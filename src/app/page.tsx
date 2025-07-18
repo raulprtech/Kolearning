@@ -1,3 +1,4 @@
 export default function Home() {
-  return <></>;
+  // The middleware will redirect users to /login or /dashboard
+  return null;
 }
