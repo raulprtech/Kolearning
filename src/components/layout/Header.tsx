@@ -2,13 +2,11 @@ import Link from 'next/link';
 import { BookOpenCheck } from 'lucide-react';
 import { UserNav } from './UserNav';
 import { getAuthSession } from '@/lib/auth';
-import { adminDb } from '@/lib/firebase/admin';
 import type { User } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 
 async function getUserData(uid: string): Promise<User | null> {
     // Return mock user data since auth is disabled
-    // Timestamps are not serializable, so we create mock plain objects for them.
     const mockTimestamp = {
         seconds: Math.floor(Date.now() / 1000),
         nanoseconds: 0,
@@ -41,6 +39,12 @@ export async function Header() {
               className="transition-colors hover:text-foreground/80 text-foreground/60"
             >
               Dashboard
+            </Link>
+             <Link
+              href="/decks"
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+            >
+              Decks
             </Link>
             <Link
               href="/tutor"
