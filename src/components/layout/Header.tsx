@@ -8,11 +8,17 @@ import { Timestamp } from 'firebase/firestore';
 
 async function getUserData(uid: string): Promise<User | null> {
     // Return mock user data since auth is disabled
+    // Timestamps are not serializable, so we create mock plain objects for them.
+    const mockTimestamp = {
+        seconds: Math.floor(Date.now() / 1000),
+        nanoseconds: 0,
+    } as unknown as Timestamp;
+
     return {
         uid: 'mock-user-id',
         email: 'test@example.com',
-        createdAt: Timestamp.now(),
-        lastSessionAt: Timestamp.now(),
+        createdAt: mockTimestamp,
+        lastSessionAt: mockTimestamp,
         currentStreak: 5,
     };
 }

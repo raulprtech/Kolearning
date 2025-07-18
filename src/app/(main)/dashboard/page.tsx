@@ -1,23 +1,13 @@
-import { adminDb } from '@/lib/firebase/admin';
 import type { Deck } from '@/types';
 import { DeckCard } from '@/components/deck/DeckCard';
-import { getAuthSession } from '@/lib/auth';
-import { redirect } from 'next/navigation';
 
 async function getDecks(): Promise<Deck[]> {
-  try {
-    const decksSnapshot = await adminDb.collection('decks').get();
-    if (decksSnapshot.empty) {
-      return [];
-    }
-    return decksSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...(doc.data() as Omit<Deck, 'id'>),
-    }));
-  } catch (error) {
-    console.error('Error fetching decks:', error);
-    return [];
-  }
+  // Return mock data since auth and firestore are disabled
+  return [
+    { id: '1', title: 'Basic Algebra', description: 'Learn the fundamentals of algebra.' },
+    { id: '2', title: 'World Capitals', description: 'Test your knowledge of world capitals.' },
+    { id: '3', title: 'Spanish Vocabulary', description: 'Expand your Spanish vocabulary.' },
+  ];
 }
 
 export default async function DashboardPage() {
