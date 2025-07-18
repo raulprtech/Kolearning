@@ -1,25 +1,18 @@
-import admin from 'firebase-admin';
-import { getApps, initializeApp } from 'firebase-admin/app';
+import { getApps, initializeApp, App } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-};
+let app: App;
 
 if (!getApps().length) {
-  // Check if credentials are provided before initializing with them
-  if (serviceAccount.projectId && serviceAccount.clientEmail && serviceAccount.privateKey) {
-    initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } else {
-    // Initialize without credentials for local/mock development
-    initializeApp();
-  }
+  // Initialize without credentials for local/mock development
+  // This is suitable since we've disabled authentication for now.
+  app = initializeApp();
+} else {
+  app = getApps()[0];
 }
 
-const adminAuth = admin.auth();
-const adminDb = admin.firestore();
+const adminAuth = getAuth(app);
+const adminDb = getFirestore(app);
 
 export { adminAuth, adminDb };
