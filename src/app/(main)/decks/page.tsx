@@ -1,8 +1,7 @@
+
 import { DeckCard } from '@/components/deck/DeckCard';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -10,9 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getAuthSession } from '@/lib/auth';
+import { Separator } from '@/components/ui/separator';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+
 import type { Deck } from '@/types';
-import { Search } from 'lucide-react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 
 async function getDecks(): Promise<Deck[]> {
   // Return mock data
@@ -53,71 +58,89 @@ export default async function DecksPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Explorar Decks</h1>
+        <h1 className="text-3xl font-bold">Explore Decks</h1>
         <p className="text-muted-foreground">
-          Encuentra nuevos mazos para ampliar tu conocimiento.
+          Find new decks to expand your knowledge.
         </p>
       </div>
 
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Búsqueda Avanzada</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nombre del Deck</Label>
-              <Input id="name" placeholder="Ej: Capitales del Mundo" />
+      <div className="mb-8 flex justify-center">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full max-w-2xl h-14 rounded-full shadow-md hover:shadow-lg transition-shadow"
+            >
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center">
+                   <Search className="mr-4 h-5 w-5" />
+                   <span className="font-semibold text-foreground">Start searching...</span>
+                </div>
+                <div className="flex items-center">
+                   <Separator orientation="vertical" className="h-8 mx-4" />
+                   <SlidersHorizontal className="h-5 w-5" />
+                </div>
+              </div>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[600px] p-6">
+             <div className="grid gap-4">
+                <h4 className="font-medium leading-none">Advanced Search</h4>
+                <p className="text-sm text-muted-foreground">
+                    Fine-tune your search with the filters below.
+                </p>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="author">Autor</Label>
-              <Select>
-                <SelectTrigger id="author">
-                  <SelectValue placeholder="Seleccionar autor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kolearning">
-                    Originals de Kolearning
-                  </SelectItem>
-                  <SelectItem value="community">Comunidad</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="topic">Tema</Label>
-              <Input id="topic" placeholder="Ej: Geografía" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="school">Escuela</Label>
-              <Input id="school" placeholder="Ej: Universidad Nacional" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="region">Región</Label>
-               <Select>
-                <SelectTrigger id="region">
-                  <SelectValue placeholder="Seleccionar región" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="latam">Latinoamérica</SelectItem>
-                  <SelectItem value="na">Norteamérica</SelectItem>
-                  <SelectItem value="eu">Europa</SelectItem>
-                  <SelectItem value="asia">Asia</SelectItem>
-                  <SelectItem value="africa">África</SelectItem>
-                  <SelectItem value="oceania">Oceanía</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="grid gap-2 self-end">
-                <Button className="w-full">
-                    <Search className="mr-2 h-4 w-4" />
-                    Buscar
-                </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            <Separator className="my-4" />
+            <form className="grid grid-cols-2 gap-6">
+                <div className="grid gap-2 col-span-2">
+                    <label className="text-sm font-medium">Deck Name</label>
+                    <Input placeholder="e.g., World Capitals" />
+                </div>
+                <div className="grid gap-2">
+                    <label className="text-sm font-medium">Topic</label>
+                    <Input placeholder="e.g., Geography" />
+                </div>
+                <div className="grid gap-2">
+                    <label className="text-sm font-medium">Author</label>
+                    <Select>
+                        <SelectTrigger><SelectValue placeholder="Select author" /></SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="kolearning">Kolearning Originals</SelectItem>
+                        <SelectItem value="community">Community</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-2">
+                    <label className="text-sm font-medium">School</label>
+                    <Input placeholder="e.g., National University" />
+                </div>
+                 <div className="grid gap-2">
+                    <label className="text-sm font-medium">Region</label>
+                    <Select>
+                        <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="latam">Latin America</SelectItem>
+                        <SelectItem value="na">North America</SelectItem>
+                        <SelectItem value="eu">Europe</SelectItem>
+                        <SelectItem value="asia">Asia</SelectItem>
+                        <SelectItem value="africa">Africa</SelectItem>
+                        <SelectItem value="oceania">Oceania</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="col-span-2 mt-4 flex justify-end">
+                     <Button className="w-full md:w-auto">
+                        <Search className="mr-2 h-4 w-4" />
+                        Apply Search
+                    </Button>
+                </div>
+            </form>
+          </PopoverContent>
+        </Popover>
+      </div>
 
-      <h2 className="text-2xl font-bold mb-4">Resultados</h2>
+      <h2 className="text-2xl font-bold mb-4">Results</h2>
 
       {decks.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -127,9 +150,9 @@ export default async function DecksPage() {
         </div>
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
-          <h2 className="text-xl font-semibold">No se encontraron decks</h2>
+          <h2 className="text-xl font-semibold">No decks found</h2>
           <p className="text-muted-foreground mt-2">
-            Intenta con otros criterios de búsqueda.
+            Try using different search criteria.
           </p>
         </div>
       )}
