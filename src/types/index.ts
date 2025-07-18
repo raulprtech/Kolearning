@@ -12,6 +12,10 @@ export interface Deck {
   id: string;
   title: string;
   description: string;
+  category: string;
+  author: string;
+  size: number;
+  bibliography: string[];
 }
 
 export interface Flashcard {

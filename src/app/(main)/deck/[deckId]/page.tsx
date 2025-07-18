@@ -4,9 +4,33 @@ import FlashcardViewer from './FlashcardViewer';
 async function getDeckDetails(deckId: string): Promise<Deck | null> {
   // Return mock data since auth and firestore are disabled
   const mockDecks: Record<string, Deck> = {
-    '1': { id: '1', title: 'Basic Algebra', description: 'Learn the fundamentals of algebra.' },
-    '2': { id: '2', title: 'World Capitals', description: 'Test your knowledge of world capitals.' },
-    '3': { id: '3', title: 'Spanish Vocabulary', description: 'Expand your Spanish vocabulary.' },
+    '1': { 
+      id: '1', 
+      title: 'Basic Algebra', 
+      description: 'Learn the fundamentals of algebra.',
+      category: 'Mathematics',
+      author: 'Kolearning Originals',
+      size: 6,
+      bibliography: ['"Algebra for Dummies" by Mary Jane Sterling']
+    },
+    '2': { 
+      id: '2', 
+      title: 'World Capitals', 
+      description: 'Test your knowledge of world capitals.',
+      category: 'Geography',
+      author: 'Kolearning Originals',
+      size: 5,
+      bibliography: ['National Geographic Atlas of the World']
+    },
+    '3': { 
+      id: '3', 
+      title: 'Spanish Vocabulary', 
+      description: 'Expand your Spanish vocabulary.',
+      category: 'Languages',
+      author: 'Community',
+      size: 7,
+      bibliography: ['"Madrigal\'s Magic Key to Spanish" by Margarita Madrigal']
+    },
   };
 
   if (mockDecks[deckId]) {

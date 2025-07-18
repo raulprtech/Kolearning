@@ -21,16 +21,28 @@ async function getDecks(): Promise<Deck[]> {
       id: '1',
       title: 'Basic Algebra',
       description: 'Learn the fundamentals of algebra.',
+      category: 'Mathematics',
+      author: 'Kolearning Originals',
+      size: 6,
+      bibliography: ['"Algebra for Dummies" by Mary Jane Sterling'],
     },
     {
       id: '2',
       title: 'World Capitals',
       description: 'Test your knowledge of world capitals.',
+      category: 'Geography',
+      author: 'Kolearning Originals',
+      size: 5,
+      bibliography: ['National Geographic Atlas of the World'],
     },
     {
       id: '3',
       title: 'Spanish Vocabulary',
       description: 'Expand your Spanish vocabulary.',
+      category: 'Languages',
+      author: 'Community',
+      size: 7,
+      bibliography: ['"Madrigal\'s Magic Key to Spanish" by Margarita Madrigal'],
     },
   ];
 }
