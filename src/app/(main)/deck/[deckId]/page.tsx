@@ -30,11 +30,6 @@ async function getFlashcards(deckId: string) {
 }
 
 export default async function DeckPage({ params }: { params: { deckId: string } }) {
-  const session = await getAuthSession();
-  if (!session) {
-    redirect('/login');
-  }
-
   const deck = await getDeckDetails(params.deckId);
   const flashcards = await getFlashcards(params.deckId);
 

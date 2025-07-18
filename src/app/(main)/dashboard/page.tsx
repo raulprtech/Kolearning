@@ -21,11 +21,6 @@ async function getDecks(): Promise<Deck[]> {
 }
 
 export default async function DashboardPage() {
-  const session = await getAuthSession();
-  if (!session) {
-    redirect('/login');
-  }
-
   const decks = await getDecks();
 
   return (
