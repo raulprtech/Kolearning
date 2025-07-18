@@ -4,16 +4,17 @@ import { UserNav } from './UserNav';
 import { getAuthSession } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase/admin';
 import type { User } from '@/types';
+import { Timestamp } from 'firebase/firestore';
 
-async function getUserData(uid: string) {
-    try {
-        const userDoc = await adminDb.collection('users').doc(uid).get();
-        if (!userDoc.exists) return null;
-        return userDoc.data() as User;
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        return null;
-    }
+async function getUserData(uid: string): Promise<User | null> {
+    // Return mock user data since auth is disabled
+    return {
+        uid: 'mock-user-id',
+        email: 'test@example.com',
+        createdAt: Timestamp.now(),
+        lastSessionAt: Timestamp.now(),
+        currentStreak: 5,
+    };
 }
 
 export async function Header() {
