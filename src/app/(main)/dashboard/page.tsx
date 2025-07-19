@@ -115,8 +115,8 @@ export default async function DashboardPage() {
         <div className="mb-12">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-bold">Mis Planes de Estudio</h2>
-                <div className="flex gap-2">
-                    <Button asChild variant="outline">
+                <div className="flex gap-4">
+                    <Button asChild variant="secondary">
                         <Link href="/decks">
                             <Search className="mr-2 h-5 w-5" />
                             Buscar Plan
