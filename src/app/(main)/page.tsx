@@ -80,8 +80,15 @@ export default async function DashboardPage() {
     const nextLevelPoints = 100;
     const progressPercentage = (dominionPoints / nextLevelPoints) * 100;
 
-    // Mock data for the last 5 days activity
-    const lastFiveDaysActivity = [true, true, false, true, true];
+    const weeklyActivity = [
+        { day: 'Lun', active: true },
+        { day: 'Mar', active: true },
+        { day: 'Mié', active: false },
+        { day: 'Jue', active: true },
+        { day: 'Vie', active: true },
+        { day: 'Sáb', active: false },
+        { day: 'Dom', active: true },
+    ];
 
 
   return (
@@ -130,13 +137,15 @@ export default async function DashboardPage() {
                     <p className="text-muted-foreground text-sm">Racha Actual</p>
                 </div>
                 <p className="text-4xl font-bold">{currentStreak}</p>
-                <div className="flex justify-center gap-2">
-                  {lastFiveDaysActivity.map((active, index) => (
-                    <div
-                      key={index}
-                      className={`h-3 w-3 rounded-full ${active ? 'bg-orange-500' : 'bg-muted'}`}
-                      title={`Día ${index + 1}: ${active ? 'Activo' : 'Inactivo'}`}
-                    ></div>
+                <div className="flex justify-center gap-3">
+                  {weeklyActivity.map((dayActivity) => (
+                    <div key={dayActivity.day} className="flex flex-col items-center gap-2">
+                      <p className="text-xs text-muted-foreground">{dayActivity.day}</p>
+                      <div
+                        className={`h-6 w-6 rounded-full ${dayActivity.active ? 'bg-orange-500' : 'bg-muted'}`}
+                        title={`${dayActivity.day}: ${dayActivity.active ? 'Activo' : 'Inactivo'}`}
+                      ></div>
+                    </div>
                   ))}
                 </div>
             </CardContent>
