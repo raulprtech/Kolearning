@@ -115,12 +115,20 @@ export default async function DashboardPage() {
         <div className="mb-12">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-bold">Mis Planes de Estudio</h2>
-                <Button asChild>
-                    <Link href="/create">
-                        <PlusCircle className="mr-2 h-5 w-5" />
-                        Magic Import
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    <Button asChild variant="outline">
+                        <Link href="/decks">
+                            <Search className="mr-2 h-5 w-5" />
+                            Buscar Plan
+                        </Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href="/create">
+                            <PlusCircle className="mr-2 h-5 w-5" />
+                            Magic Import
+                        </Link>
+                    </Button>
+                </div>
             </div>
              {myDecks.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -143,12 +151,6 @@ export default async function DashboardPage() {
             <Button size="lg" className="bg-primary/80 hover:bg-primary text-primary-foreground w-full sm:w-auto">
                 <Play className="mr-2 h-5 w-5" />
                 Sesión de Estudio Rápida
-            </Button>
-             <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link href="/decks">
-                    <Search className="mr-2 h-5 w-5" />
-                    Buscar Plan
-                </Link>
             </Button>
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
                 <Link href="/tutor">
