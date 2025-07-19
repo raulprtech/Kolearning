@@ -48,12 +48,6 @@ export async function Header() {
             >
               Tutor
             </Link>
-             <Link
-              href="/tienda"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Tienda
-            </Link>
         </nav>
         </div>
         
