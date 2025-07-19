@@ -29,37 +29,32 @@ export default function CreateDeckPage() {
       return;
     }
 
-    setFile(fileToProcess);
-    setFileName(fileToProcess.name);
-    setIsLoading(true);
-
     const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
+    reader.onload = (e) => {
         const fileText = e.target?.result as string;
         setText(fileText);
+        setFile(fileToProcess);
+        setFileName(fileToProcess.name);
         toast({
-          title: 'File Processed',
-          description: 'Text extracted from file. You can now generate the deck.',
+            title: 'File Ready',
+            description: 'Text extracted from file. You can now generate the deck.',
         });
-      } catch (error) {
-        console.error(error);
+    };
+    reader.onerror = () => {
         toast({
-          variant: 'destructive',
-          title: 'File Error',
-          description: 'Could not process the file.',
+            variant: 'destructive',
+            title: 'File Error',
+            description: 'Could not read the selected file.',
         });
         setFile(null);
         setFileName('');
-      } finally {
-        setIsLoading(false);
-      }
+        setText('');
     };
     reader.readAsText(fileToProcess);
   }, [toast]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files?.[0]) {
       processFile(e.target.files[0]);
     }
   }, [processFile]);
@@ -70,7 +65,7 @@ export default function CreateDeckPage() {
   
   const onDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (e.dataTransfer.files?.[0]) {
       processFile(e.dataTransfer.files[0]);
     }
   }, [processFile]);
@@ -81,7 +76,7 @@ export default function CreateDeckPage() {
     setText('');
   }, []);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
     if (!text) {
@@ -95,20 +90,30 @@ export default function CreateDeckPage() {
     
     setIsLoading(true);
     
-    const formData = new FormData();
-    formData.append('studyNotes', text);
-    const result = await handleGenerateDeckFromText(formData);
+    try {
+        const formData = new FormData();
+        formData.append('studyNotes', text);
+        const result = await handleGenerateDeckFromText(formData);
 
-    if (result?.error) {
-      toast({
-        variant: 'destructive',
-        title: 'Generation Failed',
-        description: result.error,
-      });
+        if (result?.error) {
+          toast({
+            variant: 'destructive',
+            title: 'Generation Failed',
+            description: result.error,
+          });
+          setIsLoading(false);
+        }
+        // On success, the page redirects via the server action, so no need to set loading to false.
+    } catch (error) {
+        console.error('Submission error', error);
+        toast({
+            variant: 'destructive',
+            title: 'An Unexpected Error Occurred',
+            description: 'Please try again.',
+        });
+        setIsLoading(false);
     }
-    // Success will redirect, only set loading false on error
-    setIsLoading(false);
-  };
+  }, [text, toast]);
 
   return (
     <div className="container mx-auto py-8">
@@ -124,12 +129,13 @@ export default function CreateDeckPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="paste-text">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="paste-text">Paste Text</TabsTrigger>
-                <TabsTrigger value="upload-file">Upload File</TabsTrigger>
-              </TabsList>
-              <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit}>
+              <Tabs defaultValue="paste-text" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="paste-text" disabled={!!file}>Paste Text</TabsTrigger>
+                  <TabsTrigger value="upload-file">Upload File</TabsTrigger>
+                </TabsList>
+
                 <TabsContent value="paste-text">
                   <Textarea
                     name="studyNotesFromText"
@@ -137,53 +143,55 @@ export default function CreateDeckPage() {
                     className="min-h-[250px] text-base"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    disabled={isLoading || file !== null}
+                    disabled={isLoading || !!file}
                   />
                 </TabsContent>
-                <TabsContent value="upload-file">
-                    {!file ? (
-                        <label 
-                            htmlFor="file-upload" 
-                            className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors"
-                            onDragOver={onDragOver}
-                            onDrop={onDrop}
-                        >
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <FileUp className="w-10 h-10 mb-3 text-muted-foreground" />
-                                <p className="mb-2 text-sm text-muted-foreground">
-                                    <span className="font-semibold text-primary">Click to upload</span> or drag and drop
-                                </p>
-                                <p className="text-xs text-muted-foreground">TXT, MD (MAX. 5MB)</p>
-                            </div>
-                            <input id="file-upload" type="file" className="hidden" accept=".txt,.md,text/plain,text/markdown" onChange={handleFileChange} disabled={isLoading} />
-                        </label>
-                    ) : (
-                         <div className="flex items-center justify-between w-full h-24 border-2 border-dashed rounded-lg p-4 bg-muted">
-                            <p className="font-medium truncate">{fileName}</p>
-                            <Button variant="ghost" size="icon" onClick={clearFile} disabled={isLoading}>
-                                <X className="h-5 w-5" />
-                            </Button>
-                        </div>
-                    )}
-                </TabsContent>
 
-                <div className="grid w-full gap-4 mt-4">
-                  <Button type="submit" size="lg" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin mr-2"></span>
-                        {file ? 'Processing File...' : 'Generating Deck...'}
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="mr-2 h-5 w-5" />
-                        Generate Flashcards
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </TabsContent>
+                <TabsContent value="upload-file">
+                  {!file ? (
+                      <label 
+                          htmlFor="file-upload" 
+                          className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors"
+                          onDragOver={onDragOver}
+                          onDrop={onDrop}
+                      >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <FileUp className="w-10 h-10 mb-3 text-muted-foreground" />
+                              <p className="mb-2 text-sm text-muted-foreground">
+                                  <span className="font-semibold text-primary">Click to upload</span> or drag and drop
+                              </p>
+                              <p className="text-xs text-muted-foreground">TXT, MD (MAX. 5MB)</p>
+                          </div>
+                          <input id="file-upload" type="file" className="hidden" accept=".txt,.md,text/plain,text/markdown" onChange={handleFileChange} disabled={isLoading} />
+                      </label>
+                  ) : (
+                       <div className="flex items-center justify-between w-full h-24 border-2 border-dashed rounded-lg p-4 bg-muted">
+                          <p className="font-medium truncate">{fileName}</p>
+                          <Button variant="ghost" size="icon" onClick={clearFile} disabled={isLoading}>
+                              <X className="h-5 w-5" />
+                          </Button>
+                      </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+                
+              <div className="grid w-full gap-4 mt-6">
+                <Button type="submit" size="lg" disabled={isLoading || !text}>
+                  {isLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin mr-2"></span>
+                      Generating Deck...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="mr-2 h-5 w-5" />
+                      Generate Flashcards
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
         </Card>
       </div>
     </div>
