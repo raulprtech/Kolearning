@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { signOut as performSignOut } from '@/app/actions/auth';
 import { useRouter } from 'next/navigation';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, User as UserIcon, Settings, HelpCircle } from 'lucide-react';
 import type { User } from '@/types';
 import { useTheme } from 'next-themes';
 import { Switch } from '../ui/switch';
@@ -50,6 +50,21 @@ export function UserNav({ user }: { user: User }) {
             </p>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+           <DropdownMenuItem>
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Perfil</span>
+            </DropdownMenuItem>
+             <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Ajustes</span>
+            </DropdownMenuItem>
+             <DropdownMenuItem>
+                <HelpCircle className="mr-2 h-4 w-4" />
+                <span>Preguntas Frecuentes</span>
+            </DropdownMenuItem>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
