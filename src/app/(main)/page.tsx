@@ -81,7 +81,7 @@ export default async function DashboardPage() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-10">
           <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
-          <p className="text-muted-foreground mt-2">¿Listo para continuar tu viaje de aprendizaje?</p>
+          <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
