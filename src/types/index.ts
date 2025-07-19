@@ -16,6 +16,7 @@ export interface Deck {
   description: string;
   category: string;
   author: string;
+  school?: string;
   size: number;
   bibliography: string[];
 }

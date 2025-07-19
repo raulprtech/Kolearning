@@ -29,6 +29,7 @@ const allDecks: Deck[] = [
     description: 'Aprende los fundamentos del álgebra.',
     category: 'Mathematics',
     author: 'Kolearning',
+    school: 'Universidad Politécnica',
     size: 6,
     bibliography: ['"Algebra for Dummies" by Mary Jane Sterling'],
   },
@@ -38,6 +39,7 @@ const allDecks: Deck[] = [
     description: 'Pon a prueba tu conocimiento de las capitales del mundo.',
     category: 'Geography',
     author: 'Kolearning',
+    school: 'Instituto Global',
     size: 5,
     bibliography: ['National Geographic Atlas of the World'],
   },
@@ -47,6 +49,7 @@ const allDecks: Deck[] = [
     description: 'Amplía tu vocabulario en español.',
     category: 'Languages',
     author: 'Community',
+    school: 'Centro de Idiomas',
     size: 7,
     bibliography: ['"Madrigal\'s Magic Key to Spanish" by Margarita Madrigal'],
   },
@@ -56,6 +59,7 @@ const allDecks: Deck[] = [
     description: 'Bases de la programación, algoritmos y estructuras de datos.',
     category: 'Programming',
     author: 'Kolearning',
+    school: 'Universidad Politécnica',
     size: 15,
     bibliography: [],
   },
@@ -64,6 +68,8 @@ const allDecks: Deck[] = [
 export default function ProyectosPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [authorFilter, setAuthorFilter] = useState('all');
+  const [themeFilter, setThemeFilter] = useState('');
+  const [schoolFilter, setSchoolFilter] = useState('');
   const [searchResults, setSearchResults] = useState<Deck[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -80,6 +86,8 @@ export default function ProyectosPage() {
     event.preventDefault();
 
     const searchTerms = normalizeText(searchQuery).split(/\s+/).filter(Boolean);
+    const normalizedTheme = normalizeText(themeFilter);
+    const normalizedSchool = normalizeText(schoolFilter);
 
     let results = allDecks;
 
@@ -91,6 +99,16 @@ export default function ProyectosPage() {
         );
         return searchTerms.every(term => deckText.includes(term));
       });
+    }
+
+    // Filter by theme (category)
+    if (normalizedTheme) {
+      results = results.filter(deck => normalizeText(deck.category).includes(normalizedTheme));
+    }
+    
+    // Filter by school
+    if (normalizedSchool) {
+        results = results.filter(deck => deck.school && normalizeText(deck.school).includes(normalizedSchool));
     }
 
     // Filter by author
@@ -150,6 +168,14 @@ export default function ProyectosPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+              </div>
+              <div className="grid gap-2">
+                 <label className="text-sm font-medium">Tema</label>
+                 <Input placeholder="e.g., Geografía" value={themeFilter} onChange={(e) => setThemeFilter(e.target.value)} />
+              </div>
+              <div className="grid gap-2">
+                 <label className="text-sm font-medium">Escuela</label>
+                 <Input placeholder="e.g., Universidad Politécnica" value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)} />
               </div>
               <div className="grid gap-2 col-span-2">
                 <label className="text-sm font-medium">Autor</label>
