@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { BookOpenCheck } from 'lucide-react';
+import { BookOpenCheck, PlusCircle } from 'lucide-react';
 import { UserNav } from './UserNav';
 import { getAuthSession } from '@/lib/auth';
 import type { User } from '@/types';
 import { Timestamp } from 'firebase/firestore';
+import { Button } from '../ui/button';
 
 async function getUserData(uid: string): Promise<User | null> {
-    // Return mock user data since auth is disabled
     const mockTimestamp = {
         seconds: Math.floor(Date.now() / 1000),
         nanoseconds: 0,
@@ -55,6 +55,12 @@ export async function Header() {
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
+           <Button asChild>
+                <Link href="/create">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create
+                </Link>
+            </Button>
            {user && <UserNav user={user} />}
         </div>
       </div>

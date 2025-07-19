@@ -1,10 +1,10 @@
 import { getAuthSession } from '@/lib/auth';
-import type { Deck, User } from '@/types';
+import type { User } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Smartphone, Flame, TrendingUp, Play, Bot } from 'lucide-react';
+import { Smartphone, Flame, TrendingUp, Play, Bot, PlusCircle } from 'lucide-react';
 
 async function getUserData(uid: string): Promise<User | null> {
     const mockTimestamp = {
@@ -21,45 +21,11 @@ async function getUserData(uid: string): Promise<User | null> {
     };
 }
 
-async function getDecks(): Promise<Deck[]> {
-  // Return mock data
-  return [
-    {
-      id: '1',
-      title: 'Basic Algebra',
-      description: 'Learn the fundamentals of algebra.',
-      category: 'Mathematics',
-      author: 'Kolearning Originals',
-      size: 6,
-      bibliography: ['"Algebra for Dummies" by Mary Jane Sterling'],
-    },
-    {
-      id: '2',
-      title: 'World Capitals',
-      description: 'Test your knowledge of world capitals.',
-      category: 'Geography',
-      author: 'Kolearning Originals',
-      size: 5,
-      bibliography: ['National Geographic Atlas of the World'],
-    },
-    {
-      id: '3',
-      title: 'Spanish Vocabulary',
-      description: 'Expand your Spanish vocabulary.',
-      category: 'Languages',
-      author: 'Community',
-      size: 7,
-      bibliography: ['"Madrigal\'s Magic Key to Spanish" by Margarita Madrigal'],
-    },
-  ];
-}
-
 
 export default async function DashboardPage() {
     const session = await getAuthSession();
     const user = session ? await getUserData(session.uid) : null;
-    const decks = await getDecks();
-    const availableDecks = decks.length;
+    const availableDecks = 3;
     const currentStreak = user?.currentStreak ?? 0;
 
   return (
@@ -98,6 +64,15 @@ export default async function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+        
+        <div className="mb-10">
+            <Button asChild size="lg" className="w-full">
+                <Link href="/create">
+                    <PlusCircle className="mr-2 h-5 w-5" />
+                    Crear un nuevo mazo
+                </Link>
+            </Button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">

@@ -1,7 +1,12 @@
 import type { Deck, Flashcard } from '@/types';
 import FlashcardViewer from './FlashcardViewer';
+import { getGeneratedDeck } from '@/app/actions/decks';
 
 async function getDeckDetails(deckId: string): Promise<Deck | null> {
+  if (deckId.startsWith('gen-')) {
+    return getGeneratedDeck(deckId);
+  }
+  
   // Return mock data since auth and firestore are disabled
   const mockDecks: Record<string, Deck> = {
     '1': { 
@@ -41,7 +46,12 @@ async function getDeckDetails(deckId: string): Promise<Deck | null> {
   return null;
 }
 
-async function getFlashcards(deckId: string): Promise<Flashcard[]> {
+async function getFlashcards(deckId: string, deck: Deck | null): Promise<Flashcard[]> {
+  // if it's a generated deck, flashcards are part of the deck object
+  if (deckId.startsWith('gen-') && deck && 'flashcards' in deck) {
+      return (deck as any).flashcards.map((fc: any, index: number) => ({...fc, id: `${deckId}-card-${index}`}));
+  }
+
   // Return mock data since auth and firestore are disabled
   const mockFlashcards: Record<string, Flashcard[]> = {
       '1': [
@@ -80,7 +90,7 @@ async function getFlashcards(deckId: string): Promise<Flashcard[]> {
 
 export default async function DeckPage({ params }: { params: { deckId: string } }) {
   const deck = await getDeckDetails(params.deckId);
-  const flashcards = await getFlashcards(params.deckId);
+  const flashcards = await getFlashcards(params.deckId, deck);
 
   if (!deck) {
     return (
