@@ -125,7 +125,7 @@ export default async function DashboardPage() {
                     <Button asChild>
                         <Link href="/create">
                             <PlusCircle className="mr-2 h-5 w-5" />
-                            Magic Import
+                            Crear Plan
                         </Link>
                     </Button>
                 </div>
