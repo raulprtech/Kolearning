@@ -36,15 +36,9 @@ export async function Header() {
         </div>
         
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <Link
-              href="/"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Dashboard
-            </Link>
              <Link
               href="/decks"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className="transition-colors hover:text-foreground/80 text-foreground"
             >
               Decks
             </Link>
