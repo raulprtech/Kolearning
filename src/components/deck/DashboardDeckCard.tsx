@@ -36,21 +36,21 @@ export function DashboardDeckCard({ deck }: { deck: Deck }) {
         </CardContent>
       </Link>
       <div className="px-6 pb-4 pt-0">
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center text-xs text-muted-foreground">
+        <div className="flex items-center gap-4">
+          <div className="flex-grow">
+            <div className="flex justify-between items-center text-xs text-muted-foreground mb-1">
               <span>Progreso</span>
               <span>{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />
           </div>
-          <div className="flex justify-end items-center text-sm text-muted-foreground mt-2">
-              <Button asChild variant="link" className="p-0 h-auto text-primary font-medium">
-                  <Link href={`/deck/${deck.id}`}>
-                      <Play className="h-4 w-4 mr-2"/>
-                      <span>Empezar</span>
-                  </Link>
-              </Button>
-          </div>
+          <Button asChild variant="link" className="p-0 h-auto text-primary font-medium shrink-0">
+            <Link href={`/deck/${deck.id}`}>
+              <Play className="h-4 w-4 mr-2"/>
+              <span>Empezar</span>
+            </Link>
+          </Button>
+        </div>
       </div>
     </Card>
   );
