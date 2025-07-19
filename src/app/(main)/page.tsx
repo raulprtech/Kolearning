@@ -139,9 +139,9 @@ export default async function DashboardPage() {
                <div className="my-4">
                   <p className="text-5xl font-bold">{energy}</p>
               </div>
-              <div>
+              <div className="w-full">
                 <Progress value={energyPercentage} className="h-2 [&>div]:bg-primary" />
-                <p className="text-xs text-muted-foreground mt-2">Recuperas 1 de energía cada 2 horas</p>
+                <p className="text-xs text-muted-foreground mt-2 text-right">Recuperas 1 de energía cada 2 horas</p>
               </div>
             </CardContent>
           </Card>
