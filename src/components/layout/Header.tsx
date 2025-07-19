@@ -56,12 +56,6 @@ export async function Header() {
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
-           <Button asChild>
-                <Link href="/create">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create
-                </Link>
-            </Button>
            <ThemeToggle />
            {user && <UserNav user={user} />}
         </div>
