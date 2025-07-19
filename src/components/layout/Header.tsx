@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpenCheck, Flame, Gem, Zap } from 'lucide-react';
+import { BookOpenCheck, Flame, Zap } from 'lucide-react';
 import { UserNav } from './UserNav';
 import { getAuthSession } from '@/lib/auth';
 import type { User } from '@/types';
@@ -22,6 +22,26 @@ async function getUserData(uid: string): Promise<User | null> {
         energy: 5,
     };
 }
+
+const CoinIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </svg>
+);
+
 
 export async function Header() {
   const session = await getAuthSession();
@@ -58,8 +78,8 @@ export async function Header() {
                   <Flame className="h-5 w-5" />
                   <span className="font-bold">{user.currentStreak}</span>
                </Button>
-               <Button variant="ghost" size="sm" className="flex items-center gap-2 text-blue-400">
-                  <Gem className="h-5 w-5" />
+               <Button variant="ghost" size="sm" className="flex items-center gap-2 text-yellow-500">
+                  <CoinIcon className="h-5 w-5" />
                   <span className="font-bold">{user.coins}</span>
                </Button>
                <Button variant="ghost" size="sm" className="flex items-center gap-2 text-primary">
