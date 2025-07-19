@@ -112,7 +112,7 @@ export default async function DashboardPage() {
                 <p className="text-4xl font-bold">{currentStreak}</p>
                 <Button size="sm" className="w-full bg-primary/80 hover:bg-primary text-primary-foreground">
                     <Play className="mr-2 h-4 w-4" />
-                    Sesión de Estudio
+                    Aprender
                 </Button>
             </CardContent>
           </Card>
