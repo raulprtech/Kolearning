@@ -122,12 +122,6 @@ export default async function DashboardPage() {
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-bold">Mis Planes de Estudio</h2>
                 <div className="flex gap-4">
-                    <Button asChild variant="outline">
-                      <Link href="/tutor">
-                          <Bot className="mr-2 h-5 w-5" />
-                          Preguntar al Tutor IA
-                      </Link>
-                    </Button>
                     <Button asChild variant="secondary">
                         <Link href="/proyectos">
                             <Search className="mr-2 h-5 w-5" />
