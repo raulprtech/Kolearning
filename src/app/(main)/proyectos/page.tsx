@@ -63,7 +63,7 @@ const allDecks: Deck[] = [
 
 export default function ProyectosPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [authorFilter, setAuthorFilter] = useState('');
+  const [authorFilter, setAuthorFilter] = useState('all');
   const [searchResults, setSearchResults] = useState<Deck[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -94,7 +94,7 @@ export default function ProyectosPage() {
     }
 
     // Filter by author
-    if (authorFilter) {
+    if (authorFilter && authorFilter !== 'all') {
       results = results.filter(deck => deck.author === authorFilter);
     }
 
@@ -158,7 +158,7 @@ export default function ProyectosPage() {
                     <SelectValue placeholder="Seleccionar autor" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="Kolearning">Kolearning</SelectItem>
                     <SelectItem value="Community">Comunidad</SelectItem>
                   </SelectContent>
@@ -175,7 +175,7 @@ export default function ProyectosPage() {
         </Popover>
       </div>
 
-      {isSearching && (
+      {isSearching ? (
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4">Resultados de la búsqueda</h2>
           {searchResults.length > 0 ? (
@@ -193,18 +193,16 @@ export default function ProyectosPage() {
             </div>
           )}
         </section>
-      )}
+      ) : null}
 
-      {!isSearching && (
-        <section>
-          <h2 className="text-2xl font-bold mb-4">Recomendados</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recommendedDecks.map((deck) => (
-              <DeckCard key={deck.id} deck={deck} />
-            ))}
-          </div>
-        </section>
-      )}
+      <section>
+        <h2 className="text-2xl font-bold mb-4">Recomendados</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recommendedDecks.map((deck) => (
+            <DeckCard key={deck.id} deck={deck} />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
