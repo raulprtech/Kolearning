@@ -84,9 +84,9 @@ export default async function DashboardPage() {
         { day: 'Lun', active: true },
         { day: 'Mar', active: true },
         { day: 'Mié', active: false },
-        { day: 'Jue', active: true },
+        { day: 'Jue', active: false },
         { day: 'Vie', active: true },
-        { day: 'Sáb', active: false },
+        { day: 'Sáb', active: true },
         { day: 'Dom', active: true },
     ];
 
