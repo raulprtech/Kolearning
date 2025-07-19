@@ -5,6 +5,7 @@ import { getAuthSession } from '@/lib/auth';
 import type { User } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 import { Button } from '../ui/button';
+import { ThemeToggle } from './ThemeToggle';
 
 async function getUserData(uid: string): Promise<User | null> {
     const mockTimestamp = {
@@ -61,6 +62,7 @@ export async function Header() {
                     Create
                 </Link>
             </Button>
+           <ThemeToggle />
            {user && <UserNav user={user} />}
         </div>
       </div>
