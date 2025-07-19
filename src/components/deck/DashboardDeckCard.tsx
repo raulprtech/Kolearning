@@ -37,7 +37,7 @@ export function DashboardDeckCard({ deck }: { deck: Deck }) {
       </Link>
       <div className="px-6 pb-4 pt-0">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex-grow max-w-[70%]">
+          <div className="w-1/2">
             <div className="flex justify-between items-center text-xs text-muted-foreground mb-1">
               <span>Progreso</span>
               <span>{progress}%</span>
