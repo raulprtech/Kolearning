@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Play, Code, Bot, LineChart, BookOpen } from 'lucide-react';
+import { Play, Code, Bot, LineChart, BookOpen } from 'lucide-react';
 import type { Deck } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 
 const categoryIcons: { [key: string]: React.ReactNode } = {
     Programming: <Code className="w-full h-full" />,
@@ -17,6 +18,8 @@ const getCategoryIcon = (category: string) => {
 };
 
 export function DashboardDeckCard({ deck }: { deck: Deck }) {
+  const progress = Math.floor(Math.random() * 100); // Placeholder for actual progress
+
   return (
     <Card className="flex flex-col h-full transition-all duration-300 group bg-card/50 hover:bg-card hover:shadow-primary/20 hover:shadow-lg hover:-translate-y-1">
       <Link href={`/deck/${deck.id}/details`} className="block flex-grow">
@@ -33,11 +36,14 @@ export function DashboardDeckCard({ deck }: { deck: Deck }) {
         </CardContent>
       </Link>
       <div className="px-6 pb-4 pt-0">
-          <div className="flex justify-between items-center text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4"/>
-                  <span>~ 15 min</span>
-              </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <span>Progreso</span>
+              <span>{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+          <div className="flex justify-end items-center text-sm text-muted-foreground mt-2">
               <Button asChild variant="link" className="p-0 h-auto text-primary font-medium">
                   <Link href={`/deck/${deck.id}`}>
                       <Play className="h-4 w-4 mr-2"/>
