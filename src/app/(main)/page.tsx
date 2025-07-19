@@ -76,6 +76,9 @@ export default async function DashboardPage() {
     const myDecks = await getMyDecks();
     const availableDecks = myDecks.length;
     const currentStreak = user?.currentStreak ?? 0;
+    const energy = user?.energy ?? 0;
+    const maxEnergy = 10;
+    const energyPercentage = (energy / maxEnergy) * 100;
     const dominionPoints = 40;
     const nextLevelPoints = 100;
     const progressPercentage = (dominionPoints / nextLevelPoints) * 100;
@@ -122,12 +125,13 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
            <Card className="bg-card/50">
-            <CardContent className="p-6 flex flex-col items-start gap-4">
-              <Zap className="h-8 w-8 text-primary" />
+            <CardContent className="p-6 flex flex-col items-start gap-4 justify-between h-full">
               <div>
-                <p className="text-muted-foreground text-sm">Energía Restante</p>
-                <p className="text-2xl font-bold">{currentStreak}</p>
+                <Zap className="h-8 w-8 text-primary" />
+                <p className="text-muted-foreground text-sm mt-4">Energía Restante</p>
+                <p className="text-2xl font-bold">{energy}</p>
               </div>
+              <Progress value={energyPercentage} className="h-2 [&>div]:bg-primary" />
             </CardContent>
           </Card>
            <Card className="bg-card/50">
