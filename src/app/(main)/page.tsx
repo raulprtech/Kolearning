@@ -121,13 +121,13 @@ export default async function DashboardPage() {
                     <Button asChild variant="secondary">
                         <Link href="/proyectos">
                             <Search className="mr-2 h-5 w-5" />
-                            Buscar Plan
+                            Buscar proyecto
                         </Link>
                     </Button>
                     <Button asChild>
                         <Link href="/create">
                             <PlusCircle className="mr-2 h-5 w-5" />
-                            Crear Plan
+                            Nuevo proyecto
                         </Link>
                     </Button>
                 </div>
