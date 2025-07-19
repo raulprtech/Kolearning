@@ -7,10 +7,6 @@ import { handleGenerateDeckFromText } from '@/app/actions/decks';
 import { Wand2, FileUp, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import * as pdfjs from 'pdfjs-dist/build/pdf';
-import 'pdfjs-dist/build/pdf.worker.entry';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export default function CreateDeckPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,39 +15,28 @@ export default function CreateDeckPage() {
   const [fileName, setFileName] = useState('');
   const { toast } = useToast();
 
-  const getPdfText = useCallback(async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument(arrayBuffer).promise;
-    let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      fullText += textContent.items.map((item: any) => item.str).join(' ');
-      fullText += '\n';
-    }
-    return fullText;
-  }, []);
-
   const handleFileDrop = useCallback(async (files: FileList | null) => {
     if (files && files.length > 0) {
       const uploadedFile = files[0];
-      if (uploadedFile.type === 'application/pdf') {
+      const allowedTypes = ['text/plain', 'text/markdown'];
+      
+      if (allowedTypes.includes(uploadedFile.type) || uploadedFile.name.endsWith('.md') || uploadedFile.name.endsWith('.txt')) {
         setFile(uploadedFile);
         setFileName(uploadedFile.name);
         setIsLoading(true);
         try {
-          const extractedText = await getPdfText(uploadedFile);
-          setText(extractedText);
+          const fileText = await uploadedFile.text();
+          setText(fileText);
           toast({
             title: 'File Processed',
-            description: 'Text extracted from PDF. You can now generate the deck.',
+            description: 'Text extracted from file. You can now generate the deck.',
           });
         } catch (error) {
           console.error(error);
           toast({
             variant: 'destructive',
             title: 'File Error',
-            description: 'Could not process the PDF file.',
+            description: 'Could not process the file.',
           });
           setFile(null);
           setFileName('');
@@ -62,11 +47,11 @@ export default function CreateDeckPage() {
         toast({
           variant: 'destructive',
           title: 'Invalid File Type',
-          description: 'Please upload a PDF file.',
+          description: 'Please upload a TXT or MD file.',
         });
       }
     }
-  }, [toast, getPdfText]);
+  }, [toast]);
 
   const onDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -94,7 +79,7 @@ export default function CreateDeckPage() {
         toast({
             variant: 'destructive',
             title: 'No Content',
-            description: 'Please paste notes or upload a PDF before generating.',
+            description: 'Please paste notes or upload a file before generating.',
         });
         return;
     }
@@ -126,14 +111,14 @@ export default function CreateDeckPage() {
               <CardTitle className="text-2xl">Magic Import</CardTitle>
             </div>
             <CardDescription>
-              Paste your study notes or upload a PDF, and we'll magically convert them into a flashcard deck for you.
+              Paste your study notes or upload a text file, and we'll magically convert them into a flashcard deck for you.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="paste-text">
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="paste-text">Paste Text</TabsTrigger>
-                <TabsTrigger value="upload-pdf">Upload PDF</TabsTrigger>
+                <TabsTrigger value="upload-file">Upload File</TabsTrigger>
               </TabsList>
               <form onSubmit={handleSubmit}>
                 <TabsContent value="paste-text">
@@ -146,10 +131,10 @@ export default function CreateDeckPage() {
                     disabled={isLoading || file !== null}
                   />
                 </TabsContent>
-                <TabsContent value="upload-pdf">
+                <TabsContent value="upload-file">
                     {!file ? (
                         <label 
-                            htmlFor="pdf-upload" 
+                            htmlFor="file-upload" 
                             className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors"
                             onDragOver={onDragOver}
                             onDrop={onDrop}
@@ -159,9 +144,9 @@ export default function CreateDeckPage() {
                                 <p className="mb-2 text-sm text-muted-foreground">
                                     <span className="font-semibold text-primary">Click to upload</span> or drag and drop
                                 </p>
-                                <p className="text-xs text-muted-foreground">PDF (MAX. 5MB)</p>
+                                <p className="text-xs text-muted-foreground">TXT, MD (MAX. 5MB)</p>
                             </div>
-                            <input id="pdf-upload" type="file" className="hidden" accept=".pdf" onChange={handleFileChange} disabled={isLoading} />
+                            <input id="file-upload" type="file" className="hidden" accept=".txt,.md,text/plain,text/markdown" onChange={handleFileChange} disabled={isLoading} />
                         </label>
                     ) : (
                          <div className="flex items-center justify-between w-full h-24 border-2 border-dashed rounded-lg p-4 bg-muted">
