@@ -57,7 +57,7 @@ export default function FlashcardViewer({ deck, initialFlashcards }: { deck: Dec
         <h1 className="text-2xl font-bold">{deck.title}</h1>
         <p className="text-muted-foreground mt-4">This deck has no flashcards.</p>
         <Button asChild className="mt-4">
-          <Link href="/dashboard">
+          <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
           </Link>
         </Button>
@@ -72,7 +72,7 @@ export default function FlashcardViewer({ deck, initialFlashcards }: { deck: Dec
             <h1 className="text-3xl font-bold mb-2">Session Complete!</h1>
             <p className="text-muted-foreground mb-6">You've finished this learning session. Great job!</p>
             <Button asChild>
-                <Link href="/dashboard">
+                <Link href="/">
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
                 </Link>
             </Button>
@@ -84,7 +84,7 @@ export default function FlashcardViewer({ deck, initialFlashcards }: { deck: Dec
     <div className="container mx-auto py-8 flex flex-col items-center">
       <div className="w-full max-w-2xl">
         <div className="mb-4 text-center">
-          <Link href="/dashboard" className="text-sm text-primary hover:underline flex items-center justify-center mb-4">
+          <Link href="/" className="text-sm text-primary hover:underline flex items-center justify-center mb-4">
              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Decks
           </Link>
           <h1 className="text-3xl font-bold">{deck.title}</h1>

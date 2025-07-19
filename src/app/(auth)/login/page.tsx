@@ -58,7 +58,7 @@ export default function LoginPage() {
       );
       const idToken = await userCredential.user.getIdToken();
       await createSession(idToken);
-      router.push('/dashboard');
+      router.push('/');
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -82,7 +82,7 @@ export default function LoginPage() {
       await createUserInFirestore(user.uid, user.email || '');
       const idToken = await user.getIdToken();
       await createSession(idToken);
-      router.push('/dashboard');
+      router.push('/');
     } catch (error: any) {
       toast({
         variant: 'destructive',
