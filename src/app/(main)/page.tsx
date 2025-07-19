@@ -110,14 +110,14 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <Card className="bg-card/50">
-            <CardContent className="p-6 flex flex-col justify-between h-full">
+            <CardContent className="p-6 flex flex-col justify-between text-center h-full">
               <div>
                 <div className="flex items-center justify-center gap-2 text-green-500">
                   <TrendingUp className="h-6 w-6" />
                   <p className="text-muted-foreground text-sm">Progreso de Aprendizaje</p>
                 </div>
               </div>
-              <div className="text-center my-4">
+              <div className="my-4">
                 <p className="text-2xl font-bold">Aprendiz en ascenso</p>
               </div>
               <div className="w-full">
@@ -129,17 +129,20 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
            <Card className="bg-card/50">
-            <CardContent className="p-6 flex flex-col justify-between h-full">
+            <CardContent className="p-6 flex flex-col justify-between text-center h-full">
               <div>
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <Zap className="h-6 w-6" />
                   <p className="text-muted-foreground text-sm">Energía Restante</p>
                 </div>
               </div>
-               <div className="text-center my-4">
+               <div className="my-4">
                   <p className="text-5xl font-bold">{energy}</p>
               </div>
-              <Progress value={energyPercentage} className="h-2 [&>div]:bg-primary" />
+              <div>
+                <Progress value={energyPercentage} className="h-2 [&>div]:bg-primary" />
+                <p className="text-xs text-muted-foreground mt-2">Recuperas 1 de energía cada 2 horas</p>
+              </div>
             </CardContent>
           </Card>
            <Card className="bg-card/50">
