@@ -79,9 +79,15 @@ export default async function DashboardPage() {
   return (
     <div className="bg-background text-foreground min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
-          <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
+        <div className="flex justify-between items-center mb-10">
+          <div>
+            <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
+            <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
+          </div>
+          <Button size="lg" className="bg-primary/80 hover:bg-primary text-primary-foreground">
+            <Play className="mr-2 h-4 w-4" />
+            Aprender
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -110,10 +116,6 @@ export default async function DashboardPage() {
                     <p className="text-muted-foreground text-sm">Racha Actual</p>
                 </div>
                 <p className="text-4xl font-bold">{currentStreak}</p>
-                <Button size="sm" className="w-full bg-primary/80 hover:bg-primary text-primary-foreground">
-                    <Play className="mr-2 h-4 w-4" />
-                    Aprender
-                </Button>
             </CardContent>
           </Card>
         </div>
