@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Zap, Play, Bot, PlusCircle, BookCopy, Search, Flame, TrendingUp } from 'lucide-react';
 import type { Deck } from '@/types';
 import { DashboardDeckCard } from '@/components/deck/DashboardDeckCard';
+import { Progress } from '@/components/ui/progress';
 
 async function getUserData(uid: string): Promise<User | null> {
     const mockTimestamp = {
@@ -75,6 +76,9 @@ export default async function DashboardPage() {
     const myDecks = await getMyDecks();
     const availableDecks = myDecks.length;
     const currentStreak = user?.currentStreak ?? 0;
+    const dominionPoints = 40;
+    const nextLevelPoints = 100;
+    const progressPercentage = (dominionPoints / nextLevelPoints) * 100;
 
   return (
     <div className="bg-background text-foreground min-h-screen p-8">
@@ -94,9 +98,15 @@ export default async function DashboardPage() {
           <Card className="bg-card/50">
             <CardContent className="p-6 flex flex-col items-start gap-4">
               <TrendingUp className="h-8 w-8 text-green-500" />
-              <div>
+              <div className="w-full">
                 <p className="text-muted-foreground text-sm">Progreso de Aprendizaje</p>
                 <p className="text-2xl font-bold">Aprendiz en ascenso</p>
+                 <div className="mt-2 w-full">
+                    <Progress value={progressPercentage} className="h-2" />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                        {dominionPoints}/{nextLevelPoints} para el siguiente nivel
+                    </p>
+                </div>
               </div>
             </CardContent>
           </Card>
