@@ -63,34 +63,40 @@ const allDecks: Deck[] = [
 
 export default function ProyectosPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [authorFilter, setAuthorFilter] = useState('');
   const [searchResults, setSearchResults] = useState<Deck[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   const recommendedDecks = useMemo(() => allDecks.slice(0, 3), []);
 
+  const normalizeText = (text: string) =>
+    text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!searchQuery.trim()) {
-      setIsSearching(false);
-      setSearchResults([]);
-      return;
-    }
-
-    const normalizeText = (text: string) =>
-      text
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
 
     const searchTerms = normalizeText(searchQuery).split(/\s+/).filter(Boolean);
 
-    const results = allDecks.filter((deck) => {
-      const deckText = normalizeText(
-        `${deck.title} ${deck.description} ${deck.category}`
-      );
-      return searchTerms.every(term => deckText.includes(term));
-    });
+    let results = allDecks;
+
+    // Filter by search query
+    if (searchTerms.length > 0) {
+      results = results.filter((deck) => {
+        const deckText = normalizeText(
+          `${deck.title} ${deck.description} ${deck.category}`
+        );
+        return searchTerms.every(term => deckText.includes(term));
+      });
+    }
+
+    // Filter by author
+    if (authorFilter) {
+      results = results.filter(deck => deck.author === authorFilter);
+    }
 
     setSearchResults(results);
     setIsSearching(true);
@@ -145,25 +151,18 @@ export default function ProyectosPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">Tema</label>
-                <Input placeholder="e.g., Geografía" />
-              </div>
-              <div className="grid gap-2">
+              <div className="grid gap-2 col-span-2">
                 <label className="text-sm font-medium">Autor</label>
-                <Select>
+                <Select value={authorFilter} onValueChange={setAuthorFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar autor" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="kolearning">Kolearning</SelectItem>
-                    <SelectItem value="community">Comunidad</SelectItem>
+                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="Kolearning">Kolearning</SelectItem>
+                    <SelectItem value="Community">Comunidad</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">Escuela</label>
-                <Input placeholder="e.g., Universidad Nacional" />
               </div>
               <div className="col-span-2 mt-4 flex justify-end">
                 <Button type="submit" className="w-full md:w-auto">
@@ -196,14 +195,16 @@ export default function ProyectosPage() {
         </section>
       )}
 
-      <section>
-        <h2 className="text-2xl font-bold mb-4">Recomendados</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recommendedDecks.map((deck) => (
-            <DeckCard key={deck.id} deck={deck} />
-          ))}
-        </div>
-      </section>
+      {!isSearching && (
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Recomendados</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {recommendedDecks.map((deck) => (
+              <DeckCard key={deck.id} deck={deck} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
