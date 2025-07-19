@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import { BookOpenCheck, Flame, Zap } from 'lucide-react';
+import { BookOpenCheck } from 'lucide-react';
 import { UserNav } from './UserNav';
 import { getAuthSession } from '@/lib/auth';
 import type { User } from '@/types';
 import { Timestamp } from 'firebase/firestore';
-import { Button } from '@/components/ui/button';
+import { UserStats } from './UserStats';
 
 async function getUserData(uid: string): Promise<User | null> {
     const mockTimestamp = {
@@ -22,11 +22,6 @@ async function getUserData(uid: string): Promise<User | null> {
         energy: 5,
     };
 }
-
-const CoinIcon = (props: React.HTMLAttributes<HTMLSpanElement>) => (
-    <span {...props}>🪙</span>
-);
-
 
 export async function Header() {
   const session = await getAuthSession();
@@ -57,22 +52,7 @@ export async function Header() {
         </div>
         
         <div className="flex flex-1 items-center justify-end space-x-2">
-           {user && (
-            <div className='flex items-center gap-4 mr-2'>
-               <Button variant="ghost" size="sm" className="flex items-center gap-2 text-orange-500">
-                  <Flame className="h-5 w-5" />
-                  <span className="font-bold">{user.currentStreak}</span>
-               </Button>
-               <Button variant="ghost" size="sm" className="flex items-center gap-2 text-yellow-500">
-                  <CoinIcon className="h-5 w-5" />
-                  <span className="font-bold">{user.coins}</span>
-               </Button>
-               <Button variant="ghost" size="sm" className="flex items-center gap-2 text-primary">
-                  <Zap className="h-5 w-5" />
-                  <span className="font-bold">{user.energy}</span>
-               </Button>
-            </div>
-           )}
+           {user && <UserStats user={user} />}
            {user && <UserNav user={user} />}
         </div>
       </div>
