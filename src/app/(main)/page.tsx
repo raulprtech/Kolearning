@@ -112,8 +112,12 @@ export default async function DashboardPage() {
           <Card className="bg-card/50">
             <CardContent className="p-6 flex flex-col justify-between h-full">
               <div>
-                <TrendingUp className="h-8 w-8 text-green-500 mb-4" />
-                <p className="text-muted-foreground text-sm">Progreso de Aprendizaje</p>
+                <div className="flex items-center gap-2 text-green-500">
+                  <TrendingUp className="h-6 w-6" />
+                  <p className="text-muted-foreground text-sm">Progreso de Aprendizaje</p>
+                </div>
+              </div>
+              <div className="text-center my-4">
                 <p className="text-2xl font-bold">Aprendiz en ascenso</p>
               </div>
               <div className="w-full">
@@ -127,20 +131,28 @@ export default async function DashboardPage() {
            <Card className="bg-card/50">
             <CardContent className="p-6 flex flex-col justify-between h-full">
               <div>
-                <Zap className="h-8 w-8 text-primary mb-4" />
-                <p className="text-muted-foreground text-sm">Energía Restante</p>
-                <p className="text-2xl font-bold">{energy}</p>
+                <div className="flex items-center gap-2 text-primary">
+                  <Zap className="h-6 w-6" />
+                  <p className="text-muted-foreground text-sm">Energía Restante</p>
+                </div>
+              </div>
+               <div className="text-center my-4">
+                  <p className="text-5xl font-bold">{energy}</p>
               </div>
               <Progress value={energyPercentage} className="h-2 [&>div]:bg-primary" />
             </CardContent>
           </Card>
            <Card className="bg-card/50">
-            <CardContent className="p-6 flex flex-col items-center justify-between text-center h-full">
-              <div className="flex items-center gap-2 text-orange-500">
-                <Flame className="h-6 w-6" />
-                <p className="text-muted-foreground text-sm">Racha Actual</p>
+            <CardContent className="p-6 flex flex-col justify-between text-center h-full">
+               <div>
+                  <div className="flex items-center justify-center gap-2 text-orange-500">
+                    <Flame className="h-6 w-6" />
+                    <p className="text-muted-foreground text-sm">Racha Actual</p>
+                  </div>
               </div>
-              <p className="text-4xl font-bold">{currentStreak}</p>
+              <div className="my-4">
+                <p className="text-5xl font-bold">{currentStreak}</p>
+              </div>
               <div className="flex justify-center gap-3 w-full">
                 {weeklyActivity.map((dayActivity) => (
                   <div key={dayActivity.day} className="flex flex-col items-center gap-2">
