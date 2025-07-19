@@ -112,7 +112,7 @@ export default async function DashboardPage() {
           <Card className="bg-card/50">
             <CardContent className="p-6 flex flex-col justify-between h-full">
               <div>
-                <div className="flex items-center gap-2 text-green-500">
+                <div className="flex items-center justify-center gap-2 text-green-500">
                   <TrendingUp className="h-6 w-6" />
                   <p className="text-muted-foreground text-sm">Progreso de Aprendizaje</p>
                 </div>
@@ -131,7 +131,7 @@ export default async function DashboardPage() {
            <Card className="bg-card/50">
             <CardContent className="p-6 flex flex-col justify-between h-full">
               <div>
-                <div className="flex items-center gap-2 text-primary">
+                <div className="flex items-center justify-center gap-2 text-primary">
                   <Zap className="h-6 w-6" />
                   <p className="text-muted-foreground text-sm">Energía Restante</p>
                 </div>
