@@ -75,7 +75,7 @@ export default async function DecksPage() {
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center">
                    <Search className="mr-4 h-5 w-5" />
-                   <span className="font-semibold text-foreground">Empieza a buscar...</span>
+                   <span className="font-semibold text-foreground">¿Qué quieres aprender hoy?</span>
                 </div>
                 <div className="flex items-center">
                    <Separator orientation="vertical" className="h-8 mx-4" />
