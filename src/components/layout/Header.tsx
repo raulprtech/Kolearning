@@ -4,7 +4,6 @@ import { UserNav } from './UserNav';
 import { getAuthSession } from '@/lib/auth';
 import type { User } from '@/types';
 import { Timestamp } from 'firebase/firestore';
-import { ThemeToggle } from './ThemeToggle';
 import { Button } from '@/components/ui/button';
 
 async function getUserData(uid: string): Promise<User | null> {
@@ -30,15 +29,13 @@ export async function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 max-w-6xl mx-auto items-center justify-between">
+      <div className="container flex h-14 max-w-6xl mx-auto items-center">
         <div className="flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <BookOpenCheck className="h-6 w-6 text-primary" />
             <span className="font-bold">Kolearning</span>
           </Link>
-        </div>
-        
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
              <Link
               href="/decks"
               className="transition-colors hover:text-foreground/80 text-foreground"
@@ -52,8 +49,9 @@ export async function Header() {
               Tutor
             </Link>
         </nav>
-
-        <div className="flex items-center justify-end space-x-2">
+        </div>
+        
+        <div className="flex flex-1 items-center justify-end space-x-2">
            {user && (
             <div className='flex items-center gap-4 mr-2'>
                <Button variant="ghost" size="sm" className="flex items-center gap-2 text-orange-500">
@@ -70,7 +68,6 @@ export async function Header() {
                </Button>
             </div>
            )}
-           <ThemeToggle />
            {user && <UserNav user={user} />}
         </div>
       </div>

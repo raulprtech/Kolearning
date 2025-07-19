@@ -12,11 +12,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { signOut as performSignOut } from '@/app/actions/auth';
 import { useRouter } from 'next/navigation';
-import { Flame } from 'lucide-react';
+import { Flame, Moon, Sun } from 'lucide-react';
 import type { User } from '@/types';
+import { useTheme } from 'next-themes';
 
 export function UserNav({ user }: { user: User }) {
   const router = useRouter();
+  const { setTheme } = useTheme();
   
   const handleSignOut = async () => {
     await performSignOut();
@@ -53,6 +55,17 @@ export function UserNav({ user }: { user: User }) {
             <span className='flex items-center gap-1'>
                 <Flame className='h-4 w-4 text-orange-500' /> {user.currentStreak}
             </span>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+           <DropdownMenuItem onClick={() => setTheme('light')}>
+            <Sun className="mr-2 h-4 w-4" />
+            <span>Light</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme('dark')}>
+            <Moon className="mr-2 h-4 w-4" />
+            <span>Dark</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
