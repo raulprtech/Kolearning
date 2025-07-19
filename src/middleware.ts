@@ -2,14 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Since authentication is mocked, we don't need complex logic here.
-  // We'll just ensure that requests for the old dashboard URL are redirected.
-  if (pathname === '/dashboard') {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
+  // Since authentication is mocked and the dashboard is at '/', 
+  // we don't need complex redirect logic for now.
   return NextResponse.next();
 }
 
