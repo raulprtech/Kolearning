@@ -4,6 +4,7 @@ import type { User } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { BrainCircuit, Flame, Zap } from 'lucide-react';
+import Link from 'next/link';
 
 const CoinIcon = (props: React.HTMLAttributes<HTMLSpanElement>) => (
     <span {...props}>🪙</span>
@@ -32,7 +33,9 @@ export function UserStats({ user }: { user: User }) {
                         <div className="space-y-1">
                             <h4 className="text-sm font-semibold">Créditos Cognitivos</h4>
                             <p className="text-sm text-muted-foreground">Tienes {user.coins} créditos.</p>
-                             <Button variant="link" className="p-0 h-auto text-primary">COMPRAR ENERGÍA</Button>
+                             <Button variant="link" asChild className="p-0 h-auto text-primary">
+                                <Link href="/tienda">COMPRAR ENERGÍA</Link>
+                             </Button>
                         </div>
                     </div>
                 </PopoverContent>
