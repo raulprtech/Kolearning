@@ -111,8 +111,9 @@ export default function CreateDeckPage() {
         title: 'Generation Failed',
         description: result.error,
       });
-      setIsLoading(false);
     }
+    // Only set loading to false on error, success will redirect
+    setIsLoading(false);
   };
 
   return (
