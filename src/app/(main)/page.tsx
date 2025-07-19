@@ -5,7 +5,7 @@ import { Timestamp } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Smartphone, Flame, TrendingUp, Play, Bot, PlusCircle, BookCopy, Search } from 'lucide-react';
+import { Zap, TrendingUp, Play, Bot, PlusCircle, BookCopy, Search } from 'lucide-react';
 import type { Deck } from '@/types';
 import { DashboardDeckCard } from '@/components/deck/DashboardDeckCard';
 
@@ -94,9 +94,9 @@ export default async function DashboardPage() {
           </Card>
            <Card className="bg-card/50">
             <CardContent className="p-6 flex flex-col items-start gap-4">
-              <Flame className="h-8 w-8 text-primary" />
+              <Zap className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-muted-foreground text-sm">Racha Actual</p>
+                <p className="text-muted-foreground text-sm">Energía Restante</p>
                 <p className="text-2xl font-bold">{currentStreak}</p>
               </div>
             </CardContent>
