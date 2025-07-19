@@ -1,3 +1,4 @@
+
 import { getAuthSession } from '@/lib/auth';
 import type { User } from '@/types';
 import { Timestamp } from 'firebase/firestore';
@@ -113,7 +114,7 @@ export default async function DashboardPage() {
         
         <div className="mb-12">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold">Mis Mazos</h2>
+                <h2 className="text-3xl font-bold">Mis Planes de Estudio</h2>
                 <Button asChild>
                     <Link href="/create">
                         <PlusCircle className="mr-2 h-5 w-5" />
