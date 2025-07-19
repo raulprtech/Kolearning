@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { User } from '@/types';
@@ -31,7 +32,7 @@ export function UserStats({ user }: { user: User }) {
                         <span className="font-bold">{user.currentStreak}</span>
                     </Button>
                 </PopoverTrigger>
-                 <PopoverContent className="w-64 p-4">
+                 <PopoverContent className="w-auto p-4 px-12 py-4">
                     <div className="text-center">
                         <h4 className="text-sm font-semibold mb-2">Racha de estudio</h4>
                          <div className="flex justify-center gap-3 w-full mb-4">
