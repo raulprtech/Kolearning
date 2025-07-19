@@ -27,7 +27,7 @@ async function getDecks(): Promise<Deck[]> {
       title: 'Álgebra Básica',
       description: 'Aprende los fundamentos del álgebra.',
       category: 'Mathematics',
-      author: 'Kolearning Originals',
+      author: 'Kolearning',
       size: 6,
       bibliography: ['"Algebra for Dummies" by Mary Jane Sterling'],
     },
@@ -36,7 +36,7 @@ async function getDecks(): Promise<Deck[]> {
       title: 'Capitales del Mundo',
       description: 'Pon a prueba tu conocimiento de las capitales del mundo.',
       category: 'Geography',
-      author: 'Kolearning Originals',
+      author: 'Kolearning',
       size: 5,
       bibliography: ['National Geographic Atlas of the World'],
     },
@@ -106,7 +106,7 @@ export default async function DecksPage() {
                     <Select>
                         <SelectTrigger><SelectValue placeholder="Seleccionar autor" /></SelectTrigger>
                         <SelectContent>
-                        <SelectItem value="kolearning">Kolearning Originals</SelectItem>
+                        <SelectItem value="kolearning">Kolearning</SelectItem>
                         <SelectItem value="community">Comunidad</SelectItem>
                         </SelectContent>
                     </Select>

@@ -14,7 +14,7 @@ async function getDeckDetails(deckId: string): Promise<Deck | null> {
       title: 'Basic Algebra', 
       description: 'Learn the fundamentals of algebra.',
       category: 'Mathematics',
-      author: 'Kolearning Originals',
+      author: 'Kolearning',
       size: 6,
       bibliography: ['"Algebra for Dummies" by Mary Jane Sterling']
     },
@@ -23,7 +23,7 @@ async function getDeckDetails(deckId: string): Promise<Deck | null> {
       title: 'World Capitals', 
       description: 'Test your knowledge of world capitals.',
       category: 'Geography',
-      author: 'Kolearning Originals',
+      author: 'Kolearning',
       size: 5,
       bibliography: ['National Geographic Atlas of the World']
     },
