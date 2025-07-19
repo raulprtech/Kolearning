@@ -21,6 +21,8 @@ async function getUserData(uid: string): Promise<User | null> {
         createdAt: mockTimestamp,
         lastSessionAt: mockTimestamp,
         currentStreak: 3,
+        coins: 142,
+        energy: 5,
     };
 }
 

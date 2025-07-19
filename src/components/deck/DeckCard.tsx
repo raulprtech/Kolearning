@@ -43,7 +43,7 @@ export function DeckCard({ deck }: { deck: Deck }) {
           </div>
           <Button asChild variant="link" className="p-0 h-auto text-primary font-medium shrink-0">
             <Link href={`/deck/${deck.id}`}>
-              <span>Start</span>
+              <span>Empezar</span>
               <ArrowRight className="h-4 w-4 ml-2"/>
             </Link>
           </Button>

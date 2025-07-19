@@ -24,8 +24,8 @@ async function getDecks(): Promise<Deck[]> {
   return [
     {
       id: '1',
-      title: 'Basic Algebra',
-      description: 'Learn the fundamentals of algebra.',
+      title: 'Álgebra Básica',
+      description: 'Aprende los fundamentos del álgebra.',
       category: 'Mathematics',
       author: 'Kolearning Originals',
       size: 6,
@@ -33,8 +33,8 @@ async function getDecks(): Promise<Deck[]> {
     },
     {
       id: '2',
-      title: 'World Capitals',
-      description: 'Test your knowledge of world capitals.',
+      title: 'Capitales del Mundo',
+      description: 'Pon a prueba tu conocimiento de las capitales del mundo.',
       category: 'Geography',
       author: 'Kolearning Originals',
       size: 5,
@@ -42,8 +42,8 @@ async function getDecks(): Promise<Deck[]> {
     },
     {
       id: '3',
-      title: 'Spanish Vocabulary',
-      description: 'Expand your Spanish vocabulary.',
+      title: 'Vocabulario de Español',
+      description: 'Amplía tu vocabulario en español.',
       category: 'Languages',
       author: 'Community',
       size: 7,
@@ -58,9 +58,9 @@ export default async function DecksPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Explore Decks</h1>
+        <h1 className="text-3xl font-bold">Explora Proyectos</h1>
         <p className="text-muted-foreground">
-          Find new decks to expand your knowledge.
+          Encuentra nuevos proyectos para ampliar tus conocimientos.
         </p>
       </div>
 
@@ -75,7 +75,7 @@ export default async function DecksPage() {
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center">
                    <Search className="mr-4 h-5 w-5" />
-                   <span className="font-semibold text-foreground">Start searching...</span>
+                   <span className="font-semibold text-foreground">Empieza a buscar...</span>
                 </div>
                 <div className="flex items-center">
                    <Separator orientation="vertical" className="h-8 mx-4" />
@@ -86,53 +86,53 @@ export default async function DecksPage() {
           </PopoverTrigger>
           <PopoverContent className="w-[600px] p-6">
              <div className="grid gap-4">
-                <h4 className="font-medium leading-none">Advanced Search</h4>
+                <h4 className="font-medium leading-none">Búsqueda Avanzada</h4>
                 <p className="text-sm text-muted-foreground">
-                    Fine-tune your search with the filters below.
+                    Ajusta tu búsqueda con los filtros a continuación.
                 </p>
             </div>
             <Separator className="my-4" />
             <form className="grid grid-cols-2 gap-6">
                 <div className="grid gap-2 col-span-2">
-                    <label className="text-sm font-medium">Deck Name</label>
-                    <Input placeholder="e.g., World Capitals" />
+                    <label className="text-sm font-medium">Nombre del Proyecto</label>
+                    <Input placeholder="e.g., Capitales del Mundo" />
                 </div>
                 <div className="grid gap-2">
-                    <label className="text-sm font-medium">Topic</label>
-                    <Input placeholder="e.g., Geography" />
+                    <label className="text-sm font-medium">Tema</label>
+                    <Input placeholder="e.g., Geografía" />
                 </div>
                 <div className="grid gap-2">
-                    <label className="text-sm font-medium">Author</label>
+                    <label className="text-sm font-medium">Autor</label>
                     <Select>
-                        <SelectTrigger><SelectValue placeholder="Select author" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Seleccionar autor" /></SelectTrigger>
                         <SelectContent>
                         <SelectItem value="kolearning">Kolearning Originals</SelectItem>
-                        <SelectItem value="community">Community</SelectItem>
+                        <SelectItem value="community">Comunidad</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="grid gap-2">
-                    <label className="text-sm font-medium">School</label>
-                    <Input placeholder="e.g., National University" />
+                    <label className="text-sm font-medium">Escuela</label>
+                    <Input placeholder="e.g., Universidad Nacional" />
                 </div>
                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Region</label>
+                    <label className="text-sm font-medium">Región</label>
                     <Select>
-                        <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Seleccionar región" /></SelectTrigger>
                         <SelectContent>
-                        <SelectItem value="latam">Latin America</SelectItem>
-                        <SelectItem value="na">North America</SelectItem>
-                        <SelectItem value="eu">Europe</SelectItem>
+                        <SelectItem value="latam">América Latina</SelectItem>
+                        <SelectItem value="na">América del Norte</SelectItem>
+                        <SelectItem value="eu">Europa</SelectItem>
                         <SelectItem value="asia">Asia</SelectItem>
-                        <SelectItem value="africa">Africa</SelectItem>
-                        <SelectItem value="oceania">Oceania</SelectItem>
+                        <SelectItem value="africa">África</SelectItem>
+                        <SelectItem value="oceania">Oceanía</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="col-span-2 mt-4 flex justify-end">
                      <Button className="w-full md:w-auto">
                         <Search className="mr-2 h-4 w-4" />
-                        Apply Search
+                        Aplicar Búsqueda
                     </Button>
                 </div>
             </form>
@@ -140,7 +140,7 @@ export default async function DecksPage() {
         </Popover>
       </div>
 
-      <h2 className="text-2xl font-bold mb-4">Results</h2>
+      <h2 className="text-2xl font-bold mb-4">Resultados</h2>
 
       {decks.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -150,9 +150,9 @@ export default async function DecksPage() {
         </div>
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
-          <h2 className="text-xl font-semibold">No decks found</h2>
+          <h2 className="text-xl font-semibold">No se encontraron proyectos</h2>
           <p className="text-muted-foreground mt-2">
-            Try using different search criteria.
+            Intenta usar diferentes criterios de búsqueda.
           </p>
         </div>
       )}

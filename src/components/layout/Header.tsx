@@ -45,7 +45,7 @@ export async function Header() {
               href="/decks"
               className="transition-colors hover:text-foreground/80 text-foreground"
             >
-              Decks
+              Proyectos
             </Link>
             <Link
               href="/tutor"
