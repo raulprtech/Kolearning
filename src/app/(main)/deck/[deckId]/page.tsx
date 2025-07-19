@@ -13,7 +13,7 @@ async function getDeckDetails(deckId: string): Promise<Deck | null> {
       id: '1', 
       title: 'Basic Algebra', 
       description: 'Learn the fundamentals of algebra.',
-      category: 'Mathematics',
+      category: 'Matemáticas',
       author: 'Kolearning',
       size: 6,
       bibliography: ['"Algebra for Dummies" by Mary Jane Sterling']
@@ -22,7 +22,7 @@ async function getDeckDetails(deckId: string): Promise<Deck | null> {
       id: '2', 
       title: 'World Capitals', 
       description: 'Test your knowledge of world capitals.',
-      category: 'Geography',
+      category: 'Geografía',
       author: 'Kolearning',
       size: 5,
       bibliography: ['National Geographic Atlas of the World']
@@ -31,7 +31,7 @@ async function getDeckDetails(deckId: string): Promise<Deck | null> {
       id: '3', 
       title: 'Spanish Vocabulary', 
       description: 'Expand your Spanish vocabulary.',
-      category: 'Languages',
+      category: 'Idiomas',
       author: 'Community',
       size: 7,
       bibliography: ['"Madrigal\'s Magic Key to Spanish" by Margarita Madrigal']

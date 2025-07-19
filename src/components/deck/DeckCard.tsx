@@ -6,12 +6,12 @@ import type { Deck } from '@/types';
 import { Badge } from '../ui/badge';
 
 const categoryIcons: { [key: string]: React.ReactNode } = {
-    Programming: <Code className="w-full h-full" />,
+    Programación: <Code className="w-full h-full" />,
     'Web Development': <LineChart className="w-full h-full" />,
     AI: <Bot className="w-full h-full" />,
-    Mathematics: <LineChart className="w-full h-full" />,
-    Geography: <LineChart className="w-full h-full" />,
-    Languages: <LineChart className="w-full h-full" />,
+    Matemáticas: <LineChart className="w-full h-full" />,
+    Geografía: <LineChart className="w-full h-full" />,
+    Idiomas: <LineChart className="w-full h-full" />,
     Default: <BookOpen className="w-full h-full" />,
 };
 
