@@ -165,22 +165,6 @@ export default function ProyectosPage() {
                 <label className="text-sm font-medium">Escuela</label>
                 <Input placeholder="e.g., Universidad Nacional" />
               </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">Región</label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar región" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="latam">América Latina</SelectItem>
-                    <SelectItem value="na">América del Norte</SelectItem>
-                    <SelectItem value="eu">Europa</SelectItem>
-                    <SelectItem value="asia">Asia</SelectItem>
-                    <SelectItem value="africa">África</SelectItem>
-                    <SelectItem value="oceania">Oceanía</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="col-span-2 mt-4 flex justify-end">
                 <Button type="submit" className="w-full md:w-auto">
                   <Search className="mr-2 h-4 w-4" />
