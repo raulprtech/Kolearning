@@ -37,7 +37,7 @@ export function DashboardDeckCard({ deck }: { deck: Deck }) {
                 </div>
                 <div className="flex items-center gap-2 text-primary font-medium">
                     <Play className="h-4 w-4"/>
-                    <span>Listo para estudiar</span>
+                    <span>Estudios en Curso</span>
                 </div>
             </div>
         </CardContent>
