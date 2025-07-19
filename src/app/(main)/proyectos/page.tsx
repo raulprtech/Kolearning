@@ -77,13 +77,20 @@ export default function ProyectosPage() {
       return;
     }
 
-    const lowercasedQuery = searchQuery.toLowerCase();
-    const results = allDecks.filter(
-      (deck) =>
-        deck.title.toLowerCase().includes(lowercasedQuery) ||
-        deck.description.toLowerCase().includes(lowercasedQuery) ||
-        deck.category.toLowerCase().includes(lowercasedQuery)
-    );
+    const normalizeText = (text: string) =>
+      text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const searchTerms = normalizeText(searchQuery).split(/\s+/).filter(Boolean);
+
+    const results = allDecks.filter((deck) => {
+      const deckText = normalizeText(
+        `${deck.title} ${deck.description} ${deck.category}`
+      );
+      return searchTerms.every(term => deckText.includes(term));
+    });
 
     setSearchResults(results);
     setIsSearching(true);
