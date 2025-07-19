@@ -104,12 +104,16 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
            <Card className="bg-card/50">
-            <CardContent className="p-6 flex flex-col items-start gap-4">
-              <Flame className="h-8 w-8 text-orange-500" />
-              <div>
-                <p className="text-muted-foreground text-sm">Racha Actual</p>
-                <p className="text-2xl font-bold">{currentStreak}</p>
-              </div>
+            <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-4">
+                <div className="flex items-center gap-2 text-orange-500">
+                    <Flame className="h-6 w-6" />
+                    <p className="text-muted-foreground text-sm">Racha Actual</p>
+                </div>
+                <p className="text-4xl font-bold">{currentStreak}</p>
+                <Button size="sm" className="w-full bg-primary/80 hover:bg-primary text-primary-foreground">
+                    <Play className="mr-2 h-4 w-4" />
+                    Sesión de Estudio
+                </Button>
             </CardContent>
           </Card>
         </div>
@@ -150,10 +154,6 @@ export default async function DashboardPage() {
 
 
         <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="bg-primary/80 hover:bg-primary text-primary-foreground w-full sm:w-auto">
-                <Play className="mr-2 h-5 w-5" />
-                Sesión de Estudio Rápida
-            </Button>
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
                 <Link href="/tutor">
                     <Bot className="mr-2 h-5 w-5" />
