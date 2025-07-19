@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
@@ -15,62 +16,70 @@ export default function CreateDeckPage() {
   const [fileName, setFileName] = useState('');
   const { toast } = useToast();
 
-  const handleFileDrop = useCallback(async (files: FileList | null) => {
-    if (files && files.length > 0) {
-      const uploadedFile = files[0];
-      const allowedTypes = ['text/plain', 'text/markdown'];
-      
-      if (allowedTypes.includes(uploadedFile.type) || uploadedFile.name.endsWith('.md') || uploadedFile.name.endsWith('.txt')) {
-        setFile(uploadedFile);
-        setFileName(uploadedFile.name);
-        setIsLoading(true);
-        try {
-          const fileText = await uploadedFile.text();
-          setText(fileText);
-          toast({
-            title: 'File Processed',
-            description: 'Text extracted from file. You can now generate the deck.',
-          });
-        } catch (error) {
-          console.error(error);
-          toast({
-            variant: 'destructive',
-            title: 'File Error',
-            description: 'Could not process the file.',
-          });
-          setFile(null);
-          setFileName('');
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
+  const processFile = useCallback((fileToProcess: File) => {
+    const allowedTypes = ['text/plain', 'text/markdown'];
+    const isAllowedType = allowedTypes.includes(fileToProcess.type) || fileToProcess.name.endsWith('.md') || fileToProcess.name.endsWith('.txt');
+
+    if (!isAllowedType) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid File Type',
+        description: 'Please upload a TXT or MD file.',
+      });
+      return;
+    }
+
+    setFile(fileToProcess);
+    setFileName(fileToProcess.name);
+    setIsLoading(true);
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const fileText = e.target?.result as string;
+        setText(fileText);
+        toast({
+          title: 'File Processed',
+          description: 'Text extracted from file. You can now generate the deck.',
+        });
+      } catch (error) {
+        console.error(error);
         toast({
           variant: 'destructive',
-          title: 'Invalid File Type',
-          description: 'Please upload a TXT or MD file.',
+          title: 'File Error',
+          description: 'Could not process the file.',
         });
+        setFile(null);
+        setFileName('');
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+    reader.readAsText(fileToProcess);
   }, [toast]);
 
-  const onDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-  };
-  
-  const onDrop = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    handleFileDrop(e.dataTransfer.files);
-  };
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFileDrop(e.target.files);
-  };
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFile(e.target.files[0]);
+    }
+  }, [processFile]);
 
-  const clearFile = () => {
+  const onDragOver = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+  }, []);
+  
+  const onDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  }, [processFile]);
+
+  const clearFile = useCallback(() => {
     setFile(null);
     setFileName('');
     setText('');
-  };
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -96,9 +105,9 @@ export default function CreateDeckPage() {
         title: 'Generation Failed',
         description: result.error,
       });
-      // Only set loading to false on error, success will redirect
-      setIsLoading(false);
     }
+    // Success will redirect, only set loading false on error
+    setIsLoading(false);
   };
 
   return (
