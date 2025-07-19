@@ -80,6 +80,10 @@ export default async function DashboardPage() {
     const nextLevelPoints = 100;
     const progressPercentage = (dominionPoints / nextLevelPoints) * 100;
 
+    // Mock data for the last 5 days activity
+    const lastFiveDaysActivity = [true, true, false, true, true];
+
+
   return (
     <div className="bg-background text-foreground min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
@@ -126,6 +130,15 @@ export default async function DashboardPage() {
                     <p className="text-muted-foreground text-sm">Racha Actual</p>
                 </div>
                 <p className="text-4xl font-bold">{currentStreak}</p>
+                <div className="flex justify-center gap-2">
+                  {lastFiveDaysActivity.map((active, index) => (
+                    <div
+                      key={index}
+                      className={`h-3 w-3 rounded-full ${active ? 'bg-orange-500' : 'bg-muted'}`}
+                      title={`Día ${index + 1}: ${active ? 'Activo' : 'Inactivo'}`}
+                    ></div>
+                  ))}
+                </div>
             </CardContent>
           </Card>
         </div>
