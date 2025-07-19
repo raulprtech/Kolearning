@@ -96,7 +96,7 @@ export default async function DashboardPage() {
               <TrendingUp className="h-8 w-8 text-green-500" />
               <div>
                 <p className="text-muted-foreground text-sm">Progreso de Aprendizaje</p>
-                <p className="text-2xl font-bold">Activo</p>
+                <p className="text-2xl font-bold">Aprendiz en ascenso</p>
               </div>
             </CardContent>
           </Card>
