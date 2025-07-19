@@ -15,10 +15,12 @@ import { useRouter } from 'next/navigation';
 import { Moon, Sun } from 'lucide-react';
 import type { User } from '@/types';
 import { useTheme } from 'next-themes';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
 
 export function UserNav({ user }: { user: User }) {
   const router = useRouter();
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   
   const handleSignOut = async () => {
     await performSignOut();
@@ -50,13 +52,18 @@ export function UserNav({ user }: { user: User }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-           <DropdownMenuItem onClick={() => setTheme('light')}>
-            <Sun className="mr-2 h-4 w-4" />
-            <span>Light</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme('dark')}>
-            <Moon className="mr-2 h-4 w-4" />
-            <span>Dark</span>
+          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+             <div className="flex items-center justify-between w-full">
+                <Label htmlFor="dark-mode" className="flex items-center gap-2 cursor-pointer">
+                  {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  <span>Dark Mode</span>
+                </Label>
+                <Switch
+                  id="dark-mode"
+                  checked={theme === 'dark'}
+                  onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                />
+              </div>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
