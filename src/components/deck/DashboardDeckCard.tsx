@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Play, Code, Bot, LineChart, BookOpen } from 'lucide-react';
 import type { Deck } from '@/types';
+import { Button } from '@/components/ui/button';
 
 const categoryIcons: { [key: string]: React.ReactNode } = {
     Programming: <Code className="w-full h-full" />,
@@ -17,9 +18,9 @@ const getCategoryIcon = (category: string) => {
 
 export function DashboardDeckCard({ deck }: { deck: Deck }) {
   return (
-    <Link href={`/deck/${deck.id}`} className="block group">
-        <Card className="flex flex-col h-full transition-all duration-300 group-hover:shadow-primary/20 group-hover:shadow-lg group-hover:-translate-y-1 bg-card/50 hover:bg-card">
-        <CardContent className="p-6 flex-grow">
+    <Card className="flex flex-col h-full transition-all duration-300 group bg-card/50 hover:bg-card hover:shadow-primary/20 hover:shadow-lg hover:-translate-y-1">
+      <Link href={`/deck/${deck.id}/details`} className="block flex-grow">
+        <CardContent className="p-6 flex-grow flex flex-col h-full">
             <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 p-2.5 rounded-lg bg-primary/10 text-primary">
                     {getCategoryIcon(deck.category)}
@@ -28,20 +29,23 @@ export function DashboardDeckCard({ deck }: { deck: Deck }) {
             </div>
             
             <h3 className="font-bold text-lg text-foreground mb-2 truncate">{deck.title}</h3>
-            <p className="text-muted-foreground text-sm line-clamp-2 mb-4 h-10">{deck.description}</p>
-            
-            <div className="flex justify-between items-center text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4"/>
-                    <span>~ 15 min</span>
-                </div>
-                <div className="flex items-center gap-2 text-primary font-medium">
-                    <Play className="h-4 w-4"/>
-                    <span>Empezar</span>
-                </div>
-            </div>
+            <p className="text-muted-foreground text-sm line-clamp-2 mb-4 h-10 flex-grow">{deck.description}</p>
         </CardContent>
-        </Card>
-    </Link>
+      </Link>
+      <div className="px-6 pb-4 pt-0">
+          <div className="flex justify-between items-center text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4"/>
+                  <span>~ 15 min</span>
+              </div>
+              <Button asChild variant="link" className="p-0 h-auto text-primary font-medium">
+                  <Link href={`/deck/${deck.id}`}>
+                      <Play className="h-4 w-4 mr-2"/>
+                      <span>Empezar</span>
+                  </Link>
+              </Button>
+          </div>
+      </div>
+    </Card>
   );
 }
