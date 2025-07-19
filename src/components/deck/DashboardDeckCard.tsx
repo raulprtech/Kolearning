@@ -24,7 +24,7 @@ export function DashboardDeckCard({ deck }: { deck: Deck }) {
                 <div className="w-12 h-12 p-2.5 rounded-lg bg-primary/10 text-primary">
                     {getCategoryIcon(deck.category)}
                 </div>
-                <Badge variant="outline" className="font-normal">Mazo de estudio</Badge>
+                <Badge variant="outline" className="font-normal capitalize">{deck.category}</Badge>
             </div>
             
             <h3 className="font-bold text-lg text-foreground mb-2 truncate">{deck.title}</h3>
