@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { signOut as performSignOut } from '@/app/actions/auth';
 import { useRouter } from 'next/navigation';
-import { Flame, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import type { User } from '@/types';
 import { useTheme } from 'next-themes';
 
@@ -48,15 +48,6 @@ export function UserNav({ user }: { user: User }) {
             </p>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem className="flex items-center justify-between">
-            <span>Daily Streak</span>
-            <span className='flex items-center gap-1'>
-                <Flame className='h-4 w-4 text-orange-500' /> {user.currentStreak}
-            </span>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
            <DropdownMenuItem onClick={() => setTheme('light')}>
