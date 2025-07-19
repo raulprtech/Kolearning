@@ -19,7 +19,7 @@ export default function CreateDeckPage() {
   const [fileName, setFileName] = useState('');
   const { toast } = useToast();
 
-  const getPdfText = async (file: File): Promise<string> => {
+  const getPdfText = useCallback(async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument(arrayBuffer).promise;
     let fullText = '';
@@ -27,10 +27,10 @@ export default function CreateDeckPage() {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
       fullText += textContent.items.map((item: any) => item.str).join(' ');
-      fullText += '\n'; // Add a newline between pages
+      fullText += '\n';
     }
     return fullText;
-  };
+  }, []);
 
   const handleFileDrop = useCallback(async (files: FileList | null) => {
     if (files && files.length > 0) {
@@ -66,12 +66,12 @@ export default function CreateDeckPage() {
         });
       }
     }
-  }, [toast]);
+  }, [toast, getPdfText]);
 
   const onDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
   };
-
+  
   const onDrop = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     handleFileDrop(e.dataTransfer.files);
@@ -111,9 +111,9 @@ export default function CreateDeckPage() {
         title: 'Generation Failed',
         description: result.error,
       });
+      // Only set loading to false on error, success will redirect
+      setIsLoading(false);
     }
-    // Only set loading to false on error, success will redirect
-    setIsLoading(false);
   };
 
   return (
