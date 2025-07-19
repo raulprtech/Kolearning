@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { BookOpenCheck } from 'lucide-react';
+import { BookOpenCheck, Flame, Gem, Zap } from 'lucide-react';
 import { UserNav } from './UserNav';
 import { getAuthSession } from '@/lib/auth';
 import type { User } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 import { ThemeToggle } from './ThemeToggle';
+import { Button } from '@/components/ui/button';
 
 async function getUserData(uid: string): Promise<User | null> {
     const mockTimestamp = {
@@ -18,6 +19,8 @@ async function getUserData(uid: string): Promise<User | null> {
         createdAt: mockTimestamp,
         lastSessionAt: mockTimestamp,
         currentStreak: 5,
+        coins: 142,
+        energy: 5,
     };
 }
 
@@ -50,7 +53,23 @@ export async function Header() {
             </Link>
         </nav>
 
-        <div className="flex items-center justify-end space-x-4">
+        <div className="flex items-center justify-end space-x-2">
+           {user && (
+            <div className='flex items-center gap-4 mr-2'>
+               <Button variant="ghost" size="sm" className="flex items-center gap-2 text-orange-500">
+                  <Flame className="h-5 w-5" />
+                  <span className="font-bold">{user.currentStreak}</span>
+               </Button>
+               <Button variant="ghost" size="sm" className="flex items-center gap-2 text-blue-400">
+                  <Gem className="h-5 w-5" />
+                  <span className="font-bold">{user.coins}</span>
+               </Button>
+               <Button variant="ghost" size="sm" className="flex items-center gap-2 text-primary">
+                  <Zap className="h-5 w-5" />
+                  <span className="font-bold">{user.energy}</span>
+               </Button>
+            </div>
+           )}
            <ThemeToggle />
            {user && <UserNav user={user} />}
         </div>

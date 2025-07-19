@@ -6,6 +6,8 @@ export interface User {
   createdAt: Timestamp;
   lastSessionAt: Timestamp;
   currentStreak: number;
+  coins: number;
+  energy: number;
 }
 
 export interface Deck {
