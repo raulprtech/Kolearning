@@ -315,9 +315,9 @@ export default function AprenderPage() {
                       )}
                    </div>
                   <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={handleRepeatQuestion}>
-                        <Repeat className="mr-2 h-4 w-4" />
-                        Repetir
+                      <Button variant="outline" size="sm" onClick={goToNext}>
+                        <Frown className="mr-2 h-4 w-4" />
+                        Muy Difícil
                       </Button>
                       <Button variant="outline" size="sm" onClick={goToNext}>
                         <Frown className="mr-2 h-4 w-4" />
