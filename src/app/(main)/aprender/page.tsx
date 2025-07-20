@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -21,6 +21,7 @@ import { handleTutorChat } from '@/app/actions/tutor';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { handleEvaluateOpenAnswer } from '@/app/actions/decks';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const initialSessionQuestions = [
   {
@@ -124,9 +125,18 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
   );
 };
 
-const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer, onUserAnswerChange }: any) => {
+const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer, onUserAnswerChange, feedback }: any) => {
     return (
         <div className="flex flex-col gap-4 mb-6">
+             {feedback && (
+                <Alert variant="default" className="bg-primary/10 border-primary/20">
+                    <Lightbulb className="h-4 w-4 text-primary" />
+                    <AlertTitle className="text-primary/90">Feedback de Koli</AlertTitle>
+                    <AlertDescription className="text-primary/80 prose prose-sm prose-invert max-w-none">
+                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{feedback}</ReactMarkdown>
+                    </AlertDescription>
+                </Alert>
+            )}
             <Textarea 
                 placeholder="Escribe tu respuesta aquí..."
                 className="min-h-[150px] bg-card/70 border-primary/20 text-base"
@@ -470,7 +480,8 @@ export default function AprenderPage() {
   const [isPulsing, setIsPulsing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentOpenAnswerText, setCurrentOpenAnswerText] = useState('');
-  
+  const [openAnswerFeedback, setOpenAnswerFeedback] = useState<string | null>(null);
+
   const { user } = useUser();
   const hasEnergy = user && user.energy > 0;
 
@@ -496,10 +507,18 @@ export default function AprenderPage() {
     updateAnswer(currentIndex, { selectedOption: optionId, isAnswered: true, isCorrect: isAnswerCorrect });
   };
 
+  const handleOpenAnswerTextChange = (text: string) => {
+    setCurrentOpenAnswerText(text);
+    if (openAnswerFeedback) {
+        setOpenAnswerFeedback(null);
+    }
+  };
+
   const handleAnswerSubmit = async () => {
     if (!currentOpenAnswerText.trim()) return;
 
     setIsLoading(true);
+    setOpenAnswerFeedback(null);
 
     const attempts = currentAnswerState.openAnswerAttempts || 0;
     
@@ -515,13 +534,16 @@ export default function AprenderPage() {
         updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText });
     } else {
         if (attempts >= 2) { // Max attempts reached (0, 1, 2). This is the 3rd attempt.
-            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts });
+            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText });
         } else {
             // Try again
+            if (result.evaluation?.feedback) {
+                setOpenAnswerFeedback(result.evaluation.feedback);
+            }
             if (result.evaluation?.rephrasedQuestion) {
                 setSessionQuestions(prevQuestions => {
                     const updatedQuestions = [...prevQuestions];
-                    updatedQuestions[currentIndex].question = result.evaluation.rephrasedQuestion!;
+                    updatedQuestions[currentIndex].question = result.evaluation!.rephrasedQuestion!;
                     return updatedQuestions;
                 });
                 setIsPulsing(true);
@@ -557,6 +579,7 @@ export default function AprenderPage() {
   const goToNext = () => {
       if (currentIndex < sessionQuestions.length - 1) {
           setCurrentIndex(prev => prev + 1);
+          setOpenAnswerFeedback(null);
       }
   };
 
@@ -648,7 +671,8 @@ export default function AprenderPage() {
               isAnswered={currentAnswerState.isAnswered}
               isLoading={isLoading}
               userAnswer={currentOpenAnswerText}
-              onUserAnswerChange={setCurrentOpenAnswerText}
+              onUserAnswerChange={handleOpenAnswerTextChange}
+              feedback={openAnswerFeedback}
             />
           )}
           
@@ -695,5 +719,7 @@ export default function AprenderPage() {
     </div>
   );
 }
+
+    
 
     
