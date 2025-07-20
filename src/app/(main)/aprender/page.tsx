@@ -496,10 +496,9 @@ export default function AprenderPage() {
   };
 
   const handleAnswerSubmit = async () => {
-    if (!currentOpenAnswerText.trim() || !hasEnergy) return;
+    if (!currentOpenAnswerText.trim()) return;
 
     setIsLoading(true);
-    decrementEnergy();
 
     const attempts = currentAnswerState.openAnswerAttempts || 0;
     
@@ -513,7 +512,7 @@ export default function AprenderPage() {
         setMasteryProgress(prev => Math.min(prev + 10, 100));
         updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText });
     } else {
-        if (attempts + 1 >= 2) {
+        if (attempts + 1 >= 3) {
             // Max attempts reached
             updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
         } else {
