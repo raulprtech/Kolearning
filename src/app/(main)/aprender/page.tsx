@@ -224,10 +224,10 @@ export default function AprenderPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+      <div className="xl:grid xl:grid-cols-3 xl:gap-8">
 
         {/* Main Content Column */}
-        <div className="lg:col-span-2">
+        <div className="xl:col-span-2">
           <div className="mb-4">
             <Link href="/" className="text-sm text-primary hover:underline flex items-center mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Salir de la sesión
@@ -337,12 +337,12 @@ export default function AprenderPage() {
         </div>
 
         {/* Help Column */}
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
             <MagicHelpPanel />
         </div>
       </div>
 
-       <div className="lg:hidden">
+       <div className="xl:hidden">
          <MagicHelpPopover />
        </div>
 
