@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SendHorizonal, User as UserIcon } from 'lucide-react';
+import { SendHorizonal, User2 } from 'lucide-react';
 import { handleTutorChat } from '@/app/actions/tutor';
 import { cn } from '@/lib/utils';
 
@@ -84,9 +84,9 @@ export default function TutorPage() {
             <h1 className="text-3xl font-bold">AI Tutor</h1>
             <p className="text-muted-foreground">Ask me anything about your studies!</p>
        </div>
-      <div className="flex-grow flex flex-col bg-card border rounded-lg shadow-sm">
+      <div className="flex-grow flex flex-col bg-black/30 rounded-lg">
         <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
-          <div className="space-y-4">
+          <div className="space-y-6 font-code">
             {messages.map((msg, index) => (
               <div
                 key={index}
@@ -98,17 +98,17 @@ export default function TutorPage() {
                 {msg.sender === 'ai' && <TutorAvatar />}
                 <div
                   className={cn(
-                    'max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg',
+                    'max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg text-sm md:text-base',
                     msg.sender === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                      ? 'bg-secondary/50 border border-primary/50 text-primary-foreground'
+                      : 'bg-blue-900/50 border border-blue-600/50 shadow-[0_0_15px_rgba(59,130,246,0.2)] text-blue-50'
                   )}
                 >
-                  <p className="text-sm">{msg.text}</p>
+                  <p>{msg.text}</p>
                 </div>
                 {msg.sender === 'user' && (
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback><UserIcon className="w-5 h-5" /></AvatarFallback>
+                  <Avatar className="w-8 h-8 border-2 border-primary/50">
+                    <AvatarFallback className='bg-secondary/50'><User2 className="w-5 h-5" /></AvatarFallback>
                   </Avatar>
                 )}
               </div>
@@ -125,20 +125,20 @@ export default function TutorPage() {
             )}
           </div>
         </ScrollArea>
-        <div className="p-4 border-t">
-          <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-2">
+        <div className="p-4 border-t border-primary/20">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-4">
             <Input
               {...register('message')}
-              placeholder="Type your message..."
-              className="flex-grow"
+              placeholder="Message AI Tutor..."
+              className="flex-grow bg-transparent border-primary/30 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:border-primary font-code"
               autoComplete='off'
               disabled={isLoading}
             />
-            <Button type="submit" size="icon" disabled={isLoading}>
+            <Button type="submit" size="icon" disabled={isLoading} variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20 hover:text-primary-foreground">
               <SendHorizonal className="h-4 w-4" />
             </Button>
           </form>
-           {errors.message && <p className="text-destructive text-xs mt-1">{errors.message.message}</p>}
+           {errors.message && <p className="text-destructive text-xs mt-2">{errors.message.message}</p>}
         </div>
       </div>
     </div>
