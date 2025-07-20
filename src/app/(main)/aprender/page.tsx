@@ -226,23 +226,27 @@ export default function AprenderPage() {
         
         {currentAnswerState.isAnswered && (
              <div className="flex justify-between items-center bg-card/70 border rounded-lg p-4">
-                 <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-4">
                     {currentQuestion.type === 'multiple-choice' && (
                          isCorrect ? (
-                            <>
+                            <div className="flex items-center gap-2">
                                 <CheckCircle className="h-6 w-6 text-green-500" />
                                 <p className="font-bold text-lg">¡Correcto!</p>
-                            </>
+                            </div>
                         ) : (
-                             <>
+                             <div className="flex items-center gap-2">
                                 <XCircle className="h-6 w-6 text-red-500" />
                                 <p className="font-bold text-lg">Respuesta incorrecta</p>
-                            </>
+                            </div>
                         )
                     )}
                     {currentQuestion.type === 'open-answer' && (
                         <p className="font-bold text-lg">Respuesta enviada</p>
                     )}
+                    <Button variant="outline" size="sm">
+                        <Lightbulb className="mr-2 h-4 w-4" />
+                        Explicar
+                    </Button>
                  </div>
                 <div className="flex gap-2">
                     <Button size="icon" variant="outline" onClick={goToPrevious} disabled={currentIndex === 0}>
