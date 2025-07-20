@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, ChevronRight, ChevronLeft, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, ChevronRight, ChevronLeft, Lightbulb, Repeat } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -120,7 +120,6 @@ const OpenAnswerQuestion = ({ onAnswerSubmit }: any) => {
 export default function AprenderPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerState>({});
-  const [showNavigation, setShowNavigation] = useState(false);
   const [masteryProgress, setMasteryProgress] = useState(10);
 
   const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [currentIndex]);
@@ -134,7 +133,6 @@ export default function AprenderPage() {
       ...prev,
       [index]: { ...prev[index], ...update, isAnswered: true }
     }));
-    setShowNavigation(true);
   }
 
   const handleOptionSelect = (optionId: string) => {
@@ -149,18 +147,18 @@ export default function AprenderPage() {
     // This could be a feature for later where AI evaluates the answer.
     updateAnswer(currentIndex, { answerText: 'dummy' });
   };
+  
+  const handleRepeatQuestion = () => {
+    setAnswers(prev => {
+        const newAnswers = {...prev};
+        delete newAnswers[currentIndex];
+        return newAnswers;
+    });
+  };
 
   const goToNext = () => {
       if (currentIndex < sessionQuestions.length - 1) {
           setCurrentIndex(prev => prev + 1);
-          setShowNavigation(false);
-      }
-  };
-
-  const goToPrevious = () => {
-      if (currentIndex > 0) {
-          setCurrentIndex(prev => prev - 1);
-          setShowNavigation(false);
       }
   };
 
@@ -258,16 +256,21 @@ export default function AprenderPage() {
                         Explicar
                     </Button>
                  </div>
-                {showNavigation && (
-                    <div className="flex gap-2">
-                        <Button size="icon" variant="outline" onClick={goToPrevious} disabled={currentIndex === 0}>
-                            <ChevronLeft className="h-5 w-5" />
-                        </Button>
-                        <Button size="icon" onClick={goToNext} disabled={currentIndex === sessionQuestions.length - 1}>
-                            <ChevronRight className="h-5 w-5" />
-                        </Button>
-                    </div>
-                )}
+                <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleRepeatQuestion}>
+                      <Repeat className="mr-2 h-4 w-4" />
+                      Repetir
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={goToNext}>
+                      Difícil
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={goToNext}>
+                      Bien
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={goToNext}>
+                      Fácil
+                    </Button>
+                </div>
             </div>
         )}
 
