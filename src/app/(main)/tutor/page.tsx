@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -8,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SendHorizonal, Bot, User as UserIcon } from 'lucide-react';
+import { SendHorizonal, User as UserIcon } from 'lucide-react';
 import { handleTutorChat } from '@/app/actions/tutor';
+import { cn } from '@/lib/utils';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'Message cannot be empty.'),
@@ -20,6 +22,12 @@ interface Message {
   sender: 'user' | 'ai';
   text: string;
 }
+
+const TutorAvatar = () => (
+  <div className="w-8 h-8 rounded-full bg-blue-500/50 flex items-center justify-center shrink-0">
+      <div className="w-full h-full rounded-full bg-gradient-radial from-white to-blue-400 animate-pulse"></div>
+  </div>
+);
 
 export default function TutorPage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -82,25 +90,23 @@ export default function TutorPage() {
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`flex items-start gap-3 ${
+                className={cn(
+                  'flex items-start gap-3',
                   msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                {msg.sender === 'ai' && (
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback><Bot className="w-5 h-5" /></AvatarFallback>
-                  </Avatar>
                 )}
+              >
+                {msg.sender === 'ai' && <TutorAvatar />}
                 <div
-                  className={`max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg ${
+                  className={cn(
+                    'max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg',
                     msg.sender === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
-                  }`}
+                  )}
                 >
                   <p className="text-sm">{msg.text}</p>
                 </div>
-                 {msg.sender === 'user' && (
+                {msg.sender === 'user' && (
                   <Avatar className="w-8 h-8">
                     <AvatarFallback><UserIcon className="w-5 h-5" /></AvatarFallback>
                   </Avatar>
@@ -109,9 +115,7 @@ export default function TutorPage() {
             ))}
              {isLoading && (
                 <div className="flex items-start gap-3 justify-start">
-                     <Avatar className="w-8 h-8">
-                        <AvatarFallback><Bot className="w-5 h-5" /></AvatarFallback>
-                     </Avatar>
+                     <TutorAvatar />
                     <div className="max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg bg-muted flex items-center gap-2">
                         <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-0"></span>
                         <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-150"></span>
