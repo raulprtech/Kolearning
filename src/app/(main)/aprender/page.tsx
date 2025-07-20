@@ -59,6 +59,24 @@ type AnswerState = {
     };
 };
 
+const QuestionHelperActions = () => (
+    <div className="flex justify-end items-center gap-2 mb-4 -mt-2">
+        <Button variant="outline" size="sm" className="text-muted-foreground">
+            <Lightbulb className="mr-2 h-4 w-4" />
+            Pista
+        </Button>
+        <Button variant="outline" size="sm" className="text-muted-foreground">
+            <Eye className="mr-2 h-4 w-4" />
+            Ver Respuesta
+        </Button>
+        <Button variant="outline" size="sm" className="text-muted-foreground">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Reformular
+        </Button>
+    </div>
+);
+
+
 const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) => {
   const { isAnswered, selectedOption } = answerState || { isAnswered: false };
   
@@ -78,6 +96,7 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
 
   return (
     <>
+      <QuestionHelperActions />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {question.options.map((option: any) => (
           <Card
@@ -117,6 +136,7 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered }: any) => {
             />
             {!isAnswered && (
                 <>
+                    <QuestionHelperActions />
                     <div className="flex justify-end">
                         <Button onClick={onAnswerSubmit}>Enviar Respuesta</Button>
                     </div>
@@ -236,11 +256,12 @@ export default function AprenderPage() {
           
           <Card className="mb-6">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <div>
-                  <h2 className="text-sm text-muted-foreground mb-1">Estás aprendiendo</h2>
-                  <h1 className="text-2xl font-bold">JavaScript Fundamentals</h1>
+                <div className="mb-4">
+                    <h2 className="text-sm text-muted-foreground mb-1">Estás aprendiendo</h2>
+                    <h1 className="text-2xl font-bold">JavaScript Fundamentals</h1>
                 </div>
+
+              <div className="flex items-center justify-between gap-4 mb-4">
                 <div className="flex items-center gap-4 text-sm shrink-0">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-green-400" />
