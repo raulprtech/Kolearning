@@ -88,9 +88,9 @@ async function getFlashcards(deckId: string, deck: Deck | null): Promise<Flashca
   return [];
 }
 
-export default async function DeckPage({ params }: { params: { deckId: string } }) {
-  const deck = await getDeckDetails(params.deckId);
-  const flashcards = await getFlashcards(params.deckId, deck);
+export default async function DeckPage({ params: { deckId } }: { params: { deckId: string } }) {
+  const deck = await getDeckDetails(deckId);
+  const flashcards = await getFlashcards(deckId, deck);
 
   if (!deck) {
     return (
