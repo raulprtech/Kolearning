@@ -613,9 +613,10 @@ export default function AprenderPage() {
       if (currentQuestion.type === 'multiple-choice') {
           handleOptionSelect((currentQuestion as any).correctAnswer);
       } else if (currentQuestion.type === 'open-answer') {
+          handleCorrectAnswer('open-answer');
           updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentQuestion.correctAnswerText });
           setCurrentOpenAnswerText(currentQuestion.correctAnswerText);
-          setRevealedAnswer(null); // Clear any revealed answer to avoid duplication
+          setRevealedAnswer(currentQuestion.correctAnswerText);
       }
   };
   
@@ -801,3 +802,4 @@ export default function AprenderPage() {
 
 
     
+
