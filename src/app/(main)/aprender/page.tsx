@@ -132,8 +132,8 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
              {feedback && (
                 <Alert variant="default" className="bg-primary/10 border-primary/20">
                     <TutorAvatar className="h-5 w-5 absolute left-4 top-4" />
-                    <AlertTitle className="text-primary/90">Feedback de Koli</AlertTitle>
-                    <AlertDescription className="text-primary/80 prose prose-sm prose-invert max-w-none">
+                    <AlertTitle className="text-primary/90 pl-7">Feedback de Koli</AlertTitle>
+                    <AlertDescription className="text-primary/80 prose prose-sm prose-invert pl-7">
                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{feedback}</ReactMarkdown>
                     </AlertDescription>
                 </Alert>
@@ -724,3 +724,4 @@ export default function AprenderPage() {
     
 
     
+
