@@ -81,8 +81,8 @@ export default function TutorPage() {
   return (
     <div className="container mx-auto py-8 h-[calc(100vh-57px)] flex flex-col">
        <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold">AI Tutor</h1>
-            <p className="text-muted-foreground">Ask me anything about your studies!</p>
+            <h1 className="text-3xl font-bold">Pregúntale a Koli</h1>
+            <p className="text-muted-foreground">¡Pregúntame lo que sea sobre tus estudios!</p>
        </div>
       <div className="flex-grow flex flex-col bg-black/30 rounded-lg">
         <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
@@ -100,7 +100,7 @@ export default function TutorPage() {
                   className={cn(
                     'max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg text-sm md:text-base',
                     msg.sender === 'user'
-                      ? 'bg-secondary/50 border border-primary/50 text-foreground'
+                      ? 'bg-secondary/50 border border-primary/50 text-primary-foreground'
                       : 'bg-blue-900/50 border border-blue-600/50 shadow-[0_0_15px_rgba(59,130,246,0.2)] text-blue-100'
                   )}
                 >
@@ -129,7 +129,7 @@ export default function TutorPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-4">
             <Input
               {...register('message')}
-              placeholder="Message AI Tutor..."
+              placeholder="Escríbele a Koli..."
               className="flex-grow bg-transparent border-primary/30 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:border-primary font-code"
               autoComplete='off'
               disabled={isLoading}
