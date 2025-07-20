@@ -136,7 +136,7 @@ export default function AprenderPage() {
   }
 
   const handleOptionSelect = (optionId: string) => {
-    if (currentQuestion.type === 'multiple-choice' && optionId === currentQuestion.correctAnswer) {
+    if (currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer) {
         setMasteryProgress(prev => Math.min(prev + 10, 100));
     }
     updateAnswer(currentIndex, { selectedOption: optionId });
@@ -162,7 +162,7 @@ export default function AprenderPage() {
       }
   };
 
-  const isCorrect = currentQuestion.type === 'multiple-choice' && currentAnswerState.selectedOption === currentQuestion.correctAnswer;
+  const isCorrect = currentQuestion.type === 'multiple-choice' && currentAnswerState.selectedOption === (currentQuestion as any).correctAnswer;
 
   return (
     <div className="container mx-auto py-8 flex flex-col items-center">
@@ -213,7 +213,7 @@ export default function AprenderPage() {
                 </ReactMarkdown>
                 {currentQuestion.type === 'multiple-choice' && 'code' in currentQuestion && (
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {currentQuestion.code}
+                        {(currentQuestion as any).code}
                     </ReactMarkdown>
                 )}
             </div>
