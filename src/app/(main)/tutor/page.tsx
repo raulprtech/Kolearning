@@ -107,12 +107,11 @@ export default function TutorPage() {
                   )}
                 >
                   {msg.sender === 'ai' ? (
-                    <ReactMarkdown 
-                        remarkPlugins={[remarkGfm]}
-                        className="prose prose-invert prose-sm md:prose-base prose-p:my-2 prose-p:leading-relaxed prose-headings:text-blue-200 prose-strong:text-blue-100 prose-blockquote:border-blue-400 prose-code:text-yellow-300 prose-table:border-blue-600/50 prose-th:text-blue-200 prose-tr:border-blue-600/50"
-                    >
-                      {msg.text}
-                    </ReactMarkdown>
+                    <div className="prose prose-invert prose-sm md:prose-base prose-p:my-2 prose-p:leading-relaxed prose-headings:text-blue-200 prose-strong:text-blue-100 prose-blockquote:border-blue-400 prose-code:text-yellow-300 prose-table:border-blue-600/50 prose-th:text-blue-200 prose-tr:border-blue-600/50">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.text}
+                        </ReactMarkdown>
+                    </div>
                   ) : (
                     <p>{msg.text}</p>
                   )}
