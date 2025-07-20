@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Slider } from '@/components/ui/slider';
 import { ArrowLeft, Zap, TrendingUp, Sparkles, Eye, Repeat, CheckCircle, XCircle, ChevronRight, ChevronLeft, Lightbulb } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -53,7 +55,6 @@ type AnswerState = {
         answerText?: string;
     };
 };
-
 
 const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) => {
   const { isAnswered, selectedOption } = answerState || { isAnswered: false };
@@ -121,6 +122,8 @@ const OpenAnswerQuestion = ({ onAnswerSubmit }: any) => {
 export default function AprenderPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerState>({});
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
+  const [showNavigation, setShowNavigation] = useState(false);
 
   const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [currentIndex]);
   const currentAnswerState = useMemo(() => answers[currentIndex] || { isAnswered: false }, [answers, currentIndex]);
@@ -129,29 +132,39 @@ export default function AprenderPage() {
   const masteryProgress = 10;
   const energy = 5;
 
-  const handleOptionSelect = (optionId: string) => {
+  const updateAnswer = (index: number, update: Partial<AnswerState[number]>) => {
     setAnswers(prev => ({
       ...prev,
-      [currentIndex]: { ...prev[currentIndex], isAnswered: true, selectedOption: optionId }
+      [index]: { ...prev[index], ...update, isAnswered: true }
     }));
+    setIsRatingOpen(true);
+    setShowNavigation(false);
+  }
+
+  const handleOptionSelect = (optionId: string) => {
+    updateAnswer(currentIndex, { selectedOption: optionId });
   };
 
   const handleAnswerSubmit = () => {
-    setAnswers(prev => ({
-      ...prev,
-      [currentIndex]: { ...prev[currentIndex], isAnswered: true }
-    }));
+    updateAnswer(currentIndex, { answerText: 'dummy' });
   };
+
+  const handleRatingSubmit = () => {
+      setIsRatingOpen(false);
+      setShowNavigation(true);
+  }
 
   const goToNext = () => {
       if (currentIndex < sessionQuestions.length - 1) {
           setCurrentIndex(prev => prev + 1);
+          setShowNavigation(false);
       }
   };
 
   const goToPrevious = () => {
       if (currentIndex > 0) {
           setCurrentIndex(prev => prev - 1);
+          setShowNavigation(false);
       }
   };
 
@@ -224,7 +237,7 @@ export default function AprenderPage() {
           />
         )}
         
-        {currentAnswerState.isAnswered && (
+        {currentAnswerState.isAnswered && !isRatingOpen && (
              <div className="flex justify-between items-center bg-card/70 border rounded-lg p-4">
                  <div className="flex items-center gap-4">
                     {currentQuestion.type === 'multiple-choice' && (
@@ -248,18 +261,45 @@ export default function AprenderPage() {
                         Explicar
                     </Button>
                  </div>
-                <div className="flex gap-2">
-                    <Button size="icon" variant="outline" onClick={goToPrevious} disabled={currentIndex === 0}>
-                        <ChevronLeft className="h-5 w-5" />
-                    </Button>
-                    <Button size="icon" onClick={goToNext} disabled={currentIndex === sessionQuestions.length - 1}>
-                        <ChevronRight className="h-5 w-5" />
-                    </Button>
-                </div>
+                {showNavigation && (
+                    <div className="flex gap-2">
+                        <Button size="icon" variant="outline" onClick={goToPrevious} disabled={currentIndex === 0}>
+                            <ChevronLeft className="h-5 w-5" />
+                        </Button>
+                        <Button size="icon" onClick={goToNext} disabled={currentIndex === sessionQuestions.length - 1}>
+                            <ChevronRight className="h-5 w-5" />
+                        </Button>
+                    </div>
+                )}
             </div>
         )}
+
+        <Dialog open={isRatingOpen} onOpenChange={setIsRatingOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle className="text-center text-lg">¿Qué tan difícil se te hizo la pregunta?</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 px-2">
+                    <Slider
+                        defaultValue={[50]}
+                        max={100}
+                        step={1}
+                        className="my-4"
+                    />
+                     <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Muy Fácil</span>
+                        <span>Muy Difícil</span>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleRatingSubmit} className="w-full">Continuar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
       </div>
     </div>
   );
 }
+
+    
