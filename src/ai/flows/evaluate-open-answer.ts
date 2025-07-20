@@ -23,7 +23,7 @@ const EvaluateOpenAnswerOutputSchema = z.object({
   feedback: z
     .string()
     .describe(
-      "Brief, one-sentence feedback explaining why the answer is incorrect. If the answer is correct, this should be a short, encouraging message like '¡Correcto!'."
+      "Personalized feedback based on the user's answer. If correct, provide a short, encouraging message. If incorrect, explain the main error or acknowledge partial correctness (e.g., 'You're on the right track, but...')."
     ),
   rephrasedQuestion: z
     .string()
@@ -42,12 +42,19 @@ const prompt = ai.definePrompt({
   name: 'evaluateOpenAnswerPrompt',
   input: { schema: EvaluateOpenAnswerInputSchema },
   output: { schema: EvaluateOpenAnswerOutputSchema },
-  prompt: `You are an expert evaluator for a learning application. Your task is to assess a user's answer to a question.
+  prompt: `You are an expert evaluator for a learning application. Your task is to assess a user's answer to a question and provide constructive, personalized feedback.
 
 Analyze the user's answer and determine if it is substantially correct when compared to the provided correct answer. Minor differences in wording are acceptable as long as the core concepts are accurate.
 
-- If the user's answer is correct, set 'isCorrect' to true and provide brief, positive feedback.
-- If the user's answer is incorrect, set 'isCorrect' to false. Provide a concise, one-sentence feedback explaining the main error. Then, rephrase the original question in a simpler way or from a different angle to give the user another chance. Do not give away the answer in your feedback or rephrased question.
+- If the user's answer is correct, set 'isCorrect' to true and provide brief, positive feedback (e.g., '¡Correcto!', '¡Excelente!').
+- If the user's answer is incorrect, set 'isCorrect' to false and do the following:
+  1.  **Analyze the user's answer for partial correctness.**
+  2.  **Generate personalized feedback.**
+      - If the user is on the right track but missed a key point, acknowledge their effort (e.g., "¡Estás cerca!", "Vas por buen camino, pero recuerda que..."). Then, briefly state what's missing or needs correction.
+      - If the answer is completely off-track, provide a concise, one-sentence feedback explaining the main error.
+  3.  **Rephrase the original question.** Create a simpler version or reframe it from a different angle to give the user another chance.
+
+**Crucially, do not give away the full answer in your feedback or rephrased question.** Your goal is to guide, not to provide solutions.
 
 Original Question:
 """
