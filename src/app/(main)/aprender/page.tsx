@@ -488,6 +488,7 @@ export default function AprenderPage() {
   }
 
   const handleOptionSelect = (optionId: string) => {
+    if (!hasEnergy) return; // Although button is disabled, good to double check
     const isAnswerCorrect = currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer;
     if (isAnswerCorrect) {
         setMasteryProgress(prev => Math.min(prev + 10, 100));
@@ -502,6 +503,7 @@ export default function AprenderPage() {
 
     const attempts = currentAnswerState.openAnswerAttempts || 0;
     
+    // This part does not consume energy
     const result = await handleEvaluateOpenAnswer({
         question: currentQuestion.question,
         correctAnswer: currentQuestion.correctAnswerText,
@@ -512,9 +514,8 @@ export default function AprenderPage() {
         setMasteryProgress(prev => Math.min(prev + 10, 100));
         updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText });
     } else {
-        if (attempts >= 2) {
-            // Max attempts reached (0, 1, 2)
-            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
+        if (attempts >= 2) { // Max attempts reached (0, 1, 2). This is the 3rd attempt.
+            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts });
         } else {
             // Try again
             if (result.evaluation?.rephrasedQuestion) {
@@ -694,3 +695,5 @@ export default function AprenderPage() {
     </div>
   );
 }
+
+    
