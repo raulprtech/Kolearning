@@ -150,10 +150,11 @@ const MagicHelpPanel = () => (
   </Card>
 );
 
-const MagicHelpPopover = ({ currentQuestion }: { currentQuestion: any }) => {
+const MagicHelpPopover = ({ currentQuestion, onShowAnswer }: { currentQuestion: any, onShowAnswer: () => void }) => {
     const [hintViewActive, setHintViewActive] = useState(false);
     const [hintText, setHintText] = useState('');
     const [isHintLoading, setIsHintLoading] = useState(false);
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
     const handleHintClick = async () => {
         setHintViewActive(true);
@@ -171,13 +172,25 @@ const MagicHelpPopover = ({ currentQuestion }: { currentQuestion: any }) => {
         setIsHintLoading(false);
     };
 
+    const handleShowAnswerClick = () => {
+        onShowAnswer();
+        setIsPopoverOpen(false); // Close popover after action
+    };
+
     const resetView = () => {
         setHintViewActive(false);
         setHintText('');
     };
 
+    const onOpenChange = (open: boolean) => {
+        setIsPopoverOpen(open);
+        if (!open) {
+            resetView();
+        }
+    };
+
     return (
-        <Popover onOpenChange={(open) => !open && resetView()}>
+        <Popover open={isPopoverOpen} onOpenChange={onOpenChange}>
             <PopoverTrigger asChild>
                 <Button
                     variant="default"
@@ -221,7 +234,7 @@ const MagicHelpPopover = ({ currentQuestion }: { currentQuestion: any }) => {
                         </div>
                         <div className="grid gap-2">
                             <Button variant="outline" onClick={handleHintClick}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
-                            <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
+                            <Button variant="outline" onClick={handleShowAnswerClick}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
                             <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
                             <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
                         </div>
@@ -262,6 +275,14 @@ export default function AprenderPage() {
     // For open answers, we can't auto-check, so we don't award points here automatically.
     // This could be a feature for later where AI evaluates the answer.
     updateAnswer(currentIndex, { answerText: 'dummy' });
+  };
+
+  const handleShowAnswer = () => {
+      if (currentQuestion.type === 'multiple-choice') {
+          handleOptionSelect((currentQuestion as any).correctAnswer);
+      } else if (currentQuestion.type === 'open-answer') {
+          handleAnswerSubmit();
+      }
   };
   
   const handleRepeatQuestion = () => {
@@ -404,7 +425,7 @@ export default function AprenderPage() {
       </div>
 
        <div className="xl:hidden">
-         <MagicHelpPopover currentQuestion={currentQuestion} />
+         <MagicHelpPopover currentQuestion={currentQuestion} onShowAnswer={handleShowAnswer} />
        </div>
 
     </div>
