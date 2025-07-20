@@ -126,6 +126,54 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered }: any) => {
     );
 };
 
+const MagicHelpPanel = () => (
+  <Card className="bg-card/70 sticky top-24">
+      <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-primary" />
+              Ayuda Mágica
+          </CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-2">
+          <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+          <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
+          <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+          <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
+      </CardContent>
+  </Card>
+);
+
+const MagicHelpPopover = () => (
+   <Popover>
+    <PopoverTrigger asChild>
+       <Button
+        variant="default"
+        size="lg"
+        className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30"
+      >
+        <Wand2 className="h-8 w-8" />
+        <span className="sr-only">Ayuda Mágica</span>
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-80 mb-2 mr-2" side="top" align="end">
+      <div className="grid gap-4">
+        <div className="space-y-2">
+          <h4 className="font-medium leading-none">Ayuda Mágica</h4>
+          <p className="text-sm text-muted-foreground">
+            Usa estas herramientas para ayudarte a aprender.
+          </p>
+        </div>
+        <div className="grid gap-2">
+           <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+           <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
+           <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+           <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
+        </div>
+      </div>
+    </PopoverContent>
+  </Popover>
+);
+
 
 export default function AprenderPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -175,144 +223,128 @@ export default function AprenderPage() {
   const isCorrect = currentQuestion.type === 'multiple-choice' && currentAnswerState.selectedOption === (currentQuestion as any).correctAnswer;
 
   return (
-    <div className="container mx-auto py-8 flex flex-col items-center">
-      <div className="w-full max-w-3xl">
-        <div className="mb-4">
-          <Link href="/" className="text-sm text-primary hover:underline flex items-center mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Salir de la sesión
-          </Link>
+    <div className="container mx-auto py-8">
+      <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+
+        {/* Main Content Column */}
+        <div className="lg:col-span-2">
+          <div className="mb-4">
+            <Link href="/" className="text-sm text-primary hover:underline flex items-center mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Salir de la sesión
+            </Link>
+          </div>
+          
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <h2 className="text-sm text-muted-foreground mb-1">Estás aprendiendo</h2>
+              <h1 className="text-2xl font-bold mb-3">JavaScript Fundamentals</h1>
+              <div className="flex items-center justify-between gap-6">
+                <div className="w-full">
+                  <p className="text-sm text-muted-foreground mb-1">Progreso de la sesión ({currentIndex + 1}/{sessionQuestions.length})</p>
+                  <Progress value={sessionProgress} />
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-green-400" />
+                    <div>
+                      <p className="font-bold">{masteryProgress}%</p>
+                      <p className="text-xs text-muted-foreground">Dominio</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-primary" />
+                     <div>
+                      <p className="font-bold">{energy}</p>
+                      <p className="text-xs text-muted-foreground">Energía</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-6 bg-card/70">
+            <CardHeader>
+              <CardTitle className="text-xl">Pregunta</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-invert prose-sm md:prose-base max-w-none prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {currentQuestion.question}
+                  </ReactMarkdown>
+                  {currentQuestion.type === 'multiple-choice' && 'code' in currentQuestion && (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {(currentQuestion as any).code}
+                      </ReactMarkdown>
+                  )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {currentQuestion.type === 'multiple-choice' ? (
+            <MultipleChoiceQuestion 
+              question={currentQuestion}
+              answerState={currentAnswerState}
+              onOptionSelect={handleOptionSelect}
+            />
+          ) : (
+            <OpenAnswerQuestion 
+              onAnswerSubmit={handleAnswerSubmit}
+              isAnswered={currentAnswerState.isAnswered}
+            />
+          )}
+          
+          {currentAnswerState.isAnswered && (
+               <div className="flex justify-between items-center bg-card/70 border rounded-lg p-4">
+                   <div className="flex items-center gap-4">
+                      {currentQuestion.type === 'multiple-choice' && (
+                           isCorrect ? (
+                              <div className="flex items-center gap-2">
+                                  <CheckCircle className="h-6 w-6 text-green-500" />
+                                  <p className="font-bold text-lg">¡Correcto!</p>
+                              </div>
+                          ) : (
+                               <div className="flex items-center gap-2">
+                                  <XCircle className="h-6 w-6 text-red-500" />
+                                  <p className="font-bold text-lg">Respuesta incorrecta</p>
+                              </div>
+                          )
+                      )}
+                      {currentQuestion.type === 'open-answer' && (
+                          <p className="font-bold text-lg">Respuesta enviada</p>
+                      )}
+                   </div>
+                  <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={handleRepeatQuestion}>
+                        <Repeat className="mr-2 h-4 w-4" />
+                        Repetir
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={goToNext}>
+                        <Frown className="mr-2 h-4 w-4" />
+                        Difícil
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={goToNext}>
+                        <Meh className="mr-2 h-4 w-4" />
+                        Bien
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={goToNext}>
+                        <Smile className="mr-2 h-4 w-4" />
+                        Fácil
+                      </Button>
+                  </div>
+              </div>
+          )}
         </div>
-        
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <h2 className="text-sm text-muted-foreground mb-1">Estás aprendiendo</h2>
-            <h1 className="text-2xl font-bold mb-3">JavaScript Fundamentals</h1>
-            <div className="flex items-center justify-between gap-6">
-              <div className="w-full">
-                <p className="text-sm text-muted-foreground mb-1">Progreso de la sesión ({currentIndex + 1}/{sessionQuestions.length})</p>
-                <Progress value={sessionProgress} />
-              </div>
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-400" />
-                  <div>
-                    <p className="font-bold">{masteryProgress}%</p>
-                    <p className="text-xs text-muted-foreground">Dominio</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-primary" />
-                   <div>
-                    <p className="font-bold">{energy}</p>
-                    <p className="text-xs text-muted-foreground">Energía</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="mb-6 bg-card/70">
-          <CardHeader>
-            <CardTitle className="text-xl">Pregunta</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-invert prose-sm md:prose-base max-w-none prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {currentQuestion.question}
-                </ReactMarkdown>
-                {currentQuestion.type === 'multiple-choice' && 'code' in currentQuestion && (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {(currentQuestion as any).code}
-                    </ReactMarkdown>
-                )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {currentQuestion.type === 'multiple-choice' ? (
-          <MultipleChoiceQuestion 
-            question={currentQuestion}
-            answerState={currentAnswerState}
-            onOptionSelect={handleOptionSelect}
-          />
-        ) : (
-          <OpenAnswerQuestion 
-            onAnswerSubmit={handleAnswerSubmit}
-            isAnswered={currentAnswerState.isAnswered}
-          />
-        )}
-        
-        {currentAnswerState.isAnswered && (
-             <div className="flex justify-between items-center bg-card/70 border rounded-lg p-4">
-                 <div className="flex items-center gap-4">
-                    {currentQuestion.type === 'multiple-choice' && (
-                         isCorrect ? (
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="h-6 w-6 text-green-500" />
-                                <p className="font-bold text-lg">¡Correcto!</p>
-                            </div>
-                        ) : (
-                             <div className="flex items-center gap-2">
-                                <XCircle className="h-6 w-6 text-red-500" />
-                                <p className="font-bold text-lg">Respuesta incorrecta</p>
-                            </div>
-                        )
-                    )}
-                    {currentQuestion.type === 'open-answer' && (
-                        <p className="font-bold text-lg">Respuesta enviada</p>
-                    )}
-                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleRepeatQuestion}>
-                      <Repeat className="mr-2 h-4 w-4" />
-                      Repetir
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={goToNext}>
-                      <Frown className="mr-2 h-4 w-4" />
-                      Difícil
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={goToNext}>
-                      <Meh className="mr-2 h-4 w-4" />
-                      Bien
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={goToNext}>
-                      <Smile className="mr-2 h-4 w-4" />
-                      Fácil
-                    </Button>
-                </div>
-            </div>
-        )}
+        {/* Help Column */}
+        <div className="hidden lg:block">
+            <MagicHelpPanel />
+        </div>
       </div>
 
-       <Popover>
-        <PopoverTrigger asChild>
-           <Button
-            variant="default"
-            size="lg"
-            className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30"
-          >
-            <Wand2 className="h-8 w-8" />
-            <span className="sr-only">Ayuda Mágica</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80 mb-2 mr-2" side="top" align="end">
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <h4 className="font-medium leading-none">Ayuda Mágica</h4>
-              <p className="text-sm text-muted-foreground">
-                Usa estas herramientas para ayudarte a aprender.
-              </p>
-            </div>
-            <div className="grid gap-2">
-               <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
-               <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
-               <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
-               <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+       <div className="lg:hidden">
+         <MagicHelpPopover />
+       </div>
 
     </div>
   );
