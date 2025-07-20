@@ -12,6 +12,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SendHorizonal, User2 } from 'lucide-react';
 import { handleTutorChat } from '@/app/actions/tutor';
 import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'Message cannot be empty.'),
@@ -98,13 +100,22 @@ export default function TutorPage() {
                 {msg.sender === 'ai' && <TutorAvatar />}
                 <div
                   className={cn(
-                    'max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg text-sm md:text-base',
+                    'max-w-xs md:max-w-2xl p-3 rounded-lg text-sm md:text-base',
                     msg.sender === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-blue-900/50 border border-blue-600/50 shadow-[0_0_15px_rgba(59,130,246,0.2)] text-blue-100'
                   )}
                 >
-                  <p>{msg.text}</p>
+                  {msg.sender === 'ai' ? (
+                    <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        className="prose prose-invert prose-sm md:prose-base prose-p:my-2 prose-p:leading-relaxed prose-headings:text-blue-200 prose-strong:text-blue-100 prose-blockquote:border-blue-400 prose-code:text-yellow-300 prose-table:border-blue-600/50 prose-th:text-blue-200 prose-tr:border-blue-600/50"
+                    >
+                      {msg.text}
+                    </ReactMarkdown>
+                  ) : (
+                    <p>{msg.text}</p>
+                  )}
                 </div>
                 {msg.sender === 'user' && (
                   <Avatar className="w-8 h-8 border-2 border-primary/50">
