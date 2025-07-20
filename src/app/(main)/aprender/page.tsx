@@ -6,9 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Zap, TrendingUp, Sparkles, Eye, Repeat, CheckCircle, XCircle, ChevronRight, ChevronLeft, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, ChevronRight, ChevronLeft, Lightbulb } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -122,7 +120,6 @@ const OpenAnswerQuestion = ({ onAnswerSubmit }: any) => {
 export default function AprenderPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerState>({});
-  const [isRatingOpen, setIsRatingOpen] = useState(false);
   const [showNavigation, setShowNavigation] = useState(false);
   const [masteryProgress, setMasteryProgress] = useState(10);
 
@@ -137,13 +134,12 @@ export default function AprenderPage() {
       ...prev,
       [index]: { ...prev[index], ...update, isAnswered: true }
     }));
-    setIsRatingOpen(true);
-    setShowNavigation(false);
+    setShowNavigation(true);
   }
 
   const handleOptionSelect = (optionId: string) => {
     if (currentQuestion.type === 'multiple-choice' && optionId === currentQuestion.correctAnswer) {
-        setMasteryProgress(prev => prev + 10);
+        setMasteryProgress(prev => Math.min(prev + 10, 100));
     }
     updateAnswer(currentIndex, { selectedOption: optionId });
   };
@@ -153,11 +149,6 @@ export default function AprenderPage() {
     // This could be a feature for later where AI evaluates the answer.
     updateAnswer(currentIndex, { answerText: 'dummy' });
   };
-
-  const handleRatingSubmit = () => {
-      setIsRatingOpen(false);
-      setShowNavigation(true);
-  }
 
   const goToNext = () => {
       if (currentIndex < sessionQuestions.length - 1) {
@@ -182,11 +173,12 @@ export default function AprenderPage() {
           <Link href="/" className="text-sm text-primary hover:underline flex items-center mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" /> Salir de la sesión
           </Link>
-          <h1 className="text-3xl font-bold">JavaScript Fundamentals</h1>
         </div>
-
+        
         <Card className="mb-6">
           <CardContent className="p-4">
+            <h2 className="text-sm text-muted-foreground mb-1">Estás aprendiendo</h2>
+            <h1 className="text-2xl font-bold mb-3">JavaScript Fundamentals</h1>
             <div className="flex items-center justify-between gap-6">
               <div className="w-full">
                 <p className="text-sm text-muted-foreground mb-1">Progreso de la sesión ({currentIndex + 1}/{sessionQuestions.length})</p>
@@ -242,7 +234,7 @@ export default function AprenderPage() {
           />
         )}
         
-        {currentAnswerState.isAnswered && !isRatingOpen && (
+        {currentAnswerState.isAnswered && (
              <div className="flex justify-between items-center bg-card/70 border rounded-lg p-4">
                  <div className="flex items-center gap-4">
                     {currentQuestion.type === 'multiple-choice' && (
@@ -278,29 +270,6 @@ export default function AprenderPage() {
                 )}
             </div>
         )}
-
-        <Dialog open={isRatingOpen} onOpenChange={setIsRatingOpen}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle className="text-center text-lg">¿Qué tan difícil se te hizo la pregunta?</DialogTitle>
-                </DialogHeader>
-                <div className="py-4 px-2">
-                    <Slider
-                        defaultValue={[50]}
-                        max={100}
-                        step={1}
-                        className="my-4"
-                    />
-                     <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Muy Fácil</span>
-                        <span>Muy Difícil</span>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button onClick={handleRatingSubmit} className="w-full">Continuar</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
 
       </div>
     </div>
