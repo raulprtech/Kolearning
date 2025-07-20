@@ -23,7 +23,7 @@ const EvaluateOpenAnswerOutputSchema = z.object({
   feedback: z
     .string()
     .describe(
-      "Personalized feedback based on the user's answer. If correct, provide a short, encouraging message. If incorrect, explain the main error or acknowledge partial correctness (e.g., 'You're on the right track, but...')."
+      "Personalized feedback based on the user's answer. If correct, provide a short, encouraging message. If incorrect, explain the main error or acknowledge partial correctness (e.g., 'You're on the right track, but...'). Never give him the answer, just clues for him to discover alone."
     ),
   rephrasedQuestion: z
     .string()

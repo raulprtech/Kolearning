@@ -169,7 +169,7 @@ type QuickChatMessage = {
   text: string;
 };
 
-const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, isAnswered: boolean }) => {
+const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, isAnswered: boolean }) => {
     const router = useRouter();
     const { user, decrementEnergy } = useUser();
     const hasEnergy = user && user.energy > 0;
@@ -420,7 +420,7 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
         return (
             <div className="grid gap-4">
                 <div className="space-y-2">
-                    <h4 className="font-medium leading-none">Ayuda Mágica</h4>
+                    <h4 className="font-medium leading-none">Asistencia de Koli</h4>
                     <p className="text-sm text-muted-foreground">
                         Usa estas herramientas para ayudarte a aprender.
                     </p>
@@ -449,7 +449,7 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
             disabled={!hasEnergy}
         >
             <Wand2 className="h-8 w-8" />
-            <span className="sr-only">Ayuda Mágica</span>
+            <span className="sr-only">Asistencia de Koli</span>
         </Button>
     );
 
@@ -537,7 +537,7 @@ export default function AprenderPage() {
 
     if (result.evaluation?.isCorrect) {
         setMasteryProgress(prev => Math.min(prev + 10, 100));
-        updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText });
+        updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
     } else {
         if (attempts >= 2) { // This was the 3rd attempt (0, 1, 2)
             updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
@@ -568,7 +568,7 @@ export default function AprenderPage() {
       if (currentQuestion.type === 'multiple-choice') {
           handleOptionSelect((currentQuestion as any).correctAnswer);
       } else if (currentQuestion.type === 'open-answer') {
-          updateAnswer(currentIndex, { isAnswered: true, isCorrect: false });
+          updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, openAnswerAttempts: 3 });
       }
   };
   
@@ -609,6 +609,13 @@ export default function AprenderPage() {
                   <h1 className="text-xl md:text-2xl font-bold">Fundamentos de JavaScript</h1>
                 </div>
                 <div className="flex items-center gap-4 text-sm shrink-0">
+                  <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-green-400" />
+                      <div>
+                        <p className="font-bold text-base md:text-lg">4</p>
+                        <p className="text-xs text-muted-foreground">Creditos Cognitivos Ganados</p>
+                      </div>
+                    </div>
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-green-400" />
                     <div>
@@ -713,7 +720,7 @@ export default function AprenderPage() {
       </div>
 
        <div className="xl:hidden-for-now">
-         <MagicHelpPopover 
+         <KoliAssistancePopover 
             currentQuestion={currentQuestion} 
             correctAnswer={currentQuestion.correctAnswerText || ''}
             onShowAnswer={handleShowAnswer}
@@ -729,6 +736,7 @@ export default function AprenderPage() {
     
 
     
+
 
 
 
