@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -54,6 +54,14 @@ type AnswerState = {
     };
 };
 
+const QuestionHelperActions = () => (
+    <div className="flex justify-end gap-2 my-4">
+        <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+        <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
+        <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+    </div>
+);
+
 const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) => {
   const { isAnswered, selectedOption } = answerState || { isAnswered: false };
   
@@ -72,46 +80,53 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-      {question.options.map((option: any) => (
-        <Card
-          key={option.id}
-          className={cn(
-            "transition-all duration-300 border-2 border-transparent",
-            getOptionClass(option.id)
-          )}
-          onClick={() => !isAnswered && onOptionSelect(option.id)}
-        >
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className={cn(
-              "h-8 w-8 rounded-md flex items-center justify-center font-bold text-sm shrink-0",
-              "bg-muted text-muted-foreground",
-              selectedOption === option.id && 'bg-primary text-primary-foreground'
-            )}>
-              {option.id}
-            </div>
-            <div className="prose prose-invert prose-sm prose-p:my-0">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{option.text}</ReactMarkdown>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <>
+      {!isAnswered && <QuestionHelperActions />}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {question.options.map((option: any) => (
+          <Card
+            key={option.id}
+            className={cn(
+              "transition-all duration-300 border-2 border-transparent",
+              getOptionClass(option.id)
+            )}
+            onClick={() => !isAnswered && onOptionSelect(option.id)}
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className={cn(
+                "h-8 w-8 rounded-md flex items-center justify-center font-bold text-sm shrink-0",
+                "bg-muted text-muted-foreground",
+                selectedOption === option.id && 'bg-primary text-primary-foreground'
+              )}>
+                {option.id}
+              </div>
+              <div className="prose prose-invert prose-sm prose-p:my-0">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{option.text}</ReactMarkdown>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </>
   );
 };
 
-const OpenAnswerQuestion = ({ onAnswerSubmit }: any) => {
+const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered }: any) => {
     return (
         <div className="flex flex-col gap-4 mb-6">
             <Textarea 
                 placeholder="Escribe tu respuesta aquí..."
                 className="min-h-[150px] bg-card/70 border-primary/20 text-base"
+                disabled={isAnswered}
             />
-            <div className="flex justify-end gap-2">
-                <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
-                <Button variant="outline">Ver Respuesta</Button>
-                <Button onClick={onAnswerSubmit}>Enviar Respuesta</Button>
-            </div>
+            {!isAnswered && (
+                <>
+                    <QuestionHelperActions />
+                    <div className="flex justify-end">
+                        <Button onClick={onAnswerSubmit}>Enviar Respuesta</Button>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
@@ -229,6 +244,7 @@ export default function AprenderPage() {
         ) : (
           <OpenAnswerQuestion 
             onAnswerSubmit={handleAnswerSubmit}
+            isAnswered={currentAnswerState.isAnswered}
           />
         )}
         
