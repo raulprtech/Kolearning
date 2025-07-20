@@ -155,6 +155,11 @@ const MagicHelpPanel = () => (
   </Card>
 );
 
+type QuickChatMessage = {
+  sender: 'user' | 'ai';
+  text: string;
+};
+
 const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, isAnswered: boolean }) => {
     const router = useRouter();
     const [activeView, setActiveView] = useState<'main' | 'hint' | 'explanation'>('main');
@@ -163,9 +168,11 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
     const [isLoading, setIsLoading] = useState(false);
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [showQuickQuestion, setShowQuickQuestion] = useState(false);
+
+    const [showQuickQuestionInput, setShowQuickQuestionInput] = useState(false);
     const [quickQuestionText, setQuickQuestionText] = useState('');
-    const [quickQuestionResponse, setQuickQuestionResponse] = useState('');
+    const [quickChatHistory, setQuickChatHistory] = useState<QuickChatMessage[]>([]);
+    const [quickQuestionCount, setQuickQuestionCount] = useState(0);
 
     const handleHintClick = async () => {
         setActiveView('hint');
@@ -188,8 +195,9 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
         setActiveView('explanation');
         setIsLoading(true);
         setExplanationText('');
-        setShowQuickQuestion(false);
-        setQuickQuestionResponse('');
+        setShowQuickQuestionInput(false);
+        setQuickChatHistory([]);
+        setQuickQuestionCount(0);
 
         const prompt = `Explica de forma muy breve y concisa por qué la respuesta a esta pregunta es correcta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". Respuesta Correcta: "${correctAnswer}".`;
 
@@ -223,8 +231,9 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
         setActiveView('explanation');
         setIsLoading(true);
         setExplanationText('');
-        setShowQuickQuestion(false);
-        setQuickQuestionResponse('');
+        setShowQuickQuestionInput(false);
+        setQuickChatHistory([]);
+        setQuickQuestionCount(0);
 
         const prompt = `Explica de forma breve y concisa el concepto detrás de esta pregunta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". La respuesta correcta es "${correctAnswer}".`;
 
@@ -240,16 +249,19 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
     const handleQuickQuestionSubmit = async () => {
         if (!quickQuestionText.trim()) return;
 
+        const userMessage: QuickChatMessage = { sender: 'user', text: quickQuestionText };
+        setQuickChatHistory(prev => [...prev, userMessage]);
+        setShowQuickQuestionInput(false);
         setIsLoading(true);
-        setQuickQuestionResponse('');
+
         const prompt = `Dentro del contexto de la pregunta "${currentQuestion.question}" (cuya respuesta es "${correctAnswer}"), responde a la siguiente duda del usuario de forma concisa: "${quickQuestionText}"`;
         
         const result = await handleTutorChat(prompt);
-        if (result.response) {
-            setQuickQuestionResponse(result.response);
-        } else {
-            setQuickQuestionResponse(result.error || 'Lo siento, no pude responder a tu pregunta.');
-        }
+        const aiResponse = result.response || result.error || 'Lo siento, no pude responder a tu pregunta.';
+        const aiMessage: QuickChatMessage = { sender: 'ai', text: aiResponse };
+
+        setQuickChatHistory(prev => [...prev, aiMessage]);
+        setQuickQuestionCount(prev => prev + 1);
         setQuickQuestionText('');
         setIsLoading(false);
     };
@@ -260,27 +272,26 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
         router.push(`/tutor?context=${encodedContext}`);
     };
 
-
     const resetView = () => {
         setActiveView('main');
         setHintText('');
         setExplanationText('');
         setIsSuccess(false);
-        setShowQuickQuestion(false);
-        setQuickQuestionResponse('');
+        setShowQuickQuestionInput(false);
+        setQuickChatHistory([]);
+        setQuickQuestionCount(0);
         setQuickQuestionText('');
     };
 
     const onOpenChange = (open: boolean) => {
         setIsPopoverOpen(open);
         if (!open) {
-            // Use timeout to prevent view reset before closing animation finishes
             setTimeout(resetView, 150);
         }
     };
     
     const renderContent = () => {
-        if (isLoading) {
+        if (isLoading && activeView !== 'explanation') {
             return (
                  <div className="flex items-center gap-2 text-muted-foreground h-36 justify-center">
                     <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-0"></span>
@@ -328,17 +339,41 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
                         <Button variant="ghost" size="sm" onClick={resetView}>Volver</Button>
                     </div>
                     <div className="text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanationText}</ReactMarkdown>
+                       {isLoading && !explanationText ? (
+                           <div className="flex items-center gap-2 text-muted-foreground justify-center py-4">
+                               <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-0"></span>
+                               <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-150"></span>
+                               <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-300"></span>
+                           </div>
+                       ) : (
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanationText}</ReactMarkdown>
+                       )}
                     </div>
+
                     <div className="border-t border-primary/20 pt-4 mt-4 space-y-2">
-                      {!showQuickQuestion && (
-                          <div className="grid grid-cols-2 gap-2">
-                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestion(true)}>Pregunta Rápida</Button>
-                              <Button variant="outline" size="sm" onClick={handleDeepen}>Profundizar</Button>
-                          </div>
-                      )}
-                      {showQuickQuestion && (
-                          <div className="space-y-2">
+                      <div className="space-y-3 text-xs">
+                          {quickChatHistory.map((msg, index) => (
+                              <div key={index} className={cn("flex items-start gap-2", msg.sender === 'user' ? "justify-end" : "justify-start")}>
+                                  {msg.sender === 'ai' && <TutorAvatar />}
+                                  <div className={cn("max-w-[85%] p-2 rounded-lg", msg.sender === 'user' ? 'bg-primary/20' : 'bg-muted')}>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-invert prose-xs max-w-none prose-p:my-0">{msg.text}</ReactMarkdown>
+                                  </div>
+                              </div>
+                          ))}
+                           {isLoading && quickChatHistory.length % 2 !== 0 && (
+                                <div className="flex items-start gap-2 justify-start">
+                                    <TutorAvatar />
+                                    <div className="p-2 rounded-lg bg-muted flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 bg-foreground rounded-full animate-pulse delay-0"></span>
+                                        <span className="w-1.5 h-1.5 bg-foreground rounded-full animate-pulse delay-150"></span>
+                                        <span className="w-1.5 h-1.5 bg-foreground rounded-full animate-pulse delay-300"></span>
+                                    </div>
+                                </div>
+                           )}
+                      </div>
+
+                      {showQuickQuestionInput ? (
+                          <div className="space-y-2 pt-2">
                               <Textarea 
                                   placeholder="Haz una pregunta de seguimiento..."
                                   value={quickQuestionText}
@@ -346,15 +381,17 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
                                   className="text-xs"
                                   rows={2}
                               />
-                              <Button size="sm" onClick={handleQuickQuestionSubmit} className="w-full">
+                              <Button size="sm" onClick={handleQuickQuestionSubmit} className="w-full" disabled={isLoading}>
                                   <SendHorizonal className="mr-2 h-4 w-4" /> Enviar
                               </Button>
-                              {quickQuestionResponse && (
-                                  <div className="text-xs text-muted-foreground border-l-2 border-primary/50 pl-2">
-                                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{quickQuestionResponse}</ReactMarkdown>
-                                  </div>
-                              )}
                           </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2 pt-2">
+                            {quickQuestionCount < 2 &&
+                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestionInput(true)} disabled={isLoading}>Pregunta Rápida</Button>
+                            }
+                            <Button variant="outline" size="sm" onClick={handleDeepen} className={cn(quickQuestionCount >= 2 && "col-span-2")} disabled={isLoading}>Profundizar</Button>
+                        </div>
                       )}
                     </div>
                 </div>
