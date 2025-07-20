@@ -335,20 +335,20 @@ export default function AprenderPage() {
           
           {currentAnswerState.isAnswered && (
                <div className="flex justify-end items-center bg-card/70 border rounded-lg p-4">
-                  <div className="flex gap-2 w-full justify-around">
-                      <Button variant="outline" size="sm" onClick={goToNext} className="flex-1">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                      <Button variant="outline" size="sm" onClick={goToNext}>
                         <Frown className="mr-2 h-4 w-4" />
                         Muy Difícil
                       </Button>
-                      <Button variant="outline" size="sm" onClick={goToNext} className="flex-1">
+                      <Button variant="outline" size="sm" onClick={goToNext}>
                         <Frown className="mr-2 h-4 w-4" />
                         Difícil
                       </Button>
-                      <Button variant="outline" size="sm" onClick={goToNext} className="flex-1">
+                      <Button variant="outline" size="sm" onClick={goToNext}>
                         <Meh className="mr-2 h-4 w-4" />
                         Bien
                       </Button>
-                      <Button variant="outline" size="sm" onClick={goToNext} className="flex-1">
+                      <Button variant="outline" size="sm" onClick={goToNext}>
                         <Smile className="mr-2 h-4 w-4" />
                         Fácil
                       </Button>
