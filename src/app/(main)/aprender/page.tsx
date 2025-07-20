@@ -131,13 +131,13 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
         <div className="flex flex-col gap-4 mb-6">
              {feedback && (
                 <Alert variant="default" className="bg-primary/10 border-primary/20">
-                    <div className="flex items-start gap-3">
+                     <div className="flex items-start gap-3">
                         <TutorAvatar className="h-8 w-8" />
-                        <div className="flex-1">
+                        <div className="flex-1 pt-1">
                             <AlertDescription className="text-primary/80 prose prose-sm prose-invert">
-                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {`**Koli:** ${feedback}`}
-                               </ReactMarkdown>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {`**Koli:** ${feedback}`}
+                                </ReactMarkdown>
                             </AlertDescription>
                         </div>
                     </div>
@@ -500,7 +500,7 @@ export default function AprenderPage() {
   const updateAnswer = (index: number, update: Partial<AnswerState[number]>) => {
     setAnswers(prev => ({
       ...prev,
-      [index]: { ...(prev[index] || {}), ...update }
+      [index]: { ...(prev[index] || { isAnswered: false, openAnswerAttempts: 0 }), ...update }
     }));
   }
 
@@ -528,7 +528,6 @@ export default function AprenderPage() {
 
     const attempts = currentAnswerState.openAnswerAttempts || 0;
     
-    // This part does not consume energy
     const result = await handleEvaluateOpenAnswer({
         question: currentQuestion.question,
         correctAnswer: currentQuestion.correctAnswerText,
@@ -569,7 +568,8 @@ export default function AprenderPage() {
       if (currentQuestion.type === 'multiple-choice') {
           handleOptionSelect((currentQuestion as any).correctAnswer);
       } else if (currentQuestion.type === 'open-answer') {
-          updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, openAnswerAttempts: 3 });
+          setCurrentOpenAnswerText(currentQuestion.correctAnswerText);
+          updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, openAnswerAttempts: 1, userAnswer: currentQuestion.correctAnswerText });
       }
   };
   
@@ -587,9 +587,11 @@ export default function AprenderPage() {
       if (currentIndex < sessionQuestions.length - 1) {
           setCurrentIndex(prev => prev + 1);
           setOpenAnswerFeedback(null);
+          setCurrentOpenAnswerText('');
       }
   };
 
+  const showAttemptCounter = currentAnswerState.openAnswerAttempts > 0 && !currentAnswerState.isCorrect;
 
   return (
     <div className="container mx-auto py-4 sm:py-8">
@@ -642,7 +644,7 @@ export default function AprenderPage() {
 
           <Card className={cn("mb-3 sm:mb-6 bg-card/70", isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta {currentAnswerState.openAnswerAttempts > 0 && !currentAnswerState.isCorrect ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Pregunta {showAttemptCounter ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
               {currentAnswerState.isAnswered && (
                  <div className="flex items-center gap-4">
                     { isCorrect ? (
@@ -684,7 +686,7 @@ export default function AprenderPage() {
               onAnswerSubmit={handleAnswerSubmit}
               isAnswered={currentAnswerState.isAnswered}
               isLoading={isLoading}
-              userAnswer={currentOpenAnswerText}
+              userAnswer={currentAnswerState.isAnswered ? (currentAnswerState.userAnswer || '') : currentOpenAnswerText}
               onUserAnswerChange={handleOpenAnswerTextChange}
               feedback={openAnswerFeedback}
             />
@@ -748,3 +750,6 @@ export default function AprenderPage() {
 
 
 
+
+
+    
