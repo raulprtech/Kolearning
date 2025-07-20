@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star, User2 } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star, User2, Check } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/popover"
 import { handleTutorChat } from '@/app/actions/tutor';
 
-const sessionQuestions = [
+const initialSessionQuestions = [
   {
     type: 'multiple-choice',
     question: '¿Cuál es el resultado del siguiente código?',
@@ -154,16 +154,13 @@ const MagicHelpPanel = () => (
   </Card>
 );
 
-const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void }) => {
-    const [hintViewActive, setHintViewActive] = useState(false);
-    const [explanationViewActive, setExplanationViewActive] = useState(false);
+const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void }) => {
     const [activeView, setActiveView] = useState<'main' | 'hint' | 'explanation'>('main');
-    
     const [hintText, setHintText] = useState('');
     const [explanationText, setExplanationText] = useState('');
-
     const [isLoading, setIsLoading] = useState(false);
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
 
     const handleHintClick = async () => {
         setActiveView('hint');
@@ -197,24 +194,43 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer }: { cu
         }
         setIsLoading(false);
     };
+    
+    const handleRephraseClick = async () => {
+        setIsLoading(true);
+        const prompt = `Reformula la siguiente pregunta para que sea más fácil de entender o esté mejor ejemplificada. Devuelve solo el texto de la nueva pregunta. Pregunta original: "${currentQuestion.question} ${currentQuestion.code || ''}"`;
+        const result = await handleTutorChat(prompt);
+        setIsLoading(false);
+
+        if (result.response) {
+            onRephrase(result.response);
+            setIsSuccess(true);
+            setTimeout(() => {
+                setIsPopoverOpen(false);
+            }, 1000);
+        } else {
+            // Handle error, maybe show a toast
+        }
+    };
 
     const resetView = () => {
         setActiveView('main');
         setHintText('');
         setExplanationText('');
+        setIsSuccess(false);
     };
 
     const onOpenChange = (open: boolean) => {
         setIsPopoverOpen(open);
         if (!open) {
-            resetView();
+            // Use timeout to prevent view reset before closing animation finishes
+            setTimeout(resetView, 150);
         }
     };
     
     const renderContent = () => {
         if (isLoading) {
             return (
-                 <div className="flex items-center gap-2 text-muted-foreground">
+                 <div className="flex items-center gap-2 text-muted-foreground h-36 justify-center">
                     <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-0"></span>
                     <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-150"></span>
                     <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-300"></span>
@@ -223,6 +239,15 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer }: { cu
             )
         }
         
+        if (isSuccess) {
+            return (
+                <div className="flex flex-col items-center justify-center text-center h-36">
+                    <CheckCircle className="h-10 w-10 text-green-500 mb-2 animate-in fade-in zoom-in-50" />
+                    <p className="font-medium">¡Listo!</p>
+                </div>
+            );
+        }
+
         if (activeView === 'hint') {
             return (
                  <div className="space-y-4">
@@ -269,7 +294,7 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer }: { cu
                 <div className="grid gap-2">
                     <Button variant="outline" onClick={handleHintClick}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
                     <Button variant="outline" onClick={handleShowAnswerAndExplainClick}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
-                    <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+                    <Button variant="outline" onClick={handleRephraseClick}><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
                     <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
                 </div>
             </div>
@@ -297,12 +322,14 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer }: { cu
 
 
 export default function AprenderPage() {
+  const [sessionQuestions, setSessionQuestions] = useState(initialSessionQuestions);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerState>({});
   const [masteryProgress, setMasteryProgress] = useState(10);
   const [bestStreak, setBestStreak] = useState(1);
+  const [isPulsing, setIsPulsing] = useState(false);
 
-  const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [currentIndex]);
+  const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [sessionQuestions, currentIndex]);
   const currentAnswerState = useMemo(() => answers[currentIndex] || { isAnswered: false }, [answers, currentIndex]);
 
   const sessionProgress = ((currentIndex + 1) / sessionQuestions.length) * 100;
@@ -335,12 +362,14 @@ export default function AprenderPage() {
       }
   };
   
-  const handleRepeatQuestion = () => {
-    setAnswers(prev => {
-        const newAnswers = {...prev};
-        delete newAnswers[currentIndex];
-        return newAnswers;
-    });
+  const handleRephrase = (newQuestionText: string) => {
+      setSessionQuestions(prevQuestions => {
+          const updatedQuestions = [...prevQuestions];
+          updatedQuestions[currentIndex].question = newQuestionText;
+          return updatedQuestions;
+      });
+      setIsPulsing(true);
+      setTimeout(() => setIsPulsing(false), 1000); // Duration of the pulse animation
   };
 
   const goToNext = () => {
@@ -393,7 +422,7 @@ export default function AprenderPage() {
             </CardContent>
           </Card>
 
-          <Card className="mb-3 sm:mb-6 bg-card/70">
+          <Card className={cn("mb-3 sm:mb-6 bg-card/70", isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
               <CardTitle className="text-lg md:text-xl">Pregunta</CardTitle>
               {currentAnswerState.isAnswered && (
@@ -418,7 +447,7 @@ export default function AprenderPage() {
               )}
             </CardHeader>
             <CardContent className="px-4 sm:px-6">
-              <div className="prose prose-invert prose-sm md:prose-base max-w-none prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50">
+              <div className="prose prose-invert prose-sm md:prose-base max-w-none prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50 transition-opacity duration-300">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {currentQuestion.question}
                   </ReactMarkdown>
@@ -478,7 +507,8 @@ export default function AprenderPage() {
          <MagicHelpPopover 
             currentQuestion={currentQuestion} 
             correctAnswer={currentQuestion.correctAnswerText || ''}
-            onShowAnswer={handleShowAnswer} 
+            onShowAnswer={handleShowAnswer}
+            onRephrase={handleRephrase}
           />
        </div>
 
