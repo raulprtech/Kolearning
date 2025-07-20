@@ -253,8 +253,8 @@ export default function AprenderPage() {
           </div>
           
           <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-4 sm:mb-0">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6">
                 <div className="mb-4 sm:mb-0">
                   <h1 className="text-xl md:text-2xl font-bold">JavaScript Fundamentals</h1>
                 </div>
