@@ -1,6 +1,8 @@
 'use server';
 
 import { generateDeckFromText } from '@/ai/flows/generate-deck-from-text';
+import { evaluateOpenAnswer } from '@/ai/flows/evaluate-open-answer';
+import type { EvaluateOpenAnswerInput } from '@/ai/flows/evaluate-open-answer';
 import { redirect } from 'next/navigation';
 
 let createdDecks: any[] = [];
@@ -37,4 +39,14 @@ export async function handleGenerateDeckFromText(formData: FormData) {
 
 export async function getGeneratedDeck(deckId: string) {
     return createdDecks.find(d => d.id === deckId) || null;
+}
+
+export async function handleEvaluateOpenAnswer(input: EvaluateOpenAnswerInput) {
+  try {
+    const evaluation = await evaluateOpenAnswer(input);
+    return { evaluation };
+  } catch (error) {
+    console.error('Error evaluating answer:', error);
+    return { error: 'Sorry, I was unable to evaluate your answer.' };
+  }
 }

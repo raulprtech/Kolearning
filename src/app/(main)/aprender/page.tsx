@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { handleTutorChat } from '@/app/actions/tutor';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
+import { handleEvaluateOpenAnswer } from '@/app/actions/decks';
 
 const initialSessionQuestions = [
   {
@@ -62,8 +63,10 @@ const initialSessionQuestions = [
 type AnswerState = {
     [key: number]: {
         isAnswered: boolean;
+        isCorrect?: boolean;
         selectedOption?: string;
-        answerText?: string;
+        userAnswer?: string;
+        openAnswerAttempts?: number;
     };
 };
 
@@ -121,18 +124,23 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
   );
 };
 
-const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered }: any) => {
+const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer, onUserAnswerChange }: any) => {
     return (
         <div className="flex flex-col gap-4 mb-6">
             <Textarea 
                 placeholder="Escribe tu respuesta aquí..."
                 className="min-h-[150px] bg-card/70 border-primary/20 text-base"
-                disabled={isAnswered}
+                disabled={isAnswered || isLoading}
+                value={userAnswer}
+                onChange={(e) => onUserAnswerChange(e.target.value)}
             />
             {!isAnswered && (
                 <>
                     <div className="flex justify-end">
-                        <Button onClick={onAnswerSubmit}>Enviar Respuesta</Button>
+                        <Button onClick={onAnswerSubmit} disabled={isLoading}>
+                          {isLoading && <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin mr-2"></span>}
+                          {isLoading ? 'Evaluando...' : 'Enviar Respuesta'}
+                        </Button>
                     </div>
                 </>
             )}
@@ -162,10 +170,10 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
     const [quickChatHistory, setQuickChatHistory] = useState<QuickChatMessage[]>([]);
     const [quickQuestionCount, setQuickQuestionCount] = useState(0);
 
-    const handleActionWithEnergyCheck = (action: () => void) => {
+    const handleActionWithEnergyCheck = (action: (...args: any[]) => void, ...args: any[]) => {
         if (!hasEnergy) return;
         decrementEnergy();
-        action();
+        action(...args);
     }
 
     const handleHintClick = async () => {
@@ -460,37 +468,79 @@ export default function AprenderPage() {
   const [masteryProgress, setMasteryProgress] = useState(10);
   const [bestStreak, setBestStreak] = useState(1);
   const [isPulsing, setIsPulsing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentOpenAnswerText, setCurrentOpenAnswerText] = useState('');
+  
+  const { user, decrementEnergy } = useUser();
+  const hasEnergy = user && user.energy > 0;
 
   const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [sessionQuestions, currentIndex]);
-  const currentAnswerState = useMemo(() => answers[currentIndex] || { isAnswered: false }, [answers, currentIndex]);
+  const currentAnswerState = useMemo(() => answers[currentIndex] || { isAnswered: false, openAnswerAttempts: 0 }, [answers, currentIndex]);
+  const isCorrect = currentAnswerState.isCorrect;
 
   const sessionProgress = ((currentIndex + 1) / sessionQuestions.length) * 100;
   
   const updateAnswer = (index: number, update: Partial<AnswerState[number]>) => {
     setAnswers(prev => ({
       ...prev,
-      [index]: { ...prev[index], ...update, isAnswered: true }
+      [index]: { ...prev[index], ...update }
     }));
   }
 
   const handleOptionSelect = (optionId: string) => {
-    if (currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer) {
+    const isAnswerCorrect = currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer;
+    if (isAnswerCorrect) {
         setMasteryProgress(prev => Math.min(prev + 10, 100));
     }
-    updateAnswer(currentIndex, { selectedOption: optionId });
+    updateAnswer(currentIndex, { selectedOption: optionId, isAnswered: true, isCorrect: isAnswerCorrect });
   };
 
-  const handleAnswerSubmit = () => {
-    // For open answers, we can't auto-check, so we don't award points here automatically.
-    // This could be a feature for later where AI evaluates the answer.
-    updateAnswer(currentIndex, { answerText: 'dummy' });
+  const handleAnswerSubmit = async () => {
+    if (!currentOpenAnswerText.trim() || !hasEnergy) return;
+
+    setIsLoading(true);
+    decrementEnergy();
+
+    const attempts = currentAnswerState.openAnswerAttempts || 0;
+    
+    const result = await handleEvaluateOpenAnswer({
+        question: currentQuestion.question,
+        correctAnswer: currentQuestion.correctAnswerText,
+        userAnswer: currentOpenAnswerText,
+    });
+
+    if (result.evaluation?.isCorrect) {
+        setMasteryProgress(prev => Math.min(prev + 10, 100));
+        updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText });
+    } else {
+        if (attempts + 1 >= 2) {
+            // Max attempts reached
+            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
+        } else {
+            // Try again
+            if (result.evaluation?.rephrasedQuestion) {
+                setSessionQuestions(prevQuestions => {
+                    const updatedQuestions = [...prevQuestions];
+                    updatedQuestions[currentIndex].question = result.evaluation.rephrasedQuestion!;
+                    return updatedQuestions;
+                });
+                setIsPulsing(true);
+                setTimeout(() => setIsPulsing(false), 1000);
+            }
+             updateAnswer(currentIndex, { openAnswerAttempts: attempts + 1, userAnswer: currentOpenAnswerText });
+        }
+    }
+    
+    setCurrentOpenAnswerText('');
+    setIsLoading(false);
   };
+
 
   const handleShowAnswer = () => {
       if (currentQuestion.type === 'multiple-choice') {
           handleOptionSelect((currentQuestion as any).correctAnswer);
       } else if (currentQuestion.type === 'open-answer') {
-          handleAnswerSubmit();
+          updateAnswer(currentIndex, { isAnswered: true, isCorrect: false });
       }
   };
   
@@ -510,7 +560,6 @@ export default function AprenderPage() {
       }
   };
 
-  const isCorrect = currentQuestion.type === 'multiple-choice' && currentAnswerState.selectedOption === (currentQuestion as any).correctAnswer;
 
   return (
     <div className="container mx-auto py-4 sm:py-8">
@@ -556,24 +605,19 @@ export default function AprenderPage() {
 
           <Card className={cn("mb-3 sm:mb-6 bg-card/70", isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Pregunta {currentAnswerState.openAnswerAttempts > 0 ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
               {currentAnswerState.isAnswered && (
                  <div className="flex items-center gap-4">
-                    {currentQuestion.type === 'multiple-choice' && (
-                         isCorrect ? (
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="h-5 sm:h-6 w-5 sm:w-6 text-green-500" />
-                                <p className="font-bold text-base md:text-lg">¡Correcto!</p>
-                            </div>
-                        ) : (
-                             <div className="flex items-center gap-2">
-                                <XCircle className="h-5 sm:h-6 w-5 sm:w-6 text-red-500" />
-                                <p className="font-bold text-base md:text-lg">Respuesta incorrecta</p>
-                            </div>
-                        )
-                    )}
-                    {currentQuestion.type === 'open-answer' && (
-                        <p className="font-bold text-base md:text-lg">Respuesta enviada</p>
+                    { isCorrect ? (
+                        <div className="flex items-center gap-2">
+                            <CheckCircle className="h-5 sm:h-6 w-5 sm:w-6 text-green-500" />
+                            <p className="font-bold text-base md:text-lg">¡Correcto!</p>
+                        </div>
+                    ) : (
+                         <div className="flex items-center gap-2">
+                            <XCircle className="h-5 sm:h-6 w-5 sm:w-6 text-red-500" />
+                            <p className="font-bold text-base md:text-lg">Respuesta incorrecta</p>
+                        </div>
                     )}
                  </div>
               )}
@@ -602,6 +646,9 @@ export default function AprenderPage() {
             <OpenAnswerQuestion 
               onAnswerSubmit={handleAnswerSubmit}
               isAnswered={currentAnswerState.isAnswered}
+              isLoading={isLoading}
+              userAnswer={currentOpenAnswerText}
+              onUserAnswerChange={setCurrentOpenAnswerText}
             />
           )}
           
