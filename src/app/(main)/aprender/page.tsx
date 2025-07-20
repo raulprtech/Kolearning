@@ -131,11 +131,15 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
         <div className="flex flex-col gap-4 mb-6">
              {feedback && (
                 <Alert variant="default" className="bg-primary/10 border-primary/20">
-                    <TutorAvatar className="h-5 w-5 absolute left-4 top-4" />
-                    <AlertTitle className="text-primary/90 pl-7">Feedback de Koli</AlertTitle>
-                    <AlertDescription className="text-primary/80 prose prose-sm prose-invert pl-7">
-                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{feedback}</ReactMarkdown>
-                    </AlertDescription>
+                    <div className="flex items-start gap-3">
+                        <TutorAvatar className="h-5 w-5 mt-1" />
+                        <div className="flex-1">
+                            <AlertTitle className="text-primary/90">Feedback de Koli</AlertTitle>
+                            <AlertDescription className="text-primary/80 prose prose-sm prose-invert">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{feedback}</ReactMarkdown>
+                            </AlertDescription>
+                        </div>
+                    </div>
                 </Alert>
             )}
             <Textarea 
@@ -724,4 +728,5 @@ export default function AprenderPage() {
     
 
     
+
 
