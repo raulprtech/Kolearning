@@ -236,14 +236,12 @@ export default function AprenderPage() {
           
           <Card className="mb-6">
             <CardContent className="p-4">
-              <h2 className="text-sm text-muted-foreground mb-1">Estás aprendiendo</h2>
-              <h1 className="text-2xl font-bold mb-3">JavaScript Fundamentals</h1>
-              <div className="flex items-center justify-between gap-6">
-                <div className="w-full">
-                  <p className="text-sm text-muted-foreground mb-1">Progreso de la sesión ({currentIndex + 1}/{sessionQuestions.length})</p>
-                  <Progress value={sessionProgress} />
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-sm text-muted-foreground mb-1">Estás aprendiendo</h2>
+                  <h1 className="text-2xl font-bold">JavaScript Fundamentals</h1>
                 </div>
-                <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-4 text-sm shrink-0">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-green-400" />
                     <div>
@@ -259,6 +257,11 @@ export default function AprenderPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Progreso de la sesión ({currentIndex + 1}/{sessionQuestions.length})</p>
+                <Progress value={sessionProgress} />
               </div>
             </CardContent>
           </Card>
