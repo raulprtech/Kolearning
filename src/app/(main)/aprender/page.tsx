@@ -616,7 +616,7 @@ export default function AprenderPage() {
           handleCorrectAnswer('open-answer');
           updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentQuestion.correctAnswerText });
           setCurrentOpenAnswerText(currentQuestion.correctAnswerText);
-          setRevealedAnswer(currentQuestion.correctAnswerText);
+          setRevealedAnswer(null); // Clear revealed answer since it's now in the textarea
       }
   };
   
@@ -692,7 +692,7 @@ export default function AprenderPage() {
 
           <Card className={cn("mb-3 sm:mb-6 bg-card/70", isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta {showAttemptCounter ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Pregunta {currentQuestion.type === 'open-answer' && !currentAnswerState.isAnswered && currentAnswerState.openAnswerAttempts > 0 ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
               {currentAnswerState.isAnswered && (
                  <div className="flex items-center gap-4">
                     { isCorrect ? (
@@ -802,4 +802,5 @@ export default function AprenderPage() {
 
 
     
+
 
