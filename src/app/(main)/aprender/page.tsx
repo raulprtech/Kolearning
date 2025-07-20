@@ -134,7 +134,7 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
                     <div className="flex items-start gap-3">
                         <TutorAvatar className="h-5 w-5 mt-1" />
                         <div className="flex-1">
-                            <AlertTitle className="text-primary/90">Feedback de Koli</AlertTitle>
+                            <AlertTitle className="text-primary/90">Koli:</AlertTitle>
                             <AlertDescription className="text-primary/80 prose prose-sm prose-invert">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{feedback}</ReactMarkdown>
                             </AlertDescription>
@@ -728,5 +728,6 @@ export default function AprenderPage() {
     
 
     
+
 
 
