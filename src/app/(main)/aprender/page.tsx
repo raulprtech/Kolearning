@@ -30,10 +30,12 @@ const sessionQuestions = [
       { id: 'D', text: '`string`' },
     ],
     correctAnswer: 'C',
+    correctAnswerText: '`object`',
   },
   {
     type: 'open-answer',
     question: 'Explica la diferencia entre `let`, `const`, y `var` en JavaScript.',
+    correctAnswerText: '`var` tiene alcance de función, mientras que `let` y `const` tienen alcance de bloque. `const` no puede ser reasignada, a diferencia de `let` y `var`.',
   },
   {
     type: 'multiple-choice',
@@ -45,10 +47,12 @@ const sessionQuestions = [
         { id: 'D', text: '`boolean`' },
     ],
     correctAnswer: 'C',
+    correctAnswerText: '`array` (es un tipo de objeto)',
   },
    {
     type: 'open-answer',
     question: '¿Qué es un closure en JavaScript? Proporciona un ejemplo de código sencillo.',
+    correctAnswerText: 'Un closure es una función que recuerda el entorno en el que fue creada. Ejemplo:\n```javascript\nfunction exterior() {\n  let a = 1;\n  function interior() {\n    console.log(a);\n  }\n  return interior;\n}\nconst miClosure = exterior();\nmiClosure(); // Imprime 1\n```',
   },
 ];
 
@@ -150,15 +154,20 @@ const MagicHelpPanel = () => (
   </Card>
 );
 
-const MagicHelpPopover = ({ currentQuestion, onShowAnswer }: { currentQuestion: any, onShowAnswer: () => void }) => {
+const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void }) => {
     const [hintViewActive, setHintViewActive] = useState(false);
+    const [explanationViewActive, setExplanationViewActive] = useState(false);
+    const [activeView, setActiveView] = useState<'main' | 'hint' | 'explanation'>('main');
+    
     const [hintText, setHintText] = useState('');
-    const [isHintLoading, setIsHintLoading] = useState(false);
+    const [explanationText, setExplanationText] = useState('');
+
+    const [isLoading, setIsLoading] = useState(false);
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
     const handleHintClick = async () => {
-        setHintViewActive(true);
-        setIsHintLoading(true);
+        setActiveView('hint');
+        setIsLoading(true);
         setHintText('');
 
         const prompt = `Proporciona una pista corta y concisa para la siguiente pregunta. No des la respuesta directamente. Pregunta: "${currentQuestion.question}" ${currentQuestion.code || ''}`;
@@ -169,17 +178,30 @@ const MagicHelpPopover = ({ currentQuestion, onShowAnswer }: { currentQuestion: 
         } else {
             setHintText(result.error || 'Lo siento, no pude obtener una pista para ti.');
         }
-        setIsHintLoading(false);
+        setIsLoading(false);
     };
 
-    const handleShowAnswerClick = () => {
+    const handleShowAnswerAndExplainClick = async () => {
         onShowAnswer();
-        setIsPopoverOpen(false); // Close popover after action
+        setActiveView('explanation');
+        setIsLoading(true);
+        setExplanationText('');
+
+        const prompt = `Explica de forma muy breve y concisa por qué la respuesta a esta pregunta es correcta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". Respuesta Correcta: "${correctAnswer}".`;
+
+        const result = await handleTutorChat(prompt);
+        if (result.response) {
+            setExplanationText(result.response);
+        } else {
+            setExplanationText(result.error || 'Lo siento, no pude obtener una explicación para ti.');
+        }
+        setIsLoading(false);
     };
 
     const resetView = () => {
-        setHintViewActive(false);
+        setActiveView('main');
         setHintText('');
+        setExplanationText('');
     };
 
     const onOpenChange = (open: boolean) => {
@@ -187,6 +209,71 @@ const MagicHelpPopover = ({ currentQuestion, onShowAnswer }: { currentQuestion: 
         if (!open) {
             resetView();
         }
+    };
+    
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                 <div className="flex items-center gap-2 text-muted-foreground">
+                    <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-0"></span>
+                    <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-150"></span>
+                    <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-300"></span>
+                    Koli está pensando...
+                </div>
+            )
+        }
+        
+        if (activeView === 'hint') {
+            return (
+                 <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="font-medium leading-none flex items-center gap-2">
+                            <TutorAvatar />
+                            Pista de Koli
+                        </h4>
+                        <Button variant="ghost" size="sm" onClick={resetView}>Volver</Button>
+                    </div>
+                    <div className="text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{hintText}</ReactMarkdown>
+                    </div>
+                </div>
+            )
+        }
+
+        if (activeView === 'explanation') {
+            return (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="font-medium leading-none flex items-center gap-2">
+                            <TutorAvatar />
+                            Explicación
+                        </h4>
+                        <Button variant="ghost" size="sm" onClick={resetView}>Volver</Button>
+                    </div>
+                    <div className="text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanationText}</ReactMarkdown>
+                    </div>
+                </div>
+            );
+        }
+
+        // Default 'main' view
+        return (
+            <div className="grid gap-4">
+                <div className="space-y-2">
+                    <h4 className="font-medium leading-none">Ayuda Mágica</h4>
+                    <p className="text-sm text-muted-foreground">
+                        Usa estas herramientas para ayudarte a aprender.
+                    </p>
+                </div>
+                <div className="grid gap-2">
+                    <Button variant="outline" onClick={handleHintClick}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+                    <Button variant="outline" onClick={handleShowAnswerAndExplainClick}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
+                    <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+                    <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -202,44 +289,7 @@ const MagicHelpPopover = ({ currentQuestion, onShowAnswer }: { currentQuestion: 
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 mb-2 mr-2" side="top" align="end">
-                {hintViewActive ? (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h4 className="font-medium leading-none flex items-center gap-2">
-                                <TutorAvatar />
-                                Pista de Koli
-                            </h4>
-                            <Button variant="ghost" size="sm" onClick={resetView}>Volver</Button>
-                        </div>
-                        {isHintLoading ? (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-0"></span>
-                                <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-150"></span>
-                                <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-300"></span>
-                                Koli está pensando...
-                            </div>
-                        ) : (
-                            <div className="text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{hintText}</ReactMarkdown>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="grid gap-4">
-                        <div className="space-y-2">
-                            <h4 className="font-medium leading-none">Ayuda Mágica</h4>
-                            <p className="text-sm text-muted-foreground">
-                                Usa estas herramientas para ayudarte a aprender.
-                            </p>
-                        </div>
-                        <div className="grid gap-2">
-                            <Button variant="outline" onClick={handleHintClick}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
-                            <Button variant="outline" onClick={handleShowAnswerClick}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
-                            <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
-                            <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
-                        </div>
-                    </div>
-                )}
+                {renderContent()}
             </PopoverContent>
         </Popover>
     );
@@ -343,7 +393,7 @@ export default function AprenderPage() {
             </CardContent>
           </Card>
 
-          <Card className="mb-6 bg-card/70">
+          <Card className="mb-3 sm:mb-6 bg-card/70">
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
               <CardTitle className="text-lg md:text-xl">Pregunta</CardTitle>
               {currentAnswerState.isAnswered && (
@@ -425,7 +475,11 @@ export default function AprenderPage() {
       </div>
 
        <div className="xl:hidden">
-         <MagicHelpPopover currentQuestion={currentQuestion} onShowAnswer={handleShowAnswer} />
+         <MagicHelpPopover 
+            currentQuestion={currentQuestion} 
+            correctAnswer={currentQuestion.correctAnswerText || ''}
+            onShowAnswer={handleShowAnswer} 
+          />
        </div>
 
     </div>
