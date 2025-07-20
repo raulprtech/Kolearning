@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -42,6 +43,34 @@ const initialSessionQuestions = [
     type: 'open-answer',
     question: 'Explica la diferencia entre `let`, `const`, y `var` en JavaScript.',
     correctAnswerText: '`var` tiene alcance de función, mientras que `let` y `const` tienen alcance de bloque. `const` no puede ser reasignada, a diferencia de `let` y `var`.',
+  },
+  {
+    type: 'matching',
+    question: 'Asocia cada hook de React con su propósito principal.',
+    pairs: [
+        { id: 'A', term: '`useState`', definition: 'Gestionar el estado local en un componente.' },
+        { id: 'B', term: '`useEffect`', definition: 'Realizar efectos secundarios (como peticiones de datos) después del renderizado.' },
+        { id: 'C', term: '`useContext`', definition: 'Consumir un valor de un Context de React.' },
+    ],
+    correctAnswerText: 'useState -> Gestionar estado, useEffect -> Realizar efectos secundarios, useContext -> Consumir contexto',
+  },
+  {
+    type: 'ordering',
+    question: 'Ordena los pasos para hacer un componente "Hello, World" en React.',
+    items: [
+        { id: '1', text: 'Importar React.' },
+        { id: '2', text: 'Definir el componente de función.' },
+        { id: '3', text: 'Retornar el JSX `<h1>Hello, World</h1>`.' },
+        { id: '4', text: 'Exportar el componente.' },
+    ],
+    correctAnswerText: 'Importar -> Definir -> Retornar -> Exportar',
+  },
+  {
+    type: 'fill-in-the-blank',
+    question: 'Completa la frase: En React, las props son ________.',
+    textParts: ['En React, las props son ', 'inmutables', '.'],
+    correctAnswer: 'inmutables',
+    correctAnswerText: 'En React, las props son inmutables.',
   },
   {
     type: 'multiple-choice',
@@ -135,7 +164,7 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
                         <TutorAvatar className="h-8 w-8" />
                         <div className="flex-1 pt-1">
                             <AlertDescription className="text-primary/80 prose prose-sm prose-invert">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {`**Koli:** ${feedback}`}
                                 </ReactMarkdown>
                             </AlertDescription>
@@ -177,6 +206,164 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
         </div>
     );
 };
+
+const FillInTheBlankQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
+    const [userAnswer, setUserAnswer] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onAnswerSubmit(userAnswer);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+            <div className="prose prose-invert prose-sm md:prose-base flex-grow">
+                {question.textParts[0]}
+                <Input 
+                    type="text" 
+                    className="inline-block w-48 mx-2 bg-card/70 border-primary/20"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    disabled={isAnswered}
+                    autoFocus
+                />
+                {question.textParts[2]}
+            </div>
+            {!isAnswered && (
+                <Button type="submit">
+                    <Check className="mr-2 h-4 w-4" />
+                    Comprobar
+                </Button>
+            )}
+        </form>
+    );
+};
+
+const MatchingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
+    const { pairs } = question;
+    const [shuffledTerms, setShuffledTerms] = useState([]);
+    const [shuffledDefs, setShuffledDefs] = useState([]);
+    const [selectedTerm, setSelectedTerm] = useState<any>(null);
+    const [selectedDef, setSelectedDef] = useState<any>(null);
+    const [matchedPairs, setMatchedPairs] = useState<{ [key: string]: string }>({});
+
+    useEffect(() => {
+        const shuffle = (arr: any[]) => [...arr].sort(() => Math.random() - 0.5);
+        setShuffledTerms(shuffle(pairs));
+        setShuffledDefs(shuffle(pairs.map((p: any) => ({ id: p.id, text: p.definition }))));
+    }, [pairs]);
+
+    useEffect(() => {
+        if (selectedTerm && selectedDef) {
+            if (selectedTerm.id === selectedDef.id) {
+                // Correct match
+                setMatchedPairs(prev => ({...prev, [selectedTerm.id]: selectedDef.id}));
+            }
+            // Reset selection after a short delay
+            setTimeout(() => {
+                setSelectedTerm(null);
+                setSelectedDef(null);
+            }, 500);
+        }
+    }, [selectedTerm, selectedDef]);
+
+    useEffect(() => {
+        if (Object.keys(matchedPairs).length === pairs.length) {
+            onAnswerSubmit(true);
+        }
+    }, [matchedPairs, pairs.length, onAnswerSubmit]);
+
+    const getCardClass = (item: any, type: 'term' | 'def') => {
+        const isSelected = (type === 'term' && selectedTerm?.id === item.id) || (type === 'def' && selectedDef?.id === item.id);
+        const isMatched = (type === 'term' && matchedPairs[item.id]) || (type === 'def' && Object.values(matchedPairs).includes(item.id));
+        
+        if (isMatched) return 'border-green-500 bg-green-500/10 text-green-300 opacity-70';
+        if (isSelected) return 'border-primary bg-primary/20';
+
+        return 'hover:bg-muted/80 hover:border-primary/50 cursor-pointer';
+    };
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="space-y-4">
+                {shuffledTerms.map((term: any) => (
+                    <Card key={term.id} className={cn("transition-all", getCardClass(term, 'term'))} onClick={() => !matchedPairs[term.id] && setSelectedTerm(term)}>
+                        <CardContent className="p-4">{term.term}</CardContent>
+                    </Card>
+                ))}
+            </div>
+            <div className="space-y-4">
+                 {shuffledDefs.map((def: any) => (
+                    <Card key={def.id} className={cn("transition-all", getCardClass(def, 'def'))} onClick={() => !Object.values(matchedPairs).includes(def.id) && setSelectedDef(def)}>
+                        <CardContent className="p-4">{def.text}</CardContent>
+                    </Card>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
+const OrderingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
+    const [items, setItems] = useState([]);
+    const dragItem = useRef<number | null>(null);
+    const dragOverItem = useRef<number | null>(null);
+
+    useEffect(() => {
+        setItems([...question.items].sort(() => Math.random() - 0.5));
+    }, [question.items]);
+
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+        dragItem.current = index;
+    };
+
+    const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+        dragOverItem.current = index;
+    };
+
+    const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+        if (dragItem.current !== null && dragOverItem.current !== null) {
+            const newItems = [...items];
+            const draggedItemContent = newItems.splice(dragItem.current, 1)[0];
+            newItems.splice(dragOverItem.current, 0, draggedItemContent);
+            setItems(newItems);
+        }
+        dragItem.current = null;
+        dragOverItem.current = null;
+    };
+
+    const checkOrder = () => {
+        const isCorrect = items.every((item, index) => item.id === (index + 1).toString());
+        onAnswerSubmit(isCorrect);
+    };
+
+    return (
+        <div className="mb-6">
+            <div className="space-y-3 mb-6">
+                {items.map((item, index) => (
+                    <div
+                        key={item.id}
+                        className={cn("flex items-center gap-4 p-4 rounded-lg bg-card/80 border cursor-grab", isAnswered && (items[index].id === (index + 1).toString() ? 'border-green-500' : 'border-red-500'))}
+                        draggable={!isAnswered}
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragEnter={(e) => handleDragEnter(e, index)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={(e) => e.preventDefault()}
+                    >
+                        <GripVertical className="text-muted-foreground" />
+                        <p>{item.text}</p>
+                    </div>
+                ))}
+            </div>
+            {!isAnswered && (
+                <div className="flex justify-end">
+                    <Button onClick={checkOrder}>Verificar Orden</Button>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 type QuickChatMessage = {
   sender: 'user' | 'ai';
@@ -525,19 +712,24 @@ export default function AprenderPage() {
     }));
   }
 
-  const handleCorrectAnswer = (type: 'multiple-choice' | 'open-answer') => {
+  const handleCorrectAnswer = (type: string) => {
     const newStreak = currentStreak + 1;
     setCurrentStreak(newStreak);
     if (newStreak > bestStreak) {
       setBestStreak(newStreak);
     }
-    if (type === 'multiple-choice') {
-      setMasteryProgress(prev => prev + 10);
-      setCognitiveCredits(prev => prev + 5);
-    } else {
-      setMasteryProgress(prev => prev + 20);
-      setCognitiveCredits(prev => prev + 10);
-    }
+
+    const pointsMap: { [key: string]: { mastery: number, credits: number } } = {
+        'multiple-choice': { mastery: 10, credits: 5 },
+        'open-answer': { mastery: 20, credits: 10 },
+        'matching': { mastery: 15, credits: 8 },
+        'ordering': { mastery: 15, credits: 8 },
+        'fill-in-the-blank': { mastery: 10, credits: 5 },
+    };
+
+    const points = pointsMap[type] || { mastery: 0, credits: 0 };
+    setMasteryProgress(prev => prev + points.mastery);
+    setCognitiveCredits(prev => prev + points.credits);
   };
 
   const handleIncorrectAnswer = () => {
@@ -556,6 +748,16 @@ export default function AprenderPage() {
     
     updateAnswer(currentIndex, { selectedOption: optionId, isAnswered: true, isCorrect: isAnswerCorrect });
   };
+  
+  const handleGenericAnswer = (isCorrect: boolean, questionType: string) => {
+      if (isCorrect) {
+          handleCorrectAnswer(questionType);
+      } else {
+          handleIncorrectAnswer();
+      }
+      updateAnswer(currentIndex, { isAnswered: true, isCorrect });
+  };
+
 
   const handleOpenAnswerTextChange = (text: string) => {
     setCurrentOpenAnswerText(text);
@@ -722,14 +924,16 @@ export default function AprenderPage() {
               </div>
             </CardContent>
           </Card>
-
-          {currentQuestion.type === 'multiple-choice' ? (
+          
+          {currentQuestion.type === 'multiple-choice' && (
             <MultipleChoiceQuestion 
               question={currentQuestion}
               answerState={currentAnswerState}
               onOptionSelect={handleOptionSelect}
             />
-          ) : (
+          )}
+
+          {currentQuestion.type === 'open-answer' && (
             <OpenAnswerQuestion 
               onAnswerSubmit={handleAnswerSubmit}
               isAnswered={currentAnswerState.isAnswered}
@@ -739,6 +943,33 @@ export default function AprenderPage() {
               feedback={openAnswerFeedback}
               revealedAnswer={revealedAnswer}
             />
+          )}
+
+          {currentQuestion.type === 'fill-in-the-blank' && (
+              <FillInTheBlankQuestion 
+                  question={currentQuestion}
+                  isAnswered={currentAnswerState.isAnswered}
+                  onAnswerSubmit={(answer: string) => {
+                      const isCorrect = answer.trim().toLowerCase() === (currentQuestion as any).correctAnswer.toLowerCase();
+                      handleGenericAnswer(isCorrect, 'fill-in-the-blank');
+                  }}
+              />
+          )}
+
+          {currentQuestion.type === 'matching' && (
+              <MatchingQuestion
+                  question={currentQuestion}
+                  isAnswered={currentAnswerState.isAnswered}
+                  onAnswerSubmit={(isCorrect: boolean) => handleGenericAnswer(isCorrect, 'matching')}
+              />
+          )}
+
+          {currentQuestion.type === 'ordering' && (
+              <OrderingQuestion
+                  question={currentQuestion}
+                  isAnswered={currentAnswerState.isAnswered}
+                  onAnswerSubmit={(isCorrect: boolean) => handleGenericAnswer(isCorrect, 'ordering')}
+              />
           )}
           
           {currentAnswerState.isAnswered && (
@@ -784,23 +1015,3 @@ export default function AprenderPage() {
     </div>
   );
 }
-
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
