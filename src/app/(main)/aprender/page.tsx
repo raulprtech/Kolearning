@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, ChevronRight, ChevronLeft, Lightbulb, Repeat } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -262,12 +262,15 @@ export default function AprenderPage() {
                       Repetir
                     </Button>
                     <Button variant="outline" size="sm" onClick={goToNext}>
+                      <Frown className="mr-2 h-4 w-4" />
                       Difícil
                     </Button>
                     <Button variant="outline" size="sm" onClick={goToNext}>
+                      <Meh className="mr-2 h-4 w-4" />
                       Bien
                     </Button>
                     <Button variant="outline" size="sm" onClick={goToNext}>
+                      <Smile className="mr-2 h-4 w-4" />
                       Fácil
                     </Button>
                 </div>
