@@ -124,12 +124,12 @@ export default function AprenderPage() {
   const [answers, setAnswers] = useState<AnswerState>({});
   const [isRatingOpen, setIsRatingOpen] = useState(false);
   const [showNavigation, setShowNavigation] = useState(false);
+  const [masteryProgress, setMasteryProgress] = useState(10);
 
   const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [currentIndex]);
   const currentAnswerState = useMemo(() => answers[currentIndex] || { isAnswered: false }, [answers, currentIndex]);
 
   const sessionProgress = ((currentIndex + 1) / sessionQuestions.length) * 100;
-  const masteryProgress = 10;
   const energy = 5;
 
   const updateAnswer = (index: number, update: Partial<AnswerState[number]>) => {
@@ -142,10 +142,15 @@ export default function AprenderPage() {
   }
 
   const handleOptionSelect = (optionId: string) => {
+    if (currentQuestion.type === 'multiple-choice' && optionId === currentQuestion.correctAnswer) {
+        setMasteryProgress(prev => prev + 10);
+    }
     updateAnswer(currentIndex, { selectedOption: optionId });
   };
 
   const handleAnswerSubmit = () => {
+    // For open answers, we can't auto-check, so we don't award points here automatically.
+    // This could be a feature for later where AI evaluates the answer.
     updateAnswer(currentIndex, { answerText: 'dummy' });
   };
 
@@ -301,5 +306,3 @@ export default function AprenderPage() {
     </div>
   );
 }
-
-    
