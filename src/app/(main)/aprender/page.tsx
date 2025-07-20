@@ -241,8 +241,8 @@ const FillInTheBlankQuestion = ({ question, isAnswered, onAnswerSubmit }: any) =
 
 const MatchingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
     const { pairs } = question;
-    const [shuffledTerms, setShuffledTerms] = useState([]);
-    const [shuffledDefs, setShuffledDefs] = useState([]);
+    const [shuffledTerms, setShuffledTerms] = useState<any[]>([]);
+    const [shuffledDefs, setShuffledDefs] = useState<any[]>([]);
     const [selectedTerm, setSelectedTerm] = useState<any>(null);
     const [selectedDef, setSelectedDef] = useState<any>(null);
     const [matchedPairs, setMatchedPairs] = useState<{ [key: string]: string }>({});
@@ -268,10 +268,10 @@ const MatchingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
     }, [selectedTerm, selectedDef]);
 
     useEffect(() => {
-        if (Object.keys(matchedPairs).length === pairs.length) {
+        if (!isAnswered && Object.keys(matchedPairs).length === pairs.length) {
             onAnswerSubmit(true);
         }
-    }, [matchedPairs, pairs.length, onAnswerSubmit]);
+    }, [matchedPairs, pairs.length, onAnswerSubmit, isAnswered]);
 
     const getCardClass = (item: any, type: 'term' | 'def') => {
         const isSelected = (type === 'term' && selectedTerm?.id === item.id) || (type === 'def' && selectedDef?.id === item.id);
@@ -305,7 +305,7 @@ const MatchingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
 
 
 const OrderingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
-    const [items, setItems] = useState([]);
+    const [items, setItems] = useState<any[]>([]);
     const dragItem = useRef<number | null>(null);
     const dragOverItem = useRef<number | null>(null);
 
