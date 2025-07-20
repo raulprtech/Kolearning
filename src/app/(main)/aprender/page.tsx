@@ -132,7 +132,7 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
              {feedback && (
                 <Alert variant="default" className="bg-primary/10 border-primary/20">
                     <div className="flex items-start gap-3">
-                        <TutorAvatar className="h-5 w-5 mt-1" />
+                        <TutorAvatar className="h-8 w-8" />
                         <div className="flex-1">
                             <AlertTitle className="text-primary/90">Koli:</AlertTitle>
                             <AlertDescription className="text-primary/80 prose prose-sm prose-invert">
@@ -633,7 +633,7 @@ export default function AprenderPage() {
 
           <Card className={cn("mb-3 sm:mb-6 bg-card/70", isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta {currentAnswerState.openAnswerAttempts > 0 && currentAnswerState.openAnswerAttempts < 4 ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Pregunta {currentAnswerState.openAnswerAttempts > 0 && currentAnswerState.openAnswerAttempts < 4 ? `(Intento ${currentAnswerState.openAnswerAttempts})` : ''}</CardTitle>
               {currentAnswerState.isAnswered && (
                  <div className="flex items-center gap-4">
                     { isCorrect ? (
@@ -728,6 +728,7 @@ export default function AprenderPage() {
     
 
     
+
 
 
 
