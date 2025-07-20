@@ -6,11 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 const sessionQuestions = [
   {
@@ -54,14 +59,6 @@ type AnswerState = {
     };
 };
 
-const QuestionHelperActions = () => (
-    <div className="flex justify-end gap-2 my-4">
-        <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
-        <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
-        <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
-    </div>
-);
-
 const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) => {
   const { isAnswered, selectedOption } = answerState || { isAnswered: false };
   
@@ -81,7 +78,6 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
 
   return (
     <>
-      {!isAnswered && <QuestionHelperActions />}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {question.options.map((option: any) => (
           <Card
@@ -121,7 +117,6 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered }: any) => {
             />
             {!isAnswered && (
                 <>
-                    <QuestionHelperActions />
                     <div className="flex justify-end">
                         <Button onClick={onAnswerSubmit}>Enviar Respuesta</Button>
                     </div>
@@ -267,10 +262,6 @@ export default function AprenderPage() {
                     {currentQuestion.type === 'open-answer' && (
                         <p className="font-bold text-lg">Respuesta enviada</p>
                     )}
-                    <Button variant="outline" size="sm">
-                        <Lightbulb className="mr-2 h-4 w-4" />
-                        Explicar
-                    </Button>
                  </div>
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={handleRepeatQuestion}>
@@ -292,8 +283,38 @@ export default function AprenderPage() {
                 </div>
             </div>
         )}
-
       </div>
+
+       <Popover>
+        <PopoverTrigger asChild>
+           <Button
+            variant="default"
+            size="lg"
+            className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30"
+          >
+            <Wand2 className="h-8 w-8" />
+            <span className="sr-only">Ayuda Mágica</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 mb-2 mr-2" side="top" align="end">
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <h4 className="font-medium leading-none">Ayuda Mágica</h4>
+              <p className="text-sm text-muted-foreground">
+                Usa estas herramientas para ayudarte a aprender.
+              </p>
+            </div>
+            <div className="grid gap-2">
+               <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+               <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
+               <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+               <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
     </div>
   );
 }
+
