@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -106,7 +106,7 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
             )}
             onClick={() => !isAnswered && onOptionSelect(option.id)}
           >
-            <CardContent className="p-4 flex items-center gap-4">
+            <CardContent className="p-3 sm:p-4 flex items-center gap-4">
               <div className={cn(
                 "h-8 w-8 rounded-md flex items-center justify-center font-bold text-sm shrink-0",
                 "bg-muted text-muted-foreground",
@@ -114,7 +114,7 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
               )}>
                 {option.id}
               </div>
-              <div className="prose prose-invert prose-sm prose-p:my-0">
+              <div className="prose prose-invert prose-sm md:prose-base prose-p:my-0">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{option.text}</ReactMarkdown>
               </div>
             </CardContent>
@@ -254,22 +254,22 @@ export default function AprenderPage() {
           
           <Card className="mb-6">
             <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-4">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-4 sm:mb-0">
                 <div className="mb-4 sm:mb-0">
-                  <h1 className="text-2xl font-bold">JavaScript Fundamentals</h1>
+                  <h1 className="text-xl md:text-2xl font-bold">JavaScript Fundamentals</h1>
                 </div>
                 <div className="flex items-center gap-4 text-sm shrink-0">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-green-400" />
                     <div>
-                      <p className="font-bold">+{masteryProgress}</p>
+                      <p className="font-bold text-base md:text-lg">+{masteryProgress}</p>
                       <p className="text-xs text-muted-foreground">Puntos de Dominio</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Star className="h-5 w-5 text-yellow-400" />
                      <div>
-                      <p className="font-bold">{bestStreak}</p>
+                      <p className="font-bold text-base md:text-lg">{bestStreak}</p>
                       <p className="text-xs text-muted-foreground">Mejor Racha</p>
                     </div>
                   </div>
@@ -283,30 +283,30 @@ export default function AprenderPage() {
           </Card>
 
           <Card className="mb-6 bg-card/70">
-            <CardHeader className="flex flex-row justify-between items-center">
-              <CardTitle className="text-xl">Pregunta</CardTitle>
+            <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
+              <CardTitle className="text-lg md:text-xl">Pregunta</CardTitle>
               {currentAnswerState.isAnswered && (
                  <div className="flex items-center gap-4">
                     {currentQuestion.type === 'multiple-choice' && (
                          isCorrect ? (
                             <div className="flex items-center gap-2">
-                                <CheckCircle className="h-6 w-6 text-green-500" />
-                                <p className="font-bold text-lg">¡Correcto!</p>
+                                <CheckCircle className="h-5 sm:h-6 w-5 sm:w-6 text-green-500" />
+                                <p className="font-bold text-base md:text-lg">¡Correcto!</p>
                             </div>
                         ) : (
                              <div className="flex items-center gap-2">
-                                <XCircle className="h-6 w-6 text-red-500" />
-                                <p className="font-bold text-lg">Respuesta incorrecta</p>
+                                <XCircle className="h-5 sm:h-6 w-5 sm:w-6 text-red-500" />
+                                <p className="font-bold text-base md:text-lg">Respuesta incorrecta</p>
                             </div>
                         )
                     )}
                     {currentQuestion.type === 'open-answer' && (
-                        <p className="font-bold text-lg">Respuesta enviada</p>
+                        <p className="font-bold text-base md:text-lg">Respuesta enviada</p>
                     )}
                  </div>
               )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 sm:px-6">
               <div className="prose prose-invert prose-sm md:prose-base max-w-none prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {currentQuestion.question}
