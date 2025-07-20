@@ -207,9 +207,7 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
     );
 };
 
-const FillInTheBlankQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
-    const [userAnswer, setUserAnswer] = useState('');
-
+const FillInTheBlankQuestion = ({ question, isAnswered, onAnswerSubmit, userAnswer, onUserAnswerChange }: any) => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onAnswerSubmit(userAnswer);
@@ -223,7 +221,7 @@ const FillInTheBlankQuestion = ({ question, isAnswered, onAnswerSubmit }: any) =
                     type="text" 
                     className="inline-block w-48 mx-2 bg-card/70 border-primary/20"
                     value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onChange={(e) => onUserAnswerChange(e.target.value)}
                     disabled={isAnswered}
                     autoFocus
                 />
@@ -287,14 +285,14 @@ const MatchingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="space-y-4">
                 {shuffledTerms.map((term: any) => (
-                    <Card key={term.id} className={cn("transition-all", getCardClass(term, 'term'))} onClick={() => !matchedPairs[term.id] && setSelectedTerm(term)}>
+                    <Card key={term.id} className={cn("transition-all", getCardClass(term, 'term'))} onClick={() => !isAnswered && !matchedPairs[term.id] && setSelectedTerm(term)}>
                         <CardContent className="p-4">{term.term}</CardContent>
                     </Card>
                 ))}
             </div>
             <div className="space-y-4">
                  {shuffledDefs.map((def: any) => (
-                    <Card key={def.id} className={cn("transition-all", getCardClass(def, 'def'))} onClick={() => !Object.values(matchedPairs).includes(def.id) && setSelectedDef(def)}>
+                    <Card key={def.id} className={cn("transition-all", getCardClass(def, 'def'))} onClick={() => !isAnswered && !Object.values(matchedPairs).includes(def.id) && setSelectedDef(def)}>
                         <CardContent className="p-4">{def.text}</CardContent>
                     </Card>
                 ))}
@@ -694,7 +692,6 @@ export default function AprenderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentOpenAnswerText, setCurrentOpenAnswerText] = useState('');
   const [openAnswerFeedback, setOpenAnswerFeedback] = useState<string | null>(null);
-  const [revealedAnswer, setRevealedAnswer] = useState<string | null>(null);
 
   const { user } = useUser();
   const hasEnergy = user && user.energy > 0;
@@ -766,7 +763,7 @@ export default function AprenderPage() {
     }
   };
 
-  const handleAnswerSubmit = async () => {
+  const handleOpenAnswerSubmit = async () => {
     if (!currentOpenAnswerText.trim()) return;
 
     setIsLoading(true);
@@ -818,7 +815,9 @@ export default function AprenderPage() {
           handleCorrectAnswer('open-answer');
           updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentQuestion.correctAnswerText });
           setCurrentOpenAnswerText(currentQuestion.correctAnswerText);
-          setRevealedAnswer(null); // Clear revealed answer since it's now in the textarea
+      } else if (currentQuestion.type === 'fill-in-the-blank') {
+          handleGenericAnswer(true, 'fill-in-the-blank');
+          setCurrentOpenAnswerText((currentQuestion as any).correctAnswer);
       }
   };
   
@@ -837,7 +836,6 @@ export default function AprenderPage() {
           setCurrentIndex(prev => prev + 1);
           setOpenAnswerFeedback(null);
           setCurrentOpenAnswerText('');
-          setRevealedAnswer(null);
       }
   };
 
@@ -935,13 +933,13 @@ export default function AprenderPage() {
 
           {currentQuestion.type === 'open-answer' && (
             <OpenAnswerQuestion 
-              onAnswerSubmit={handleAnswerSubmit}
+              onAnswerSubmit={handleOpenAnswerSubmit}
               isAnswered={currentAnswerState.isAnswered}
               isLoading={isLoading}
               userAnswer={currentAnswerState.isAnswered ? (currentAnswerState.userAnswer || '') : currentOpenAnswerText}
               onUserAnswerChange={handleOpenAnswerTextChange}
               feedback={openAnswerFeedback}
-              revealedAnswer={revealedAnswer}
+              revealedAnswer={null}
             />
           )}
 
@@ -949,9 +947,14 @@ export default function AprenderPage() {
               <FillInTheBlankQuestion 
                   question={currentQuestion}
                   isAnswered={currentAnswerState.isAnswered}
-                  onAnswerSubmit={(answer: string) => {
-                      const isCorrect = answer.trim().toLowerCase() === (currentQuestion as any).correctAnswer.toLowerCase();
+                  userAnswer={currentOpenAnswerText}
+                  onUserAnswerChange={setCurrentOpenAnswerText}
+                  onAnswerSubmit={() => {
+                      const isCorrect = currentOpenAnswerText.trim().toLowerCase() === (currentQuestion as any).correctAnswer.toLowerCase();
                       handleGenericAnswer(isCorrect, 'fill-in-the-blank');
+                      if (!isCorrect) {
+                        setCurrentOpenAnswerText('');
+                      }
                   }}
               />
           )}
