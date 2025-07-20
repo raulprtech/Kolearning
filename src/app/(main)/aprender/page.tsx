@@ -448,7 +448,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
             className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30 flex items-center justify-center p-0"
             disabled={!hasEnergy}
         >
-            <TutorAvatar className="h-8 w-8" />
+            <TutorAvatar className="h-16 w-16" />
             <span className="sr-only">Pedir ayuda a Koli</span>
         </Button>
     );
@@ -642,7 +642,7 @@ export default function AprenderPage() {
 
           <Card className={cn("mb-3 sm:mb-6 bg-card/70", isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta {currentAnswerState.openAnswerAttempts > 0 && currentAnswerState.openAnswerAttempts < 4 && !currentAnswerState.isCorrect ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Pregunta {currentAnswerState.openAnswerAttempts > 0 && !currentAnswerState.isCorrect ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
               {currentAnswerState.isAnswered && (
                  <div className="flex items-center gap-4">
                     { isCorrect ? (
@@ -737,6 +737,7 @@ export default function AprenderPage() {
     
 
     
+
 
 
 
