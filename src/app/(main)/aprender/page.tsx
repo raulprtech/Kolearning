@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star, User2, Check, SendHorizonal } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star, User2, Check, SendHorizonal, Bot } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -151,6 +151,7 @@ const MagicHelpPanel = () => (
           <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
           <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
           <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
+          <Button variant="outline"><Bot className="mr-2 h-4 w-4" /> Tutor AI</Button>
       </CardContent>
   </Card>
 );
@@ -267,7 +268,7 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
     };
 
     const handleDeepen = () => {
-        const contextMessage = `Hola Koli, estoy en una sesión de estudio. La pregunta era: "${currentQuestion.question}". Me has explicado que la respuesta es correcta por lo siguiente: "${explanationText}". ¿Podemos profundizar en este tema?`;
+        const contextMessage = `Hola Koli, estoy en una sesión de estudio. La pregunta era: "${currentQuestion.question}". ${isAnswered ? `La respuesta correcta es "${correctAnswer}".` : ''} ¿Podemos profundizar en este tema?`;
         const encodedContext = encodeURIComponent(contextMessage);
         router.push(`/tutor?context=${encodedContext}`);
     };
@@ -417,6 +418,7 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
                   ) : (
                     <Button variant="outline" onClick={handleExplainClick}><Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta</Button>
                   )}
+                   <Button variant="outline" onClick={handleDeepen}><Bot className="mr-2 h-4 w-4" /> Tutor AI</Button>
                 </div>
             </div>
         );
