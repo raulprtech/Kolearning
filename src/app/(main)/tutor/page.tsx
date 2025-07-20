@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SendHorizonal, User2 } from 'lucide-react';
+import { SendHorizonal, User2, MessageSquare, RefreshCw, ChevronRight } from 'lucide-react';
 import { handleTutorChat } from '@/app/actions/tutor';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -34,6 +34,7 @@ const TutorAvatar = () => (
 export default function TutorPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInputVisible, setIsInputVisible] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -53,32 +54,47 @@ export default function TutorPage() {
         }
       }, 0);
   };
-
-  const onSubmit = async (data: ChatFormData) => {
+  
+  const processMessage = async (message: string) => {
     setIsLoading(true);
-    const userMessage: Message = { sender: 'user', text: data.message };
-    setMessages(prev => [...prev, userMessage]);
     reset();
-    
     scrollToBottom();
 
-    const result = await handleTutorChat(data.message);
-
+    const result = await handleTutorChat(message);
+    
     if (result.response) {
       const aiMessage: Message = { sender: 'ai', text: result.response };
       setMessages(prev => [...prev, aiMessage]);
+      setIsInputVisible(false);
     } else if (result.error) {
        const errorMessage: Message = { sender: 'ai', text: result.error };
        setMessages(prev => [...prev, errorMessage]);
+       setIsInputVisible(true);
     }
 
     setIsLoading(false);
     scrollToBottom();
   };
 
+
+  const onSubmit = async (data: ChatFormData) => {
+    const userMessage: Message = { sender: 'user', text: data.message };
+    setMessages(prev => [...prev, userMessage]);
+    setIsInputVisible(false);
+    await processMessage(data.message);
+  };
+
+  const handleQuickAction = async (prompt: string) => {
+      const userMessage: Message = { sender: 'user', text: prompt };
+      setMessages(prev => [...prev, userMessage]);
+      await processMessage(prompt);
+  }
+
   useEffect(() => {
       scrollToBottom();
   }, [messages]);
+
+  const lastMessageIsFromAI = messages.length > 0 && messages[messages.length - 1].sender === 'ai';
 
   return (
     <div className="container mx-auto py-8 h-[calc(100vh-57px)] flex flex-col">
@@ -103,11 +119,11 @@ export default function TutorPage() {
                     'max-w-xs md:max-w-2xl p-3 rounded-lg text-sm md:text-base',
                     msg.sender === 'user'
                       ? 'bg-primary text-primary-foreground'
-                      : 'bg-blue-900/50 border border-blue-600/50 shadow-[0_0_15px_rgba(59,130,246,0.2)] text-blue-100'
+                      : 'bg-blue-900/50 border border-blue-600/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
                   )}
                 >
                   {msg.sender === 'ai' ? (
-                    <div className="prose prose-invert prose-sm md:prose-base prose-p:my-2 prose-p:leading-relaxed prose-headings:text-blue-200 prose-strong:text-blue-100 prose-blockquote:border-blue-400 prose-code:text-yellow-300 prose-table:border-blue-600/50 prose-th:text-blue-200 prose-tr:border-blue-600/50">
+                    <div className="prose prose-invert prose-sm md:prose-base prose-p:my-2 prose-p:leading-relaxed prose-headings:text-blue-200 prose-strong:text-blue-100 prose-blockquote:border-blue-400 prose-code:text-yellow-300 prose-table:border-blue-600/50 prose-th:text-blue-200 prose-tr:border-blue-600/50 text-blue-100">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {msg.text}
                         </ReactMarkdown>
@@ -136,19 +152,33 @@ export default function TutorPage() {
           </div>
         </ScrollArea>
         <div className="p-4 border-t border-primary/20">
-          <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-4">
-            <Input
-              {...register('message')}
-              placeholder="Escríbele a Koli..."
-              className="flex-grow bg-transparent border-primary/30 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:border-primary font-code"
-              autoComplete='off'
-              disabled={isLoading}
-            />
-            <Button type="submit" size="icon" disabled={isLoading} variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20 hover:text-primary-foreground">
-              <SendHorizonal className="h-4 w-4" />
-            </Button>
-          </form>
-           {errors.message && <p className="text-destructive text-xs mt-2">{errors.message.message}</p>}
+          {isInputVisible ? (
+            <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-4">
+              <Input
+                {...register('message')}
+                placeholder="Escríbele a Koli..."
+                className="flex-grow bg-transparent border-primary/30 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:border-primary font-code"
+                autoComplete='off'
+                disabled={isLoading}
+              />
+              <Button type="submit" size="icon" disabled={isLoading} variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20 hover:text-primary-foreground">
+                <SendHorizonal className="h-4 w-4" />
+              </Button>
+            </form>
+          ) : lastMessageIsFromAI && !isLoading ? (
+            <div className="flex items-center justify-center gap-2">
+                 <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => handleQuickAction('Explicamelo de nuevo de forma simple como si tuviera 5 años.')}>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Simplifícalo
+                </Button>
+                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => setIsInputVisible(true)}>
+                    <MessageSquare className="mr-2 h-4 w-4" /> Preguntar
+                </Button>
+                 <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20">
+                    Continuar <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+            </div>
+          ) : null }
+           {errors.message && isInputVisible && <p className="text-destructive text-xs mt-2">{errors.message.message}</p>}
         </div>
       </div>
     </div>
