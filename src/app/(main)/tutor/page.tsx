@@ -103,7 +103,7 @@ export default function TutorPage() {
             <h1 className="text-3xl font-bold">Pregúntale a Koli</h1>
             <p className="text-muted-foreground">¡Pregúntame lo que sea sobre tus estudios!</p>
        </div>
-      <div className="flex-grow flex flex-col bg-black/30 rounded-lg">
+      <div className="flex-grow flex flex-col bg-black/30 rounded-lg min-h-0">
         <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
           <div className="space-y-6 font-code">
             {messages.map((msg, index) => (
