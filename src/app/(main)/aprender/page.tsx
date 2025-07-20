@@ -154,7 +154,7 @@ const MagicHelpPanel = () => (
   </Card>
 );
 
-const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void }) => {
+const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, isAnswered: boolean }) => {
     const [activeView, setActiveView] = useState<'main' | 'hint' | 'explanation'>('main');
     const [hintText, setHintText] = useState('');
     const [explanationText, setExplanationText] = useState('');
@@ -210,6 +210,22 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
         } else {
             // Handle error, maybe show a toast
         }
+    };
+    
+    const handleExplainClick = async () => {
+        setActiveView('explanation');
+        setIsLoading(true);
+        setExplanationText('');
+
+        const prompt = `Explica de forma breve y concisa el concepto detrás de esta pregunta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". La respuesta correcta es "${correctAnswer}".`;
+
+        const result = await handleTutorChat(prompt);
+        if (result.response) {
+            setExplanationText(result.response);
+        } else {
+            setExplanationText(result.error || 'Lo siento, no pude obtener una explicación para ti.');
+        }
+        setIsLoading(false);
     };
 
     const resetView = () => {
@@ -292,10 +308,15 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
                     </p>
                 </div>
                 <div className="grid gap-2">
-                    <Button variant="outline" onClick={handleHintClick}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
-                    <Button variant="outline" onClick={handleShowAnswerAndExplainClick}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
-                    <Button variant="outline" onClick={handleRephraseClick}><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
-                    <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
+                  {!isAnswered ? (
+                    <>
+                      <Button variant="outline" onClick={handleHintClick}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+                      <Button variant="outline" onClick={handleShowAnswerAndExplainClick}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
+                      <Button variant="outline" onClick={handleRephraseClick}><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+                    </>
+                  ) : (
+                    <Button variant="outline" onClick={handleExplainClick}><Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta</Button>
+                  )}
                 </div>
             </div>
         );
@@ -509,9 +530,12 @@ export default function AprenderPage() {
             correctAnswer={currentQuestion.correctAnswerText || ''}
             onShowAnswer={handleShowAnswer}
             onRephrase={handleRephrase}
+            isAnswered={currentAnswerState.isAnswered}
           />
        </div>
 
     </div>
   );
 }
+
+    
