@@ -21,7 +21,7 @@ import { handleTutorChat } from '@/app/actions/tutor';
 const sessionQuestions = [
   {
     type: 'multiple-choice',
-    question: 'What is the output of the following code?',
+    question: '¿Cuál es el resultado del siguiente código?',
     code: '```javascript\nconsole.log(typeof null);\n```',
     options: [
       { id: 'A', text: '`null`' },
@@ -33,11 +33,11 @@ const sessionQuestions = [
   },
   {
     type: 'open-answer',
-    question: 'Explain the difference between `let`, `const`, and `var` in JavaScript.',
+    question: 'Explica la diferencia entre `let`, `const`, y `var` en JavaScript.',
   },
   {
     type: 'multiple-choice',
-    question: 'Which of these is NOT a primitive data type in JavaScript?',
+    question: '¿Cuál de estos NO es un tipo de dato primitivo en JavaScript?',
     options: [
         { id: 'A', text: '`string`' },
         { id: 'B', text: '`number`' },
@@ -48,7 +48,7 @@ const sessionQuestions = [
   },
    {
     type: 'open-answer',
-    question: 'What is a closure in JavaScript? Provide a simple code example.',
+    question: '¿Qué es un closure en JavaScript? Proporciona un ejemplo de código sencillo.',
   },
 ];
 
@@ -160,13 +160,13 @@ const MagicHelpPopover = ({ currentQuestion }: { currentQuestion: any }) => {
         setIsHintLoading(true);
         setHintText('');
 
-        const prompt = `Please provide a short and concise hint for the following question. Don't give the answer directly. Question: "${currentQuestion.question}" ${currentQuestion.code || ''}`;
+        const prompt = `Proporciona una pista corta y concisa para la siguiente pregunta. No des la respuesta directamente. Pregunta: "${currentQuestion.question}" ${currentQuestion.code || ''}`;
         
         const result = await handleTutorChat(prompt);
         if (result.response) {
             setHintText(result.response);
         } else {
-            setHintText(result.error || 'Sorry, I could not get a hint for you.');
+            setHintText(result.error || 'Lo siento, no pude obtener una pista para ti.');
         }
         setIsHintLoading(false);
     };
@@ -296,7 +296,7 @@ export default function AprenderPage() {
             <CardContent className="p-4 sm:p-6">
                <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6">
                 <div className="mb-4 sm:mb-0">
-                  <h1 className="text-xl md:text-2xl font-bold">JavaScript Fundamentals</h1>
+                  <h1 className="text-xl md:text-2xl font-bold">Fundamentos de JavaScript</h1>
                 </div>
                 <div className="flex items-center gap-4 text-sm shrink-0">
                   <div className="flex items-center gap-2">
