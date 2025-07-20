@@ -262,8 +262,8 @@ export default function AprenderPage() {
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-green-400" />
                     <div>
-                      <p className="font-bold">{masteryProgress}%</p>
-                      <p className="text-xs text-muted-foreground">Dominio</p>
+                      <p className="font-bold">+{masteryProgress}</p>
+                      <p className="text-xs text-muted-foreground">Puntos de Dominio</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
