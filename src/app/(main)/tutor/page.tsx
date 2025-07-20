@@ -59,7 +59,7 @@ function TutorChatComponent() {
       }, 0);
   };
   
-  const processMessage = async (message: string) => {
+  const processMessage = async (message: string, showInputAfter: boolean = true) => {
     setIsLoading(true);
     reset();
     scrollToBottom();
@@ -69,13 +69,12 @@ function TutorChatComponent() {
     if (result.response) {
       const aiMessage: Message = { sender: 'ai', text: result.response };
       setMessages(prev => [...prev, aiMessage]);
-      setIsInputVisible(true);
     } else if (result.error) {
        const errorMessage: Message = { sender: 'ai', text: result.error };
        setMessages(prev => [...prev, errorMessage]);
-       setIsInputVisible(true);
     }
 
+    setIsInputVisible(showInputAfter);
     setIsLoading(false);
     scrollToBottom();
   };
@@ -87,13 +86,15 @@ function TutorChatComponent() {
         const decodedContext = decodeURIComponent(context);
         const userMessage: Message = { sender: 'user', text: decodedContext };
         setMessages([userMessage]);
-        processMessage(decodedContext);
+        // Don't show input after processing context, show quick actions instead.
+        processMessage(decodedContext, false); 
         router.replace('/tutor', undefined);
     } else {
         // if there's no context, show the input right away
         // unless there are no messages, then show quick actions
         setIsInputVisible(messages.length > 0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -113,7 +114,7 @@ function TutorChatComponent() {
       scrollToBottom();
   }, [messages]);
 
-  const showQuickActions = !isLoading && messages.length === 0;
+  const showQuickActions = !isLoading && !isInputVisible;
   
   return (
     <div className="container mx-auto py-8 h-[calc(100vh-57px)] flex flex-col">
