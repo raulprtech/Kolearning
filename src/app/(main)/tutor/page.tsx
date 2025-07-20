@@ -34,7 +34,7 @@ const TutorAvatar = () => (
 export default function TutorPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isInputVisible, setIsInputVisible] = useState(true);
+  const [isInputVisible, setIsInputVisible] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -87,6 +87,7 @@ export default function TutorPage() {
   const handleQuickAction = async (prompt: string) => {
       const userMessage: Message = { sender: 'user', text: prompt };
       setMessages(prev => [...prev, userMessage]);
+      setIsInputVisible(false);
       await processMessage(prompt);
   }
 
@@ -94,7 +95,7 @@ export default function TutorPage() {
       scrollToBottom();
   }, [messages]);
 
-  const lastMessageIsFromAI = messages.length > 0 && messages[messages.length - 1].sender === 'ai';
+  const showQuickActions = (!isLoading && (messages.length === 0 || messages[messages.length - 1].sender === 'ai'));
 
   return (
     <div className="container mx-auto py-8 h-[calc(100vh-57px)] flex flex-col">
@@ -165,7 +166,7 @@ export default function TutorPage() {
                 <SendHorizonal className="h-4 w-4" />
               </Button>
             </form>
-          ) : lastMessageIsFromAI && !isLoading ? (
+          ) : showQuickActions ? (
             <div className="flex items-center justify-center gap-2">
                  <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => handleQuickAction('Explicamelo de nuevo de forma simple como si tuviera 5 años.')}>
                     <RefreshCw className="mr-2 h-4 w-4" /> Simplifícalo
