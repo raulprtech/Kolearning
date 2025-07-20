@@ -100,7 +100,7 @@ export default function TutorPage() {
                   className={cn(
                     'max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg text-sm md:text-base',
                     msg.sender === 'user'
-                      ? 'bg-secondary/50 border border-primary/50 text-primary-foreground'
+                      ? 'bg-primary text-primary-foreground'
                       : 'bg-blue-900/50 border border-blue-600/50 shadow-[0_0_15px_rgba(59,130,246,0.2)] text-blue-100'
                   )}
                 >
