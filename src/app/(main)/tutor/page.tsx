@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'Message cannot be empty.'),
@@ -119,12 +120,12 @@ function TutorChatComponent() {
   return (
     <div className="container mx-auto py-8 h-[calc(100vh-57px)] flex flex-col">
        <div className="text-center mb-8 relative">
-            {hasContext && (
-                <Button variant="ghost" size="sm" className="absolute left-0 top-1/2 -translate-y-1/2" onClick={() => router.back()}>
+            <Button variant="ghost" size="sm" className="absolute left-0 top-1/2 -translate-y-1/2" asChild>
+                <Link href={hasContext ? '#' : '/'} onClick={hasContext ? () => router.back() : undefined}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Volver a la sesión
-                </Button>
-            )}
+                    {hasContext ? 'Volver a la sesión' : 'Volver al inicio'}
+                </Link>
+            </Button>
             <h1 className="text-3xl font-bold">Pregúntale a Koli</h1>
             <p className="text-muted-foreground">¡Pregúntame lo que sea sobre tus estudios!</p>
        </div>
