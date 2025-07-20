@@ -111,11 +111,11 @@ const sources = [
 ];
 
 export default async function DeckDetailsPage({
-  params,
+  params: { deckId },
 }: {
   params: { deckId: string };
 }) {
-  const deck = await getDeckDetails(params.deckId);
+  const deck = await getDeckDetails(deckId);
 
   if (!deck) {
     return (
