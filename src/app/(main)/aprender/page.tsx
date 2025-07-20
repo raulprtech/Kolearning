@@ -481,7 +481,7 @@ export default function AprenderPage() {
   const [sessionQuestions, setSessionQuestions] = useState(initialSessionQuestions);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerState>({});
-  const [masteryProgress, setMasteryProgress] = useState(10);
+  const [masteryProgress, setMasteryProgress] = useState(0);
   const [bestStreak, setBestStreak] = useState(1);
   const [isPulsing, setIsPulsing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -536,7 +536,7 @@ export default function AprenderPage() {
     });
 
     if (result.evaluation?.isCorrect) {
-        setMasteryProgress(prev => Math.min(prev + 10, 100));
+        setMasteryProgress(prev => Math.min(prev + 20, 100));
         updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
     } else {
         const nextAttempt = attempts + 1;
@@ -611,10 +611,10 @@ export default function AprenderPage() {
                 </div>
                 <div className="flex items-center gap-4 text-sm shrink-0">
                   <div className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-green-400" />
+                      {'🪙'}
                       <div>
                         <p className="font-bold text-base md:text-lg">4</p>
-                        <p className="text-xs text-muted-foreground">Creditos Cognitivos Ganados</p>
+                        <p className="text-xs text-muted-foreground">Creditos Cognitivos</p>
                       </div>
                     </div>
                   <div className="flex items-center gap-2">
@@ -737,6 +737,7 @@ export default function AprenderPage() {
     
 
     
+
 
 
 
