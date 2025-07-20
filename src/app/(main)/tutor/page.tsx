@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SendHorizonal, User2, MessageSquare, RefreshCw, ChevronRight } from 'lucide-react';
+import { SendHorizonal, User2, MessageSquare, RefreshCw, ChevronRight, ArrowLeft } from 'lucide-react';
 import { handleTutorChat } from '@/app/actions/tutor';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'Message cannot be empty.'),
@@ -31,12 +32,15 @@ const TutorAvatar = () => (
   </div>
 );
 
-export default function TutorPage() {
+function TutorChatComponent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInputVisible, setIsInputVisible] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-
+  const [hasContext, setHasContext] = useState(false);
+  
   const {
     register,
     handleSubmit,
@@ -76,6 +80,20 @@ export default function TutorPage() {
     scrollToBottom();
   };
 
+  useEffect(() => {
+    const context = searchParams.get('context');
+    if (context) {
+        setHasContext(true);
+        const decodedContext = decodeURIComponent(context);
+        const userMessage: Message = { sender: 'user', text: decodedContext };
+        setMessages([userMessage]);
+        processMessage(decodedContext);
+        router.replace('/tutor', undefined);
+    } else {
+        setIsInputVisible(true);
+    }
+  }, []);
+
 
   const onSubmit = async (data: ChatFormData) => {
     const userMessage: Message = { sender: 'user', text: data.message };
@@ -96,10 +114,16 @@ export default function TutorPage() {
   }, [messages]);
 
   const showQuickActions = (!isLoading && (messages.length === 0 || messages[messages.length - 1].sender === 'ai'));
-
+  
   return (
     <div className="container mx-auto py-8 h-[calc(100vh-57px)] flex flex-col">
-       <div className="text-center mb-8">
+       <div className="text-center mb-8 relative">
+            {hasContext && (
+                <Button variant="ghost" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2" onClick={() => router.back()}>
+                    <ArrowLeft className="h-5 w-5" />
+                    <span className="sr-only">Volver a la sesión</span>
+                </Button>
+            )}
             <h1 className="text-3xl font-bold">Pregúntale a Koli</h1>
             <p className="text-muted-foreground">¡Pregúntame lo que sea sobre tus estudios!</p>
        </div>
@@ -184,4 +208,13 @@ export default function TutorPage() {
       </div>
     </div>
   );
+}
+
+
+export default function TutorPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <TutorChatComponent />
+        </Suspense>
+    );
 }

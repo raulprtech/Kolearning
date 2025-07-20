@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star, User2, Check } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star, User2, Check, SendHorizonal } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -17,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { handleTutorChat } from '@/app/actions/tutor';
+import { useRouter } from 'next/navigation';
 
 const initialSessionQuestions = [
   {
@@ -155,12 +156,16 @@ const MagicHelpPanel = () => (
 );
 
 const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, isAnswered: boolean }) => {
+    const router = useRouter();
     const [activeView, setActiveView] = useState<'main' | 'hint' | 'explanation'>('main');
     const [hintText, setHintText] = useState('');
     const [explanationText, setExplanationText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [showQuickQuestion, setShowQuickQuestion] = useState(false);
+    const [quickQuestionText, setQuickQuestionText] = useState('');
+    const [quickQuestionResponse, setQuickQuestionResponse] = useState('');
 
     const handleHintClick = async () => {
         setActiveView('hint');
@@ -183,6 +188,8 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
         setActiveView('explanation');
         setIsLoading(true);
         setExplanationText('');
+        setShowQuickQuestion(false);
+        setQuickQuestionResponse('');
 
         const prompt = `Explica de forma muy breve y concisa por qué la respuesta a esta pregunta es correcta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". Respuesta Correcta: "${correctAnswer}".`;
 
@@ -216,6 +223,8 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
         setActiveView('explanation');
         setIsLoading(true);
         setExplanationText('');
+        setShowQuickQuestion(false);
+        setQuickQuestionResponse('');
 
         const prompt = `Explica de forma breve y concisa el concepto detrás de esta pregunta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". La respuesta correcta es "${correctAnswer}".`;
 
@@ -228,11 +237,38 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
         setIsLoading(false);
     };
 
+    const handleQuickQuestionSubmit = async () => {
+        if (!quickQuestionText.trim()) return;
+
+        setIsLoading(true);
+        setQuickQuestionResponse('');
+        const prompt = `Dentro del contexto de la pregunta "${currentQuestion.question}" (cuya respuesta es "${correctAnswer}"), responde a la siguiente duda del usuario de forma concisa: "${quickQuestionText}"`;
+        
+        const result = await handleTutorChat(prompt);
+        if (result.response) {
+            setQuickQuestionResponse(result.response);
+        } else {
+            setQuickQuestionResponse(result.error || 'Lo siento, no pude responder a tu pregunta.');
+        }
+        setQuickQuestionText('');
+        setIsLoading(false);
+    };
+
+    const handleDeepen = () => {
+        const contextMessage = `Hola Koli, estoy en una sesión de estudio. La pregunta era: "${currentQuestion.question}". Me has explicado que la respuesta es correcta por lo siguiente: "${explanationText}". ¿Podemos profundizar en este tema?`;
+        const encodedContext = encodeURIComponent(contextMessage);
+        router.push(`/tutor?context=${encodedContext}`);
+    };
+
+
     const resetView = () => {
         setActiveView('main');
         setHintText('');
         setExplanationText('');
         setIsSuccess(false);
+        setShowQuickQuestion(false);
+        setQuickQuestionResponse('');
+        setQuickQuestionText('');
     };
 
     const onOpenChange = (open: boolean) => {
@@ -293,6 +329,33 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
                     </div>
                     <div className="text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanationText}</ReactMarkdown>
+                    </div>
+                    <div className="border-t border-primary/20 pt-4 mt-4 space-y-2">
+                      {!showQuickQuestion && (
+                          <div className="grid grid-cols-2 gap-2">
+                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestion(true)}>Pregunta Rápida</Button>
+                              <Button variant="outline" size="sm" onClick={handleDeepen}>Profundizar</Button>
+                          </div>
+                      )}
+                      {showQuickQuestion && (
+                          <div className="space-y-2">
+                              <Textarea 
+                                  placeholder="Haz una pregunta de seguimiento..."
+                                  value={quickQuestionText}
+                                  onChange={(e) => setQuickQuestionText(e.target.value)}
+                                  className="text-xs"
+                                  rows={2}
+                              />
+                              <Button size="sm" onClick={handleQuickQuestionSubmit} className="w-full">
+                                  <SendHorizonal className="mr-2 h-4 w-4" /> Enviar
+                              </Button>
+                              {quickQuestionResponse && (
+                                  <div className="text-xs text-muted-foreground border-l-2 border-primary/50 pl-2">
+                                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{quickQuestionResponse}</ReactMarkdown>
+                                  </div>
+                              )}
+                          </div>
+                      )}
                     </div>
                 </div>
             );
@@ -413,7 +476,7 @@ export default function AprenderPage() {
             </Link>
           </div>
           
-          <Card className="mb-6">
+          <Card className="mb-3 sm:mb-6">
             <CardContent className="p-4 sm:p-6">
                <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6">
                 <div className="mb-4 sm:mb-0">
@@ -537,5 +600,3 @@ export default function AprenderPage() {
     </div>
   );
 }
-
-    
