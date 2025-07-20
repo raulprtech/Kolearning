@@ -96,7 +96,6 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
 
   return (
     <>
-      <QuestionHelperActions />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {question.options.map((option: any) => (
           <Card
@@ -136,7 +135,6 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered }: any) => {
             />
             {!isAnswered && (
                 <>
-                    <QuestionHelperActions />
                     <div className="flex justify-end">
                         <Button onClick={onAnswerSubmit}>Enviar Respuesta</Button>
                     </div>
@@ -249,7 +247,7 @@ export default function AprenderPage() {
         {/* Main Content Column */}
         <div className="xl:col-span-2">
           <div className="mb-4">
-            <Link href="/" className="text-sm text-primary hover:underline flex items-center mb-4">
+            <Link href="/" className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Salir de la sesión
             </Link>
           </div>
