@@ -284,8 +284,28 @@ export default function AprenderPage() {
           </Card>
 
           <Card className="mb-6 bg-card/70">
-            <CardHeader>
+            <CardHeader className="flex flex-row justify-between items-center">
               <CardTitle className="text-xl">Pregunta</CardTitle>
+              {currentAnswerState.isAnswered && (
+                 <div className="flex items-center gap-4">
+                    {currentQuestion.type === 'multiple-choice' && (
+                         isCorrect ? (
+                            <div className="flex items-center gap-2">
+                                <CheckCircle className="h-6 w-6 text-green-500" />
+                                <p className="font-bold text-lg">¡Correcto!</p>
+                            </div>
+                        ) : (
+                             <div className="flex items-center gap-2">
+                                <XCircle className="h-6 w-6 text-red-500" />
+                                <p className="font-bold text-lg">Respuesta incorrecta</p>
+                            </div>
+                        )
+                    )}
+                    {currentQuestion.type === 'open-answer' && (
+                        <p className="font-bold text-lg">Respuesta enviada</p>
+                    )}
+                 </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="prose prose-invert prose-sm md:prose-base max-w-none prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50">
@@ -315,25 +335,7 @@ export default function AprenderPage() {
           )}
           
           {currentAnswerState.isAnswered && (
-               <div className="flex justify-between items-center bg-card/70 border rounded-lg p-4">
-                   <div className="flex items-center gap-4">
-                      {currentQuestion.type === 'multiple-choice' && (
-                           isCorrect ? (
-                              <div className="flex items-center gap-2">
-                                  <CheckCircle className="h-6 w-6 text-green-500" />
-                                  <p className="font-bold text-lg">¡Correcto!</p>
-                              </div>
-                          ) : (
-                               <div className="flex items-center gap-2">
-                                  <XCircle className="h-6 w-6 text-red-500" />
-                                  <p className="font-bold text-lg">Respuesta incorrecta</p>
-                              </div>
-                          )
-                      )}
-                      {currentQuestion.type === 'open-answer' && (
-                          <p className="font-bold text-lg">Respuesta enviada</p>
-                      )}
-                   </div>
+               <div className="flex justify-end items-center bg-card/70 border rounded-lg p-4">
                   <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={goToNext}>
                         <Frown className="mr-2 h-4 w-4" />
