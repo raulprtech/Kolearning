@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2 } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -179,13 +179,13 @@ export default function AprenderPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerState>({});
   const [masteryProgress, setMasteryProgress] = useState(10);
+  const [bestStreak, setBestStreak] = useState(1);
 
   const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [currentIndex]);
   const currentAnswerState = useMemo(() => answers[currentIndex] || { isAnswered: false }, [answers, currentIndex]);
 
   const sessionProgress = ((currentIndex + 1) / sessionQuestions.length) * 100;
-  const energy = 5;
-
+  
   const updateAnswer = (index: number, update: Partial<AnswerState[number]>) => {
     setAnswers(prev => ({
       ...prev,
@@ -252,10 +252,10 @@ export default function AprenderPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" />
+                    <Star className="h-5 w-5 text-yellow-400" />
                      <div>
-                      <p className="font-bold">{energy}</p>
-                      <p className="text-xs text-muted-foreground">Energía</p>
+                      <p className="font-bold">{bestStreak}</p>
+                      <p className="text-xs text-muted-foreground">Mejor Racha</p>
                     </div>
                   </div>
                 </div>
