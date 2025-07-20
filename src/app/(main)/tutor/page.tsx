@@ -69,7 +69,7 @@ function TutorChatComponent() {
     if (result.response) {
       const aiMessage: Message = { sender: 'ai', text: result.response };
       setMessages(prev => [...prev, aiMessage]);
-      setIsInputVisible(false);
+      setIsInputVisible(true);
     } else if (result.error) {
        const errorMessage: Message = { sender: 'ai', text: result.error };
        setMessages(prev => [...prev, errorMessage]);
@@ -98,14 +98,12 @@ function TutorChatComponent() {
   const onSubmit = async (data: ChatFormData) => {
     const userMessage: Message = { sender: 'user', text: data.message };
     setMessages(prev => [...prev, userMessage]);
-    setIsInputVisible(false);
     await processMessage(data.message);
   };
 
   const handleQuickAction = async (prompt: string) => {
       const userMessage: Message = { sender: 'user', text: prompt };
       setMessages(prev => [...prev, userMessage]);
-      setIsInputVisible(false);
       await processMessage(prompt);
   }
 
@@ -119,9 +117,9 @@ function TutorChatComponent() {
     <div className="container mx-auto py-8 h-[calc(100vh-57px)] flex flex-col">
        <div className="text-center mb-8 relative">
             {hasContext && (
-                <Button variant="ghost" size="icon" className="absolute left-0 top-1/2 -translate-y-1/2" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
-                    <span className="sr-only">Volver a la sesión</span>
+                <Button variant="ghost" size="sm" className="absolute left-0 top-1/2 -translate-y-1/2" onClick={() => router.back()}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Volver a la sesión
                 </Button>
             )}
             <h1 className="text-3xl font-bold">Pregúntale a Koli</h1>
@@ -197,9 +195,6 @@ function TutorChatComponent() {
                 </Button>
                 <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => setIsInputVisible(true)}>
                     <MessageSquare className="mr-2 h-4 w-4" /> Preguntar
-                </Button>
-                 <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20">
-                    Continuar <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
             </div>
           ) : null }
