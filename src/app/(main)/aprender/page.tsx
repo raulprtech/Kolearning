@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star, User2 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { handleTutorChat } from '@/app/actions/tutor';
 
 const sessionQuestions = [
   {
@@ -59,23 +60,11 @@ type AnswerState = {
     };
 };
 
-const QuestionHelperActions = () => (
-    <div className="flex justify-end items-center gap-2 mb-4 -mt-2">
-        <Button variant="outline" size="sm" className="text-muted-foreground">
-            <Lightbulb className="mr-2 h-4 w-4" />
-            Pista
-        </Button>
-        <Button variant="outline" size="sm" className="text-muted-foreground">
-            <Eye className="mr-2 h-4 w-4" />
-            Ver Respuesta
-        </Button>
-        <Button variant="outline" size="sm" className="text-muted-foreground">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Reformular
-        </Button>
+const TutorAvatar = () => (
+    <div className="w-8 h-8 rounded-full bg-blue-500/50 flex items-center justify-center shrink-0">
+        <div className="w-full h-full rounded-full bg-gradient-radial from-white to-blue-400 animate-pulse"></div>
     </div>
 );
-
 
 const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) => {
   const { isAnswered, selectedOption } = answerState || { isAnswered: false };
@@ -161,36 +150,87 @@ const MagicHelpPanel = () => (
   </Card>
 );
 
-const MagicHelpPopover = () => (
-   <Popover>
-    <PopoverTrigger asChild>
-       <Button
-        variant="default"
-        size="lg"
-        className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30"
-      >
-        <Wand2 className="h-8 w-8" />
-        <span className="sr-only">Ayuda Mágica</span>
-      </Button>
-    </PopoverTrigger>
-    <PopoverContent className="w-80 mb-2 mr-2" side="top" align="end">
-      <div className="grid gap-4">
-        <div className="space-y-2">
-          <h4 className="font-medium leading-none">Ayuda Mágica</h4>
-          <p className="text-sm text-muted-foreground">
-            Usa estas herramientas para ayudarte a aprender.
-          </p>
-        </div>
-        <div className="grid gap-2">
-           <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
-           <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
-           <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
-           <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
-        </div>
-      </div>
-    </PopoverContent>
-  </Popover>
-);
+const MagicHelpPopover = ({ currentQuestion }: { currentQuestion: any }) => {
+    const [hintViewActive, setHintViewActive] = useState(false);
+    const [hintText, setHintText] = useState('');
+    const [isHintLoading, setIsHintLoading] = useState(false);
+
+    const handleHintClick = async () => {
+        setHintViewActive(true);
+        setIsHintLoading(true);
+        setHintText('');
+
+        const prompt = `Please provide a short and concise hint for the following question. Don't give the answer directly. Question: "${currentQuestion.question}" ${currentQuestion.code || ''}`;
+        
+        const result = await handleTutorChat(prompt);
+        if (result.response) {
+            setHintText(result.response);
+        } else {
+            setHintText(result.error || 'Sorry, I could not get a hint for you.');
+        }
+        setIsHintLoading(false);
+    };
+
+    const resetView = () => {
+        setHintViewActive(false);
+        setHintText('');
+    };
+
+    return (
+        <Popover onOpenChange={(open) => !open && resetView()}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="default"
+                    size="lg"
+                    className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30"
+                >
+                    <Wand2 className="h-8 w-8" />
+                    <span className="sr-only">Ayuda Mágica</span>
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 mb-2 mr-2" side="top" align="end">
+                {hintViewActive ? (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h4 className="font-medium leading-none flex items-center gap-2">
+                                <TutorAvatar />
+                                Pista de Koli
+                            </h4>
+                            <Button variant="ghost" size="sm" onClick={resetView}>Volver</Button>
+                        </div>
+                        {isHintLoading ? (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-0"></span>
+                                <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-150"></span>
+                                <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-300"></span>
+                                Koli está pensando...
+                            </div>
+                        ) : (
+                            <div className="text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{hintText}</ReactMarkdown>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="grid gap-4">
+                        <div className="space-y-2">
+                            <h4 className="font-medium leading-none">Ayuda Mágica</h4>
+                            <p className="text-sm text-muted-foreground">
+                                Usa estas herramientas para ayudarte a aprender.
+                            </p>
+                        </div>
+                        <div className="grid gap-2">
+                            <Button variant="outline" onClick={handleHintClick}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+                            <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
+                            <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+                            <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
+                        </div>
+                    </div>
+                )}
+            </PopoverContent>
+        </Popover>
+    );
+};
 
 
 export default function AprenderPage() {
@@ -241,7 +281,7 @@ export default function AprenderPage() {
   const isCorrect = currentQuestion.type === 'multiple-choice' && currentAnswerState.selectedOption === (currentQuestion as any).correctAnswer;
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-4 sm:py-8">
       <div className="xl:grid xl:grid-cols-3 xl:gap-8">
 
         {/* Main Content Column */}
@@ -254,7 +294,7 @@ export default function AprenderPage() {
           
           <Card className="mb-6">
             <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6">
+               <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6">
                 <div className="mb-4 sm:mb-0">
                   <h1 className="text-xl md:text-2xl font-bold">JavaScript Fundamentals</h1>
                 </div>
@@ -364,7 +404,7 @@ export default function AprenderPage() {
       </div>
 
        <div className="xl:hidden">
-         <MagicHelpPopover />
+         <MagicHelpPopover currentQuestion={currentQuestion} />
        </div>
 
     </div>
