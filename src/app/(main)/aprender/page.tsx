@@ -471,7 +471,7 @@ export default function AprenderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentOpenAnswerText, setCurrentOpenAnswerText] = useState('');
   
-  const { user, decrementEnergy } = useUser();
+  const { user } = useUser();
   const hasEnergy = user && user.energy > 0;
 
   const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [sessionQuestions, currentIndex]);
@@ -512,8 +512,8 @@ export default function AprenderPage() {
         setMasteryProgress(prev => Math.min(prev + 10, 100));
         updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText });
     } else {
-        if (attempts + 1 >= 3) {
-            // Max attempts reached
+        if (attempts >= 2) {
+            // Max attempts reached (0, 1, 2)
             updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
         } else {
             // Try again
