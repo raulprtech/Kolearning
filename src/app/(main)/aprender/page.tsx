@@ -420,7 +420,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         return (
             <div className="grid gap-4">
                 <div className="space-y-2">
-                    <h4 className="font-medium leading-none">Asistencia de Koli</h4>
+                    <h4 className="font-medium leading-none">Pedir ayuda a Koli</h4>
                     <p className="text-sm text-muted-foreground">
                         Usa estas herramientas para ayudarte a aprender.
                     </p>
@@ -449,7 +449,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
             disabled={!hasEnergy}
         >
             <Wand2 className="h-8 w-8" />
-            <span className="sr-only">Asistencia de Koli</span>
+            <span className="sr-only">Pedir ayuda a Koli</span>
         </Button>
     );
 
@@ -736,6 +736,7 @@ export default function AprenderPage() {
     
 
     
+
 
 
 
