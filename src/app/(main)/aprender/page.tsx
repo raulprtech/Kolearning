@@ -5,15 +5,50 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Zap, TrendingUp, Sparkles, Eye, Repeat } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, Sparkles, Eye, Repeat, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+const questionData = {
+  question: 'What is the output of the following code?',
+  code: '```javascript\nconsole.log(typeof null);\n```',
+  options: [
+    { id: 'A', text: '`null`' },
+    { id: 'B', text: '`undefined`' },
+    { id: 'C', text: '`object`' },
+    { id: 'D', text: '`string`' },
+  ],
+  correctAnswer: 'C',
+};
 
 export default function AprenderPage() {
-  const [answer, setAnswer] = useState('');
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isAnswered, setIsAnswered] = useState(false);
+  
   const sessionProgress = 35;
   const masteryProgress = 10;
   const energy = 5;
+
+  const handleOptionSelect = (optionId: string) => {
+    if (isAnswered) return;
+    setSelectedOption(optionId);
+    setIsAnswered(true);
+  };
+
+  const getOptionClass = (optionId: string) => {
+    if (!isAnswered) {
+      return 'hover:bg-muted/80 hover:border-primary/50 cursor-pointer';
+    }
+    const isCorrect = optionId === questionData.correctAnswer;
+    const isSelected = optionId === selectedOption;
+
+    if (isCorrect) return 'border-green-500 bg-green-500/10 text-green-300';
+    if (isSelected && !isCorrect) return 'border-red-500 bg-red-500/10 text-red-300';
+    
+    return 'opacity-50';
+  };
 
   return (
     <div className="container mx-auto py-8 flex flex-col items-center">
@@ -57,41 +92,64 @@ export default function AprenderPage() {
             <CardTitle className="text-xl">Pregunta</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-lg">
-              ¿Cuál es la diferencia entre `let`, `const` y `var` en JavaScript?
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <Textarea
-              placeholder="Escribe tu respuesta aquí..."
-              className="min-h-[150px] text-base mb-4"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-            />
-            <div className="flex justify-between items-center">
-              <div className="flex gap-2">
-                 <Button variant="outline">
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Pista
-                </Button>
-                <Button variant="outline">
-                    <Eye className="mr-2 h-4 w-4" />
-                    Ver Respuesta
-                </Button>
-                <Button variant="ghost">
-                    <Repeat className="mr-2 h-4 w-4" />
-                    Reformular
-                </Button>
-              </div>
-              <Button size="lg" disabled={!answer}>
-                Enviar Respuesta
-              </Button>
+            <div className="prose prose-invert prose-sm md:prose-base max-w-none prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {questionData.question}
+                </ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {questionData.code}
+                </ReactMarkdown>
             </div>
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {questionData.options.map(option => (
+                 <Card 
+                    key={option.id}
+                    className={cn(
+                        "transition-all duration-300 border-2 border-transparent",
+                        getOptionClass(option.id)
+                    )}
+                    onClick={() => handleOptionSelect(option.id)}
+                 >
+                    <CardContent className="p-4 flex items-center gap-4">
+                       <div className={cn(
+                           "h-8 w-8 rounded-md flex items-center justify-center font-bold text-sm shrink-0",
+                           "bg-muted text-muted-foreground",
+                            selectedOption === option.id && 'bg-primary text-primary-foreground'
+                       )}>
+                           {option.id}
+                        </div>
+                        <div className="prose prose-invert prose-sm prose-p:my-0">
+                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{option.text}</ReactMarkdown>
+                        </div>
+                    </CardContent>
+                 </Card>
+            ))}
+        </div>
+        
+        {isAnswered && (
+             <div className="flex justify-between items-center bg-card/70 border rounded-lg p-4">
+                 <div className="flex items-center gap-2">
+                    {selectedOption === questionData.correctAnswer ? (
+                        <>
+                            <CheckCircle className="h-6 w-6 text-green-500" />
+                            <p className="font-bold text-lg">¡Correcto!</p>
+                        </>
+                    ) : (
+                         <>
+                            <XCircle className="h-6 w-6 text-red-500" />
+                            <p className="font-bold text-lg">Respuesta incorrecta</p>
+                        </>
+                    )}
+                 </div>
+                <Button size="lg" onClick={() => { /* Logic to go to next question */ }}>
+                    Continuar <ChevronRight className="ml-2 h-5 w-5" />
+                </Button>
+            </div>
+        )}
+
       </div>
     </div>
   );
