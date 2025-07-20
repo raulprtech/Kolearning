@@ -445,10 +445,10 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         <Button
             variant="default"
             size="lg"
-            className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30"
+            className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30 flex items-center justify-center p-0"
             disabled={!hasEnergy}
         >
-            <Bot className="h-8 w-8" />
+            <TutorAvatar className="h-8 w-8" />
             <span className="sr-only">Pedir ayuda a Koli</span>
         </Button>
     );
@@ -539,8 +539,9 @@ export default function AprenderPage() {
         setMasteryProgress(prev => Math.min(prev + 10, 100));
         updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
     } else {
-        if (attempts >= 2) { // This was the 3rd attempt (0, 1, 2)
-            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
+        const nextAttempt = attempts + 1;
+        if (nextAttempt >= 3) {
+            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: nextAttempt });
         } else {
             // Try again
             if (result.evaluation?.feedback) {
@@ -555,7 +556,7 @@ export default function AprenderPage() {
                 setIsPulsing(true);
                 setTimeout(() => setIsPulsing(false), 1000);
             }
-             updateAnswer(currentIndex, { openAnswerAttempts: attempts + 1, userAnswer: currentOpenAnswerText });
+             updateAnswer(currentIndex, { openAnswerAttempts: nextAttempt, userAnswer: currentOpenAnswerText });
         }
     }
     
@@ -736,6 +737,7 @@ export default function AprenderPage() {
     
 
     
+
 
 
 
