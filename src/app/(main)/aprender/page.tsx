@@ -416,7 +416,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         setQuickChatHistory([]);
         setQuickQuestionCount(0);
 
-        const prompt = `Explica de forma muy breve y concisa por qué la respuesta a esta pregunta es correcta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". Respuesta Correcta: "${correctAnswer}".`;
+        const prompt = `Explica de forma muy breve y concisa por qué la respuesta a esta pregunta es correcta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". Respuesta Correcta: "${correctAnswer}". Ve directo al punto.`;
 
         const result = await handleTutorChat(prompt);
         if (result.response) {
@@ -452,7 +452,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         setQuickChatHistory([]);
         setQuickQuestionCount(0);
 
-        const prompt = `Explica de forma breve y concisa el concepto detrás de esta pregunta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". La respuesta correcta es "${correctAnswer}".`;
+        const prompt = `Explica de forma breve y concisa el concepto detrás de esta pregunta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". La respuesta correcta es "${correctAnswer}". Ve directo al punto.`;
 
         const result = await handleTutorChat(prompt);
         if (result.response) {
@@ -947,7 +947,7 @@ export default function AprenderPage() {
               <FillInTheBlankQuestion 
                   question={currentQuestion}
                   isAnswered={currentAnswerState.isAnswered}
-                  userAnswer={currentOpenAnswerText}
+                  userAnswer={currentAnswerState.isAnswered ? (currentQuestion as any).correctAnswer : currentOpenAnswerText}
                   onUserAnswerChange={setCurrentOpenAnswerText}
                   onAnswerSubmit={() => {
                       const isCorrect = currentOpenAnswerText.trim().toLowerCase() === (currentQuestion as any).correctAnswer.toLowerCase();
