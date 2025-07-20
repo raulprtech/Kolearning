@@ -90,7 +90,9 @@ function TutorChatComponent() {
         processMessage(decodedContext);
         router.replace('/tutor', undefined);
     } else {
-        setIsInputVisible(true);
+        // if there's no context, show the input right away
+        // unless there are no messages, then show quick actions
+        setIsInputVisible(messages.length > 0);
     }
   }, []);
 
@@ -111,7 +113,7 @@ function TutorChatComponent() {
       scrollToBottom();
   }, [messages]);
 
-  const showQuickActions = (!isLoading && (messages.length === 0 || messages[messages.length - 1].sender === 'ai'));
+  const showQuickActions = !isLoading && messages.length === 0;
   
   return (
     <div className="container mx-auto py-8 h-[calc(100vh-57px)] flex flex-col">
@@ -175,7 +177,16 @@ function TutorChatComponent() {
           </div>
         </ScrollArea>
         <div className="p-4 border-t border-primary/20">
-          {isInputVisible ? (
+          {showQuickActions ? (
+            <div className="flex items-center justify-center gap-2">
+                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => handleQuickAction('Explicamelo de nuevo de forma simple como si tuviera 5 años.')}>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Simplifícalo
+                </Button>
+                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => setIsInputVisible(true)}>
+                    <MessageSquare className="mr-2 h-4 w-4" /> Preguntar
+                </Button>
+            </div>
+          ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-4">
               <Input
                 {...register('message')}
@@ -188,17 +199,8 @@ function TutorChatComponent() {
                 <SendHorizonal className="h-4 w-4" />
               </Button>
             </form>
-          ) : showQuickActions ? (
-            <div className="flex items-center justify-center gap-2">
-                 <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => handleQuickAction('Explicamelo de nuevo de forma simple como si tuviera 5 años.')}>
-                    <RefreshCw className="mr-2 h-4 w-4" /> Simplifícalo
-                </Button>
-                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => setIsInputVisible(true)}>
-                    <MessageSquare className="mr-2 h-4 w-4" /> Preguntar
-                </Button>
-            </div>
-          ) : null }
-           {errors.message && isInputVisible && <p className="text-destructive text-xs mt-2">{errors.message.message}</p>}
+          )}
+           {errors.message && <p className="text-destructive text-xs mt-2">{errors.message.message}</p>}
         </div>
       </div>
     </div>
