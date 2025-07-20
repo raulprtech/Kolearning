@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Wand2, Star, User2, Check, SendHorizonal, Bot } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -126,17 +126,31 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
   );
 };
 
-const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer, onUserAnswerChange, feedback }: any) => {
+const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer, onUserAnswerChange, feedback, revealedAnswer }: any) => {
     return (
         <div className="flex flex-col gap-4 mb-6">
-             {feedback && (
+             {feedback && !revealedAnswer && (
                 <Alert variant="default" className="bg-primary/10 border-primary/20">
-                     <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3">
                         <TutorAvatar className="h-8 w-8" />
                         <div className="flex-1 pt-1">
                             <AlertDescription className="text-primary/80 prose prose-sm prose-invert">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {`**Koli:** ${feedback}`}
+                                </ReactMarkdown>
+                            </AlertDescription>
+                        </div>
+                    </div>
+                </Alert>
+            )}
+            {revealedAnswer && (
+                 <Alert variant="default" className="bg-green-500/10 border-green-500/20">
+                    <div className="flex items-start gap-3">
+                        <TutorAvatar className="h-8 w-8" />
+                        <div className="flex-1 pt-1">
+                            <AlertDescription className="text-green-300/90 prose prose-sm prose-invert">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {`**Respuesta correcta:** ${revealedAnswer}`}
                                 </ReactMarkdown>
                             </AlertDescription>
                         </div>
@@ -481,12 +495,19 @@ export default function AprenderPage() {
   const [sessionQuestions, setSessionQuestions] = useState(initialSessionQuestions);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerState>({});
+  
+  // Session Stats
   const [masteryProgress, setMasteryProgress] = useState(0);
-  const [bestStreak, setBestStreak] = useState(1);
+  const [cognitiveCredits, setCognitiveCredits] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
+
+  // Question-specific state
   const [isPulsing, setIsPulsing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentOpenAnswerText, setCurrentOpenAnswerText] = useState('');
   const [openAnswerFeedback, setOpenAnswerFeedback] = useState<string | null>(null);
+  const [revealedAnswer, setRevealedAnswer] = useState<string | null>(null);
 
   const { user } = useUser();
   const hasEnergy = user && user.energy > 0;
@@ -504,12 +525,35 @@ export default function AprenderPage() {
     }));
   }
 
+  const handleCorrectAnswer = (type: 'multiple-choice' | 'open-answer') => {
+    const newStreak = currentStreak + 1;
+    setCurrentStreak(newStreak);
+    if (newStreak > bestStreak) {
+      setBestStreak(newStreak);
+    }
+    if (type === 'multiple-choice') {
+      setMasteryProgress(prev => prev + 10);
+      setCognitiveCredits(prev => prev + 5);
+    } else {
+      setMasteryProgress(prev => prev + 20);
+      setCognitiveCredits(prev => prev + 10);
+    }
+  };
+
+  const handleIncorrectAnswer = () => {
+    setCurrentStreak(0);
+  };
+
   const handleOptionSelect = (optionId: string) => {
     if (!hasEnergy) return; // Although button is disabled, good to double check
     const isAnswerCorrect = currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer;
+    
     if (isAnswerCorrect) {
-        setMasteryProgress(prev => Math.min(prev + 10, 100));
+      handleCorrectAnswer('multiple-choice');
+    } else {
+      handleIncorrectAnswer();
     }
+    
     updateAnswer(currentIndex, { selectedOption: optionId, isAnswered: true, isCorrect: isAnswerCorrect });
   };
 
@@ -535,9 +579,10 @@ export default function AprenderPage() {
     });
 
     if (result.evaluation?.isCorrect) {
-        setMasteryProgress(prev => Math.min(prev + 20, 100));
+        handleCorrectAnswer('open-answer');
         updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
     } else {
+        handleIncorrectAnswer();
         const nextAttempt = attempts + 1;
         if (nextAttempt >= 3) {
             updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: nextAttempt });
@@ -568,8 +613,9 @@ export default function AprenderPage() {
       if (currentQuestion.type === 'multiple-choice') {
           handleOptionSelect((currentQuestion as any).correctAnswer);
       } else if (currentQuestion.type === 'open-answer') {
+          updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentQuestion.correctAnswerText });
           setCurrentOpenAnswerText(currentQuestion.correctAnswerText);
-          updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, openAnswerAttempts: 1, userAnswer: currentQuestion.correctAnswerText });
+          setRevealedAnswer(null); // Clear any revealed answer to avoid duplication
       }
   };
   
@@ -588,10 +634,11 @@ export default function AprenderPage() {
           setCurrentIndex(prev => prev + 1);
           setOpenAnswerFeedback(null);
           setCurrentOpenAnswerText('');
+          setRevealedAnswer(null);
       }
   };
 
-  const showAttemptCounter = currentAnswerState.openAnswerAttempts > 0 && !currentAnswerState.isCorrect;
+  const showAttemptCounter = currentAnswerState.openAnswerAttempts > 0 && !currentAnswerState.isCorrect && currentQuestion.type === 'open-answer';
 
   return (
     <div className="container mx-auto py-4 sm:py-8">
@@ -615,7 +662,7 @@ export default function AprenderPage() {
                   <div className="flex items-center gap-2">
                       {'🪙'}
                       <div>
-                        <p className="font-bold text-base md:text-lg">4</p>
+                        <p className="font-bold text-base md:text-lg">{cognitiveCredits}</p>
                         <p className="text-xs text-muted-foreground">Creditos Cognitivos</p>
                       </div>
                     </div>
@@ -689,6 +736,7 @@ export default function AprenderPage() {
               userAnswer={currentAnswerState.isAnswered ? (currentAnswerState.userAnswer || '') : currentOpenAnswerText}
               onUserAnswerChange={handleOpenAnswerTextChange}
               feedback={openAnswerFeedback}
+              revealedAnswer={revealedAnswer}
             />
           )}
           
