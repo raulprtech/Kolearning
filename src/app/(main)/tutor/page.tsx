@@ -16,6 +16,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useUser } from '@/context/UserContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'Message cannot be empty.'),
@@ -36,6 +38,9 @@ const TutorAvatar = () => (
 function TutorChatComponent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, decrementEnergy } = useUser();
+  const hasEnergy = user && user.energy > 0;
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInputVisible, setIsInputVisible] = useState(false);
@@ -79,6 +84,12 @@ function TutorChatComponent() {
     setIsLoading(false);
     scrollToBottom();
   };
+  
+  const handleActionWithEnergyCheck = (action: (message: string) => void, message: string, showInputAfter: boolean = true) => {
+      if (!hasEnergy) return;
+      decrementEnergy();
+      action(message, showInputAfter);
+  }
 
   useEffect(() => {
     const context = searchParams.get('context');
@@ -87,12 +98,9 @@ function TutorChatComponent() {
         const decodedContext = decodeURIComponent(context);
         const userMessage: Message = { sender: 'user', text: decodedContext };
         setMessages([userMessage]);
-        // Don't show input after processing context, show quick actions instead.
-        processMessage(decodedContext, false); 
+        handleActionWithEnergyCheck(processMessage, decodedContext, false); 
         router.replace('/tutor', undefined);
     } else {
-        // if there's no context, show the input right away
-        // unless there are no messages, then show quick actions
         setIsInputVisible(messages.length > 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,13 +110,13 @@ function TutorChatComponent() {
   const onSubmit = async (data: ChatFormData) => {
     const userMessage: Message = { sender: 'user', text: data.message };
     setMessages(prev => [...prev, userMessage]);
-    await processMessage(data.message);
+    handleActionWithEnergyCheck(processMessage, data.message);
   };
 
   const handleQuickAction = async (prompt: string) => {
       const userMessage: Message = { sender: 'user', text: prompt };
       setMessages(prev => [...prev, userMessage]);
-      await processMessage(prompt);
+      handleActionWithEnergyCheck(processMessage, prompt);
   }
 
   useEffect(() => {
@@ -181,10 +189,10 @@ function TutorChatComponent() {
         <div className="p-4 border-t border-primary/20">
           {showQuickActions ? (
             <div className="flex items-center justify-center gap-2">
-                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => handleQuickAction('Explicamelo de nuevo de forma simple como si tuviera 5 años.')}>
+                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => handleQuickAction('Explicamelo de nuevo de forma simple como si tuviera 5 años.')} disabled={!hasEnergy || isLoading}>
                     <RefreshCw className="mr-2 h-4 w-4" /> Simplifícalo
                 </Button>
-                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => setIsInputVisible(true)}>
+                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => setIsInputVisible(true)} disabled={!hasEnergy || isLoading}>
                     <MessageSquare className="mr-2 h-4 w-4" /> Preguntar
                 </Button>
             </div>
@@ -195,11 +203,22 @@ function TutorChatComponent() {
                 placeholder="Escríbele a Koli..."
                 className="flex-grow bg-transparent border-primary/30 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:border-primary font-code"
                 autoComplete='off'
-                disabled={isLoading}
+                disabled={isLoading || !hasEnergy}
               />
-              <Button type="submit" size="icon" disabled={isLoading} variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20 hover:text-primary-foreground">
-                <SendHorizonal className="h-4 w-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button type="submit" size="icon" disabled={isLoading || !hasEnergy} variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20 hover:text-primary-foreground">
+                            <SendHorizonal className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    {!hasEnergy && (
+                        <TooltipContent>
+                            <p>No tienes suficiente energía.</p>
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+              </TooltipProvider>
             </form>
           )}
            {errors.message && <p className="text-destructive text-xs mt-2">{errors.message.message}</p>}

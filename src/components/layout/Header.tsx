@@ -1,31 +1,13 @@
+'use client';
+
 import Link from 'next/link';
 import { BookOpenCheck } from 'lucide-react';
 import { UserNav } from './UserNav';
-import { getAuthSession } from '@/lib/auth';
-import type { User } from '@/types';
-import { Timestamp } from 'firebase/firestore';
 import { UserStats } from './UserStats';
+import { useUser } from '@/context/UserContext';
 
-async function getUserData(uid: string): Promise<User | null> {
-    const mockTimestamp = {
-        seconds: Math.floor(Date.now() / 1000),
-        nanoseconds: 0,
-    } as unknown as Timestamp;
-
-    return {
-        uid: 'mock-user-id',
-        email: 'test@example.com',
-        createdAt: mockTimestamp,
-        lastSessionAt: mockTimestamp,
-        currentStreak: 5,
-        coins: 142,
-        energy: 5,
-    };
-}
-
-export async function Header() {
-  const session = await getAuthSession();
-  const user = session ? await getUserData(session.uid) : null;
+export function Header() {
+  const { user } = useUser();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

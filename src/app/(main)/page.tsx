@@ -1,35 +1,18 @@
 
-import { getAuthSession } from '@/lib/auth';
-import type { User } from '@/types';
-import { Timestamp } from 'firebase/firestore';
+'use client';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Zap, Play, Bot, PlusCircle, BookCopy, Search, Flame, TrendingUp } from 'lucide-react';
+import { Zap, Play, PlusCircle, Search, Flame, TrendingUp } from 'lucide-react';
 import type { Deck } from '@/types';
 import { DashboardDeckCard } from '@/components/deck/DashboardDeckCard';
 import { Progress } from '@/components/ui/progress';
+import { useUser } from '@/context/UserContext';
+import { useEffect, useState } from 'react';
 
-async function getUserData(uid: string): Promise<User | null> {
-    const mockTimestamp = {
-        seconds: Math.floor(Date.now() / 1000),
-        nanoseconds: 0,
-    } as unknown as Timestamp;
-
-    return {
-        uid: 'mock-user-id',
-        email: 'test@example.com',
-        createdAt: mockTimestamp,
-        lastSessionAt: mockTimestamp,
-        currentStreak: 3,
-        coins: 142,
-        energy: 5,
-    };
-}
-
-async function getMyDecks(): Promise<Deck[]> {
-  // Return mock data for the user's decks
-  return [
+// In a real app, this would be an API call. For now, we define the data here.
+const myDecksData: Deck[] = [
     {
       id: '1',
       title: 'JavaScript Fundamentals',
@@ -67,14 +50,17 @@ async function getMyDecks(): Promise<Deck[]> {
       bibliography: [],
     },
   ];
-}
 
 
-export default async function DashboardPage() {
-    const session = await getAuthSession();
-    const user = session ? await getUserData(session.uid) : null;
-    const myDecks = await getMyDecks();
-    const availableDecks = myDecks.length;
+export default function DashboardPage() {
+    const { user } = useUser();
+    const [myDecks, setMyDecks] = useState<Deck[]>([]);
+
+    useEffect(() => {
+        // Simulating async fetch
+        setMyDecks(myDecksData);
+    }, []);
+
     const currentStreak = user?.currentStreak ?? 0;
     const energy = user?.energy ?? 0;
     const maxEnergy = 10;

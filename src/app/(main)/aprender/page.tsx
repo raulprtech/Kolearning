@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -16,8 +16,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { handleTutorChat } from '@/app/actions/tutor';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@/context/UserContext';
 
 const initialSessionQuestions = [
   {
@@ -138,24 +140,6 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered }: any) => {
     );
 };
 
-const MagicHelpPanel = () => (
-  <Card className="bg-card/70 sticky top-24">
-      <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-              <Wand2 className="h-5 w-5 text-primary" />
-              Ayuda Mágica
-          </CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-2">
-          <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
-          <Button variant="outline"><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
-          <Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
-          <Button variant="outline"><Lightbulb className="mr-2 h-4 w-4" /> Explicar</Button>
-          <Button variant="outline"><Bot className="mr-2 h-4 w-4" /> Tutor AI</Button>
-      </CardContent>
-  </Card>
-);
-
 type QuickChatMessage = {
   sender: 'user' | 'ai';
   text: string;
@@ -163,6 +147,9 @@ type QuickChatMessage = {
 
 const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, isAnswered: boolean }) => {
     const router = useRouter();
+    const { user, decrementEnergy } = useUser();
+    const hasEnergy = user && user.energy > 0;
+
     const [activeView, setActiveView] = useState<'main' | 'hint' | 'explanation'>('main');
     const [hintText, setHintText] = useState('');
     const [explanationText, setExplanationText] = useState('');
@@ -174,6 +161,12 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
     const [quickQuestionText, setQuickQuestionText] = useState('');
     const [quickChatHistory, setQuickChatHistory] = useState<QuickChatMessage[]>([]);
     const [quickQuestionCount, setQuickQuestionCount] = useState(0);
+
+    const handleActionWithEnergyCheck = (action: () => void) => {
+        if (!hasEnergy) return;
+        decrementEnergy();
+        action();
+    }
 
     const handleHintClick = async () => {
         setActiveView('hint');
@@ -382,16 +375,16 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
                                   className="text-xs"
                                   rows={2}
                               />
-                              <Button size="sm" onClick={handleQuickQuestionSubmit} className="w-full" disabled={isLoading}>
+                              <Button size="sm" onClick={() => handleActionWithEnergyCheck(handleQuickQuestionSubmit)} className="w-full" disabled={isLoading || !hasEnergy}>
                                   <SendHorizonal className="mr-2 h-4 w-4" /> Enviar
                               </Button>
                           </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-2 pt-2">
                             {quickQuestionCount < 2 &&
-                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestionInput(true)} disabled={isLoading}>Pregunta Rápida</Button>
+                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestionInput(true)} disabled={isLoading || !hasEnergy}>Pregunta Rápida</Button>
                             }
-                            <Button variant="outline" size="sm" onClick={handleDeepen} className={cn(quickQuestionCount >= 2 && "col-span-2")} disabled={isLoading}>Profundizar</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleActionWithEnergyCheck(handleDeepen)} className={cn(quickQuestionCount >= 2 && "col-span-2")} disabled={isLoading || !hasEnergy}>Profundizar</Button>
                         </div>
                       )}
                     </div>
@@ -411,31 +404,47 @@ const MagicHelpPopover = ({ currentQuestion, correctAnswer, onShowAnswer, onReph
                 <div className="grid gap-2">
                   {!isAnswered ? (
                     <>
-                      <Button variant="outline" onClick={handleHintClick}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
-                      <Button variant="outline" onClick={handleShowAnswerAndExplainClick}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
-                      <Button variant="outline" onClick={handleRephraseClick}><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+                      <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleHintClick)} disabled={!hasEnergy}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+                      <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick)} disabled={!hasEnergy}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
+                      <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleRephraseClick)} disabled={!hasEnergy}><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
                     </>
                   ) : (
-                    <Button variant="outline" onClick={handleExplainClick}><Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta</Button>
+                    <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleExplainClick)} disabled={!hasEnergy}><Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta</Button>
                   )}
-                   <Button variant="outline" onClick={handleDeepen}><Bot className="mr-2 h-4 w-4" /> Tutor AI</Button>
+                   <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleDeepen)} disabled={!hasEnergy}><Bot className="mr-2 h-4 w-4" /> Tutor AI</Button>
                 </div>
             </div>
         );
     };
 
+    const popoverButton = (
+        <Button
+            variant="default"
+            size="lg"
+            className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30"
+            disabled={!hasEnergy}
+        >
+            <Wand2 className="h-8 w-8" />
+            <span className="sr-only">Ayuda Mágica</span>
+        </Button>
+    );
+
     return (
         <Popover open={isPopoverOpen} onOpenChange={onOpenChange}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="default"
-                    size="lg"
-                    className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30"
-                >
-                    <Wand2 className="h-8 w-8" />
-                    <span className="sr-only">Ayuda Mágica</span>
-                </Button>
-            </PopoverTrigger>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <PopoverTrigger asChild>
+                             {popoverButton}
+                        </PopoverTrigger>
+                    </TooltipTrigger>
+                    {!hasEnergy && (
+                        <TooltipContent side="top" align="end" className="mb-2 mr-2">
+                            <p>No tienes suficiente energía.</p>
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+            </TooltipProvider>
             <PopoverContent className="w-80 mb-2 mr-2" side="top" align="end">
                 {renderContent()}
             </PopoverContent>
@@ -620,13 +629,13 @@ export default function AprenderPage() {
           )}
         </div>
 
-        {/* Help Column */}
+        {/* Help Column is not used with the Popover approach */}
         <div className="hidden xl:block">
-            <MagicHelpPanel />
+            {/* Placeholder for potential future side panel */}
         </div>
       </div>
 
-       <div className="xl:hidden">
+       <div className="xl:hidden-for-now">
          <MagicHelpPopover 
             currentQuestion={currentQuestion} 
             correctAnswer={currentQuestion.correctAnswerText || ''}
