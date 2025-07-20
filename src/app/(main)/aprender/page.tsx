@@ -277,7 +277,6 @@ export default function AprenderPage() {
               </div>
 
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Progreso de la sesión ({currentIndex + 1}/{sessionQuestions.length})</p>
                 <Progress value={sessionProgress} />
               </div>
             </CardContent>
