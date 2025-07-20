@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -71,8 +72,8 @@ type AnswerState = {
     };
 };
 
-const TutorAvatar = () => (
-    <div className="w-8 h-8 rounded-full bg-blue-500/50 flex items-center justify-center shrink-0">
+const TutorAvatar = ({ className }: { className?: string }) => (
+    <div className={cn("w-8 h-8 rounded-full bg-blue-500/50 flex items-center justify-center shrink-0", className)}>
         <div className="w-full h-full rounded-full bg-gradient-radial from-white to-blue-400 animate-pulse"></div>
     </div>
 );
@@ -130,7 +131,7 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
         <div className="flex flex-col gap-4 mb-6">
              {feedback && (
                 <Alert variant="default" className="bg-primary/10 border-primary/20">
-                    <Lightbulb className="h-4 w-4 text-primary" />
+                    <TutorAvatar className="h-5 w-5 absolute left-4 top-4" />
                     <AlertTitle className="text-primary/90">Feedback de Koli</AlertTitle>
                     <AlertDescription className="text-primary/80 prose prose-sm prose-invert max-w-none">
                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{feedback}</ReactMarkdown>
@@ -494,7 +495,7 @@ export default function AprenderPage() {
   const updateAnswer = (index: number, update: Partial<AnswerState[number]>) => {
     setAnswers(prev => ({
       ...prev,
-      [index]: { ...prev[index], ...update }
+      [index]: { ...(prev[index] || {}), ...update }
     }));
   }
 
@@ -533,8 +534,8 @@ export default function AprenderPage() {
         setMasteryProgress(prev => Math.min(prev + 10, 100));
         updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText });
     } else {
-        if (attempts >= 2) { // Max attempts reached (0, 1, 2). This is the 3rd attempt.
-            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText });
+        if (attempts >= 2) { // This was the 3rd attempt (0, 1, 2)
+            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
         } else {
             // Try again
             if (result.evaluation?.feedback) {
@@ -628,7 +629,7 @@ export default function AprenderPage() {
 
           <Card className={cn("mb-3 sm:mb-6 bg-card/70", isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta {currentAnswerState.openAnswerAttempts > 0 ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Pregunta {currentAnswerState.openAnswerAttempts > 0 && currentAnswerState.openAnswerAttempts < 4 ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
               {currentAnswerState.isAnswered && (
                  <div className="flex items-center gap-4">
                     { isCorrect ? (
