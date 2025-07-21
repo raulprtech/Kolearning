@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { Document } from '@genkit-ai/googleai';
 
 const GenerateDeckFromTextInputSchema = z.object({
   studyNotes: z.string().describe('The study notes to generate a flashcard deck from. Can be plain text, Markdown, LaTeX, or a Data URI for a PDF.'),
