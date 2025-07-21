@@ -288,13 +288,13 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
 
   const handleAiImport = async (studyNotes?: string) => {
     const content = studyNotes || fileContent;
-    if (!content || typeof content !== 'string') {
+    if (!content || (typeof content !== 'string' && !Array.isArray(content))) {
       toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo o pega texto para generar tarjetas.' });
       return;
     }
     setIsGenerating(true);
     
-    const result = await handleGenerateProjectFromText(content);
+    const result = await handleGenerateProjectFromText(content as string);
 
     setIsGenerating(false);
 
@@ -928,7 +928,7 @@ export default function CreateProjectPage() {
             <h3 className="text-lg font-medium text-muted-foreground">Métodos de creación</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
-                <Button variant="outline" onClick={() => setIsManualEntry(true)}>
+                <Button variant="outline" onClick={() => setIsManualEntry(prev => !prev)}>
                     <PencilIcon className="mr-2 h-4 w-4" />
                     Agregar manualmente
                 </Button>
@@ -957,5 +957,3 @@ export default function CreateProjectPage() {
     </div>
   );
 }
-
-    
