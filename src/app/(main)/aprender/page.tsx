@@ -158,7 +158,7 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
 const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer, onUserAnswerChange, feedback, revealedAnswer }: any) => {
     return (
         <div className="flex flex-col gap-4 mb-6">
-             {feedback && !revealedAnswer && (
+             {feedback && (
                 <Alert variant="default" className="bg-primary/10 border-primary/20">
                     <div className="flex items-start gap-3">
                         <TutorAvatar className="h-8 w-8" />
@@ -166,20 +166,6 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
                             <AlertDescription className="text-primary/80 prose prose-sm prose-invert">
                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {`**Koli:** ${feedback}`}
-                                </ReactMarkdown>
-                            </AlertDescription>
-                        </div>
-                    </div>
-                </Alert>
-            )}
-            {revealedAnswer && (
-                 <Alert variant="default" className="bg-green-500/10 border-green-500/20">
-                    <div className="flex items-start gap-3">
-                        <TutorAvatar className="h-8 w-8" />
-                        <div className="flex-1 pt-1">
-                            <AlertDescription className="text-green-300/90 prose prose-sm prose-invert">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {`**Respuesta correcta:** ${revealedAnswer}`}
                                 </ReactMarkdown>
                             </AlertDescription>
                         </div>
@@ -640,17 +626,17 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                               </Button>
                           </div>
                       ) : (
-                        <div className="grid grid-cols-2 gap-2 pt-2">
-                            {quickQuestionCount < 2 &&
-                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestionInput(true)} disabled={isLoading} className="justify-between w-full">
-                                  <span>Pregunta Rápida</span>
-                                  <span className="text-xs text-primary/80 font-mono">Gratis ({quickQuestionCount}/2)</span>
-                              </Button>
-                            }
-                            <Button variant="outline" size="sm" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} className={cn("justify-between w-full", quickQuestionCount >= 2 && "col-span-2")} disabled={isLoading || !hasEnoughEnergy(TUTOR_AI_COST)}>
-                                <span>Tutor AI</span>
-                                <CostIndicator cost={TUTOR_AI_COST} />
+                        <div className="grid grid-cols-1 gap-2 pt-2">
+                          {quickQuestionCount < 2 &&
+                            <Button variant="outline" size="sm" onClick={() => setShowQuickQuestionInput(true)} disabled={isLoading} className="justify-between w-full">
+                                <span>Pregunta Rápida</span>
+                                <span className="text-xs text-primary/80 font-mono">Gratis ({quickQuestionCount}/2)</span>
                             </Button>
+                          }
+                          <Button variant="outline" size="sm" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} className="justify-between w-full" disabled={isLoading || !hasEnoughEnergy(TUTOR_AI_COST)}>
+                              <span>Tutor AI</span>
+                              <CostIndicator cost={TUTOR_AI_COST} />
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -749,7 +735,6 @@ export default function AprenderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentOpenAnswerText, setCurrentOpenAnswerText] = useState('');
   const [openAnswerFeedback, setOpenAnswerFeedback] = useState<string | null>(null);
-  const [revealedAnswer, setRevealedAnswer] = useState<string | null>(null);
 
   const { user } = useUser();
   const hasEnergy = user && user.energy > 0;
@@ -843,7 +828,7 @@ export default function AprenderPage() {
         const nextAttempt = attempts + 1;
         if (nextAttempt >= 3) {
             updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: nextAttempt });
-            setRevealedAnswer(currentQuestion.correctAnswerText);
+            setOpenAnswerFeedback(`La respuesta correcta es: ${currentQuestion.correctAnswerText}`);
         } else {
             // Try again
             if (result.evaluation?.feedback) {
@@ -877,6 +862,7 @@ export default function AprenderPage() {
       } else if (currentQuestion.type === 'fill-in-the-blank') {
           const correctAnswer = (currentQuestion as any).correctAnswer;
           handleCorrectAnswer('fill-in-the-blank');
+          handleGenericAnswer(true, 'fill-in-the-blank');
           updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: correctAnswer });
           setCurrentOpenAnswerText(correctAnswer);
       }
@@ -916,11 +902,8 @@ export default function AprenderPage() {
           setCurrentIndex(prev => prev + 1);
           setOpenAnswerFeedback(null);
           setCurrentOpenAnswerText('');
-          setRevealedAnswer(null);
       }
   };
-
-  const showAttemptCounter = currentAnswerState.openAnswerAttempts > 0 && !currentAnswerState.isCorrect && currentQuestion.type === 'open-answer';
 
   return (
     <div className="container mx-auto py-4 sm:py-8">
@@ -1020,7 +1003,6 @@ export default function AprenderPage() {
               userAnswer={currentAnswerState.isAnswered ? (currentAnswerState.userAnswer || '') : currentOpenAnswerText}
               onUserAnswerChange={handleOpenAnswerTextChange}
               feedback={openAnswerFeedback}
-              revealedAnswer={revealedAnswer}
             />
           )}
 
