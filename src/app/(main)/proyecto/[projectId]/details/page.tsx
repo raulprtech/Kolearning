@@ -28,7 +28,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import type { Project, Flashcard } from '@/types';
-import { getGeneratedProject } from '@/app/actions/decks';
+import { getGeneratedProject } from '@/app/actions/projects';
 import {
   Dialog,
   DialogContent,
@@ -38,34 +38,25 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-async function getProjectDetails(projectId: string): Promise<(Project & { flashcards?: Flashcard[] }) | null> {
+async function getProjectDetails(projectSlug: string): Promise<Project | null> {
   // For generated projects, fetch from our temporary store
-  if (projectId.startsWith('gen-')) {
-    return getGeneratedProject(projectId);
-  }
-  return null;
+  return getGeneratedProject(projectSlug);
 }
-
-const sessions = [
-  { day: 'Día 1', topic: 'Variables', type: 'Opción Múltiple', status: 'Completada', link: '#' },
-  { day: 'Día 2', topic: 'Funciones', type: 'Tutor AI', status: 'Continuar', link: '#' },
-  { day: 'Día 3', topic: 'Funciones', type: 'Quiz de repaso', status: 'Desbloquear en 1 día', link: '#', disabled: true },
-];
 
 export default async function ProjectDetailsPage({
   params,
 }: {
   params: { projectId: string };
 }) {
-  const { projectId } = params;
-  const project = await getProjectDetails(projectId);
+  const projectSlug = params.projectId;
+  const project = await getProjectDetails(projectSlug);
 
   if (!project) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <h1 className="text-2xl font-bold">Project not found</h1>
+        <h1 className="text-2xl font-bold">Proyecto no encontrado</h1>
         <p className="text-muted-foreground">
-          The requested project could not be found.
+          El proyecto solicitado no pudo ser encontrado.
         </p>
       </div>
     );
@@ -73,6 +64,7 @@ export default async function ProjectDetailsPage({
 
   const knowledgeAtoms = project.flashcards || [];
   const knowledgeAtomsPreview = knowledgeAtoms.slice(0, 5);
+  const studyPlan = project.studyPlan?.plan || [];
 
   return (
     <div className="container mx-auto py-8">
@@ -120,28 +112,29 @@ export default async function ProjectDetailsPage({
         {/* Sessions */}
         <section className="mb-10">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Sesiones</h2>
-            <Button variant="outline">Ver plan completo</Button>
+            <h2 className="text-2xl font-bold">Plan de Estudios</h2>
           </div>
           <Card className="bg-card/70">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Sesión</TableHead>
+                  <TableHead>Sección</TableHead>
                   <TableHead>Tema</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Estado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions.map((session, index) => (
+                {studyPlan.map((session, index) => (
                   <TableRow key={index}>
-                    <TableCell>{session.day}</TableCell>
+                    <TableCell>{session.section}</TableCell>
                     <TableCell>{session.topic}</TableCell>
-                    <TableCell>{session.type}</TableCell>
+                    <TableCell>{session.sessionType}</TableCell>
                     <TableCell className="text-right">
-                      <Button asChild variant={session.status === 'Completada' ? 'link' : 'default'} size="sm" disabled={session.disabled}>
-                        <Link href={session.link} className={session.disabled ? 'text-muted-foreground' : ''}>{session.status}</Link>
+                      <Button asChild variant={index > 0 ? 'default' : 'default'} size="sm" disabled={index > 0}>
+                        <Link href={`/aprender?project=${project.slug}`} className={index > 0 ? 'text-muted-foreground' : ''}>
+                          {index > 0 ? 'Bloqueado' : 'Empezar'}
+                        </Link>
                       </Button>
                     </TableCell>
                   </TableRow>

@@ -1,3 +1,4 @@
+
 import { Timestamp } from 'firebase/firestore';
 
 export interface User {
@@ -8,6 +9,15 @@ export interface User {
   currentStreak: number;
   coins: number;
   energy: number;
+}
+
+export interface StudyPlan {
+  plan: {
+    section: string;
+    topic: string;
+    sessionType: string;
+  }[];
+  justification: string;
 }
 
 export interface Project {
@@ -21,6 +31,7 @@ export interface Project {
   size: number;
   bibliography: string[];
   flashcards?: Flashcard[];
+  studyPlan?: StudyPlan;
 }
 
 export interface Flashcard {

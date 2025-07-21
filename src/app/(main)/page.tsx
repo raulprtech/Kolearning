@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 const myProjectsData: Project[] = [
     {
       id: '1',
+      slug: 'javascript-fundamentals',
       title: 'JavaScript Fundamentals',
       description: 'Master the basics of JavaScript programming with essential concepts and syntax.',
       category: 'Programming',
@@ -24,6 +25,7 @@ const myProjectsData: Project[] = [
     },
     {
       id: '2',
+      slug: 'react-essentials',
       title: 'React Essentials',
       description: 'Learn the core concepts of React including components, props, state, and hooks.',
       category: 'Programming',
@@ -33,6 +35,7 @@ const myProjectsData: Project[] = [
     },
     {
       id: '3',
+      slug: 'web-development-basics',
       title: 'Web Development Basics',
       description: 'Fundamental concepts every web developer should know about HTML, CSS, and web technologies.',
       category: 'Web Development',
@@ -42,7 +45,8 @@ const myProjectsData: Project[] = [
     },
      {
       id: 'gen-12345',
-      title: 'Plan de Estudio: Estado del Arte en IA para Segmentación de Tumores Renales',
+      slug: 'plan-de-estudio-ia-tumores-renales',
+      title: 'Plan de Estudio: IA para Segmentación de Tumores Renales',
       description: 'Plan de estudio para comprender el estado del arte en el uso de la Inteligencia Artificial para la segmentación de tumores renales, incluyendo aspectos multimodales, optimización y despliegue en hardware.',
       category: 'AI',
       author: 'AI',

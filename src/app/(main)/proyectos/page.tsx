@@ -25,6 +25,7 @@ import { Search, SlidersHorizontal } from 'lucide-react';
 const allProjects: Project[] = [
   {
     id: '1',
+    slug: 'algebra-basica',
     title: 'Álgebra Básica',
     description: 'Aprende los fundamentos del álgebra.',
     category: 'Matemáticas',
@@ -35,6 +36,7 @@ const allProjects: Project[] = [
   },
   {
     id: '2',
+    slug: 'capitales-del-mundo',
     title: 'Capitales del Mundo',
     description: 'Pon a prueba tu conocimiento de las capitales del mundo.',
     category: 'Geografía',
@@ -45,6 +47,7 @@ const allProjects: Project[] = [
   },
   {
     id: '3',
+    slug: 'vocabulario-de-espanol',
     title: 'Vocabulario de Español',
     description: 'Amplía tu vocabulario en español.',
     category: 'Idiomas',
@@ -55,6 +58,7 @@ const allProjects: Project[] = [
   },
   {
     id: '4',
+    slug: 'conceptos-de-programacion',
     title: 'Conceptos de Programación',
     description: 'Bases de la programación, algoritmos y estructuras de datos.',
     category: 'Programación',

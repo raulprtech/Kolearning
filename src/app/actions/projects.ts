@@ -1,15 +1,13 @@
 
-
 'use server';
 
 import { generateDeckFromText } from '@/ai/flows/generate-deck-from-text';
-import { evaluateOpenAnswer } from '@/ai/flows/evaluate-open-answer';
-import type { EvaluateOpenAnswerInput } from '@/ai/flows/evaluate-open-answer';
-import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-question';
-import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-options-for-question';
+import { refineProjectDetails } from '@/ai/flows/refine-project-details';
+import { generateStudyPlan } from '@/ai/flows/generate-study-plan';
 import { z } from 'zod';
-import type { Project, Flashcard as FlashcardType } from '@/types';
+import type { Project, Flashcard as FlashcardType, StudyPlan } from '@/types';
 import { YoutubeTranscript } from 'youtube-transcript';
+import { redirect } from 'next/navigation';
 
 // In-memory store for created projects
 let createdProjects: Project[] = [];
@@ -149,22 +147,23 @@ export async function handleGenerateProjectFromWebUrl(webUrl: string) {
   }
 }
 
-export async function handleGenerateProjectFromQuizletUrl(quizletUrl: string) {
-    if (!quizletUrl) {
-        return { error: 'Quizlet URL cannot be empty.' };
-    }
-
+export async function handleRefineProjectDetails(input: { currentTitle: string, currentDescription: string, flashcards: FlashcardType[] }) {
     try {
-        const response = await fetch(quizletUrl);
-        if (!response.ok) {
-            return { error: `Could not fetch content from the URL. Status: ${response.status}` };
-        }
-        const htmlContent = await response.text();
-        const result = await generateDeckFromText({ studyNotes: htmlContent });
-        return { project: result };
+        const result = await refineProjectDetails(input);
+        return { details: result };
     } catch (error) {
-        console.error('Error with Quizlet project generation:', error);
-        return { error: 'Could not process the Quizlet page. Please check the URL and try again.' };
+        console.error('Error refining project details:', error);
+        return { error: 'Sorry, I was unable to refine the project details.' };
+    }
+}
+
+export async function handleGenerateStudyPlan(input: { projectTitle: string, objective: string, flashcards: FlashcardType[] }) {
+    try {
+        const result = await generateStudyPlan(input);
+        return { plan: result };
+    } catch (error) {
+        console.error('Error generating study plan:', error);
+        return { error: 'Sorry, I was unable to generate a study plan.' };
     }
 }
 
@@ -173,7 +172,8 @@ export async function handleCreateProject(
     title: string, 
     description: string, 
     category: string,
-    flashcards: Omit<FlashcardType, 'deckId' | 'id'>[]
+    flashcards: Omit<FlashcardType, 'deckId'>[],
+    studyPlan: StudyPlan
 ) {
     const safeFlashcards = flashcards.map(fc => ({...fc, id: fc.id || Date.now()}));
     const validation = CreateProjectInputSchema.safeParse(safeFlashcards);
@@ -189,7 +189,7 @@ export async function handleCreateProject(
     
     const slug = createSlug(title);
 
-    const newProject: Project & { flashcards: FlashcardType[] } = {
+    const newProject: Project = {
         id: `gen-${Date.now()}`,
         slug: slug,
         title: title,
@@ -198,7 +198,8 @@ export async function handleCreateProject(
         author: 'User',
         size: validation.data.length,
         bibliography: [],
-        flashcards: validation.data.map(fc => ({...fc, id: fc.id.toString(), deckId: `gen-${Date.now()}`}))
+        flashcards: validation.data.map(fc => ({...fc, id: fc.id.toString(), deckId: `gen-${Date.now()}`})),
+        studyPlan: studyPlan,
     };
 
     try {
@@ -212,29 +213,35 @@ export async function handleCreateProject(
 
 
 export async function getGeneratedProject(projectSlug: string) {
+    // Add some mock projects if none exist for testing purposes
+    if (createdProjects.length === 0) {
+        const mockFlashcards = [
+            { id: '1', deckId: 'gen-12345', question: '¿Qué es una IA multimodal?', answer: 'Una IA que puede procesar y relacionar información de múltiples tipos de datos, como texto, imágenes y sonido.' },
+            { id: '2', deckId: 'gen-12345', question: 'Nombra un modelo de IA para segmentación de imágenes.', answer: 'U-Net es una arquitectura de red neuronal convolucional popular para la segmentación de imágenes biomédicas.' },
+        ];
+        createdProjects.push({
+            id: 'gen-12345',
+            slug: 'plan-de-estudio-ia-tumores-renales',
+            title: 'Plan de Estudio: IA para Segmentación de Tumores Renales',
+            description: 'Un plan de estudio para comprender el estado del arte en el uso de la Inteligencia Artificial para la segmentación de tumores renales.',
+            category: 'AI',
+            author: 'AI',
+            size: 15,
+            bibliography: [],
+            flashcards: mockFlashcards,
+            studyPlan: {
+                plan: [
+                    { section: "Día 1", topic: "Introducción a la IA", sessionType: "Opción Múltiple" },
+                    { section: "Día 2", topic: "Modelos de Segmentación", sessionType: "Tutor AI" },
+                    { section: "Día 3", topic: "Repaso General", sessionType: "Quiz de Repaso" },
+                ],
+                justification: "Este plan está diseñado para construir una base sólida antes de pasar a temas más complejos."
+            }
+        });
+    }
     const project = createdProjects.find(d => d.slug === projectSlug);
     if (project) {
         return project;
     }
     return null;
-}
-
-export async function handleEvaluateOpenAnswer(input: EvaluateOpenAnswerInput) {
-  try {
-    const evaluation = await evaluateOpenAnswer(input);
-    return { evaluation };
-  } catch (error) {
-    console.error('Error evaluating answer:', error);
-    return { error: 'Sorry, I was unable to evaluate your answer.' };
-  }
-}
-
-export async function handleGenerateOptionsForQuestion(input: GenerateOptionsForQuestionInput) {
-    try {
-        const result = await generateOptionsForQuestion(input);
-        return { options: result.options };
-    } catch (error) {
-        console.error('Error generating options:', error);
-        return { error: 'Sorry, I was unable to generate options for this question.' };
-    }
 }

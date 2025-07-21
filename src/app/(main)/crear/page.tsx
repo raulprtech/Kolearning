@@ -4,7 +4,7 @@
 import { useState, useRef, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -22,7 +22,10 @@ import {
   Globe,
   ArrowLeft,
   ImageIcon,
-  PencilIcon
+  PencilIcon,
+  ChevronRight,
+  ChevronLeft,
+  Bot
 } from 'lucide-react';
 import {
   Dialog,
@@ -32,7 +35,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromQuizletUrl, handleGenerateProjectFromImages } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -45,15 +48,27 @@ import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { AnkiExportGuide } from '@/components/deck/AnkiExportGuide';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 
 type Flashcard = {
-  id: number;
+  id: number | string;
   question: string;
   answer: string;
   image?: string;
 };
 
-const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: Flashcard; number: number, onCardChange: (id: number, field: 'question' | 'answer', value: string) => void, onCardDelete: (id: number) => void }) => {
+type StudyPlan = {
+  plan: {
+    section: string;
+    topic: string;
+    sessionType: string;
+  }[];
+  justification: string;
+};
+
+// --- Step 1 Components ---
+
+const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: Flashcard; number: number, onCardChange: (id: number | string, field: 'question' | 'answer', value: string) => void, onCardDelete: (id: number | string) => void }) => {
   return (
     <Card className="bg-card/70 border border-primary/20">
       <CardContent className="p-4">
@@ -95,72 +110,6 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
 type ImportSourceType = 'pdf' | 'powerpoint' | 'image' | 'notes' | 'youtube' | 'quizlet' | 'anki' | 'sheets' | 'web' | 'gizmo';
 type SourceInfo = { title: string; type: ImportSourceType; icon: React.ReactNode; isFileBased: boolean; accept?: string; multiple?: boolean; };
 
-const PasteImportControls = ({
-    pastedText, setPastedText,
-    termSeparator, setTermSeparator, customTermSeparator, setCustomTermSeparator,
-    rowSeparator, setRowSeparator, customRowSeparator, setCustomRowSeparator
-}: any) => (
-    <>
-        <Textarea
-            placeholder="Pega aquí tu texto..."
-            value={pastedText}
-            onChange={(e) => setPastedText(e.target.value)}
-            className="h-40 resize-none"
-        />
-        <Separator />
-        <div className="grid grid-cols-2 gap-6">
-            <div>
-                <h4 className="font-medium mb-3">Entre término y definición</h4>
-                <RadioGroup value={termSeparator} onValueChange={setTermSeparator} className="gap-3">
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="tab" id="tab" />
-                        <Label htmlFor="tab">Tabulador</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="comma" id="comma" />
-                        <Label htmlFor="comma">Coma</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="custom" id="custom_term" />
-                        <Label htmlFor="custom_term">Personalizado</Label>
-                        <Input
-                            value={customTermSeparator}
-                            onChange={(e) => setCustomTermSeparator(e.target.value)}
-                            disabled={termSeparator !== 'custom'}
-                            className="h-8 w-24 ml-2"
-                        />
-                    </div>
-                </RadioGroup>
-            </div>
-            <div>
-                <h4 className="font-medium mb-3">Entre renglones</h4>
-                <RadioGroup value={rowSeparator} onValueChange={setRowSeparator} className="gap-3">
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="newline" id="newline" />
-                        <Label htmlFor="newline">Línea nueva</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="semicolon" id="semicolon" />
-                        <Label htmlFor="semicolon">Punto y coma</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="custom" id="custom_row" />
-                        <Label htmlFor="custom_row">Personalizado</Label>
-                        <Input
-                            value={customRowSeparator}
-                            onChange={(e) => setCustomRowSeparator(e.target.value)}
-                            disabled={rowSeparator !== 'custom'}
-                            className="h-8 w-24 ml-2"
-                            placeholder="\n\n"
-                        />
-                    </div>
-                </RadioGroup>
-            </div>
-        </div>
-    </>
-);
-
-
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
   const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube' | 'sheets' | 'web' | 'quizlet' | 'notes'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
@@ -172,13 +121,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const [pastedText, setPastedText] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [webUrl, setWebUrl] = useState('');
-  const [quizletUrl, setQuizletUrl] = useState('');
   
-  const [termSeparator, setTermSeparator] = useState('tab');
-  const [customTermSeparator, setCustomTermSeparator] = useState('-');
-  const [rowSeparator, setRowSeparator] = useState('newline');
-  const [customRowSeparator, setCustomRowSeparator] = useState('\\n\\n');
-
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -191,8 +134,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     { title: 'Video de YouTube', type: 'youtube', icon: <Youtube />, isFileBased: false },
     { title: 'Página Web', type: 'web', icon: <Globe />, isFileBased: false },
     { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
-    { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: false },
-    { title: 'Hojas de Cálculo', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: false },
   ];
 
   const handleSourceSelect = (source: SourceInfo) => {
@@ -203,12 +144,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       setView('upload');
     } else if (source.type === 'quizlet') {
         setView('quizlet');
-    } else if (source.type === 'anki') {
-        setView('paste');
     } else if (source.type === 'youtube') {
         setView('youtube');
-    } else if (source.type === 'sheets') {
-        setView('sheets');
     } else if (source.type === 'web') {
         setView('web');
     } else {
@@ -258,34 +195,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     fileInputRef.current?.click();
   };
   
-  const handlePastedTextImport = async () => {
-      if (!pastedText) {
-          toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
-          return;
-      }
-      setIsGenerating(true);
-      const parsedCards = await handlePastedTextImportAction(pastedText, termSeparator, rowSeparator, customTermSeparator, customRowSeparator);
-      const projectTitle = "Importación de Texto";
-      onProjectParsed(projectTitle, parsedCards);
-      setIsGenerating(false);
-      resetState();
-      toast({ title: '¡Tarjetas Importadas!', description: `Se han añadido ${parsedCards.length} tarjetas.` });
-  };
-  
-  const handleSheetsImport = async () => {
-      if (!pastedText) {
-          toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
-          return;
-      }
-      setIsGenerating(true);
-      const parsedCards = await handlePastedTextImportAction(pastedText, 'tab', 'newline');
-      const projectTitle = "Importación de Hoja de Cálculo";
-      onProjectParsed(projectTitle, parsedCards);
-      setIsGenerating(false);
-      resetState();
-      toast({ title: '¡Tarjetas Importadas!', description: `Se han añadido ${parsedCards.length} tarjetas.` });
-  };
-
   const handleAiImport = async (studyNotes?: string) => {
     const content = studyNotes || fileContent;
     if (!content || (typeof content !== 'string' && !Array.isArray(content))) {
@@ -383,19 +292,18 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   };
 
   const handleQuizletImport = async () => {
-     if (!pastedText) {
-          toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
-          return;
-      }
-      setIsGenerating(true);
-      // We use 'tab' and 'newline' as Quizlet's default export separators.
-      const parsedCards = await handlePastedTextImportAction(pastedText, 'tab', 'newline');
-      const projectTitle = "Importación de Quizlet";
-      onProjectParsed(projectTitle, parsedCards);
-      setIsGenerating(false);
-      resetState();
-      toast({ title: '¡Tarjetas Importadas!', description: `Se han añadido ${parsedCards.length} tarjetas de tu mazo de Quizlet.` });
-  };
+    if (!pastedText) {
+        toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega el texto exportado de Quizlet.' });
+        return;
+    }
+    setIsGenerating(true);
+    const parsedCards = await handlePastedTextImportAction(pastedText, '\t', '\n');
+    const projectTitle = `Importado de Quizlet`;
+    onProjectParsed(projectTitle, parsedCards);
+    setIsGenerating(false);
+    resetState();
+    toast({ title: '¡Tarjetas Importadas!', description: `Se han añadido ${parsedCards.length} tarjetas de tu mazo de Quizlet.` });
+};
 
   const resetState = () => {
     setIsOpen(false);
@@ -408,7 +316,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setPastedText('');
         setYoutubeUrl('');
         setWebUrl('');
-        setQuizletUrl('');
         setIsGenerating(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -533,41 +440,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     );
   };
   
-  const renderPasteView = () => (
-    <>
-      <DialogHeader className="p-6 pb-2">
-        <div className='flex items-center gap-2'>
-            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
-                <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-                <DialogTitle>Importar desde {selectedSource?.title}</DialogTitle>
-                <DialogDescription>Pega tu texto y elige los delimitadores.</DialogDescription>
-            </div>
-        </div>
-      </DialogHeader>
-      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
-          <PasteImportControls
-              pastedText={pastedText}
-              setPastedText={setPastedText}
-              termSeparator={termSeparator}
-              setTermSeparator={setTermSeparator}
-              customTermSeparator={customTermSeparator}
-              setCustomTermSeparator={setCustomTermSeparator}
-              rowSeparator={rowSeparator}
-              setRowSeparator={setRowSeparator}
-              customRowSeparator={customRowSeparator}
-              setCustomRowSeparator={setCustomRowSeparator}
-          />
-      </div>
-      <div className="flex justify-end p-6 pt-4">
-          <Button onClick={handlePastedTextImport} disabled={isGenerating || !pastedText} className="w-full">
-              {isGenerating ? 'Importando...' : 'Importar Tarjetas'}
-          </Button>
-      </div>
-    </>
-  );
-
   const renderNotesView = () => (
     <>
        <DialogHeader className="p-6 pb-2">
@@ -622,35 +494,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       <div className="flex justify-end p-6 pt-4">
           <Button onClick={() => handleAiImport(pastedText)} disabled={isGenerating || (!fileContent && !pastedText)} className="w-full">
               {isGenerating ? 'Generando...' : 'Generar con IA'}
-          </Button>
-      </div>
-    </>
-  );
-  
-  const renderAnkiView = () => (
-    <>
-      <DialogHeader className="p-6 pb-2">
-        <div className='flex items-center gap-2'>
-            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
-                <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-                <DialogTitle>Importar desde Anki</DialogTitle>
-            </div>
-        </div>
-      </DialogHeader>
-      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
-          <AnkiExportGuide />
-           <Textarea 
-              placeholder="Copia y pega aquí tu archivo 'Notas en Texto Plano (*.txt)' exportado de Anki..."
-              value={pastedText}
-              onChange={(e) => setPastedText(e.target.value)}
-              className="h-40 resize-none"
-          />
-      </div>
-      <div className="flex justify-end p-6 pt-4">
-          <Button onClick={handlePastedTextImport} disabled={isGenerating || !pastedText}>
-              {isGenerating ? 'Importando...' : 'Confirmar'}
           </Button>
       </div>
     </>
@@ -742,217 +585,336 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </div>
     </>
   );
-  
-  const renderSheetsView = () => (
-    <>
-       <DialogHeader className="p-6 pb-2">
-        <div className='flex items-center gap-2'>
-            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
-                <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-                <DialogTitle>Importar desde Hoja de Cálculo</DialogTitle>
-                <DialogDescription>
-                  Cada fila debe tener 1 columna (para tarjetas simples) o 2 columnas (para anverso y reverso).
-                </DialogDescription>
-            </div>
-        </div>
-      </DialogHeader>
-      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
-        <Textarea
-          placeholder="Copia y pega aquí tu hoja de cálculo"
-          value={pastedText}
-          onChange={(e) => setPastedText(e.target.value)}
-          className="h-60 resize-none"
-        />
-      </div>
-      <div className="flex justify-end p-6 pt-4 gap-2">
-        <Button variant="outline" onClick={() => setView('selection')}>Volver</Button>
-        <Button onClick={handleSheetsImport} disabled={isGenerating || !pastedText}>
-            {isGenerating ? 'Importando...' : 'Confirmar'}
-        </Button>
-      </div>
-    </>
-  );
-
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Importación Mágica</Button>
+        <Button variant="default" size="lg"><Wand2 className="mr-2 h-5 w-5" /> Importación Mágica</Button>
       </DialogTrigger>
-      <DialogContent className={cn("max-w-xl flex flex-col p-0", (view === 'paste' || view === 'anki' || view === 'notes') && 'max-w-3xl')}>
+      <DialogContent className={cn("max-w-xl flex flex-col p-0", (view === 'notes' || view === 'quizlet') && 'max-w-3xl')}>
          {view === 'selection' && renderSelectionView()}
          {view === 'upload' && renderUploadView()}
          {view === 'notes' && renderNotesView()}
-         {view === 'paste' && renderPasteView()}
-         {view === 'anki' && renderAnkiView()}
-         {view === 'youtube' && renderYoutubeView()}
-         {view === 'sheets' && renderSheetsView()}
-         {view === 'web' && renderWebView()}
          {view === 'quizlet' && renderQuizletView()}
+         {view === 'youtube' && renderYoutubeView()}
+         {view === 'web' && renderWebView()}
       </DialogContent>
     </Dialog>
   );
 };
 
-export default function CreateProjectPage() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([
-    { id: 1, question: '', answer: '' },
-  ]);
-  const [isPublic, setIsPublic] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [isManualEntry, setIsManualEntry] = useState(false);
+
+const Step1_Input = ({ setFlashcards, setProjectDetails, goToNext }: { setFlashcards: (cards: Flashcard[]) => void, setProjectDetails: (details: any) => void, goToNext: () => void }) => {
+    const [manualFlashcards, setManualFlashcards] = useState<Flashcard[]>([{ id: 1, question: '', answer: '' }]);
+    const [showManual, setShowManual] = useState(false);
+
+    const addCard = () => {
+        setManualFlashcards(current => [...current, { id: Date.now(), question: '', answer: '' }]);
+    };
+    
+    const handleCardChange = (id: number | string, field: 'question' | 'answer', value: string) => {
+        setManualFlashcards(current => current.map(card => card.id === id ? { ...card, [field]: value } : card));
+    };
+
+    const handleCardDelete = (id: number | string) => {
+        setManualFlashcards(current => current.filter(card => card.id !== id));
+    };
+
+    const handleProjectGenerated = (project: any) => {
+        const newFlashcards = project.flashcards.map((fc: any, index: number) => ({ ...fc, id: Date.now() + index }));
+        setFlashcards(newFlashcards);
+        setProjectDetails({ title: project.title, description: project.description, category: project.category || '' });
+        goToNext();
+    };
+
+    const handleProjectParsed = (title: string, cards: Omit<Flashcard, 'id'>[]) => {
+        const newFlashcards = cards.map((card, index) => ({ ...card, id: Date.now() + index }));
+        setFlashcards(newFlashcards);
+        setProjectDetails({ title, description: `Un conjunto de ${cards.length} tarjetas importadas.`, category: 'Importado' });
+        goToNext();
+    };
+
+    const handleContinueWithManual = () => {
+        if (manualFlashcards.some(fc => !fc.question.trim() || !fc.answer.trim())) {
+            // Optional: Add toast notification
+            return;
+        }
+        setFlashcards(manualFlashcards);
+        setProjectDetails({ title: '', description: '', category: '' });
+        goToNext();
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Ingresa tu material de estudio</CardTitle>
+                <CardDescription>Importa tu material usando IA o agrégalo manualmente.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+                <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
+                <Button variant="secondary" size="lg" onClick={() => setShowManual(prev => !prev)}>
+                    <PencilIcon className="mr-2 h-5 w-5" /> Agregar Manualmente
+                </Button>
+                {showManual && (
+                    <div className="w-full mt-4 space-y-4">
+                        <div className="space-y-4">
+                            {manualFlashcards.map((card, index) => (
+                                <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} onCardDelete={handleCardDelete} />
+                            ))}
+                        </div>
+                        <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
+                            <Plus className="mr-2 h-5 w-5" /> Añadir tarjeta
+                        </Button>
+                        <Button onClick={handleContinueWithManual} className="w-full">
+                            Continuar con tarjetas manuales <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+};
+
+// --- Step 2 Components ---
+
+const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, goToNext }: { projectDetails: any, setProjectDetails: (details: any) => void, flashcards: Flashcard[], goBack: () => void, goToNext: () => void }) => {
+    const { title, description, category, isPublic } = projectDetails;
+    const [isRefining, setIsRefining] = useState(false);
+    const { toast } = useToast();
+
+    const handleRefine = async () => {
+      setIsRefining(true);
+      const result = await handleRefineProjectDetails({
+        currentTitle: title,
+        currentDescription: description,
+        flashcards: flashcards,
+      });
+
+      if (result.details) {
+        setProjectDetails((prev: any) => ({
+          ...prev,
+          title: result.details.title,
+          description: result.details.description,
+          category: result.details.category,
+        }));
+        toast({ title: "¡Detalles mejorados por Koli!" });
+      } else {
+        toast({ variant: 'destructive', title: "Error", description: result.error });
+      }
+      setIsRefining(false);
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Detalles del Proyecto</CardTitle>
+                <CardDescription>Dale un nombre y describe tu nuevo plan de estudios.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="title">Título</Label>
+                    <Input id="title" placeholder="e.g., Fundamentos de JavaScript" value={title} onChange={(e) => setProjectDetails({ ...projectDetails, title: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="description">Descripción</Label>
+                    <Textarea id="description" placeholder="Un breve resumen de lo que aprenderás." value={description} onChange={(e) => setProjectDetails({ ...projectDetails, description: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="category">Categoría</Label>
+                    <Input id="category" placeholder="e.g., Programación, Historia" value={category} onChange={(e) => setProjectDetails({ ...projectDetails, category: e.target.value })} />
+                </div>
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="visibility">¿Hacer público?</Label>
+                    <Switch id="visibility" checked={isPublic} onCheckedChange={(checked) => setProjectDetails({ ...projectDetails, isPublic: checked })} />
+                </div>
+                <Button variant="outline" onClick={handleRefine} disabled={isRefining} className="w-full">
+                  <Bot className="mr-2 h-4 w-4" />
+                  {isRefining ? 'Mejorando...' : 'Ayúdame a mejorar'}
+                </Button>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+                <Button variant="outline" onClick={goBack}><ChevronLeft className="mr-2 h-4 w-4"/> Volver</Button>
+                <Button onClick={goToNext} disabled={!title}>Siguiente <ChevronRight className="ml-2 h-4 w-4"/></Button>
+            </CardFooter>
+        </Card>
+    );
+};
+
+// --- Step 3 Components ---
+
+const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: any) => {
+    const [objective, setObjective] = useState('');
+    const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const { toast } = useToast();
+
+    const handleGeneratePlan = async () => {
+        if (!objective) {
+            toast({ variant: 'destructive', title: 'Falta el objetivo', description: 'Por favor, dinos cuál es tu objetivo de estudio.' });
+            return;
+        }
+        setIsGenerating(true);
+        const result = await handleGenerateStudyPlan({
+            projectTitle: projectDetails.title,
+            objective: objective,
+            flashcards: flashcards,
+        });
+
+        if (result.plan) {
+            setStudyPlan(result.plan);
+            toast({ title: "¡Plan de estudios generado!" });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+        setIsGenerating(false);
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Plan de Estudios Personalizado</CardTitle>
+                <CardDescription>Define tu meta y deja que Koli organice el camino más eficiente para ti.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Label htmlFor="objective">¿Cuál es tu objetivo con este material?</Label>
+                    <Input id="objective" placeholder="e.g., Pasar mi examen final, repasar para una entrevista..." value={objective} onChange={(e) => setObjective(e.target.value)} />
+                </div>
+
+                {!studyPlan && (
+                    <Button onClick={handleGeneratePlan} disabled={isGenerating} className="w-full">
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        {isGenerating ? 'Creando plan...' : 'Crear mi Plan de Estudios'}
+                    </Button>
+                )}
+                
+                {studyPlan && (
+                    <div className="space-y-4 pt-4 border-t">
+                        <div>
+                            <h3 className="font-semibold mb-2">Previsualización del Plan</h3>
+                            <Card className="bg-card/70 max-h-60 overflow-y-auto">
+                                <CardContent className="p-4 space-y-2">
+                                    {studyPlan.plan.map((item, index) => (
+                                        <div key={index} className="flex items-center justify-between text-sm p-2 rounded-md bg-background/50">
+                                            <div className='flex items-center gap-2'>
+                                                <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{item.section}</span>
+                                                <p>{item.topic}</p>
+                                            </div>
+                                            <p className="text-primary font-medium">{item.sessionType}</p>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </div>
+                         <div>
+                            <h3 className="font-semibold mb-2">Justificación de Koli</h3>
+                             <Card className="bg-card/70">
+                                <CardContent className="p-4 text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{studyPlan.justification}</ReactMarkdown>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+            <CardFooter className="flex justify-between">
+                <Button variant="outline" onClick={goBack}><ChevronLeft className="mr-2 h-4 w-4"/> Volver</Button>
+                <Button onClick={() => createProject(studyPlan)} disabled={!studyPlan || projectDetails.isCreating}>
+                    {projectDetails.isCreating ? 'Creando...' : 'Crear Proyecto'}
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+};
+
+
+export default function CreateProjectWizardPage() {
+  const [step, setStep] = useState(1);
+  const [projectDetails, setProjectDetails] = useState({
+      title: '',
+      description: '',
+      category: '',
+      isPublic: false,
+      isCreating: false,
+  });
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const { toast } = useToast();
   const router = useRouter();
 
-  const addCard = () => {
-    setFlashcards(currentFlashcards => [
-      ...currentFlashcards,
-      { id: Date.now(), question: '', answer: '' },
-    ]);
-  };
+  const progress = (step / 3) * 100;
+
+  const goToNext = () => setStep(s => Math.min(s + 1, 3));
+  const goBack = () => setStep(s => Math.max(s - 1, 1));
   
-  const handleProjectGenerated = (project: { title: string; description: string; category?: string; flashcards: { question: string; answer: string }[] }) => {
-    setTitle(project.title);
-    setDescription(project.description);
-    setCategory(project.category || '');
-    const newFlashcards = project.flashcards.map((fc, index) => ({
-        ...fc,
-        id: Date.now() + index,
-    }));
-    setFlashcards(newFlashcards);
-    setIsManualEntry(true); // Show the cards after generating
-  };
-
-  const handleProjectParsed = async (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[]) => {
-    setTitle(parsedTitle);
-    setDescription(`Un conjunto de ${parsedCards.length} tarjetas importadas.`);
-    setCategory('Importado');
-    const newFlashcards = parsedCards.map((card, index) => ({
-        ...card,
-        id: Date.now() + index
-    }));
-    setFlashcards(newFlashcards);
-    setIsManualEntry(true); // Show the cards after parsing
-  };
-
-  const handleCardChange = (id: number, field: 'question' | 'answer', value: string) => {
-    setFlashcards(currentFlashcards => 
-      currentFlashcards.map(card => 
-        card.id === id ? { ...card, [field]: value } : card
-      )
-    );
-  };
-  
-  const handleCardDelete = (id: number) => {
-    setFlashcards(currentFlashcards => currentFlashcards.filter(card => card.id !== id));
-  };
-
-  const handleCreate = async () => {
-    if (!title.trim() || flashcards.some(fc => !fc.question.trim() || !fc.answer.trim())) {
-        toast({
-            variant: "destructive",
-            title: "Faltan datos",
-            description: "Asegúrate de que el proyecto tenga un título y que todas las tarjetas tengan término y definición."
-        });
-        return;
+  const handleCreateFinalProject = async (studyPlan: StudyPlan | null) => {
+    if (!projectDetails.title || flashcards.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Faltan datos',
+        description: 'Asegúrate de que el proyecto tenga un título y al menos una tarjeta.',
+      });
+      return;
     }
-    
-    setIsCreating(true);
-    const result = await handleCreateProject(title, description, category, flashcards);
+    if (!studyPlan) {
+      toast({
+        variant: 'destructive',
+        title: 'Plan de estudios no generado',
+        description: 'Por favor, genera un plan de estudios antes de crear el proyecto.',
+      });
+      return;
+    }
+
+    setProjectDetails(p => ({ ...p, isCreating: true }));
+
+    const result = await handleCreateProject(
+        projectDetails.title,
+        projectDetails.description,
+        projectDetails.category,
+        flashcards,
+        studyPlan
+    );
     
     if (result?.project?.slug) {
         toast({
-            title: "Creación exitosa",
-            description: "Tu proyecto ha sido creado."
+            title: '¡Creación exitosa!',
+            description: 'Tu nuevo plan de estudios está listo.',
         });
         router.push(`/proyecto/${result.project.slug}/details`);
     } else {
-        setIsCreating(false);
+        setProjectDetails(p => ({ ...p, isCreating: false }));
         toast({
-            variant: "destructive",
-            title: "Error al crear el proyecto",
-            description: result?.error || "Ocurrió un error inesperado."
+            variant: 'destructive',
+            title: 'Error al crear el proyecto',
+            description: result?.error || 'Ocurrió un error inesperado.',
         });
+    }
+  };
+
+
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return <Step1_Input setFlashcards={setFlashcards} setProjectDetails={setProjectDetails} goToNext={goToNext} />;
+      case 2:
+        return <Step2_Details projectDetails={projectDetails} setProjectDetails={setProjectDetails} flashcards={flashcards} goBack={goBack} goToNext={goToNext} />;
+      case 3:
+        return <Step3_Plan projectDetails={projectDetails} flashcards={flashcards} goBack={goBack} createProject={handleCreateFinalProject} />;
+      default:
+        return <div>Paso desconocido</div>;
     }
   };
 
   return (
     <div className="container mx-auto py-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <header className="flex justify-between items-center mb-6">
-          <div>
+      <div className="max-w-3xl mx-auto space-y-8">
+        <div className="text-center">
             <h1 className="text-3xl font-bold">Crear un nuevo proyecto</h1>
-            <p className="text-sm text-muted-foreground">Guardada hace menos de 1 minuto</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center space-x-2">
-                <Switch id="visibility" checked={isPublic} onCheckedChange={setIsPublic} />
-                <Label htmlFor="visibility">{isPublic ? 'Público' : 'Privado'}</Label>
-            </div>
-            <Button onClick={handleCreate} disabled={isCreating}>
-                {isCreating ? "Creando..." : "Crear Proyecto"}
-            </Button>
-          </div>
-        </header>
-
-        {/* Title and Description */}
-        <div className="space-y-4 mb-6">
-          <Input 
-            placeholder="Título" 
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="h-14 text-lg p-4 bg-card/70 border-primary/20"
-          />
-          <Textarea 
-            placeholder="Añade una descripción..." 
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="min-h-[80px] p-4 bg-card/70 border-primary/20"
-          />
-          <Input
-            placeholder="Categoría (e.g., Programación, Historia, etc.)"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="h-12 text-base p-4 bg-card/70 border-primary/20"
-          />
+            <p className="text-sm text-muted-foreground">Paso {step} de 3</p>
         </div>
-
-        {/* Creation Methods */}
-        <div className="space-y-4 mb-6">
-            <h3 className="text-lg font-medium text-muted-foreground">Métodos de creación</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
-                <Button variant="outline" onClick={() => setIsManualEntry(prev => !prev)}>
-                    <PencilIcon className="mr-2 h-4 w-4" />
-                    Agregar manualmente
-                </Button>
-            </div>
-        </div>
-
-        {isManualEntry && (
-          <>
-            {/* Flashcard List */}
-            <div className="space-y-4">
-                {flashcards.map((card, index) => (
-                    <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} onCardDelete={handleCardDelete} />
-                ))}
-            </div>
-
-            {/* Add Card Button */}
-            <div className="mt-6">
-                <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
-                    <Plus className="mr-2 h-5 w-5" />
-                    Añadir tarjeta
-                </Button>
-            </div>
-          </>
-        )}
+        
+        <Progress value={progress} className="w-full" />
+        
+        {renderStep()}
       </div>
     </div>
   );
