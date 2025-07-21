@@ -135,7 +135,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     { title: 'Imagen', type: 'image', icon: <ImageIcon />, isFileBased: true, accept: '.png,.jpg,.jpeg,.webp', multiple: true },
     { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
     { title: 'Anki', type: 'anki', icon: <FileQuestion />, isFileBased: false },
-    { title: 'Hojas de Cálculo', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: true },
+    { title: 'Hojas de Cálculo', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: false },
     { title: 'Gizmo', type: 'gizmo', icon: <Wand2 />, isFileBased: false },
   ];
 
@@ -162,8 +162,10 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setView('anki');
         break;
       case 'sheets':
+        setView('sheets');
+        break;
       case 'gizmo':
-        setView(source.type);
+        setView('gizmo');
         break;
       default:
         toast({ variant: 'destructive', title: 'Función no disponible', description: 'Esta opción de importación aún no está implementada.' });
@@ -609,6 +611,38 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   
   const renderAnkiView = () => renderManualPastedTextView("Anki", <AnkiExportGuide />);
 
+  const renderSheetsView = () => (
+     <>
+       <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Importar desde Hoja de Cálculo</DialogTitle>
+                <DialogDescriptionComponent>
+                  Cada fila debe tener 1 columna (para tarjetas simples) o 2 columnas (para tarjetas con anverso y reverso).
+                </DialogDescriptionComponent>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
+         <Textarea
+          placeholder="Copia y pega tu hoja de cálculo aquí..."
+          value={pastedText}
+          onChange={(e) => setPastedText(e.target.value)}
+          className="h-60 resize-none"
+        />
+      </div>
+      <div className="flex justify-between p-6 pt-4">
+          <Button variant="outline" onClick={() => setView('selection')}>Volver</Button>
+          <Button onClick={() => handleManualTextImport(pastedText, "Hoja de Cálculo")} disabled={isGenerating || !pastedText}>
+              {isGenerating ? 'Importando...' : `Confirmar`}
+          </Button>
+      </div>
+     </>
+  );
+
   const renderComingSoonView = (sourceName: string) => (
     <>
       <DialogHeader className="p-6 pb-2">
@@ -636,7 +670,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       <DialogTrigger asChild>
         <Button variant="default" size="lg"><Wand2 className="mr-2 h-5 w-5" /> Importación Mágica</Button>
       </DialogTrigger>
-      <DialogContent className={cn("max-w-xl flex flex-col p-0", (view === 'notes' || view === 'quizlet' || view === 'anki') && 'max-w-3xl')}>
+      <DialogContent className={cn("max-w-xl flex flex-col p-0", (view === 'notes' || view === 'quizlet' || view === 'anki' || view === 'sheets') && 'max-w-3xl')}>
          {view === 'selection' && renderSelectionView()}
          {view === 'upload' && renderUploadView()}
          {view === 'notes' && renderNotesView()}
@@ -644,7 +678,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
          {view === 'anki' && renderAnkiView()}
          {view === 'youtube' && renderYoutubeView()}
          {view === 'web' && renderWebView()}
-         {(view === 'sheets' || view === 'gizmo') && renderComingSoonView(selectedSource?.title || '')}
+         {view === 'sheets' && renderSheetsView()}
+         {view === 'gizmo' && renderComingSoonView(selectedSource?.title || '')}
       </DialogContent>
     </Dialog>
   );
