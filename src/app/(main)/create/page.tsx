@@ -16,7 +16,7 @@ import {
   Trash2, 
   GripVertical, 
   Wand2, 
-  Image as ImageIcon,
+  ImageIcon,
   PlusCircle,
   FileText,
   Lock,
