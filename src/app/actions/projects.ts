@@ -100,7 +100,11 @@ export async function handleQuizletUrlImport(quizletUrl: string) {
     }
 
     try {
-        const response = await fetch(quizletUrl);
+        const response = await fetch(quizletUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36',
+            },
+        });
         if (!response.ok) {
             throw new Error(`Failed to fetch Quizlet page. Status: ${response.status}`);
         }
