@@ -1,3 +1,4 @@
+
 'use server';
 
 import { generateDeckFromText } from '@/ai/flows/generate-deck-from-text';
@@ -7,8 +8,16 @@ import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-ques
 import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-options-for-question';
 import { generateLearningPlan } from '@/ai/flows/generate-learning-plan';
 import { redirect } from 'next/navigation';
+import { z } from 'zod';
 
 let createdDecks: any[] = [];
+
+// Helper Zod schema for flashcards to be passed to the action
+const FlashcardSchema = z.object({
+  id: z.number(),
+  question: z.string(),
+  answer: z.string(),
+});
 
 export async function handleGenerateDeckFromText(studyNotes: string) {
   if (!studyNotes) {
@@ -31,14 +40,17 @@ export async function handleGenerateDeckFromText(studyNotes: string) {
 export async function handleCreateProject(
     title: string, 
     description: string, 
-    flashcards: { question: string, answer: string }[]
+    flashcards: z.infer<typeof FlashcardSchema>[]
 ) {
     if (!title || flashcards.length === 0) {
         return { error: 'Project must have a title and at least one flashcard.' };
     }
 
     try {
-        const plan = await generateLearningPlan({ title, flashcards });
+        const plan = await generateLearningPlan({ 
+            title, 
+            flashcards: flashcards.map(fc => ({ question: fc.question, answer: fc.answer })) 
+        });
 
         // In a real app, this would be saved to a database.
         // For now, we store it in memory for this session.
@@ -55,13 +67,14 @@ export async function handleCreateProject(
         };
         createdDecks.push(newDeck);
 
-        // Redirect to the newly created deck's detail page
-        redirect(`/deck/${newDeck.id}/details`);
-
     } catch (error) {
         console.error('Error creating learning plan:', error);
         return { error: 'Sorry, I was unable to create a learning plan.' };
     }
+    
+    // Redirect to the newly created deck's detail page
+    const newDeckId = createdDecks[createdDecks.length - 1].id;
+    redirect(`/deck/${newDeckId}/details`);
 }
 
 

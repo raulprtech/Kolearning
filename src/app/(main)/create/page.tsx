@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -214,6 +215,7 @@ export default function CreateProjectPage() {
   const [isPublic, setIsPublic] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const addCard = () => {
     setFlashcards(currentFlashcards => [
@@ -255,8 +257,17 @@ export default function CreateProjectPage() {
     }
     
     setIsCreating(true);
-    await handleCreateProject(title, description, flashcards);
-    // The action will handle redirection. If it fails, we might want to show an error.
+    const result = await handleCreateProject(title, description, flashcards);
+    
+    if (result?.error) {
+        toast({
+            variant: "destructive",
+            title: "Error al crear el proyecto",
+            description: result.error
+        });
+    }
+    // If successful, the server action handles the redirection, so no need for router.push here.
+    
     setIsCreating(false);
   };
 
