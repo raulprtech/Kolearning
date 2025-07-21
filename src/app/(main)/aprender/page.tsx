@@ -155,7 +155,7 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
   );
 };
 
-const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer, onUserAnswerChange, feedback, revealedAnswer }: any) => {
+const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer, onUserAnswerChange, feedback }: any) => {
     return (
         <div className="flex flex-col gap-4 mb-6">
              {feedback && (
@@ -363,6 +363,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     const CONVERT_COST = 2;
     const SHOW_ANSWER_COST = 5;
     const TUTOR_AI_COST = 3;
+    const EXPLAIN_COST = 2;
 
     const hasEnoughEnergy = (cost: number) => user && user.energy >= cost;
 
@@ -672,8 +673,8 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                       </Button>
                     </>
                   ) : (
-                    <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleExplainClick, HINT_COST)} disabled={!hasEnoughEnergy(HINT_COST)}>
-                      <Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta <CostIndicator cost={HINT_COST} />
+                    <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleExplainClick, EXPLAIN_COST)} disabled={!hasEnoughEnergy(EXPLAIN_COST)}>
+                      <Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta <CostIndicator cost={EXPLAIN_COST} />
                     </Button>
                   )}
                    <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} disabled={!hasEnoughEnergy(TUTOR_AI_COST)}>
@@ -1083,5 +1084,3 @@ export default function AprenderPage() {
     </div>
   );
 }
-
-    
