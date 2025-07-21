@@ -282,7 +282,6 @@ export default function CreateProjectPage() {
             <Button variant="outline" onClick={handleCreate} disabled={isCreating}>
                 {isCreating ? "Creando..." : "Crear"}
             </Button>
-            <Button disabled={isCreating}>Crear y practicar</Button>
           </div>
         </header>
 
