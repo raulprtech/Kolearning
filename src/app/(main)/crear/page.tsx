@@ -35,7 +35,7 @@ import {
   DialogTrigger,
   DialogDescription as DialogDescriptionComponent
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails, handleGenerateProjectFromQuizletUrl } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -121,6 +121,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const [pastedText, setPastedText] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [webUrl, setWebUrl] = useState('');
+  const [quizletUrl, setQuizletUrl] = useState('');
   
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -309,6 +310,25 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     }
   };
 
+  const handleQuizletImport = async () => {
+    if (!quizletUrl) {
+      toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL de Quizlet.' });
+      return;
+    }
+    setIsGenerating(true);
+    
+    const result = await handleGenerateProjectFromQuizletUrl(quizletUrl);
+    setIsGenerating(false);
+
+    if (result.error) {
+      toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
+    } else if (result.project) {
+        onProjectGenerated(result.project);
+        resetState();
+        toast({ title: `¡Tarjetas importadas desde "${result.project.title}"!`, description: 'Tus nuevas tarjetas se han añadido al editor.' });
+    }
+  };
+
   const handleManualTextImport = async (text: string, sourceName: string) => {
     if (!text) {
         toast({ variant: 'destructive', title: 'No hay contenido', description: `Por favor, pega el texto exportado de ${sourceName}.` });
@@ -335,6 +355,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setPastedText('');
         setYoutubeUrl('');
         setWebUrl('');
+        setQuizletUrl('');
         setIsGenerating(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -574,6 +595,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     </>
   );
 
+  const renderQuizletView = () => renderManualPastedTextView("Quizlet", "En Quizlet, ve a tu mazo, haz clic en el icono de tres puntos (•••), selecciona 'Exportar', copia el texto y pégalo aquí.");
+
   const renderManualPastedTextView = (sourceName: string, instructions: React.ReactNode) => (
      <>
        <DialogHeader className="p-6 pb-2">
@@ -604,8 +627,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </div>
      </>
   );
-  
-  const renderQuizletView = () => renderManualPastedTextView("Quizlet", "En Quizlet, ve a tu mazo, haz clic en el icono de tres puntos (•••), selecciona 'Exportar', copia el texto y pégalo aquí.");
   
   const renderAnkiView = () => renderManualPastedTextView("Anki", <AnkiExportGuide />);
 
@@ -652,8 +673,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
 
 
 const Step1_Input = ({ setFlashcards, setProjectDetails, goToNext }: { setFlashcards: (cards: Flashcard[]) => void, setProjectDetails: (details: any) => void, goToNext: () => void }) => {
-    const [manualFlashcards, setManualFlashcards] = useState<Flashcard[]>([{ id: 1, question: '', answer: '' }]);
     const [showManual, setShowManual] = useState(false);
+    const [manualFlashcards, setManualFlashcards] = useState<Flashcard[]>([{ id: 1, question: '', answer: '' }]);
 
     const addCard = () => {
         setManualFlashcards(current => [...current, { id: Date.now(), question: '', answer: '' }]);
@@ -700,7 +721,7 @@ const Step1_Input = ({ setFlashcards, setProjectDetails, goToNext }: { setFlashc
             <CardContent className="flex flex-col items-center gap-4">
                 <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
                 <Button variant="outline" size="lg" onClick={() => setShowManual(prev => !prev)}>
-                    <PencilIcon className="mr-2 h-5 w-5" /> Agregar Manualmente
+                    <PencilIcon className="mr-2 h-5 w-5" /> Agregar manualmente
                 </Button>
                 {showManual && (
                     <div className="w-full mt-4 space-y-4">

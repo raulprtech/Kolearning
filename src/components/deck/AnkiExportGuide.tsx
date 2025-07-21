@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button';
 export function AnkiExportGuide() {
     return (
         <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+            <span className="text-sm text-muted-foreground">
                 Exporta tu mazo de Anki como un archivo de 'Notas en Texto Plano (*.txt)' y luego cópialo y pégalo a continuación.
-            </p>
+            </span>
             <Card className="bg-muted/50 p-6">
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
