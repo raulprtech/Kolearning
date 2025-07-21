@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useRef, ReactNode } from 'react';
@@ -22,7 +21,8 @@ import {
   FileSpreadsheet,
   Globe,
   ArrowLeft,
-  Image as ImageIcon
+  ImageIcon,
+  PencilIcon
 } from 'lucide-react';
 import {
   Dialog,
@@ -805,6 +805,7 @@ export default function CreateProjectPage() {
   ]);
   const [isPublic, setIsPublic] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isManualEntry, setIsManualEntry] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -824,6 +825,7 @@ export default function CreateProjectPage() {
         id: Date.now() + index,
     }));
     setFlashcards(newFlashcards);
+    setIsManualEntry(true); // Show the cards after generating
   };
 
   const handleProjectParsed = async (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[]) => {
@@ -835,6 +837,7 @@ export default function CreateProjectPage() {
         id: Date.now() + index
     }));
     setFlashcards(newFlashcards);
+    setIsManualEntry(true); // Show the cards after parsing
   };
 
   const handleCardChange = (id: number, field: 'question' | 'answer', value: string) => {
@@ -888,6 +891,10 @@ export default function CreateProjectPage() {
             <p className="text-sm text-muted-foreground">Guardada hace menos de 1 minuto</p>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center space-x-2">
+                <Switch id="visibility" checked={isPublic} onCheckedChange={setIsPublic} />
+                <Label htmlFor="visibility">{isPublic ? 'Público' : 'Privado'}</Label>
+            </div>
             <Button onClick={handleCreate} disabled={isCreating}>
                 {isCreating ? "Creando..." : "Crear Proyecto"}
             </Button>
@@ -916,35 +923,39 @@ export default function CreateProjectPage() {
           />
         </div>
 
-        {/* Toolbar */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center space-x-2">
-                <Switch id="visibility" checked={isPublic} onCheckedChange={setIsPublic} />
-                <Label htmlFor="visibility">{isPublic ? 'Público' : 'Privado'}</Label>
+        {/* Creation Methods */}
+        <div className="space-y-4 mb-6">
+            <h3 className="text-lg font-medium text-muted-foreground">Métodos de creación</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
+                <Button variant="outline" onClick={() => setIsManualEntry(true)}>
+                    <PencilIcon className="mr-2 h-4 w-4" />
+                    Agregar manualmente
+                </Button>
             </div>
-          </div>
         </div>
 
-        {/* Flashcard List */}
-        <div className="space-y-4">
-            {flashcards.map((card, index) => (
-                <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} onCardDelete={handleCardDelete} />
-            ))}
-        </div>
+        {isManualEntry && (
+          <>
+            {/* Flashcard List */}
+            <div className="space-y-4">
+                {flashcards.map((card, index) => (
+                    <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} onCardDelete={handleCardDelete} />
+                ))}
+            </div>
 
-        {/* Add Card Button */}
-        <div className="mt-6">
-            <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
-                <Plus className="mr-2 h-5 w-5" />
-                Añadir tarjeta
-            </Button>
-        </div>
-
+            {/* Add Card Button */}
+            <div className="mt-6">
+                <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
+                    <Plus className="mr-2 h-5 w-5" />
+                    Añadir tarjeta
+                </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
+
+    
