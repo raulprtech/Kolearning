@@ -2,7 +2,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { handleGenerateDeckFromText } from '@/app/actions/decks';
 import { Wand2, FileUp, X } from 'lucide-react';
@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 export default function CreateDeckPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -194,7 +195,7 @@ export default function CreateDeckPage() {
                       <CardTitle>Vista Previa</CardTitle>
                   </CardHeader>
                   <CardContent>
-                      <div className="prose prose-invert max-w-none p-4 border rounded-md min-h-[464px] bg-background/50 prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50">
+                      <div className="prose prose-sm md:prose-base prose-invert max-w-none p-4 border rounded-md min-h-[464px] bg-background/50 prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50 prose-headings:text-foreground prose-strong:text-foreground">
                           <ReactMarkdown
                               remarkPlugins={[remarkGfm, remarkMath]}
                               rehypePlugins={[rehypeKatex]}
