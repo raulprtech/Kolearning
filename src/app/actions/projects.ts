@@ -111,7 +111,7 @@ export async function handleQuizletUrlImport(quizletUrl: string) {
         const html = await response.text();
 
         // Find the script tag containing the set data. This is brittle and might break if Quizlet changes their site.
-        const scriptContentRegex = /<script>window\.QuizletStore\s*=\s*({.*?});<\/script>/;
+        const scriptContentRegex = /<script id="__NEXT_DATA__" type="application\/json">({.*})<\/script>/;
         const match = html.match(scriptContentRegex);
 
         if (!match || !match[1]) {
@@ -119,19 +119,18 @@ export async function handleQuizletUrlImport(quizletUrl: string) {
         }
 
         const data = JSON.parse(match[1]);
-        
-        // The path to the data can change, this is based on current inspection.
-        const setDetails = data.setPage.set;
+        const setDetails = data.props?.pageProps?.pageData?.set;
+
         if (!setDetails) {
              throw new Error('Could not parse set details from Quizlet data.');
         }
         
         const title = setDetails.title;
         const description = setDetails.description;
-        const category = setDetails.subject?.name || 'Quizlet Import';
+        const category = 'Quizlet Import';
 
         // Find flashcard terms
-        const terms = Object.values(data.term.byId);
+        const terms = setDetails.terms;
         if (!terms || terms.length === 0) {
              throw new Error('No flashcard terms found in the Quizlet data.');
         }
