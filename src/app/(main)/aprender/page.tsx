@@ -642,9 +642,15 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                       ) : (
                         <div className="grid grid-cols-2 gap-2 pt-2">
                             {quickQuestionCount < 2 &&
-                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestionInput(true)} disabled={isLoading}>Pregunta Rápida</Button>
+                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestionInput(true)} disabled={isLoading} className="justify-between w-full">
+                                  <span>Pregunta Rápida</span>
+                                  <span className="text-xs text-primary/80 font-mono">Gratis ({quickQuestionCount}/2)</span>
+                              </Button>
                             }
-                            <Button variant="outline" size="sm" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} className={cn(quickQuestionCount >= 2 && "col-span-2")} disabled={isLoading || !hasEnoughEnergy(TUTOR_AI_COST)}>Tutor AI</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} className={cn("justify-between w-full", quickQuestionCount >= 2 && "col-span-2")} disabled={isLoading || !hasEnoughEnergy(TUTOR_AI_COST)}>
+                                <span>Tutor AI</span>
+                                <CostIndicator cost={TUTOR_AI_COST} />
+                            </Button>
                         </div>
                       )}
                     </div>
@@ -672,11 +678,11 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                           <MenuSquare className="mr-2 h-4 w-4" /> Convertir a Opción Múltiple <CostIndicator cost={CONVERT_COST} />
                         </Button>
                       )}
-                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick, SHOW_ANSWER_COST)} disabled={!hasEnoughEnergy(SHOW_ANSWER_COST)}>
-                        <Eye className="mr-2 h-4 w-4" /> Ver Respuesta <CostIndicator cost={SHOW_ANSWER_COST} />
-                      </Button>
                       <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleRephraseClick, REPHRASE_COST)} disabled={!hasEnoughEnergy(REPHRASE_COST)}>
                         <RefreshCw className="mr-2 h-4 w-4" /> Reformular <CostIndicator cost={REPHRASE_COST} />
+                      </Button>
+                       <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick, SHOW_ANSWER_COST)} disabled={!hasEnoughEnergy(SHOW_ANSWER_COST)}>
+                        <Eye className="mr-2 h-4 w-4" /> Ver Respuesta <CostIndicator cost={SHOW_ANSWER_COST} />
                       </Button>
                     </>
                   ) : (
@@ -868,7 +874,6 @@ export default function AprenderPage() {
           handleCorrectAnswer('open-answer');
           updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentQuestion.correctAnswerText });
           setCurrentOpenAnswerText(currentQuestion.correctAnswerText);
-          setRevealedAnswer(null); // Clear revealed answer since it's now in the textarea
       } else if (currentQuestion.type === 'fill-in-the-blank') {
           const correctAnswer = (currentQuestion as any).correctAnswer;
           handleCorrectAnswer('fill-in-the-blank');
@@ -1096,3 +1101,5 @@ export default function AprenderPage() {
     </div>
   );
 }
+
+    
