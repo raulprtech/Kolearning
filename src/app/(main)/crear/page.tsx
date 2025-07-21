@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useRef, ReactNode } from 'react';
@@ -504,23 +505,23 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
                 <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-                <DialogTitle>Spreadsheet import</DialogTitle>
-                <DialogDescription>Each row must have 1 column (for ordinary cards) or 2 columns (for front and back cards)</DialogDescription>
+                <DialogTitle>Importar desde Hoja de Cálculo</DialogTitle>
+                <DialogDescription>Cada fila debe tener 1 columna (para tarjetas simples) o 2 columnas (para anverso y reverso).</DialogDescription>
             </div>
         </div>
       </DialogHeader>
       <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
         <Textarea
-          placeholder="Copy & paste in your spreadsheet here"
+          placeholder="Copia y pega aquí tu hoja de cálculo"
           value={pastedText}
           onChange={(e) => setPastedText(e.target.value)}
           className="h-60 resize-none"
         />
       </div>
       <div className="flex justify-end p-6 pt-4 gap-2">
-        <Button variant="outline" onClick={() => setView('selection')}>Back</Button>
+        <Button variant="outline" onClick={() => setView('selection')}>Volver</Button>
         <Button onClick={handleSheetsImport} disabled={isGenerating || !pastedText}>
-            {isGenerating ? 'Confirming...' : 'Confirm'}
+            {isGenerating ? 'Importando...' : 'Confirmar'}
         </Button>
       </div>
     </>
