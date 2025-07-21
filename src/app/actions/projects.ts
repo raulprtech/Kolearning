@@ -47,7 +47,7 @@ export async function handleGenerateProjectFromText(studyNotes: string) {
   }
 }
 
-export function handlePastedTextImport(
+export async function handlePastedTextImport(
     pastedText: string,
     termSeparator: string,
     rowSeparator: string,
