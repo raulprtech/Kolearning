@@ -162,7 +162,7 @@ const PasteImportControls = ({
 
 
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
-  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube' | 'sheets' | 'web' | 'quizlet'>('selection');
+  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube' | 'sheets' | 'web' | 'quizlet' | 'notes'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
 
   const [fileName, setFileName] = useState('');
@@ -186,19 +186,20 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
 
   const sources: SourceInfo[] = [
     { title: 'PDF', type: 'pdf', icon: <FileText />, isFileBased: true, accept: '.pdf' },
-    { title: 'Apuntes', type: 'notes', icon: <Book />, isFileBased: true, accept: '.txt,.md,.tex' },
+    { title: 'Apuntes', type: 'notes', icon: <Book />, isFileBased: false, accept: '.txt,.md,.tex' },
     { title: 'Imagen', type: 'image', icon: <ImageIcon />, isFileBased: true, accept: '.png,.jpg,.jpeg,.webp', multiple: true },
     { title: 'Video de YouTube', type: 'youtube', icon: <Youtube />, isFileBased: false },
     { title: 'Página Web', type: 'web', icon: <Globe />, isFileBased: false },
     { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
     { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: false },
     { title: 'Hojas de Cálculo', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: false },
-    { title: 'Gizmo.ai', type: 'gizmo', icon: <FileQuestion />, isFileBased: true, accept: '.txt' },
   ];
 
   const handleSourceSelect = (source: SourceInfo) => {
     setSelectedSource(source);
-    if (source.isFileBased) {
+    if (source.type === 'notes') {
+        setView('notes');
+    } else if (source.isFileBased) {
       setView('upload');
     } else if (source.type === 'quizlet') {
         setView('quizlet');
@@ -257,20 +258,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     fileInputRef.current?.click();
   };
   
-  const handleGizmoImport = async () => {
-    if (!fileContent || typeof fileContent !== 'string') {
-      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo de texto.' });
-      return;
-    }
-    setIsGenerating(true);
-    const parsedCards = await handlePastedTextImportAction(fileContent, 'newline', 'newline');
-    const projectTitle = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
-    onProjectParsed(projectTitle, parsedCards);
-    setIsGenerating(false);
-    resetState();
-    toast({ title: '¡Tarjetas Importadas!', description: 'Tus tarjetas de Gizmo.ai se han añadido.' });
-  };
-  
   const handlePastedTextImport = async () => {
       if (!pastedText) {
           toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
@@ -299,14 +286,15 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       toast({ title: '¡Tarjetas Importadas!', description: `Se han añadido ${parsedCards.length} tarjetas.` });
   };
 
-  const handleAiImport = async () => {
-    if (!fileContent || typeof fileContent !== 'string') {
-      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo de texto para generar tarjetas.' });
+  const handleAiImport = async (studyNotes?: string) => {
+    const content = studyNotes || fileContent;
+    if (!content || typeof content !== 'string') {
+      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo o pega texto para generar tarjetas.' });
       return;
     }
     setIsGenerating(true);
     
-    const result = await handleGenerateProjectFromText(fileContent);
+    const result = await handleGenerateProjectFromText(content);
 
     setIsGenerating(false);
 
@@ -395,21 +383,18 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   };
 
   const handleQuizletImport = async () => {
-    if (!quizletUrl) {
-      toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL de Quizlet.' });
-      return;
-    }
-    setIsGenerating(true);
-    const result = await handleGenerateProjectFromQuizletUrl(quizletUrl);
-    setIsGenerating(false);
-
-    if (result.error) {
-        toast({ variant: 'destructive', title: 'Error de Importación', description: result.error });
-    } else if (result.project) {
-        onProjectGenerated(result.project);
-        resetState();
-        toast({ title: '¡Tarjetas Importadas!', description: `Se ha importado el mazo "${result.project.title}".` });
-    }
+     if (!pastedText) {
+          toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
+          return;
+      }
+      setIsGenerating(true);
+      // We use 'tab' and 'newline' as Quizlet's default export separators.
+      const parsedCards = await handlePastedTextImportAction(pastedText, 'tab', 'newline');
+      const projectTitle = "Importación de Quizlet";
+      onProjectParsed(projectTitle, parsedCards);
+      setIsGenerating(false);
+      resetState();
+      toast({ title: '¡Tarjetas Importadas!', description: `Se han añadido ${parsedCards.length} tarjetas de tu mazo de Quizlet.` });
   };
 
   const resetState = () => {
@@ -467,11 +452,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     let isDisabled = isGenerating;
 
     switch (selectedSource?.type) {
-        case 'gizmo':
-            buttonAction = handleGizmoImport;
-            buttonText = 'Importar Tarjetas';
-            isDisabled = isGenerating || !fileContent;
-            break;
         case 'pdf':
             buttonAction = handleMediaImport;
             buttonText = `Generando desde ${selectedSource.title}`;
@@ -484,7 +464,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             break;
         case 'notes':
         default:
-            buttonAction = handleAiImport;
+            buttonAction = () => handleAiImport();
             isDisabled = isGenerating || !fileContent;
             break;
     }
@@ -587,6 +567,65 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </div>
     </>
   );
+
+  const renderNotesView = () => (
+    <>
+       <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Importar desde {selectedSource?.title}</DialogTitle>
+                <DialogDescription>Sube un archivo o pega tus apuntes para generar tarjetas.</DialogDescription>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 gap-6 min-h-0">
+         <div 
+          className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={handleFileClick}
+        >
+          {fileContent ? (
+             <div className="text-center">
+                <FileText className="w-12 h-12 text-primary mx-auto mb-2" />
+                <p className="font-semibold">{fileName}</p>
+                <p className="text-xs text-muted-foreground">Haz clic aquí para cambiar el archivo</p>
+             </div>
+          ) : (
+            <>
+              <UploadCloud className="w-12 h-12 text-muted-foreground mb-4" />
+              <p className="text-center text-muted-foreground mb-2">Arrastra y suelta tu archivo aquí</p>
+              <p className="text-xs text-muted-foreground mb-4">o</p>
+              <Button type="button" variant="secondary">Buscar archivo</Button>
+            </>
+          )}
+          <Input 
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept={selectedSource?.accept}
+          />
+        </div>
+        <div className="relative">
+          <Separator />
+          <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-background px-2 text-xs text-muted-foreground">O</span>
+        </div>
+        <Textarea
+            placeholder="...o pega tus apuntes aquí."
+            value={pastedText}
+            onChange={(e) => setPastedText(e.target.value)}
+            className="h-40 resize-none"
+        />
+      </div>
+      <div className="flex justify-end p-6 pt-4">
+          <Button onClick={() => handleAiImport(pastedText)} disabled={isGenerating || (!fileContent && !pastedText)} className="w-full">
+              {isGenerating ? 'Generando...' : 'Generar con IA'}
+          </Button>
+      </div>
+    </>
+  );
   
   const renderAnkiView = () => (
     <>
@@ -682,20 +721,23 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             </Button>
             <div>
                 <DialogTitle>Importar desde Quizlet</DialogTitle>
-                <DialogDescription>Pega la URL de tu mazo de Quizlet y Koli lo importará.</DialogDescription>
+                <DialogDescription>
+                    En Quizlet, ve a tu mazo, haz clic en el icono de tres puntos (•••), selecciona 'Exportar', copia el texto y pégalo aquí.
+                </DialogDescription>
             </div>
         </div>
       </DialogHeader>
       <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
-        <Input 
-          placeholder="https://quizlet.com/..."
-          value={quizletUrl}
-          onChange={(e) => setQuizletUrl(e.target.value)}
+         <Textarea
+          placeholder="Pega aquí el texto exportado de Quizlet..."
+          value={pastedText}
+          onChange={(e) => setPastedText(e.target.value)}
+          className="h-60 resize-none"
         />
       </div>
       <div className="flex justify-end p-6 pt-4">
-          <Button onClick={handleQuizletImport} disabled={isGenerating || !quizletUrl} className="w-full">
-              {isGenerating ? 'Importando...' : 'Importar con IA'}
+          <Button onClick={handleQuizletImport} disabled={isGenerating || !pastedText} className="w-full">
+              {isGenerating ? 'Importando...' : 'Importar Tarjetas'}
           </Button>
       </div>
     </>
@@ -739,9 +781,10 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       <DialogTrigger asChild>
         <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Importación Mágica</Button>
       </DialogTrigger>
-      <DialogContent className={cn("max-w-xl flex flex-col p-0", (view === 'paste' || view === 'anki') && 'max-w-3xl')}>
+      <DialogContent className={cn("max-w-xl flex flex-col p-0", (view === 'paste' || view === 'anki' || view === 'notes') && 'max-w-3xl')}>
          {view === 'selection' && renderSelectionView()}
          {view === 'upload' && renderUploadView()}
+         {view === 'notes' && renderNotesView()}
          {view === 'paste' && renderPasteView()}
          {view === 'anki' && renderAnkiView()}
          {view === 'youtube' && renderYoutubeView()}
@@ -817,8 +860,7 @@ export default function CreateProjectPage() {
     }
     
     setIsCreating(true);
-    const flashcardsToSave = flashcards.map(({ id, question, answer, image }) => ({ id, question, answer, image }));
-    const result = await handleCreateProject(title, description, category, flashcardsToSave);
+    const result = await handleCreateProject(title, description, category, flashcards);
     
     if (result?.project?.slug) {
         toast({

@@ -10,13 +10,12 @@ import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-option
 import { z } from 'zod';
 import type { Project, Flashcard as FlashcardType } from '@/types';
 import { YoutubeTranscript } from 'youtube-transcript';
-import { redirect } from 'next/navigation';
 
 // In-memory store for created projects
 let createdProjects: Project[] = [];
 
 const FlashcardSchema = z.object({
-  id: z.number(),
+  id: z.number().or(z.string()),
   question: z.string().min(1),
   answer: z.string().min(1),
   image: z.string().optional(),
@@ -174,15 +173,17 @@ export async function handleCreateProject(
     title: string, 
     description: string, 
     category: string,
-    flashcards: z.infer<typeof CreateProjectInputSchema>
+    flashcards: Omit<FlashcardType, 'deckId' | 'id'>[]
 ) {
-    const validation = CreateProjectInputSchema.safeParse(flashcards);
+    const safeFlashcards = flashcards.map(fc => ({...fc, id: fc.id || Date.now()}));
+    const validation = CreateProjectInputSchema.safeParse(safeFlashcards);
+    
     if (!validation.success) {
         console.error("Invalid flashcard data:", validation.error.flatten());
         return { error: 'Invalid flashcard data provided.' };
     }
 
-    if (!title || flashcards.length === 0) {
+    if (!title || validation.data.length === 0) {
         return { error: 'Project must have a title and at least one flashcard.' };
     }
     
@@ -195,9 +196,9 @@ export async function handleCreateProject(
         description: description,
         category: category || 'General',
         author: 'User',
-        size: flashcards.length,
+        size: validation.data.length,
         bibliography: [],
-        flashcards: flashcards.map(fc => ({...fc, id: fc.id.toString(), deckId: `gen-${Date.now()}`}))
+        flashcards: validation.data.map(fc => ({...fc, id: fc.id.toString(), deckId: `gen-${Date.now()}`}))
     };
 
     try {
