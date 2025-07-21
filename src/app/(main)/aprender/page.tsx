@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical, MenuSquare } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical, MenuSquare, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -521,6 +521,12 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
             setTimeout(resetView, 150);
         }
     };
+
+    const CostIndicator = () => (
+      <span className="ml-auto text-xs text-primary/80 font-mono flex items-center gap-1">
+          -1 <Zap className="h-3 w-3" />
+      </span>
+    );
     
     const renderContent = () => {
         if (isLoading && activeView === 'main') {
@@ -650,19 +656,29 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                 <div className="grid gap-2">
                   {!isAnswered ? (
                     <>
-                      <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleHintClick)} disabled={!hasEnergy}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleHintClick)} disabled={!hasEnergy}>
+                        <Lightbulb className="mr-2 h-4 w-4" /> Pista <CostIndicator />
+                      </Button>
                        {(currentQuestion.type === 'open-answer' || currentQuestion.type === 'fill-in-the-blank') && (
-                        <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleConvertToMultipleChoiceClick)} disabled={!hasEnergy}>
-                          <MenuSquare className="mr-2 h-4 w-4" /> Convertir a Opción Múltiple
+                        <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleConvertToMultipleChoiceClick)} disabled={!hasEnergy}>
+                          <MenuSquare className="mr-2 h-4 w-4" /> Convertir a Opción Múltiple <CostIndicator />
                         </Button>
                       )}
-                      <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick)} disabled={!hasEnergy}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
-                      <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleRephraseClick)} disabled={!hasEnergy}><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
+                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick)} disabled={!hasEnergy}>
+                        <Eye className="mr-2 h-4 w-4" /> Ver Respuesta <CostIndicator />
+                      </Button>
+                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleRephraseClick)} disabled={!hasEnergy}>
+                        <RefreshCw className="mr-2 h-4 w-4" /> Reformular <CostIndicator />
+                      </Button>
                     </>
                   ) : (
-                    <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleExplainClick)} disabled={!hasEnergy}><Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta</Button>
+                    <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleExplainClick)} disabled={!hasEnergy}>
+                      <Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta <CostIndicator />
+                    </Button>
                   )}
-                   <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleDeepen)} disabled={!hasEnergy}><Bot className="mr-2 h-4 w-4" /> Tutor AI</Button>
+                   <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleDeepen)} disabled={!hasEnergy}>
+                    <Bot className="mr-2 h-4 w-4" /> Tutor AI <CostIndicator />
+                   </Button>
                 </div>
             </div>
         );
@@ -848,7 +864,7 @@ export default function AprenderPage() {
           setRevealedAnswer(null); // Clear revealed answer since it's now in the textarea
       } else if (currentQuestion.type === 'fill-in-the-blank') {
           const correctAnswer = (currentQuestion as any).correctAnswer;
-          handleCorrectAnswer('fill-in-the-blank');
+          handleGenericAnswer(true, 'fill-in-the-blank');
           updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: correctAnswer });
           setCurrentOpenAnswerText(correctAnswer);
       }
