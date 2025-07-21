@@ -274,6 +274,7 @@ export default function CreateProjectPage() {
             description: "Tu proyecto ha sido creado."
         });
         router.push(`/proyecto/${result.slug}/detalles`);
+        setIsCreating(false);
     } else {
         setIsCreating(false);
     }
@@ -290,7 +291,7 @@ export default function CreateProjectPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleCreate} disabled={isCreating}>
-                {isCreating ? "Creando..." : "Crear"}
+                {isCreating ? "Creando..." : "Crear Proyecto"}
             </Button>
           </div>
         </header>
@@ -349,3 +350,5 @@ export default function CreateProjectPage() {
     </div>
   );
 }
+
+    
