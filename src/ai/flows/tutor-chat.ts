@@ -11,7 +11,13 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const MessageSchema = z.object({
+  role: z.enum(['user', 'model']),
+  content: z.string(),
+});
+
 const ChatWithTutorInputSchema = z.object({
+  history: z.array(MessageSchema).describe('The history of the conversation.'),
   message: z.string().describe('The message from the user to the tutor.'),
 });
 export type ChatWithTutorInput = z.infer<typeof ChatWithTutorInputSchema>;
@@ -82,7 +88,16 @@ NO INVENTAR: Si no tienes la información, decláralo. La precisión es tu máxi
 GUÍA, NO RESPONDAS DIRECTAMENTE (AL PRINCIPIO): Tu primer instinto siempre debe ser hacer una pregunta que guíe.
 
 CONFIDENCIALIDAD: Toda la conversación es confidencial.`,
-  prompt: `User message: {{{message}}}`,
+  prompt: `{{#each history}}
+{{#if (eq role 'user')}}
+User message: {{{content}}}
+{{else}}
+AI response: {{{content}}}
+{{/if}}
+{{/each}}
+
+User message: {{{message}}}
+`,
 });
 
 const chatWithTutorFlow = ai.defineFlow(

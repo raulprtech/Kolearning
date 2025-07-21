@@ -25,8 +25,8 @@ const chatSchema = z.object({
 type ChatFormData = z.infer<typeof chatSchema>;
 
 interface Message {
-  sender: 'user' | 'ai';
-  text: string;
+  role: 'user' | 'model';
+  content: string;
 }
 
 const TutorAvatar = () => (
@@ -66,7 +66,10 @@ function TutorChatComponent() {
       }, 0);
   };
   
-  const processMessage = async (message: string, showInputAfter: boolean = true) => {
+  const processMessage = async (allMessages: Message[], showInputAfter: boolean = true) => {
+    const currentMessage = allMessages[allMessages.length - 1];
+    const history = allMessages.slice(0, allMessages.length - 1);
+
     setIsLoading(true);
     reset();
     scrollToBottom();
@@ -75,13 +78,13 @@ function TutorChatComponent() {
       setTutorSession(prev => prev ? ({ ...prev, exchangesLeft: prev.exchangesLeft - 1 }) : null);
     }
     
-    const result = await handleTutorChat(message);
+    const result = await handleTutorChat(currentMessage.content, history);
     
     if (result.response) {
-      const aiMessage: Message = { sender: 'ai', text: result.response };
+      const aiMessage: Message = { role: 'model', content: result.response };
       setMessages(prev => [...prev, aiMessage]);
     } else if (result.error) {
-       const errorMessage: Message = { sender: 'ai', text: result.error };
+       const errorMessage: Message = { role: 'model', content: result.error };
        setMessages(prev => [...prev, errorMessage]);
     }
 
@@ -90,15 +93,15 @@ function TutorChatComponent() {
     scrollToBottom();
   };
   
-  const handleActionWithEnergyCheck = (action: (message: string) => void, message: string, showInputAfter: boolean = true) => {
+  const handleActionWithEnergyCheck = (action: (messages: Message[]) => void, messages: Message[], showInputAfter: boolean = true) => {
       if (isSessionActive && tutorSession.exchangesLeft > 0) {
-        action(message, showInputAfter);
+        action(messages, showInputAfter);
         return;
       }
       
       if (!hasEnergy) return;
       decrementEnergy();
-      action(message, showInputAfter);
+      action(messages, showInputAfter);
   }
 
   useEffect(() => {
@@ -106,10 +109,10 @@ function TutorChatComponent() {
     if (context) {
         setHasContext(true);
         const decodedContext = decodeURIComponent(context);
-        const userMessage: Message = { sender: 'user', text: decodedContext };
+        const userMessage: Message = { role: 'user', content: decodedContext };
         setMessages([userMessage]);
         // The energy for this initial message is already paid on the previous screen.
-        processMessage(decodedContext, false); 
+        processMessage([userMessage], false); 
         router.replace('/tutor', undefined);
     } else {
         setIsInputVisible(messages.length > 0);
@@ -119,15 +122,17 @@ function TutorChatComponent() {
 
 
   const onSubmit = async (data: ChatFormData) => {
-    const userMessage: Message = { sender: 'user', text: data.message };
-    setMessages(prev => [...prev, userMessage]);
-    handleActionWithEnergyCheck(processMessage, data.message);
+    const userMessage: Message = { role: 'user', content: data.message };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    handleActionWithEnergyCheck(processMessage, newMessages);
   };
 
   const handleQuickAction = async (prompt: string) => {
-      const userMessage: Message = { sender: 'user', text: prompt };
-      setMessages(prev => [...prev, userMessage]);
-      handleActionWithEnergyCheck(processMessage, prompt);
+      const userMessage: Message = { role: 'user', content: prompt };
+      const newMessages = [...messages, userMessage];
+      setMessages(newMessages);
+      handleActionWithEnergyCheck(processMessage, newMessages);
   }
 
   useEffect(() => {
@@ -137,7 +142,7 @@ function TutorChatComponent() {
   useEffect(() => {
     if (tutorSession && tutorSession.exchangesLeft <= 0) {
         setTutorSession(prev => prev ? ({ ...prev, isActive: false }) : null);
-        const endMessage: Message = { sender: 'ai', text: "Tu sesión de tutoría ha finalizado. Puedes iniciar una nueva desde la pantalla de aprendizaje si lo necesitas." };
+        const endMessage: Message = { role: 'model', content: "Tu sesión de tutoría ha finalizado. Puedes iniciar una nueva desde la pantalla de aprendizaje si lo necesitas." };
         setMessages(prev => [...prev, endMessage]);
     }
   }, [tutorSession, setTutorSession]);
@@ -173,29 +178,29 @@ function TutorChatComponent() {
                 key={index}
                 className={cn(
                   'flex items-start gap-3',
-                  msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                  msg.role === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
-                {msg.sender === 'ai' && <TutorAvatar />}
+                {msg.role === 'model' && <TutorAvatar />}
                 <div
                   className={cn(
                     'max-w-xs md:max-w-2xl p-3 rounded-lg text-sm md:text-base',
-                    msg.sender === 'user'
+                    msg.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-blue-900/50 border border-blue-600/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
                   )}
                 >
-                  {msg.sender === 'ai' ? (
+                  {msg.role === 'model' ? (
                     <div className="prose prose-invert prose-sm md:prose-base prose-p:my-2 prose-p:leading-relaxed prose-headings:text-blue-200 prose-strong:text-blue-100 prose-blockquote:border-blue-400 prose-code:text-yellow-300 prose-table:border-blue-600/50 prose-th:text-blue-200 prose-tr:border-blue-600/50 text-blue-100">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {msg.text}
+                            {msg.content}
                         </ReactMarkdown>
                     </div>
                   ) : (
-                    <p>{msg.text}</p>
+                    <p>{msg.content}</p>
                   )}
                 </div>
-                {msg.sender === 'user' && (
+                {msg.role === 'user' && (
                   <Avatar className="w-8 h-8 border-2 border-primary/50">
                     <AvatarFallback className='bg-secondary/50'><User2 className="w-5 h-5" /></AvatarFallback>
                   </Avatar>

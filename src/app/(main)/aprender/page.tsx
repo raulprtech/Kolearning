@@ -350,8 +350,8 @@ const OrderingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
 
 
 type QuickChatMessage = {
-  sender: 'user' | 'ai';
-  text: string;
+  role: 'user' | 'model';
+  content: string;
 };
 
 const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, onConvertToMultipleChoice, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, onConvertToMultipleChoice: (options: any[]) => void, isAnswered: boolean }) => {
@@ -392,7 +392,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
 
         const prompt = `Proporciona una pista corta y concisa para la siguiente pregunta. No des la respuesta directamente. Pregunta: "${currentQuestion.question}" ${currentQuestion.code || ''}`;
         
-        const result = await handleTutorChat(prompt);
+        const result = await handleTutorChat(prompt, []);
         if (result.response) {
             setHintText(result.response);
         } else {
@@ -412,7 +412,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
 
         const prompt = `Explica de forma muy breve y concisa por qué la respuesta a esta pregunta es correcta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". Respuesta Correcta: "${correctAnswer}". Ve directo al punto.`;
 
-        const result = await handleTutorChat(prompt);
+        const result = await handleTutorChat(prompt, []);
         if (result.response) {
             setExplanationText(result.response);
         } else {
@@ -424,7 +424,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     const handleRephraseClick = async () => {
         setIsLoading(true);
         const prompt = `Reformula la siguiente pregunta para que sea más fácil de entender o esté mejor ejemplificada. Devuelve solo el texto de la nueva pregunta. Pregunta original: "${currentQuestion.question} ${currentQuestion.code || ''}"`;
-        const result = await handleTutorChat(prompt);
+        const result = await handleTutorChat(prompt, []);
         setIsLoading(false);
 
         if (result.response) {
@@ -448,7 +448,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
 
         const prompt = `Explica de forma breve y concisa el concepto detrás de esta pregunta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". La respuesta correcta es "${correctAnswer}". Ve directo al punto.`;
 
-        const result = await handleTutorChat(prompt);
+        const result = await handleTutorChat(prompt, []);
         if (result.response) {
             setExplanationText(result.response);
         } else {
@@ -475,16 +475,18 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     const handleQuickQuestionSubmit = async () => {
         if (!quickQuestionText.trim()) return;
 
-        const userMessage: QuickChatMessage = { sender: 'user', text: quickQuestionText };
-        setQuickChatHistory(prev => [...prev, userMessage]);
+        const userMessage: QuickChatMessage = { role: 'user', content: quickQuestionText };
+        
+        const newHistory = [...quickChatHistory, userMessage];
+        setQuickChatHistory(newHistory);
         setShowQuickQuestionInput(false);
         setIsLoading(true);
 
         const prompt = `Dentro del contexto de la pregunta "${currentQuestion.question}" (cuya respuesta es "${correctAnswer}"), responde a la siguiente duda del usuario de forma concisa: "${quickQuestionText}"`;
         
-        const result = await handleTutorChat(prompt);
+        const result = await handleTutorChat(prompt, []);
         const aiResponse = result.response || result.error || 'Lo siento, no pude responder a tu pregunta.';
-        const aiMessage: QuickChatMessage = { sender: 'ai', text: aiResponse };
+        const aiMessage: QuickChatMessage = { role: 'model', content: aiResponse };
 
         setQuickChatHistory(prev => [...prev, aiMessage]);
         setQuickQuestionCount(prev => prev + 1);
@@ -594,10 +596,10 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                     <div className="border-t border-primary/20 pt-4 mt-4 space-y-2">
                       <div className="space-y-3 text-xs">
                           {quickChatHistory.map((msg, index) => (
-                              <div key={index} className={cn("flex items-start gap-2", msg.sender === 'user' ? "justify-end" : "justify-start")}>
-                                  {msg.sender === 'ai' && <TutorAvatar />}
-                                  <div className={cn("max-w-[85%] p-2 rounded-lg", msg.sender === 'user' ? 'bg-primary/20' : 'bg-muted')}>
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-invert prose-xs max-w-none prose-p:my-0">{msg.text}</ReactMarkdown>
+                              <div key={index} className={cn("flex items-start gap-2", msg.role === 'user' ? "justify-end" : "justify-start")}>
+                                  {msg.role === 'model' && <TutorAvatar />}
+                                  <div className={cn("max-w-[85%] p-2 rounded-lg", msg.role === 'user' ? 'bg-primary/20' : 'bg-muted')}>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-invert prose-xs max-w-none prose-p:my-0">{msg.content}</ReactMarkdown>
                                   </div>
                               </div>
                           ))}
