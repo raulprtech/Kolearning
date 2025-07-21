@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,8 +14,14 @@ import {
   Trash2, 
   Wand2, 
   UploadCloud,
-  ZoomIn,
-  ZoomOut
+  FileText,
+  Youtube,
+  Mic,
+  FileQuestion,
+  Book,
+  FileSpreadsheet,
+  Globe,
+  ArrowLeft
 } from 'lucide-react';
 import {
   Dialog,
@@ -80,19 +86,39 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
   );
 };
 
+type ImportSource = 'pdf' | 'powerpoint' | 'lecture' | 'notes' | 'youtube' | 'quizlet' | 'anki' | 'sheets' | 'web' | 'gizmo';
+
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
+  const [view, setView] = useState<'selection' | 'upload'>('selection');
+  const [selectedSource, setSelectedSource] = useState<{ title: string; type: ImportSource; accept?: string; isFileBased: boolean; } | null>(null);
+
   const [fileName, setFileName] = useState('');
   const [fileContent, setFileContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [previewSize, setPreviewSize] = useState(1);
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const sizeClasses = ['prose-sm', 'prose-base', 'prose-lg', 'prose-xl', 'prose-2xl'];
+  const sources = [
+    { title: 'PDF', type: 'pdf', icon: <FileText />, isFileBased: true, accept: '.pdf' },
+    { title: 'Notes', type: 'notes', icon: <Book />, isFileBased: true, accept: '.txt,.md,.tex' },
+    { title: 'Gizmo.ai', type: 'gizmo', icon: <FileQuestion />, isFileBased: true, accept: '.txt' },
+    { title: 'YouTube video', type: 'youtube', icon: <Youtube />, isFileBased: false },
+    { title: 'Record Lecture', type: 'lecture', icon: <Mic />, isFileBased: false },
+    { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
+    { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: true },
+    { title: 'Sheets', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: true },
+    { title: 'Web page', type: 'web', icon: <Globe />, isFileBased: false },
+  ];
 
-  const handleZoomIn = () => setPreviewSize(prev => Math.min(prev + 1, sizeClasses.length - 1));
-  const handleZoomOut = () => setPreviewSize(prev => Math.max(prev - 1, 0));
+  const handleSourceSelect = (source: (typeof sources)[0]) => {
+    setSelectedSource(source);
+    if (source.isFileBased) {
+      setView('upload');
+    } else {
+      toast({ variant: 'destructive', title: 'Función no disponible', description: 'Esta opción de importación aún no está implementada.' });
+    }
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -135,7 +161,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     const projectTitle = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
     onProjectParsed(projectTitle, parsedCards);
     setIsGenerating(false);
-    setIsOpen(false);
+    resetState();
     toast({ title: '¡Tarjetas Importadas!', description: 'Tus tarjetas de Gizmo.ai se han añadido.' });
   };
 
@@ -154,75 +180,116 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
     } else if (result.project) {
       onProjectGenerated(result.project);
-      setIsOpen(false);
+      resetState();
       toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
     }
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Importación Mágica</Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl h-[70vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle>Importación Mágica</DialogTitle>
-          <DialogDescription>
-            Sube tus notas y Koli creará las tarjetas de estudio por ti.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex-1 flex flex-col md:flex-row gap-6 p-6 pt-4 min-h-0">
-          <div className="flex-1 min-h-0 flex flex-col">
-            <div 
-              className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={handleFileClick}
-            >
+  const resetState = () => {
+    setIsOpen(false);
+    setView('selection');
+    setSelectedSource(null);
+    setFileName('');
+    setFileContent('');
+    setIsGenerating(false);
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
+
+  const onOpenChange = (open: boolean) => {
+    if (open) {
+      setIsOpen(true);
+    } else {
+      resetState();
+    }
+  };
+
+  const renderSelectionView = () => (
+    <>
+      <DialogHeader className="p-6 pb-4">
+        <DialogTitle>Importación Mágica</DialogTitle>
+        <DialogDescription>Selecciona desde dónde quieres importar</DialogDescription>
+      </DialogHeader>
+      <div className="p-6 pt-0 grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {sources.map(source => (
+          <Button
+            key={source.type}
+            variant="outline"
+            className="h-20 flex flex-col items-center justify-center gap-2 text-base"
+            onClick={() => handleSourceSelect(source)}
+          >
+            <div className="h-6 w-6">{source.icon}</div>
+            {source.title}
+          </Button>
+        ))}
+      </div>
+    </>
+  );
+
+  const renderUploadView = () => (
+    <>
+       <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Importar desde {selectedSource?.title}</DialogTitle>
+                <DialogDescription>Sube tu archivo y Koli creará las tarjetas de estudio.</DialogDescription>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 min-h-0">
+        <div 
+          className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={handleFileClick}
+        >
+          {fileContent ? (
+             <div className="text-center">
+                <FileText className="w-12 h-12 text-primary mx-auto mb-2" />
+                <p className="font-semibold">{fileName}</p>
+                <p className="text-xs text-muted-foreground">Haz clic aquí para cambiar el archivo</p>
+             </div>
+          ) : (
+            <>
               <UploadCloud className="w-12 h-12 text-muted-foreground mb-4" />
               <p className="text-center text-muted-foreground mb-2">Arrastra y suelta tu archivo aquí</p>
               <p className="text-xs text-muted-foreground mb-4">o</p>
               <Button type="button" variant="secondary">Buscar archivo</Button>
-              <Input 
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept=".txt,.md,.tex"
-              />
-            </div>
-          </div>
-          <div className="flex-1 flex flex-col min-h-0">
-            <Card className="flex-1 flex flex-col overflow-auto">
-              <div className="p-2 border-b flex justify-between items-center sticky top-0 bg-background z-10">
-                 <p className="text-sm font-medium px-3">Vista Previa del Archivo</p>
-                <div className="flex items-center gap-2">
-                  <Button type="button" variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
-                </div>
-              </div>
-              <CardContent className="p-4 flex-grow overflow-auto">
-                {fileContent ? (
-                  <div className={cn('prose prose-invert max-w-none', sizeClasses[previewSize])}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
-                      {fileContent}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-muted-foreground">
-                    <p>Sube un archivo para ver la vista previa.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+            </>
+          )}
+          <Input 
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept={selectedSource?.accept}
+          />
         </div>
-        <div className="flex justify-end p-6 pt-0 gap-4">
-          <Button onClick={handleGizmoImport} disabled={isGenerating || !fileContent} variant="secondary">
-            {isGenerating ? 'Procesando...' : 'Importar desde Gizmo.ai'}
-          </Button>
-          <Button onClick={handleAiImport} disabled={isGenerating || !fileContent}>
-            {isGenerating ? 'Generando...' : 'Generar con IA'}
-          </Button>
-        </div>
+      </div>
+      <div className="flex justify-end p-6 pt-0 gap-4">
+          {selectedSource?.type === 'gizmo' ? (
+            <Button onClick={handleGizmoImport} disabled={isGenerating || !fileContent} className="w-full">
+                {isGenerating ? 'Importando...' : 'Importar Tarjetas'}
+            </Button>
+          ) : (
+             <Button onClick={handleAiImport} disabled={isGenerating || !fileContent} className="w-full">
+                {isGenerating ? 'Generando...' : 'Generar con IA'}
+            </Button>
+          )}
+      </div>
+    </>
+  );
+
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Importación Mágica</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-xl flex flex-col p-0">
+         {view === 'selection' ? renderSelectionView() : renderUploadView()}
       </DialogContent>
     </Dialog>
   );
@@ -299,15 +366,16 @@ export default function CreateProjectPage() {
             title: "Creación exitosa",
             description: "Tu proyecto ha sido creado."
         });
-        router.push(`/proyecto/${result.slug}/details`);
+        router.push(`/proyecto/${result.slug}/detalles`);
+        setIsCreating(false);
     } else {
         toast({
             variant: "destructive",
             title: "Error al crear el proyecto",
-            description: result.error || "Ocurrió un error inesperado."
+            description: result?.error || "Ocurrió un error inesperado."
         });
+        setIsCreating(false);
     }
-    setIsCreating(false);
   };
 
   return (
@@ -381,4 +449,5 @@ export default function CreateProjectPage() {
   );
 }
 
+    
     
