@@ -22,8 +22,26 @@ import {
   Lock,
   Mic,
   Palette,
-  Type
+  Type,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { handleGenerateDeckFromText } from '@/app/actions/decks';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+import 'katex/dist/katex.min.css';
 
 type Flashcard = {
   id: number;
@@ -84,6 +102,89 @@ const FlashcardEditor = ({ card, number }: { card: Flashcard; number: number }) 
   );
 };
 
+const MagicImportModal = () => {
+  const [notes, setNotes] = useState('## Álgebra Básica\n\n- **Pregunta:** ¿Qué es `x` en `2x + 3 = 7`?\n- **Respuesta:** `x = 2`\n\n- **Pregunta:** ¿Cuál es la fórmula para el área de un círculo?\n- **Respuesta:** $A = \\pi r^2$');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [previewSize, setPreviewSize] = useState(1); // 0=sm, 1=base, 2=lg, 3=xl
+
+  const sizeClasses = ['prose-sm', 'prose-base', 'prose-lg', 'prose-xl', 'prose-2xl'];
+
+  const handleZoomIn = () => setPreviewSize(prev => Math.min(prev + 1, sizeClasses.length - 1));
+  const handleZoomOut = () => setPreviewSize(prev => Math.max(prev - 1, 0));
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsGenerating(true);
+    const formData = new FormData(event.currentTarget);
+    await handleGenerateDeckFromText(formData);
+    // The redirect will happen in the server action, no need to set isGenerating to false
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Importación Mágica</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl h-[70vh]">
+        <DialogHeader>
+          <DialogTitle>Importación Mágica</DialogTitle>
+          <DialogDescription>
+            Pega tus apuntes o sube un archivo y la IA creará las tarjetas de estudio por ti.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow min-h-0">
+          <div className="flex flex-col gap-4">
+            <Tabs defaultValue="paste" className="flex-grow flex flex-col">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="paste">Pegar Texto</TabsTrigger>
+                <TabsTrigger value="upload" disabled>Subir Archivo</TabsTrigger>
+              </TabsList>
+              <TabsContent value="paste" className="flex-grow flex flex-col">
+                <Textarea
+                  name="studyNotes"
+                  placeholder="Pega aquí tus apuntes. Puedes usar Markdown y LaTeX..."
+                  className="flex-grow w-full h-full resize-none"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+          <div className="flex flex-col gap-4">
+            <Card className="flex-grow flex flex-col">
+              <CardContent className="p-0 flex flex-col h-full">
+                <div className="p-2 border-b flex justify-between items-center">
+                   <Tabs defaultValue="preview" className="w-full">
+                    <TabsList>
+                      <TabsTrigger value="preview">Vista Previa</TabsTrigger>
+                      <TabsTrigger value="source">Fuente</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
+                  </div>
+                </div>
+                <div className="p-4 overflow-auto flex-grow">
+                  <div className={cn('prose prose-invert max-w-none', sizeClasses[previewSize])}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                      {notes}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="md:col-span-2 flex justify-end">
+            <Button type="submit" disabled={isGenerating}>
+              {isGenerating ? 'Generando...' : 'Generar Tarjetas'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export default function CreateProjectPage() {
   const [title, setTitle] = useState('');
@@ -135,11 +236,7 @@ export default function CreateProjectPage() {
         {/* Toolbar */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Importar</Button>
-            <Button variant="outline">
-              <FileText className="mr-2 h-4 w-4" /> Añadir diagrama <Lock className="ml-2 h-3 w-3" />
-            </Button>
-            <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Crear a partir de notas</Button>
+            <MagicImportModal />
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
