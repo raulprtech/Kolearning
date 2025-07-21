@@ -45,29 +45,28 @@ export async function handleCreateProject(
         return { error: 'Project must have a title and at least one flashcard.' };
     }
 
+    const newDeck = {
+        id: `gen-${Date.now()}`,
+        title: title,
+        description: description,
+        category: 'Custom',
+        author: 'User',
+        size: flashcards.length,
+        bibliography: [],
+        flashcards: flashcards.map(fc => ({...fc, id: fc.id.toString()}))
+    };
+
     try {
-        // In a real app, this would be saved to a database.
-        // For now, we store it in memory for this session.
-        const newDeck = {
-            id: `gen-${Date.now()}`,
-            title: title,
-            description: description,
-            category: 'Custom',
-            author: 'User',
-            size: flashcards.length,
-            bibliography: [],
-            // The flashcards would be stored as a subcollection in a real app
-            flashcards: flashcards 
-        };
+        // In a real app, this would be a database write operation.
+        // We keep the try...catch in case we add database logic later.
         createdDecks.push(newDeck);
-
-        const newDeckId = newDeck.id;
-        redirect(`/deck/${newDeckId}/details`);
-
     } catch (error) {
         console.error('Error creating project:', error);
-        return { error: 'Sorry, I was unable to create a learning plan.' };
+        return { error: 'Sorry, I was unable to save the learning plan.' };
     }
+    
+    // Redirect must happen outside the try...catch block
+    redirect(`/deck/${newDeck.id}/details`);
 }
 
 
