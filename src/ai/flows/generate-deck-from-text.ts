@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview Generates a flashcard deck from a blob of text or a PDF.
+ * @fileOverview Generates a flashcard deck from a blob of text, a PDF, HTML, or one or more images.
  *
  * - generateDeckFromText - A function that generates a flashcard deck.
  * - GenerateDeckFromTextInput - The input type for the generateDeckFromText function.
@@ -13,10 +13,9 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const GenerateDeckFromTextInputSchema = z.object({
-  studyNotes: z
-    .string()
+  studyNotes: z.union([z.string(), z.array(z.string())])
     .describe(
-      'The study notes to generate a flashcard deck from. Can be plain text, Markdown, LaTeX, a Data URI for a PDF, or HTML content.'
+      'The study notes to generate a flashcard deck from. Can be plain text, Markdown, LaTeX, a Data URI for a PDF, HTML content, or an array of Data URIs for images.'
     ),
 });
 export type GenerateDeckFromTextInput = z.infer<typeof GenerateDeckFromTextInputSchema>;
@@ -62,11 +61,12 @@ const prompt = ai.definePrompt({
     ],
   },
   prompt: `You are an expert at creating study materials. Your task is to analyze the following study notes and convert them into a structured flashcard deck.
-The notes may be plain text, Markdown, LaTeX, HTML, or a full document (like a PDF or image) provided as a Data URI.
+The notes may be plain text, Markdown, LaTeX, HTML, a full document (like a PDF as a Data URI), or a collection of images (as Data URIs).
 
 IMPORTANT: The final output (title, description, and flashcards) must be entirely in Spanish.
 
 If the input is HTML, focus on the main content and ignore navigational elements, ads, and footers.
+If the input is one or more images, analyze the content of all images together to create a single, coherent deck.
 
 Based on the content, generate a suitable title and a one-sentence description for the deck.
 
@@ -78,10 +78,16 @@ ${JSON.stringify(GenerateDeckFromTextOutputSchema.shape, null, 2)}
 \`\`\`
 
 Study Notes:
-{{#if studyNotesIsText}}
-{{{studyNotes}}}
+{{#if studyNotesIsArray}}
+  {{#each studyNotes}}
+    {{media url=this}}
+  {{/each}}
 {{else}}
-{{media url=studyNotes}}
+  {{#if studyNotesIsDataUri}}
+    {{media url=studyNotes}}
+  {{else}}
+    {{{studyNotes}}}
+  {{/if}}
 {{/if}}
 `,
 });
@@ -93,12 +99,14 @@ const generateDeckFromTextFlow = ai.defineFlow(
     outputSchema: GenerateDeckFromTextOutputSchema,
   },
   async ({ studyNotes }) => {
-    const isDataUri = studyNotes.startsWith('data:');
-    
-    // The prompt expects an object that includes our logic flag `studyNotesIsText`.
+    const isArray = Array.isArray(studyNotes);
+    const isDataUri = typeof studyNotes === 'string' && studyNotes.startsWith('data:');
+
+    // The prompt expects an object that includes our logic flags.
     const promptInput = {
       studyNotes: studyNotes,
-      studyNotesIsText: !isDataUri,
+      studyNotesIsArray: isArray,
+      studyNotesIsDataUri: isDataUri,
     };
 
     const { output } = await prompt(promptInput);

@@ -10,6 +10,7 @@ import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-option
 import { z } from 'zod';
 import type { Project, Flashcard as FlashcardType } from '@/types';
 import { YoutubeTranscript } from 'youtube-transcript';
+import { redirect } from 'next/navigation';
 
 // In-memory store for created projects
 let createdProjects: Project[] = [];
@@ -44,6 +45,19 @@ export async function handleGenerateProjectFromPdf(pdfDataUri: string, fileName:
     console.error('Error with PDF project generation:', error);
     return { error: 'Sorry, I was unable to generate a project from your PDF.' };
   }
+}
+
+export async function handleGenerateProjectFromImages(imageDataUris: string[]) {
+    if (!imageDataUris || imageDataUris.length === 0) {
+        return { error: 'No images provided.' };
+    }
+    try {
+        const result = await generateDeckFromText({ studyNotes: imageDataUris });
+        return { project: result };
+    } catch (error) {
+        console.error('Error with multi-image project generation:', error);
+        return { error: 'Sorry, I was unable to generate a project from your images.' };
+    }
 }
 
 export async function handleGenerateProjectFromText(studyNotes: string) {
@@ -83,13 +97,15 @@ export async function handlePastedTextImport(
     const termSep = getSeparator('term');
 
     const rows = pastedText.split(rowSep).filter(row => row.trim() !== '');
-    return rows.map(row => {
+    const parsedCards = rows.map(row => {
         const parts = row.split(termSep);
         return {
             question: parts[0] || '',
             answer: parts.slice(1).join(termSep) || ''
         };
     }).filter(card => card.question);
+    
+    return parsedCards;
 };
 
 export async function handleGenerateProjectFromYouTubeUrl(videoUrl: string) {
@@ -133,6 +149,26 @@ export async function handleGenerateProjectFromWebUrl(webUrl: string) {
     return { error: 'Could not process the web page. Please check the URL and try again.' };
   }
 }
+
+export async function handleGenerateProjectFromQuizletUrl(quizletUrl: string) {
+    if (!quizletUrl) {
+        return { error: 'Quizlet URL cannot be empty.' };
+    }
+
+    try {
+        const response = await fetch(quizletUrl);
+        if (!response.ok) {
+            return { error: `Could not fetch content from the URL. Status: ${response.status}` };
+        }
+        const htmlContent = await response.text();
+        const result = await generateDeckFromText({ studyNotes: htmlContent });
+        return { project: result };
+    } catch (error) {
+        console.error('Error with Quizlet project generation:', error);
+        return { error: 'Could not process the Quizlet page. Please check the URL and try again.' };
+    }
+}
+
 
 export async function handleCreateProject(
     title: string, 

@@ -32,7 +32,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromQuizletUrl, handleGenerateProjectFromImages } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -44,6 +44,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { AnkiExportGuide } from '@/components/deck/AnkiExportGuide';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Flashcard = {
   id: number;
@@ -92,7 +93,7 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
 };
 
 type ImportSourceType = 'pdf' | 'powerpoint' | 'image' | 'notes' | 'youtube' | 'quizlet' | 'anki' | 'sheets' | 'web' | 'gizmo';
-type SourceInfo = { title: string; type: ImportSourceType; icon: React.ReactNode; isFileBased: boolean; accept?: string; };
+type SourceInfo = { title: string; type: ImportSourceType; icon: React.ReactNode; isFileBased: boolean; accept?: string; multiple?: boolean; };
 
 const PasteImportControls = ({
     pastedText, setPastedText,
@@ -161,15 +162,17 @@ const PasteImportControls = ({
 
 
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
-  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube' | 'sheets' | 'web'>('selection');
+  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube' | 'sheets' | 'web' | 'quizlet'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
 
   const [fileName, setFileName] = useState('');
-  const [fileContent, setFileContent] = useState<string | ArrayBuffer | null>(null); // Can be text or data URI
+  const [fileContent, setFileContent] = useState<string | ArrayBuffer | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<{name: string, dataUri: string}[]>([]);
   
   const [pastedText, setPastedText] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [webUrl, setWebUrl] = useState('');
+  const [quizletUrl, setQuizletUrl] = useState('');
   
   const [termSeparator, setTermSeparator] = useState('tab');
   const [customTermSeparator, setCustomTermSeparator] = useState('-');
@@ -184,20 +187,22 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const sources: SourceInfo[] = [
     { title: 'PDF', type: 'pdf', icon: <FileText />, isFileBased: true, accept: '.pdf' },
     { title: 'Apuntes', type: 'notes', icon: <Book />, isFileBased: true, accept: '.txt,.md,.tex' },
-    { title: 'Imagen', type: 'image', icon: <ImageIcon />, isFileBased: true, accept: '.png,.jpg,.jpeg,.webp' },
-    { title: 'Gizmo.ai', type: 'gizmo', icon: <FileQuestion />, isFileBased: true, accept: '.txt' },
-    { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
+    { title: 'Imagen', type: 'image', icon: <ImageIcon />, isFileBased: true, accept: '.png,.jpg,.jpeg,.webp', multiple: true },
     { title: 'Video de YouTube', type: 'youtube', icon: <Youtube />, isFileBased: false },
+    { title: 'Página Web', type: 'web', icon: <Globe />, isFileBased: false },
+    { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
     { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: false },
     { title: 'Hojas de Cálculo', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: false },
-    { title: 'Página Web', type: 'web', icon: <Globe />, isFileBased: false },
+    { title: 'Gizmo.ai', type: 'gizmo', icon: <FileQuestion />, isFileBased: true, accept: '.txt' },
   ];
 
   const handleSourceSelect = (source: SourceInfo) => {
     setSelectedSource(source);
     if (source.isFileBased) {
       setView('upload');
-    } else if (source.type === 'quizlet' || source.type === 'anki') {
+    } else if (source.type === 'quizlet') {
+        setView('quizlet');
+    } else if (source.type === 'anki') {
         setView('paste');
     } else if (source.type === 'youtube') {
         setView('youtube');
@@ -211,20 +216,42 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && selectedSource) {
-      setFileName(file.name);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFileContent(e.target?.result || null);
-      };
-      if (selectedSource.type === 'pdf' || selectedSource.type === 'image') {
-          reader.readAsDataURL(file); // Read as Data URL for PDFs and images
-      } else {
-          reader.readAsText(file); // Read as text for other files
-      }
+    const files = event.target.files;
+    if (!files || !selectedSource) return;
+
+    if (selectedSource.multiple) {
+        const filePromises = Array.from(files).map(file => {
+            return new Promise<{name: string, dataUri: string}>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (e.target?.result) {
+                        resolve({ name: file.name, dataUri: e.target.result as string });
+                    } else {
+                        reject(new Error('Failed to read file.'));
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        });
+        Promise.all(filePromises)
+            .then(setSelectedFiles)
+            .catch(error => toast({ variant: 'destructive', title: 'Error al leer archivos', description: error.message }));
+    } else {
+        const file = files[0];
+        setFileName(file.name);
+        setSelectedFiles([]); 
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setFileContent(e.target?.result || null);
+        };
+        if (selectedSource.type === 'pdf') {
+            reader.readAsDataURL(file);
+        } else {
+            reader.readAsText(file);
+        }
     }
-  };
+};
   
   const handleFileClick = () => {
     fileInputRef.current?.click();
@@ -292,7 +319,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     }
   };
   
-  const handleMediaImport = async () => {
+ const handleMediaImport = async () => {
     if (!fileContent || typeof fileContent !== 'string') {
         toast({ variant: 'destructive', title: 'Archivo no válido', description: `Por favor, sube un archivo ${selectedSource?.type}.` });
         return;
@@ -307,6 +334,25 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       onProjectGenerated(result.project);
       resetState();
       toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
+    }
+  };
+
+  const handleImageImport = async () => {
+    if (selectedFiles.length === 0) {
+        toast({ variant: 'destructive', title: 'No hay imágenes', description: 'Por favor, selecciona una o más imágenes.' });
+        return;
+    }
+    setIsGenerating(true);
+    const imageDataUris = selectedFiles.map(f => f.dataUri);
+    const result = await handleGenerateProjectFromImages(imageDataUris);
+    setIsGenerating(false);
+
+    if (result.error) {
+        toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
+    } else if (result.project) {
+        onProjectGenerated(result.project);
+        resetState();
+        toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
     }
   };
 
@@ -348,16 +394,36 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     }
   };
 
+  const handleQuizletImport = async () => {
+    if (!quizletUrl) {
+      toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL de Quizlet.' });
+      return;
+    }
+    setIsGenerating(true);
+    const result = await handleGenerateProjectFromQuizletUrl(quizletUrl);
+    setIsGenerating(false);
+
+    if (result.error) {
+        toast({ variant: 'destructive', title: 'Error de Importación', description: result.error });
+    } else if (result.project) {
+        onProjectGenerated(result.project);
+        resetState();
+        toast({ title: '¡Tarjetas Importadas!', description: `Se ha importado el mazo "${result.project.title}".` });
+    }
+  };
+
   const resetState = () => {
     setIsOpen(false);
     setTimeout(() => {
         setView('selection');
         setSelectedSource(null);
         setFileName('');
-        setFileContent('');
+        setFileContent(null);
+        setSelectedFiles([]);
         setPastedText('');
         setYoutubeUrl('');
         setWebUrl('');
+        setQuizletUrl('');
         setIsGenerating(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -398,20 +464,28 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const renderUploadView = () => {
     let buttonAction;
     let buttonText = 'Generar con IA';
+    let isDisabled = isGenerating;
 
     switch (selectedSource?.type) {
         case 'gizmo':
             buttonAction = handleGizmoImport;
             buttonText = 'Importar Tarjetas';
+            isDisabled = isGenerating || !fileContent;
             break;
         case 'pdf':
-        case 'image':
             buttonAction = handleMediaImport;
             buttonText = `Generando desde ${selectedSource.title}`;
+            isDisabled = isGenerating || !fileContent;
+            break;
+        case 'image':
+            buttonAction = handleImageImport;
+            buttonText = `Generando desde ${selectedSource.title}`;
+            isDisabled = isGenerating || selectedFiles.length === 0;
             break;
         case 'notes':
         default:
             buttonAction = handleAiImport;
+            isDisabled = isGenerating || !fileContent;
             break;
     }
 
@@ -433,7 +507,20 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
           className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={handleFileClick}
         >
-          {fileContent ? (
+          {selectedFiles.length > 0 ? (
+            <div className="text-center">
+                <ImageIcon className="w-12 h-12 text-primary mx-auto mb-2" />
+                <p className="font-semibold">{selectedFiles.length} imagen(es) seleccionada(s)</p>
+                <ScrollArea className="h-32 mt-2 w-full">
+                    <div className='grid grid-cols-3 gap-2 p-2'>
+                    {selectedFiles.map(file => (
+                        <Image key={file.name} src={file.dataUri} alt={file.name} width={64} height={64} className="rounded-md object-cover h-16 w-16" />
+                    ))}
+                    </div>
+                </ScrollArea>
+                <p className="text-xs text-muted-foreground mt-2">Haz clic aquí para cambiar los archivos</p>
+            </div>
+          ) : fileContent ? (
              <div className="text-center">
                 <FileText className="w-12 h-12 text-primary mx-auto mb-2" />
                 <p className="font-semibold">{fileName}</p>
@@ -453,11 +540,12 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             onChange={handleFileChange}
             className="hidden"
             accept={selectedSource?.accept}
+            multiple={selectedSource?.multiple}
           />
         </div>
       </div>
       <div className="flex justify-end p-6 pt-0 gap-4">
-          <Button onClick={buttonAction} disabled={isGenerating || !fileContent} className="w-full">
+          <Button onClick={buttonAction} disabled={isDisabled} className="w-full">
               {isGenerating ? buttonText : 'Generar con IA'}
           </Button>
       </div>
@@ -584,6 +672,34 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </div>
     </>
   );
+
+  const renderQuizletView = () => (
+    <>
+       <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Importar desde Quizlet</DialogTitle>
+                <DialogDescription>Pega la URL de tu mazo de Quizlet y Koli lo importará.</DialogDescription>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
+        <Input 
+          placeholder="https://quizlet.com/..."
+          value={quizletUrl}
+          onChange={(e) => setQuizletUrl(e.target.value)}
+        />
+      </div>
+      <div className="flex justify-end p-6 pt-4">
+          <Button onClick={handleQuizletImport} disabled={isGenerating || !quizletUrl} className="w-full">
+              {isGenerating ? 'Importando...' : 'Importar con IA'}
+          </Button>
+      </div>
+    </>
+  );
   
   const renderSheetsView = () => (
     <>
@@ -631,6 +747,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
          {view === 'youtube' && renderYoutubeView()}
          {view === 'sheets' && renderSheetsView()}
          {view === 'web' && renderWebView()}
+         {view === 'quizlet' && renderQuizletView()}
       </DialogContent>
     </Dialog>
   );
@@ -700,8 +817,8 @@ export default function CreateProjectPage() {
     }
     
     setIsCreating(true);
-    const result = await handleCreateProject(title, description, category, flashcards);
-    setIsCreating(false);
+    const flashcardsToSave = flashcards.map(({ id, question, answer, image }) => ({ id, question, answer, image }));
+    const result = await handleCreateProject(title, description, category, flashcardsToSave);
     
     if (result?.project?.slug) {
         toast({
@@ -710,6 +827,7 @@ export default function CreateProjectPage() {
         });
         router.push(`/proyecto/${result.project.slug}/details`);
     } else {
+        setIsCreating(false);
         toast({
             variant: "destructive",
             title: "Error al crear el proyecto",
@@ -788,5 +906,3 @@ export default function CreateProjectPage() {
     </div>
   );
 }
-
-    
