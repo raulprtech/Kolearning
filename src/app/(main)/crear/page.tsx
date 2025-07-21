@@ -31,7 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleQuizletUrlImport } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -220,8 +220,22 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     fileInputRef.current?.click();
   };
   
-  const handleQuizletUrlImport = () => {
-    toast({ variant: 'destructive', title: 'Función no disponible', description: 'La importación desde URL de Quizlet todavía no está implementada.' });
+  const handleQuizletUrlImportClick = async () => {
+    if (!quizletUrl.trim()) {
+        toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL de Quizlet.' });
+        return;
+    }
+    setIsGenerating(true);
+    const result = await handleQuizletUrlImport(quizletUrl);
+    setIsGenerating(false);
+
+    if (result.error) {
+        toast({ variant: 'destructive', title: 'Error de Importación', description: result.error });
+    } else if (result.project) {
+        onProjectGenerated(result.project);
+        resetState();
+        toast({ title: '¡Set Importado!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
+    }
   }
 
   const parseGizmoFile = (content: string): Omit<Flashcard, 'id'>[] => {
@@ -319,6 +333,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setFileName('');
         setFileContent('');
         setPastedText('');
+        setQuizletUrl('');
         setIsGenerating(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -429,6 +444,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             placeholder='e.g. https://quizlet.com/...'
             value={quizletUrl}
             onChange={(e) => setQuizletUrl(e.target.value)}
+            disabled={isGenerating}
           />
           <Button 
             variant="link" 
@@ -439,9 +455,9 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
           </Button>
       </div>
        <div className="flex justify-end p-6 pt-4 gap-2">
-          <Button variant="outline" onClick={() => setView('selection')}>Volver</Button>
-          <Button onClick={handleQuizletUrlImport} disabled={!quizletUrl.trim()}>
-              Confirmar
+          <Button variant="outline" onClick={() => setView('selection')} disabled={isGenerating}>Volver</Button>
+          <Button onClick={handleQuizletUrlImportClick} disabled={!quizletUrl.trim() || isGenerating}>
+              {isGenerating ? 'Importando...' : 'Confirmar'}
           </Button>
       </div>
     </>
@@ -596,13 +612,14 @@ export default function CreateProjectPage() {
     
     setIsCreating(true);
     const result = await handleCreateProject(title, description, category, flashcards);
+    setIsCreating(false);
     
-    if (result?.slug) {
+    if (result?.project?.slug) {
         toast({
             title: "Creación exitosa",
             description: "Tu proyecto ha sido creado."
         });
-        router.push(`/proyecto/${result.slug}/details`);
+        router.push(`/proyecto/${result.project.slug}/details`);
     } else {
         toast({
             variant: "destructive",
@@ -610,7 +627,6 @@ export default function CreateProjectPage() {
             description: result?.error || "Ocurrió un error inesperado."
         });
     }
-    setIsCreating(false);
   };
 
   return (

@@ -78,7 +78,7 @@ export async function handleCreateProject(
 
     try {
         createdProjects.push(newProject);
-        return { slug: newProject.slug };
+        return { project: newProject };
     } catch (error) {
         console.error('Error creating project:', error);
         return { error: 'Sorry, I was unable to save the project.' };
@@ -93,6 +93,67 @@ export async function getGeneratedProject(projectSlug: string) {
     }
     return null;
 }
+
+export async function handleQuizletUrlImport(quizletUrl: string) {
+    if (!quizletUrl || !quizletUrl.startsWith('https://quizlet.com/')) {
+        return { error: 'Please provide a valid Quizlet URL.' };
+    }
+
+    try {
+        const response = await fetch(quizletUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch Quizlet page. Status: ${response.status}`);
+        }
+        const html = await response.text();
+
+        // Find the script tag containing the set data. This is brittle and might break if Quizlet changes their site.
+        const scriptContentRegex = /<script>window\.QuizletStore\s*=\s*({.*?});<\/script>/;
+        const match = html.match(scriptContentRegex);
+
+        if (!match || !match[1]) {
+            throw new Error('Could not find Quizlet data on the page. The set might be private or the import method needs an update.');
+        }
+
+        const data = JSON.parse(match[1]);
+        
+        // The path to the data can change, this is based on current inspection.
+        const setDetails = data.setPage.set;
+        if (!setDetails) {
+             throw new Error('Could not parse set details from Quizlet data.');
+        }
+        
+        const title = setDetails.title;
+        const description = setDetails.description;
+        const category = setDetails.subject.name || 'Quizlet Import';
+
+        // Find flashcard terms
+        const terms = Object.values(data.term.byId);
+        if (!terms || terms.length === 0) {
+             throw new Error('No flashcard terms found in the Quizlet data.');
+        }
+
+        const flashcards = terms.map((term: any, index: number) => ({
+            id: term.id || Date.now() + index,
+            question: term.word,
+            answer: term.definition,
+        }));
+
+        // We have the data, now create a project
+        const projectData = {
+            title,
+            description,
+            category,
+            flashcards
+        };
+        
+        return await handleCreateProject(projectData.title, projectData.description, projectData.category, projectData.flashcards);
+
+    } catch (error: any) {
+        console.error('Error importing from Quizlet URL:', error);
+        return { error: error.message || 'An unknown error occurred during import.' };
+    }
+}
+
 
 export async function handleEvaluateOpenAnswer(input: EvaluateOpenAnswerInput) {
   try {
