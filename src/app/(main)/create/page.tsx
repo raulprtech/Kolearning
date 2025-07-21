@@ -1,234 +1,173 @@
 
 'use client';
-import { useState, useCallback } from 'react';
+
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { handleGenerateDeckFromText } from '@/app/actions/decks';
-import { Wand2, FileUp, X, ZoomIn, ZoomOut } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
-import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { 
+  Plus, 
+  Settings, 
+  Undo, 
+  Redo, 
+  Trash2, 
+  GripVertical, 
+  Wand2, 
+  Image as ImageIcon,
+  PlusCircle,
+  FileText,
+  Lock,
+  Mic,
+  Palette,
+  Type
+} from 'lucide-react';
 
-const sizeClasses = ['prose-xs', 'prose-sm', 'prose-base', 'prose-lg', 'prose-xl'];
+type Flashcard = {
+  id: number;
+  term: string;
+  definition: string;
+  image?: string;
+};
 
-export default function CreateDeckPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [text, setText] = useState('## Álgebra Básica\n\nAquí tienes algunas notas sobre álgebra.\n\n### Ecuaciones Lineales\nUna ecuación lineal es una ecuación de primer grado. Por ejemplo:\n$2x + 3 = 7$\n\nPara resolverla, restamos 3 de ambos lados:\n$2x = 4$\n\nLuego dividimos por 2:\n$x = 2$\n\n### Fórmulas Cuadráticas\nLa fórmula cuadrática para $ax^2 + bx + c = 0$ es:\n$$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$\n');
-  const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState('');
-  const [previewSize, setPreviewSize] = useState(2); // Corresponds to prose-base
-  const { toast } = useToast();
+const FlashcardEditor = ({ card, number }: { card: Flashcard; number: number }) => {
+  return (
+    <Card className="bg-card/70 border border-primary/20">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-4">
+            <span className="text-muted-foreground font-medium">{number}</span>
+            <div className="flex items-center gap-2 p-1 rounded-md bg-muted">
+                <Button variant="ghost" size="icon" className="h-6 w-6"><Type className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6"><Palette className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6"><Mic className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6"><Lock className="h-4 w-4 text-yellow-500" /></Button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="cursor-grab">
+              <GripVertical className="h-5 w-5 text-muted-foreground" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+              <Trash2 className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex-1 grid gap-2">
+            <Input 
+              placeholder="Término" 
+              className="bg-background/50 h-12" 
+            />
+            <Label className="text-xs text-muted-foreground pl-2">TÉRMINO</Label>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 grid gap-2">
+                <Input 
+                    placeholder="Definición" 
+                    className="bg-background/50 h-12" 
+                />
+                <Label className="text-xs text-muted-foreground pl-2">DEFINICIÓN</Label>
+            </div>
+            <div className="grid gap-2 text-center">
+                <button className="h-12 w-24 border-2 border-dashed border-muted-foreground/50 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
+                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                </button>
+                 <Label className="text-xs text-muted-foreground">IMAGEN</Label>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
-  const handleZoomIn = () => {
-    setPreviewSize(prev => Math.min(prev + 1, sizeClasses.length - 1));
+
+export default function CreateUnitPage() {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([
+    { id: 1, term: '', definition: '' },
+    { id: 2, term: '', definition: '' },
+  ]);
+  const [suggestions, setSuggestions] = useState(true);
+
+  const addCard = () => {
+    setFlashcards([
+      ...flashcards,
+      { id: Date.now(), term: '', definition: '' },
+    ]);
   };
-  
-  const handleZoomOut = () => {
-    setPreviewSize(prev => Math.max(prev - 1, 0));
-  };
-
-  const processFile = useCallback((fileToProcess: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const fileText = e.target?.result as string;
-        setText(fileText);
-        setFile(fileToProcess);
-        setFileName(fileToProcess.name);
-        toast({
-            title: 'Archivo listo',
-            description: 'Texto extraído del archivo. Ahora puedes generar el mazo.',
-        });
-    };
-    reader.onerror = () => {
-        toast({
-            variant: 'destructive',
-            title: 'Error de archivo',
-            description: 'No se pudo leer el archivo seleccionado.',
-        });
-        setFile(null);
-        setFileName('');
-        setText('');
-    };
-    reader.readAsText(fileToProcess);
-  }, [toast]);
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      processFile(e.target.files[0]);
-    }
-  }, [processFile]);
-
-  const onDragOver = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-  }, []);
-  
-  const onDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.files?.[0]) {
-      processFile(e.dataTransfer.files[0]);
-    }
-  }, [processFile]);
-
-  const clearFile = useCallback(() => {
-    setFile(null);
-    setFileName('');
-    setText('');
-  }, []);
-
-  const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    
-    if (!text) {
-        toast({
-            variant: 'destructive',
-            title: 'No hay contenido',
-            description: 'Por favor, pega tus notas o sube un archivo antes de generar.',
-        });
-        return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-        const formData = new FormData();
-        formData.append('studyNotes', text);
-        const result = await handleGenerateDeckFromText(formData);
-
-        if (result?.error) {
-          toast({
-            variant: 'destructive',
-            title: 'Falló la generación',
-            description: result.error,
-          });
-          setIsLoading(false);
-        }
-        // On success, the page redirects via the server action, so no need to set loading to false.
-    } catch (error) {
-        console.error('Submission error', error);
-        toast({
-            variant: 'destructive',
-            title: 'Ocurrió un error inesperado',
-            description: 'Por favor, inténtalo de nuevo.',
-        });
-        setIsLoading(false);
-    }
-  }, [text, toast]);
 
   return (
     <div className="container mx-auto py-8">
-      <div className="max-w-6xl mx-auto">
-        <form onSubmit={handleSubmit}>
-          <div className="flex justify-between items-start mb-6">
-              <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Wand2 className="h-6 w-6 text-primary" />
-                    <h1 className="text-2xl font-bold">Importación Mágica</h1>
-                  </div>
-                  <p className="text-muted-foreground">
-                    Pega tus notas (en Markdown y LaTeX) o sube un archivo, y los convertiremos en un mazo.
-                  </p>
-              </div>
-               <Button type="submit" size="lg" disabled={isLoading || !text}>
-                  {isLoading ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin mr-2"></span>
-                      Generando Mazo...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2 h-5 w-5" />
-                      Generar Tarjetas
-                    </>
-                  )}
-                </Button>
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <header className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Crear una nueva unidad</h1>
+            <p className="text-sm text-muted-foreground">Guardada hace menos de 1 minuto</p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Editor Column */}
-              <Card>
-                  <CardHeader>
-                      <CardTitle>Editor</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                      <Tabs defaultValue="paste-text" className="w-full">
-                          <TabsList className="grid w-full grid-cols-2 mb-4">
-                              <TabsTrigger value="paste-text" disabled={!!file}>Pegar Texto</TabsTrigger>
-                              <TabsTrigger value="upload-file">Subir Archivo</TabsTrigger>
-                          </TabsList>
-                          <TabsContent value="paste-text">
-                              <Textarea
-                                  name="studyNotesFromText"
-                                  placeholder="Ej: El pH de una solución neutra es 7. La mitocondria es la central energética de la célula..."
-                                  className="min-h-[400px] text-base font-mono"
-                                  value={text}
-                                  onChange={(e) => setText(e.target.value)}
-                                  disabled={isLoading || !!file}
-                              />
-                          </TabsContent>
-                          <TabsContent value="upload-file">
-                              {!file ? (
-                                  <label
-                                      htmlFor="file-upload"
-                                      className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors"
-                                      onDragOver={onDragOver}
-                                      onDrop={onDrop}
-                                  >
-                                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                          <FileUp className="w-10 h-10 mb-3 text-muted-foreground" />
-                                          <p className="mb-2 text-sm text-muted-foreground">
-                                              <span className="font-semibold text-primary">Haz clic para subir</span> o arrastra y suelta
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">TXT, MD (MÁX. 5MB)</p>
-                                      </div>
-                                      <input id="file-upload" type="file" className="hidden" accept=".txt,.md,text/plain,text/markdown" onChange={handleFileChange} disabled={isLoading} />
-                                  </label>
-                              ) : (
-                                  <div className="flex items-center justify-between w-full h-24 border-2 border-dashed rounded-lg p-4 bg-muted">
-                                      <p className="font-medium truncate">{fileName}</p>
-                                      <Button variant="ghost" size="icon" onClick={clearFile} disabled={isLoading}>
-                                          <X className="h-5 w-5" />
-                                      </Button>
-                                  </div>
-                              )}
-                          </TabsContent>
-                      </Tabs>
-                  </CardContent>
-              </Card>
-
-              {/* Preview Column */}
-              <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>Vista Previa</CardTitle>
-                      <div className="flex items-center gap-2">
-                          <Button type="button" variant="outline" size="icon" onClick={handleZoomOut} disabled={previewSize === 0}>
-                              <ZoomOut className="h-4 w-4" />
-                          </Button>
-                          <Button type="button" variant="outline" size="icon" onClick={handleZoomIn} disabled={previewSize === sizeClasses.length - 1}>
-                              <ZoomIn className="h-4 w-4" />
-                          </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                      <div className={cn("prose prose-invert max-w-none p-4 border rounded-md min-h-[464px] bg-background/50 prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50 prose-headings:text-foreground prose-strong:text-foreground", sizeClasses[previewSize])}>
-                          <ReactMarkdown
-                              remarkPlugins={[remarkGfm, remarkMath]}
-                              rehypePlugins={[rehypeKatex]}
-                          >
-                              {text}
-                          </ReactMarkdown>
-                      </div>
-                  </CardContent>
-              </Card>
+          <div className="flex items-center gap-2">
+            <Button variant="outline">Crear</Button>
+            <Button>Crear y practicar</Button>
           </div>
-        </form>
+        </header>
+
+        {/* Title and Description */}
+        <div className="space-y-4 mb-6">
+          <Input 
+            placeholder="Título" 
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="h-14 text-lg p-4 bg-card/70 border-primary/20"
+          />
+          <Textarea 
+            placeholder="Añade una descripción..." 
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="min-h-[80px] p-4 bg-card/70 border-primary/20"
+          />
+        </div>
+
+        {/* Toolbar */}
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2">
+            <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Importar</Button>
+            <Button variant="outline">
+              <FileText className="mr-2 h-4 w-4" /> Añadir diagrama <Lock className="ml-2 h-3 w-3" />
+            </Button>
+            <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Crear a partir de notas</Button>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+                <Switch id="suggestions" checked={suggestions} onCheckedChange={setSuggestions} />
+                <Label htmlFor="suggestions">Sugerencias</Label>
+            </div>
+             <div className="flex items-center gap-1 p-1 rounded-md bg-card/70">
+                <Button variant="ghost" size="icon" className="h-8 w-8"><Settings className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8"><Undo className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8"><Redo className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+             </div>
+          </div>
+        </div>
+
+        {/* Flashcard List */}
+        <div className="space-y-4">
+          {flashcards.map((card, index) => (
+            <FlashcardEditor key={card.id} card={card} number={index + 1} />
+          ))}
+        </div>
+        
+        <div className="mt-6">
+            <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
+                <Plus className="mr-2 h-5 w-5" />
+                Añadir tarjeta
+            </Button>
+        </div>
       </div>
     </div>
   );
