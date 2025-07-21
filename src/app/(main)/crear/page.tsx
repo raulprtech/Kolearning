@@ -4,7 +4,7 @@
 import { useState, useRef, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -30,12 +30,12 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription as DialogDescriptionComponent
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails, handleGenerateProjectFromQuizletUrl } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -121,6 +121,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const [pastedText, setPastedText] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [webUrl, setWebUrl] = useState('');
+  const [quizletUrl, setQuizletUrl] = useState('');
   
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -316,6 +317,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setPastedText('');
         setYoutubeUrl('');
         setWebUrl('');
+        setQuizletUrl('');
         setIsGenerating(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -335,7 +337,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     <>
       <DialogHeader className="p-6 pb-4">
         <DialogTitle>Importación Mágica</DialogTitle>
-        <DialogDescription>Selecciona desde dónde quieres importar</DialogDescription>
+        <DialogDescriptionComponent>Selecciona desde dónde quieres importar</DialogDescriptionComponent>
       </DialogHeader>
       <div className="p-6 pt-0 grid grid-cols-2 sm:grid-cols-3 gap-4">
         {sources.map(source => (
@@ -385,7 +387,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             </Button>
             <div>
                 <DialogTitle>Importar desde {selectedSource?.title}</DialogTitle>
-                <DialogDescription>Sube tu archivo y Koli creará las tarjetas de estudio.</DialogDescription>
+                <DialogDescriptionComponent>Sube tu archivo y Koli creará las tarjetas de estudio.</DialogDescriptionComponent>
             </div>
         </div>
       </DialogHeader>
@@ -449,7 +451,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             </Button>
             <div>
                 <DialogTitle>Importar desde {selectedSource?.title}</DialogTitle>
-                <DialogDescription>Sube un archivo o pega tus apuntes para generar tarjetas.</DialogDescription>
+                <DialogDescriptionComponent>Sube un archivo o pega tus apuntes para generar tarjetas.</DialogDescriptionComponent>
             </div>
         </div>
       </DialogHeader>
@@ -508,7 +510,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             </Button>
             <div>
                 <DialogTitle>Importar desde YouTube</DialogTitle>
-                <DialogDescription>Pega la URL del video y Koli creará las tarjetas de estudio.</DialogDescription>
+                <DialogDescriptionComponent>Pega la URL del video y Koli creará las tarjetas de estudio.</DialogDescriptionComponent>
             </div>
         </div>
       </DialogHeader>
@@ -536,7 +538,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             </Button>
             <div>
                 <DialogTitle>Importar desde Página Web</DialogTitle>
-                <DialogDescription>Pega la URL de la página y Koli creará las tarjetas de estudio.</DialogDescription>
+                <DialogDescriptionComponent>Pega la URL de la página y Koli creará las tarjetas de estudio.</DialogDescriptionComponent>
             </div>
         </div>
       </DialogHeader>
@@ -564,9 +566,9 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             </Button>
             <div>
                 <DialogTitle>Importar desde Quizlet</DialogTitle>
-                <DialogDescription>
+                <DialogDescriptionComponent>
                     En Quizlet, ve a tu mazo, haz clic en el icono de tres puntos (•••), selecciona 'Exportar', copia el texto y pégalo aquí.
-                </DialogDescription>
+                </DialogDescriptionComponent>
             </div>
         </div>
       </DialogHeader>
@@ -919,3 +921,5 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
+
+    
