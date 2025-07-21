@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -53,7 +53,7 @@ type Flashcard = {
   image?: string;
 };
 
-const FlashcardEditor = ({ card, number, onCardChange }: { card: Flashcard; number: number, onCardChange: (id: number, field: 'question' | 'answer', value: string) => void }) => {
+const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: Flashcard; number: number, onCardChange: (id: number, field: 'question' | 'answer', value: string) => void, onCardDelete: (id: number) => void }) => {
   return (
     <Card className="bg-card/70 border border-primary/20">
       <CardContent className="p-4">
@@ -65,16 +65,16 @@ const FlashcardEditor = ({ card, number, onCardChange }: { card: Flashcard; numb
             <Button variant="ghost" size="icon" className="cursor-grab">
               <GripVertical className="h-5 w-5 text-muted-foreground" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => onCardDelete(card.id)}>
               <Trash2 className="h-5 w-5" />
             </Button>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex-1 grid gap-2">
-            <Input 
+            <Textarea 
               placeholder="Término" 
-              className="bg-background/50 h-12"
+              className="bg-background/50 h-24 resize-none"
               value={card.question}
               onChange={(e) => onCardChange(card.id, 'question', e.target.value)}
             />
@@ -82,9 +82,9 @@ const FlashcardEditor = ({ card, number, onCardChange }: { card: Flashcard; numb
           </div>
           <div className="flex items-center gap-4">
             <div className="flex-1 grid gap-2">
-                <Input 
+                <Textarea
                     placeholder="Definición" 
-                    className="bg-background/50 h-12"
+                    className="bg-background/50 h-24 resize-none"
                     value={card.answer}
                     onChange={(e) => onCardChange(card.id, 'answer', e.target.value)}
                 />
@@ -109,7 +109,7 @@ const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) =>
   const [previewSize, setPreviewSize] = useState(1);
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const fileInputRef = useState<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sizeClasses = ['prose-sm', 'prose-base', 'prose-lg', 'prose-xl', 'prose-2xl'];
 
@@ -239,8 +239,8 @@ export default function CreateProjectPage() {
   const [suggestions, setSuggestions] = useState(true);
 
   const addCard = () => {
-    setFlashcards([
-      ...flashcards,
+    setFlashcards(currentFlashcards => [
+      ...currentFlashcards,
       { id: Date.now(), question: '', answer: '' },
     ]);
   };
@@ -262,6 +262,11 @@ export default function CreateProjectPage() {
       )
     );
   };
+  
+  const handleCardDelete = (id: number) => {
+    setFlashcards(currentFlashcards => currentFlashcards.filter(card => card.id !== id));
+  };
+
 
   return (
     <div className="container mx-auto py-8">
@@ -316,7 +321,7 @@ export default function CreateProjectPage() {
         {/* Flashcard List */}
         <div className="space-y-4">
             {flashcards.map((card, index) => (
-                <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} />
+                <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} onCardDelete={handleCardDelete} />
             ))}
         </div>
 
