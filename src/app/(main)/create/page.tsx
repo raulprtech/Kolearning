@@ -194,7 +194,7 @@ const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) =>
             />
           </div>
           <div className="flex flex-col gap-4">
-            <Card className="flex-grow flex flex-col">
+            <Card className="flex-grow flex flex-col min-h-0">
               <CardContent className="p-0 flex flex-col h-full">
                 <div className="p-2 border-b flex justify-between items-center">
                    <p className="text-sm font-medium px-3">Vista Previa del Archivo</p>
