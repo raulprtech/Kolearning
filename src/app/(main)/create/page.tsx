@@ -287,12 +287,6 @@ export default function CreateProjectPage() {
                 <Switch id="visibility" checked={isPublic} onCheckedChange={setIsPublic} />
                 <Label htmlFor="visibility">{isPublic ? 'Público' : 'Privado'}</Label>
             </div>
-             <div className="flex items-center gap-1 p-1 rounded-md bg-card/70">
-                <Button variant="ghost" size="icon" className="h-8 w-8"><Settings className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8"><Undo className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8"><Redo className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-             </div>
           </div>
         </div>
 
