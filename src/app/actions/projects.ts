@@ -47,6 +47,37 @@ export async function handleGenerateProjectFromText(studyNotes: string) {
   }
 }
 
+export function handlePastedTextImport(
+    pastedText: string,
+    termSeparator: string,
+    rowSeparator: string,
+    customTermSeparator?: string,
+    customRowSeparator?: string
+) {
+    const getSeparator = (type: 'term' | 'row') => {
+        if (type === 'term') {
+            if (termSeparator === 'tab') return '\t';
+            if (termSeparator === 'comma') return ',';
+            return customTermSeparator || '\t';
+        }
+        if (rowSeparator === 'newline') return '\n';
+        if (rowSeparator === 'semicolon') return ';';
+        return (customRowSeparator || '\n').replace(/\\n/g, '\n');
+    };
+
+    const rowSep = getSeparator('row');
+    const termSep = getSeparator('term');
+
+    const rows = pastedText.split(rowSep).filter(row => row.trim() !== '');
+    return rows.map(row => {
+        const parts = row.split(termSep);
+        return {
+            question: parts[0] || '',
+            answer: parts.slice(1).join(termSep) || ''
+        };
+    }).filter(card => card.question);
+};
+
 export async function handleGenerateProjectFromYouTubeUrl(videoUrl: string) {
   if (!videoUrl) {
     return { error: 'YouTube URL cannot be empty.' };
@@ -55,7 +86,7 @@ export async function handleGenerateProjectFromYouTubeUrl(videoUrl: string) {
   try {
     const transcriptResponse = await YoutubeTranscript.fetchTranscript(videoUrl);
     if (!transcriptResponse || transcriptResponse.length === 0) {
-      return { error: 'Could not fetch transcript for this video. It might be disabled.' };
+      return { error: 'Could not fetch transcript for this video. It might be disabled or private.' };
     }
 
     const studyNotes = transcriptResponse.map(item => item.text).join(' ');
@@ -65,7 +96,7 @@ export async function handleGenerateProjectFromYouTubeUrl(videoUrl: string) {
 
   } catch (error) {
     console.error('Error with YouTube project generation:', error);
-    return { error: 'Could not fetch transcript for this video. It might be disabled.' };
+    return { error: 'This video ID is invalid or the video has no transcript.' };
   }
 }
 

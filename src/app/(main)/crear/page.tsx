@@ -31,7 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -160,7 +160,7 @@ const PasteImportControls = ({
 
 
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
-  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube'>('selection');
+  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube' | 'sheets'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
 
   const [fileName, setFileName] = useState('');
@@ -186,7 +186,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     { title: 'YouTube video', type: 'youtube', icon: <Youtube />, isFileBased: false },
     { title: 'Record Lecture', type: 'lecture', icon: <Mic />, isFileBased: false },
     { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: false },
-    { title: 'Sheets', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: true },
+    { title: 'Sheets', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: false },
     { title: 'Web page', type: 'web', icon: <Globe />, isFileBased: false },
   ];
 
@@ -200,6 +200,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setView('anki');
     } else if (source.type === 'youtube') {
         setView('youtube');
+    } else if (source.type === 'sheets') {
+        setView('sheets');
     } else {
       toast({ variant: 'destructive', title: 'Función no disponible', description: 'Esta opción de importación aún no está implementada.' });
     }
@@ -222,52 +224,13 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     fileInputRef.current?.click();
   };
   
-  const parseGizmoFile = (content: string): Omit<Flashcard, 'id'>[] => {
-    const lines = content.split('\n').filter(line => line.trim() !== '');
-    const cards: Omit<Flashcard, 'id'>[] = [];
-    for (let i = 0; i < lines.length; i += 2) {
-      if (lines[i] && lines[i+1]) {
-        cards.push({
-          question: lines[i].trim(),
-          answer: lines[i+1].trim(),
-        });
-      }
-    }
-    return cards;
-  };
-  
-  const parsePastedText = (): Omit<Flashcard, 'id'>[] => {
-    const getSeparator = (type: 'term' | 'row') => {
-        if (type === 'term') {
-            if (termSeparator === 'tab') return '\t';
-            if (termSeparator === 'comma') return ',';
-            return customTermSeparator;
-        }
-        if (rowSeparator === 'newline') return '\n';
-        if (rowSeparator === 'semicolon') return ';';
-        return customRowSeparator.replace(/\\n/g, '\n');
-    };
-
-    const rowSep = getSeparator('row');
-    const termSep = getSeparator('term');
-
-    const rows = pastedText.split(rowSep).filter(row => row.trim() !== '');
-    return rows.map(row => {
-        const parts = row.split(termSep);
-        return {
-            question: parts[0] || '',
-            answer: parts.slice(1).join(termSep) || ''
-        };
-    }).filter(card => card.question && card.answer);
-  };
-
   const handleGizmoImport = () => {
     if (!fileContent) {
       toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo.' });
       return;
     }
     setIsGenerating(true);
-    const parsedCards = parseGizmoFile(fileContent);
+    const parsedCards = handlePastedTextImportAction(fileContent, 'newline', 'newline');
     const projectTitle = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
     onProjectParsed(projectTitle, parsedCards);
     setIsGenerating(false);
@@ -281,8 +244,22 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
           return;
       }
       setIsGenerating(true);
-      const parsedCards = parsePastedText();
+      const parsedCards = handlePastedTextImportAction(pastedText, termSeparator, rowSeparator, customTermSeparator, customRowSeparator);
       const projectTitle = "Importación de Texto";
+      onProjectParsed(projectTitle, parsedCards);
+      setIsGenerating(false);
+      resetState();
+      toast({ title: '¡Tarjetas Importadas!', description: `Se han añadido ${parsedCards.length} tarjetas.` });
+  };
+  
+  const handleSheetsImport = () => {
+      if (!pastedText) {
+          toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
+          return;
+      }
+      setIsGenerating(true);
+      const parsedCards = handlePastedTextImportAction(pastedText, 'tab', 'newline');
+      const projectTitle = "Importación de Hoja de Cálculo";
       onProjectParsed(projectTitle, parsedCards);
       setIsGenerating(false);
       resetState();
@@ -520,6 +497,37 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </div>
     </>
   );
+  
+  const renderSheetsView = () => (
+    <>
+       <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Spreadsheet import</DialogTitle>
+                <DialogDescription>Each row must have 1 column (for ordinary cards) or 2 columns (for front and back cards)</DialogDescription>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
+        <Textarea
+          placeholder="Copy & paste in your spreadsheet here"
+          value={pastedText}
+          onChange={(e) => setPastedText(e.target.value)}
+          className="h-60 resize-none"
+        />
+      </div>
+      <div className="flex justify-end p-6 pt-4 gap-2">
+        <Button variant="outline" onClick={() => setView('selection')}>Back</Button>
+        <Button onClick={handleSheetsImport} disabled={isGenerating || !pastedText}>
+            {isGenerating ? 'Confirming...' : 'Confirm'}
+        </Button>
+      </div>
+    </>
+  );
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -532,6 +540,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
          {view === 'paste' && renderPasteView()}
          {view === 'anki' && renderAnkiView()}
          {view === 'youtube' && renderYoutubeView()}
+         {view === 'sheets' && renderSheetsView()}
       </DialogContent>
     </Dialog>
   );
