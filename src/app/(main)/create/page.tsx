@@ -57,12 +57,6 @@ const FlashcardEditor = ({ card, number }: { card: Flashcard; number: number }) 
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-4">
             <span className="text-muted-foreground font-medium">{number}</span>
-            <div className="flex items-center gap-2 p-1 rounded-md bg-muted">
-                <Button variant="ghost" size="icon" className="h-6 w-6"><Type className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6"><Palette className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6"><Mic className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6"><Lock className="h-4 w-4 text-yellow-500" /></Button>
-            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="cursor-grab">
@@ -191,7 +185,6 @@ export default function CreateProjectPage() {
   const [description, setDescription] = useState('');
   const [flashcards, setFlashcards] = useState<Flashcard[]>([
     { id: 1, term: '', definition: '' },
-    { id: 2, term: '', definition: '' },
   ]);
   const [suggestions, setSuggestions] = useState(true);
 
