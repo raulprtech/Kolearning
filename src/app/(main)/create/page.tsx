@@ -245,28 +245,20 @@ export default function CreateProjectPage() {
           </div>
         </div>
 
-        {/* Flashcard Editor Modal */}
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="outline" className="w-full">Editar Tarjetas</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-6xl w-[95vw] h-[90vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>Editor de Tarjetas</DialogTitle>
-                </DialogHeader>
-                <div className="flex-grow overflow-y-auto pr-4 -mr-4 space-y-4">
-                    {flashcards.map((card, index) => (
-                        <FlashcardEditor key={card.id} card={card} number={index + 1} />
-                    ))}
-                     <div className="mt-6">
-                        <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
-                            <Plus className="mr-2 h-5 w-5" />
-                            Añadir tarjeta
-                        </Button>
-                    </div>
-                </div>
-            </DialogContent>
-        </Dialog>
+        {/* Flashcard List */}
+        <div className="space-y-4">
+            {flashcards.map((card, index) => (
+                <FlashcardEditor key={card.id} card={card} number={index + 1} />
+            ))}
+        </div>
+
+        {/* Add Card Button */}
+        <div className="mt-6">
+            <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
+                <Plus className="mr-2 h-5 w-5" />
+                Añadir tarjeta
+            </Button>
+        </div>
 
       </div>
     </div>
