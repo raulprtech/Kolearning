@@ -370,8 +370,15 @@ type QuickChatMessage = {
 
 const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, onConvertToMultipleChoice, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, onConvertToMultipleChoice: (options: any[]) => void, isAnswered: boolean }) => {
     const router = useRouter();
-    const { user, decrementEnergy } = useUser();
-    const hasEnergy = user && user.energy > 0;
+    const { user, decrementEnergy, setTutorSession } = useUser();
+    
+    const HINT_COST = 1;
+    const REPHRASE_COST = 1;
+    const CONVERT_COST = 2;
+    const SHOW_ANSWER_COST = 5;
+    const TUTOR_AI_COST = 3;
+
+    const hasEnoughEnergy = (cost: number) => user && user.energy >= cost;
 
     const [activeView, setActiveView] = useState<'main' | 'hint' | 'explanation'>('main');
     const [hintText, setHintText] = useState('');
@@ -385,9 +392,9 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     const [quickChatHistory, setQuickChatHistory] = useState<QuickChatMessage[]>([]);
     const [quickQuestionCount, setQuickQuestionCount] = useState(0);
 
-    const handleActionWithEnergyCheck = (action: (...args: any[]) => void, ...args: any[]) => {
-        if (!hasEnergy) return;
-        decrementEnergy();
+    const handleActionWithEnergyCheck = (action: (...args: any[]) => void, cost: number, ...args: any[]) => {
+        if (!hasEnoughEnergy(cost)) return;
+        decrementEnergy(cost);
         action(...args);
     }
 
@@ -499,6 +506,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     };
 
     const handleDeepen = () => {
+        setTutorSession({ exchangesLeft: 10, isActive: true });
         const contextMessage = `Hola Koli, estoy en una sesión de estudio. La pregunta era: "${currentQuestion.question}". ${isAnswered ? `La respuesta correcta es "${correctAnswer}".` : ''} ¿Podemos profundizar en este tema?`;
         const encodedContext = encodeURIComponent(contextMessage);
         router.push(`/tutor?context=${encodedContext}`);
@@ -522,9 +530,9 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         }
     };
 
-    const CostIndicator = () => (
+    const CostIndicator = ({ cost }: { cost: number }) => (
       <span className="ml-auto text-xs text-primary/80 font-mono flex items-center gap-1">
-          -1 <Zap className="h-3 w-3" />
+          - {cost} <Zap className="h-3 w-3" />
       </span>
     );
     
@@ -627,16 +635,16 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                                   className="text-xs"
                                   rows={2}
                               />
-                              <Button size="sm" onClick={() => handleActionWithEnergyCheck(handleQuickQuestionSubmit)} className="w-full" disabled={isLoading || !hasEnergy}>
+                              <Button size="sm" onClick={() => handleActionWithEnergyCheck(handleQuickQuestionSubmit, 0)} className="w-full" disabled={isLoading}>
                                   <SendHorizonal className="mr-2 h-4 w-4" /> Enviar
                               </Button>
                           </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-2 pt-2">
                             {quickQuestionCount < 2 &&
-                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestionInput(true)} disabled={isLoading || !hasEnergy}>Pregunta Rápida</Button>
+                              <Button variant="outline" size="sm" onClick={() => setShowQuickQuestionInput(true)} disabled={isLoading}>Pregunta Rápida</Button>
                             }
-                            <Button variant="outline" size="sm" onClick={() => handleActionWithEnergyCheck(handleDeepen)} className={cn(quickQuestionCount >= 2 && "col-span-2")} disabled={isLoading || !hasEnergy}>Profundizar</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} className={cn(quickQuestionCount >= 2 && "col-span-2")} disabled={isLoading || !hasEnoughEnergy(TUTOR_AI_COST)}>Tutor AI</Button>
                         </div>
                       )}
                     </div>
@@ -656,28 +664,28 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                 <div className="grid gap-2">
                   {!isAnswered ? (
                     <>
-                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleHintClick)} disabled={!hasEnergy}>
-                        <Lightbulb className="mr-2 h-4 w-4" /> Pista <CostIndicator />
+                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleHintClick, HINT_COST)} disabled={!hasEnoughEnergy(HINT_COST)}>
+                        <Lightbulb className="mr-2 h-4 w-4" /> Pista <CostIndicator cost={HINT_COST} />
                       </Button>
                        {(currentQuestion.type === 'open-answer' || currentQuestion.type === 'fill-in-the-blank') && (
-                        <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleConvertToMultipleChoiceClick)} disabled={!hasEnergy}>
-                          <MenuSquare className="mr-2 h-4 w-4" /> Convertir a Opción Múltiple <CostIndicator />
+                        <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleConvertToMultipleChoiceClick, CONVERT_COST)} disabled={!hasEnoughEnergy(CONVERT_COST)}>
+                          <MenuSquare className="mr-2 h-4 w-4" /> Convertir a Opción Múltiple <CostIndicator cost={CONVERT_COST} />
                         </Button>
                       )}
-                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick)} disabled={!hasEnergy}>
-                        <Eye className="mr-2 h-4 w-4" /> Ver Respuesta <CostIndicator />
+                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick, SHOW_ANSWER_COST)} disabled={!hasEnoughEnergy(SHOW_ANSWER_COST)}>
+                        <Eye className="mr-2 h-4 w-4" /> Ver Respuesta <CostIndicator cost={SHOW_ANSWER_COST} />
                       </Button>
-                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleRephraseClick)} disabled={!hasEnergy}>
-                        <RefreshCw className="mr-2 h-4 w-4" /> Reformular <CostIndicator />
+                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleRephraseClick, REPHRASE_COST)} disabled={!hasEnoughEnergy(REPHRASE_COST)}>
+                        <RefreshCw className="mr-2 h-4 w-4" /> Reformular <CostIndicator cost={REPHRASE_COST} />
                       </Button>
                     </>
                   ) : (
-                    <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleExplainClick)} disabled={!hasEnergy}>
-                      <Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta <CostIndicator />
+                    <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleExplainClick, HINT_COST)} disabled={!hasEnoughEnergy(HINT_COST)}>
+                      <Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta <CostIndicator cost={HINT_COST} />
                     </Button>
                   )}
-                   <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleDeepen)} disabled={!hasEnergy}>
-                    <Bot className="mr-2 h-4 w-4" /> Tutor AI <CostIndicator />
+                   <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} disabled={!hasEnoughEnergy(TUTOR_AI_COST)}>
+                    <Bot className="mr-2 h-4 w-4" /> Tutor AI <CostIndicator cost={TUTOR_AI_COST} />
                    </Button>
                 </div>
             </div>
@@ -688,8 +696,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         <Button
             variant="default"
             size="lg"
-            className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30 flex items-center justify-center p-0"
-            disabled={!hasEnergy}
+            className="fixed bottom-8 right-8 rounded-full h-16 w-16 shadow-lg shadow-primary/30 p-0"
         >
             <TutorAvatar className="h-16 w-16" />
             <span className="sr-only">Pedir ayuda a Koli</span>
@@ -705,7 +712,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                              {popoverButton}
                         </PopoverTrigger>
                     </TooltipTrigger>
-                    {!hasEnergy && (
+                    {user && user.energy === 0 && (
                         <TooltipContent side="top" align="end" className="mb-2 mr-2">
                             <p>No tienes suficiente energía.</p>
                         </TooltipContent>
@@ -864,7 +871,7 @@ export default function AprenderPage() {
           setRevealedAnswer(null); // Clear revealed answer since it's now in the textarea
       } else if (currentQuestion.type === 'fill-in-the-blank') {
           const correctAnswer = (currentQuestion as any).correctAnswer;
-          handleGenericAnswer(true, 'fill-in-the-blank');
+          handleCorrectAnswer('fill-in-the-blank');
           updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: correctAnswer });
           setCurrentOpenAnswerText(correctAnswer);
       }

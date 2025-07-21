@@ -27,3 +27,8 @@ export interface Flashcard {
   question: string;
   answer: string;
 }
+
+export interface TutorSession {
+  isActive: boolean;
+  exchangesLeft: number;
+}

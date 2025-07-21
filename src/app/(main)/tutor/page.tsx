@@ -38,8 +38,9 @@ const TutorAvatar = () => (
 function TutorChatComponent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, decrementEnergy } = useUser();
+  const { user, decrementEnergy, tutorSession, setTutorSession } = useUser();
   const hasEnergy = user && user.energy > 0;
+  const isSessionActive = tutorSession && tutorSession.isActive;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +71,10 @@ function TutorChatComponent() {
     reset();
     scrollToBottom();
 
+    if (tutorSession && tutorSession.isActive) {
+      setTutorSession(prev => prev ? ({ ...prev, exchangesLeft: prev.exchangesLeft - 1 }) : null);
+    }
+    
     const result = await handleTutorChat(message);
     
     if (result.response) {
@@ -86,6 +91,11 @@ function TutorChatComponent() {
   };
   
   const handleActionWithEnergyCheck = (action: (message: string) => void, message: string, showInputAfter: boolean = true) => {
+      if (isSessionActive && tutorSession.exchangesLeft > 0) {
+        action(message, showInputAfter);
+        return;
+      }
+      
       if (!hasEnergy) return;
       decrementEnergy();
       action(message, showInputAfter);
@@ -98,7 +108,8 @@ function TutorChatComponent() {
         const decodedContext = decodeURIComponent(context);
         const userMessage: Message = { sender: 'user', text: decodedContext };
         setMessages([userMessage]);
-        handleActionWithEnergyCheck(processMessage, decodedContext, false); 
+        // The energy for this initial message is already paid on the previous screen.
+        processMessage(decodedContext, false); 
         router.replace('/tutor', undefined);
     } else {
         setIsInputVisible(messages.length > 0);
@@ -123,8 +134,18 @@ function TutorChatComponent() {
       scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    if (tutorSession && tutorSession.exchangesLeft <= 0) {
+        setTutorSession(prev => prev ? ({ ...prev, isActive: false }) : null);
+        const endMessage: Message = { sender: 'ai', text: "Tu sesión de tutoría ha finalizado. Puedes iniciar una nueva desde la pantalla de aprendizaje si lo necesitas." };
+        setMessages(prev => [...prev, endMessage]);
+    }
+  }, [tutorSession, setTutorSession]);
+
   const showQuickActions = !isLoading && !isInputVisible;
   
+  const canChat = isSessionActive ? tutorSession.exchangesLeft > 0 : hasEnergy;
+
   return (
     <div className="container mx-auto py-8 h-[calc(100vh-57px)] flex flex-col">
        <div className="text-center mb-8 relative">
@@ -134,8 +155,15 @@ function TutorChatComponent() {
                     {hasContext ? 'Volver a la sesión' : 'Volver al inicio'}
                 </Link>
             </Button>
-            <h1 className="text-3xl font-bold">Pregúntale a Koli</h1>
-            <p className="text-muted-foreground">¡Pregúntame lo que sea sobre tus estudios!</p>
+            <div className='flex flex-col items-center justify-center'>
+                <h1 className="text-3xl font-bold">Pregúntale a Koli</h1>
+                <p className="text-muted-foreground">
+                    {isSessionActive 
+                        ? `${tutorSession.exchangesLeft} intercambios restantes en esta sesión.`
+                        : "¡Pregúntame lo que sea sobre tus estudios!"
+                    }
+                </p>
+            </div>
        </div>
       <div className="flex-grow flex flex-col bg-black/30 rounded-lg min-h-0">
         <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
@@ -189,10 +217,10 @@ function TutorChatComponent() {
         <div className="p-4 border-t border-primary/20">
           {showQuickActions ? (
             <div className="flex items-center justify-center gap-2">
-                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => handleQuickAction('Explicamelo de nuevo de forma simple como si tuviera 5 años.')} disabled={!hasEnergy || isLoading}>
+                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => handleQuickAction('Explicamelo de nuevo de forma simple como si tuviera 5 años.')} disabled={!canChat || isLoading}>
                     <RefreshCw className="mr-2 h-4 w-4" /> Simplifícalo
                 </Button>
-                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => setIsInputVisible(true)} disabled={!hasEnergy || isLoading}>
+                <Button variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20" onClick={() => setIsInputVisible(true)} disabled={!canChat || isLoading}>
                     <MessageSquare className="mr-2 h-4 w-4" /> Preguntar
                 </Button>
             </div>
@@ -203,18 +231,18 @@ function TutorChatComponent() {
                 placeholder="Escríbele a Koli..."
                 className="flex-grow bg-transparent border-primary/30 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:border-primary font-code"
                 autoComplete='off'
-                disabled={isLoading || !hasEnergy}
+                disabled={isLoading || !canChat}
               />
               <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button type="submit" size="icon" disabled={isLoading || !hasEnergy} variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20 hover:text-primary-foreground">
+                        <Button type="submit" size="icon" disabled={isLoading || !canChat} variant="outline" className="bg-transparent border-primary/30 hover:bg-primary/20 hover:text-primary-foreground">
                             <SendHorizonal className="h-4 w-4" />
                         </Button>
                     </TooltipTrigger>
-                    {!hasEnergy && (
+                    {!canChat && (
                         <TooltipContent>
-                            <p>No tienes suficiente energía.</p>
+                            <p>{isSessionActive ? "Has agotado tus intercambios." : "No tienes suficiente energía."}</p>
                         </TooltipContent>
                     )}
                 </Tooltip>
