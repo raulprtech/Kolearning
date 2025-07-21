@@ -52,6 +52,10 @@ export async function handleCreateProject(
             flashcards: flashcards.map(fc => ({ question: fc.question, answer: fc.answer })) 
         });
 
+        if (!plan || !plan.questions || plan.questions.length === 0) {
+            throw new Error("Learning plan generation failed to produce questions.");
+        }
+
         // In a real app, this would be saved to a database.
         // For now, we store it in memory for this session.
         const newDeck = {
@@ -67,19 +71,30 @@ export async function handleCreateProject(
         };
         createdDecks.push(newDeck);
 
+        const newDeckId = newDeck.id;
+        redirect(`/deck/${newDeckId}/details`);
+
     } catch (error) {
         console.error('Error creating learning plan:', error);
         return { error: 'Sorry, I was unable to create a learning plan.' };
     }
-    
-    // Redirect to the newly created deck's detail page
-    const newDeckId = createdDecks[createdDecks.length - 1].id;
-    redirect(`/deck/${newDeckId}/details`);
 }
 
 
 export async function getGeneratedDeck(deckId: string) {
-    return createdDecks.find(d => d.id === deckId) || null;
+    // This is a temporary solution for a mock database.
+    const deck = createdDecks.find(d => d.id === deckId);
+    if (deck) {
+        // Transform the stored questions into Flashcard format for the viewer
+        const flashcards = deck.questions.map((q: any, index: number) => ({
+            id: `${deck.id}-card-${index}`,
+            deckId: deck.id,
+            question: q.question,
+            answer: q.correctAnswerText || "View details for answer.",
+        }));
+        return { ...deck, flashcards };
+    }
+    return null;
 }
 
 export async function handleEvaluateOpenAnswer(input: EvaluateOpenAnswerInput) {

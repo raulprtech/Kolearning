@@ -101,12 +101,12 @@ const prompt = ai.definePrompt({
 
 Based on the provided flashcards for the topic "{{title}}", you will generate a new set of questions. Your goal is to create a pedagogically sound mix of question formats to enhance learning and retention.
 
-The available question formats are:
-- 'multiple-choice': Good for recall and recognition. Create plausible distractors.
+The available question formats you can generate are:
 - 'open-answer': Good for testing deeper understanding and explanation.
 - 'matching': Good for associating terms with definitions.
 - 'ordering': Good for procedural knowledge or timelines.
 - 'fill-in-the-blank': Good for memorizing key terms within a context.
+- 'multiple-choice': Good for recall and recognition. You can convert a flashcard pair into a multiple-choice question.
 
 Analyze the provided flashcards and decide the best format for each concept. You should use a variety of these formats. Not every flashcard needs to become a question, and some flashcards can be used to create more complex questions (like matching or ordering).
 

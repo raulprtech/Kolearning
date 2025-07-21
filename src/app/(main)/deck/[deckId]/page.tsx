@@ -4,7 +4,8 @@ import { getGeneratedDeck } from '@/app/actions/decks';
 
 async function getDeckDetails(deckId: string): Promise<Deck | null> {
   if (deckId.startsWith('gen-')) {
-    return getGeneratedDeck(deckId);
+    const deck = await getGeneratedDeck(deckId);
+    return deck ? { ...deck, flashcards: undefined } : null;
   }
   
   // Return mock data since auth and firestore are disabled
@@ -48,35 +49,36 @@ async function getDeckDetails(deckId: string): Promise<Deck | null> {
 
 async function getFlashcards(deckId: string, deck: Deck | null): Promise<Flashcard[]> {
   // if it's a generated deck, flashcards are part of the deck object
-  if (deckId.startsWith('gen-') && deck && 'flashcards' in deck) {
-      return (deck as any).flashcards.map((fc: any, index: number) => ({...fc, id: `${deckId}-card-${index}`}));
+  if (deckId.startsWith('gen-')) {
+      const fullDeck = await getGeneratedDeck(deckId);
+      return fullDeck?.flashcards || [];
   }
 
   // Return mock data since auth and firestore are disabled
   const mockFlashcards: Record<string, Flashcard[]> = {
       '1': [
-          {id: '1', question: 'What is `x` in `2x + 3 = 7`?', answer: '`x = 2`'},
-          {id: '2', question: 'What is `(a+b)²`?', answer: '`a² + 2ab + b²`'},
-          {id: '3', question: 'Solve for y: `y/3 = 4`', answer: '`y = 12`'},
-          {id: '4', question: 'What is the slope of `y = 3x - 5`?', answer: 'The slope is `3`.'},
-          {id: '5', question: 'Factor `x² - 9`', answer: '`(x-3)(x+3)`'},
-          {id: '6', question: 'What is the value of 5! (5 factorial)?', answer: '`120`'},
+          {id: '1', deckId: '1', question: 'What is `x` in `2x + 3 = 7`?', answer: '`x = 2`'},
+          {id: '2', deckId: '1', question: 'What is `(a+b)²`?', answer: '`a² + 2ab + b²`'},
+          {id: '3', deckId: '1', question: 'Solve for y: `y/3 = 4`', answer: '`y = 12`'},
+          {id: '4', deckId: '1', question: 'What is the slope of `y = 3x - 5`?', answer: 'The slope is `3`.'},
+          {id: '5', deckId: '1', question: 'Factor `x² - 9`', answer: '`(x-3)(x+3)`'},
+          {id: '6', deckId: '1', question: 'What is the value of 5! (5 factorial)?', answer: '`120`'},
       ],
       '2': [
-          {id: '1', question: 'What is the capital of Japan?', answer: 'Tokyo'},
-          {id: '2', question: 'What is the capital of Australia?', answer: 'Canberra'},
-          {id: '3', question: 'What is the capital of Canada?', answer: 'Ottawa'},
-          {id: '4', question: 'What is the capital of Brazil?', answer: 'Brasília'},
-          {id: '5', question: 'What is the capital of Egypt?', answer: 'Cairo'},
+          {id: '1', deckId: '2', question: 'What is the capital of Japan?', answer: 'Tokyo'},
+          {id: '2', deckId: '2', question: 'What is the capital of Australia?', answer: 'Canberra'},
+          {id: '3', deckId: '2', question: 'What is the capital of Canada?', answer: 'Ottawa'},
+          {id: '4', deckId: '2', question: 'What is the capital of Brazil?', answer: 'Brasília'},
+          {id: '5', deckId: '2', question: 'What is the capital of Egypt?', answer: 'Cairo'},
       ],
       '3': [
-          {id: '1', question: 'Hello', answer: 'Hola'},
-          {id: '2', question: 'Goodbye', answer: 'Adiós'},
-          {id: '3', question: 'Thank you', answer: 'Gracias'},
-          {id: '4', question: 'Please', answer: 'Por favor'},
-          {id: '5', question: 'Yes', answer: 'Sí'},
-          {id: '6', question: 'No', answer: 'No'},
-          {id: '7', question: 'Water', answer: 'Agua'},
+          {id: '1', deckId: '3', question: 'Hello', answer: 'Hola'},
+          {id: '2', deckId: '3', question: 'Goodbye', answer: 'Adiós'},
+          {id: '3', deckId: '3', question: 'Thank you', answer: 'Gracias'},
+          {id: '4', deckId: '3', question: 'Please', answer: 'Por favor'},
+          {id: '5', deckId: '3', question: 'Yes', answer: 'Sí'},
+          {id: '6', deckId: '3', question: 'No', answer: 'No'},
+          {id: '7', deckId: '3', question: 'Water', answer: 'Agua'},
       ],
   };
 
