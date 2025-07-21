@@ -1,6 +1,6 @@
 
 import { z } from 'zod';
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 export interface User {
   uid: string;
@@ -47,9 +47,17 @@ export interface Project {
 export interface Flashcard {
   id: string;
   deckId: string;
-  question: string;
-  answer: string;
+  question: string; // Mapped from 'concepto'
+  answer: string; // Mapped from 'descripcion'
   image?: string;
+  // Atom-specific fields
+  atomo_id: string;
+  material_id: string;
+  concepto: string;
+  descripcion: string;
+  atomos_padre: string[];
+  formatos_presentacion: string[];
+  dificultad_inicial: string;
 }
 
 export interface TutorSession {
@@ -94,26 +102,23 @@ export const GenerateDeckFromTextInputSchema = z.object({
 });
 export type GenerateDeckFromTextInput = z.infer<typeof GenerateDeckFromTextInputSchema>;
 
+const KnowledgeAtomSchema = z.object({
+  atomo_id: z.string().describe("A unique ID for the atom within this material (e.g., 'ALG023')."),
+  material_id: z.string().describe("The ID for the entire deck (e.g., 'MAT001')."),
+  concepto: z.string().describe('The core concept, term, or question (the "front" of the flashcard).'),
+  descripcion: z.string().describe('The definition, explanation, or answer (the "back" of the flashcard). Supports Markdown and LaTeX.'),
+  atomos_padre: z.array(z.string()).describe("An array of 'atomo_id's that are prerequisites for this atom. Empty if none."),
+  formatos_presentacion: z.array(z.string()).describe("Suitable learning formats (e.g., 'Identificación', 'Ejemplificación')."),
+  dificultad_inicial: z.string().describe("Initial difficulty level (e.g., 'Fundamental', 'Intermedio', 'Avanzado')."),
+});
+
 export const GenerateDeckFromTextOutputSchema = z.object({
   title: z.string().describe('A concise and relevant title for the generated flashcard deck.'),
   description: z.string().describe('A brief, one-sentence description of the flashcard deck.'),
-  flashcards: z
-    .array(
-      z.object({
-        question: z
-          .string()
-          .describe(
-            'The flashcard question (supports Markdown and LaTeX). Should be a clear, answerable question based on the notes.'
-          ),
-        answer: z
-          .string()
-          .describe(
-            'The flashcard answer (supports Markdown and LaTeX). Should be a concise and accurate answer to the question.'
-          ),
-      })
-    )
+  material_id: z.string().describe("A unique ID for this entire deck (e.g., 'MAT001')."),
+  flashcards: z.array(KnowledgeAtomSchema)
     .min(1)
-    .describe('An array of flashcards based on the key concepts in the notes. All relevant knowledge should be extracted.'),
+    .describe('An array of knowledge atoms (flashcards) based on the key concepts in the notes. All relevant knowledge should be extracted.'),
 });
 export type GenerateDeckFromTextOutput = z.infer<typeof GenerateDeckFromTextOutputSchema>;
 

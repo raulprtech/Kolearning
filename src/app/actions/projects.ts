@@ -55,8 +55,8 @@ let createdProjects: Project[] = [
       bibliography: [],
       isPublic: true,
        flashcards: [
-            { id: '1', deckId: 'gen-12345', question: '¿Qué es una IA multimodal?', answer: 'Una IA que puede procesar y relacionar información de múltiples tipos de datos, como texto, imágenes y sonido.' },
-            { id: '2', deckId: 'gen-12345', question: 'Nombra un modelo de IA para segmentación de imágenes.', answer: 'U-Net es una arquitectura de red neuronal convolucional popular para la segmentación de imágenes biomédicas.' },
+            { id: '1', deckId: 'gen-12345', atomo_id: "AI001", material_id: "MAT001", question: '¿Qué es una IA multimodal?', answer: 'Una IA que puede procesar y relacionar información de múltiples tipos de datos, como texto, imágenes y sonido.', concepto: 'IA Multimodal', descripcion: 'Una IA que puede procesar y relacionar información de múltiples tipos de datos, como texto, imágenes y sonido.', atomos_padre: [], formatos_presentacion: ["Identificación"], dificultad_inicial: "Fundamental" },
+            { id: '2', deckId: 'gen-12345', atomo_id: "AI002", material_id: "MAT001", question: 'Nombra un modelo de IA para segmentación de imágenes.', answer: 'U-Net es una arquitectura de red neuronal convolucional popular para la segmentación de imágenes biomédicas.', concepto: 'Modelo de Segmentación', descripcion: 'U-Net es una arquitectura de red neuronal convolucional popular para la segmentación de imágenes biomédicas.', atomos_padre: ["AI001"], formatos_presentacion: ["Ejemplificación"], dificultad_inicial: "Intermedio" },
         ],
         studyPlan: {
             plan: [
@@ -70,9 +70,17 @@ let createdProjects: Project[] = [
 ];
 
 const FlashcardSchema = z.object({
-  id: z.number().or(z.string()),
-  question: z.string().min(1),
-  answer: z.string().min(1),
+  id: z.string(),
+  deckId: z.string(),
+  question: z.string(),
+  answer: z.string(),
+  atomo_id: z.string(),
+  material_id: z.string(),
+  concepto: z.string(),
+  descripcion: z.string(),
+  atomos_padre: z.array(z.string()),
+  formatos_presentacion: z.array(z.string()),
+  dificultad_inicial: z.string(),
   image: z.string().optional(),
 });
 
@@ -227,25 +235,31 @@ export async function handleGenerateStudyPlan(input: { projectTitle: string, obj
 
 export async function handleCreateProject(
     projectDetails: ProjectDetails,
-    flashcards: Omit<FlashcardType, 'deckId'>[],
+    flashcards: FlashcardType[],
     studyPlan: StudyPlan
 ) {
-    const safeFlashcards = flashcards.map(fc => ({...fc, id: fc.id || Date.now()}));
-    const validation = CreateProjectInputSchema.safeParse(safeFlashcards);
+    if (!projectDetails.title || flashcards.length === 0) {
+        return { error: 'Project must have a title and at least one flashcard.' };
+    }
+    
+    const slug = createSlug(projectDetails.title);
+    const newProjectId = `gen-${Date.now()}`;
+
+    const processedFlashcards = flashcards.map(fc => ({
+      ...fc,
+      id: fc.id || fc.atomo_id,
+      deckId: newProjectId
+    }));
+
+    const validation = CreateProjectInputSchema.safeParse(processedFlashcards);
     
     if (!validation.success) {
         console.error("Invalid flashcard data:", validation.error.flatten());
         return { error: 'Invalid flashcard data provided.' };
     }
 
-    if (!projectDetails.title || validation.data.length === 0) {
-        return { error: 'Project must have a title and at least one flashcard.' };
-    }
-    
-    const slug = createSlug(projectDetails.title);
-
     const newProject: Project = {
-        id: `gen-${Date.now()}`,
+        id: newProjectId,
         slug: slug,
         title: projectDetails.title,
         description: projectDetails.description,
@@ -253,7 +267,7 @@ export async function handleCreateProject(
         author: 'User',
         size: validation.data.length,
         bibliography: [],
-        flashcards: validation.data.map(fc => ({...fc, id: fc.id.toString(), deckId: `gen-${Date.now()}`})),
+        flashcards: validation.data,
         studyPlan: studyPlan,
         isPublic: projectDetails.isPublic,
     };

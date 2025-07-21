@@ -51,12 +51,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import type { Flashcard as FlashcardType, StudyPlan, ProjectDetails } from '@/types';
 
-type Flashcard = {
-  id: number | string;
-  question: string;
-  answer: string;
-  image?: string;
-};
+type Flashcard = FlashcardType & { localId: number | string };
 
 // --- Step 1 Components ---
 
@@ -69,7 +64,7 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
             <span className="text-muted-foreground font-medium">{number}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => onCardDelete(card.id)}>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => onCardDelete(card.localId)}>
               <Trash2 className="h-5 w-5" />
             </Button>
           </div>
@@ -80,7 +75,7 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
               placeholder="Término" 
               className="bg-background/50 h-24 resize-none"
               value={card.question}
-              onChange={(e) => onCardChange(card.id, 'question', e.target.value)}
+              onChange={(e) => onCardChange(card.localId, 'question', e.target.value)}
             />
             <Label className="text-xs text-muted-foreground pl-2">TÉRMINO</Label>
           </div>
@@ -89,7 +84,7 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
                   placeholder="Definición" 
                   className="bg-background/50 h-24 resize-none"
                   value={card.answer}
-                  onChange={(e) => onCardChange(card.id, 'answer', e.target.value)}
+                  onChange={(e) => onCardChange(card.localId, 'answer', e.target.value)}
               />
               <Label className="text-xs text-muted-foreground pl-2">DEFINICIÓN</Label>
           </div>
@@ -102,7 +97,7 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
 type ImportSourceType = 'pdf' | 'powerpoint' | 'image' | 'notes' | 'youtube' | 'quizlet' | 'anki' | 'sheets' | 'web' | 'gizmo';
 type SourceInfo = { title: string; type: ImportSourceType; icon: React.ReactNode; isFileBased: boolean; accept?: string; multiple?: boolean; };
 
-const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
+const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Partial<FlashcardType>[]) => void }) => {
   const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube' | 'sheets' | 'web' | 'quizlet' | 'notes' | 'gizmo'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
 
@@ -589,8 +584,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             </Button>
             <div>
                 <DialogTitle>Importar desde {sourceName}</DialogTitle>
-                 <DialogDescriptionComponent asChild>
-                    <div>{instructions}</div>
+                 <DialogDescriptionComponent>
+                    {instructions}
                 </DialogDescriptionComponent>
             </div>
         </div>
@@ -692,33 +687,77 @@ const Step1_Input = ({ flashcards, setFlashcards, setProjectDetails, goToNext }:
     const [view, setView] = useState<'options' | 'editor'>('options');
     
     const addCard = () => {
-        setFlashcards(current => [...current, { id: Date.now(), question: '', answer: '' }]);
+        const newCard: Flashcard = {
+            localId: Date.now(),
+            id: `manual-${Date.now()}`,
+            atomo_id: `manual-${Date.now()}`,
+            material_id: 'manual',
+            question: '',
+            answer: '',
+            concepto: '',
+            descripcion: '',
+            atomos_padre: [],
+            formatos_presentacion: [],
+            dificultad_inicial: 'Intermedio',
+        };
+        setFlashcards(current => [...current, newCard]);
     };
     
-    const handleCardChange = (id: number | string, field: 'question' | 'answer', value: string) => {
-        setFlashcards(current => current.map(card => card.id === id ? { ...card, [field]: value } : card));
+    const handleCardChange = (localId: number | string, field: 'question' | 'answer', value: string) => {
+        setFlashcards(current => current.map(card => {
+            if (card.localId === localId) {
+                const updatedCard = { ...card, [field]: value };
+                // Sync question/answer with concepto/descripcion
+                if (field === 'question') updatedCard.concepto = value;
+                if (field === 'answer') updatedCard.descripcion = value;
+                return updatedCard;
+            }
+            return card;
+        }));
     };
 
-    const handleCardDelete = (id: number | string) => {
-        setFlashcards(current => current.filter(card => card.id !== id));
+    const handleCardDelete = (localId: number | string) => {
+        setFlashcards(current => current.filter(card => card.localId !== localId));
     };
 
     const handleProjectGenerated = (project: any) => {
-        const newFlashcards = project.flashcards.map((fc: any, index: number) => ({ ...fc, id: Date.now() + index }));
+        const newFlashcards = project.flashcards.map((fc: FlashcardType, index: number) => ({
+            ...fc,
+            localId: fc.id || `${Date.now()}-${index}`,
+            question: fc.concepto,
+            answer: fc.descripcion,
+        }));
         setFlashcards(newFlashcards);
         setProjectDetails({ title: project.title, description: project.description, category: project.category || '' });
         setView('editor');
     };
 
-    const handleProjectParsed = (title: string, cards: Omit<Flashcard, 'id'>[]) => {
-        const newFlashcards = cards.map((card, index) => ({ ...card, id: Date.now() + index }));
-        setFlashcards(newFlashcards);
+    const handleProjectParsed = (title: string, cards: Partial<FlashcardType>[]) => {
+        const newFlashcards = cards.map((card, index) => {
+            const localId = `${Date.now()}-${index}`;
+            return {
+                localId: localId,
+                id: localId,
+                atomo_id: `parsed-${localId}`,
+                material_id: 'parsed',
+                question: card.question || '',
+                answer: card.answer || '',
+                concepto: card.question || '',
+                descripcion: card.answer || '',
+                atomos_padre: [],
+                formatos_presentacion: [],
+                dificultad_inicial: 'Intermedio',
+            };
+        });
+        setFlashcards(newFlashcards as Flashcard[]);
         setProjectDetails({ title, description: `Un conjunto de ${cards.length} tarjetas importadas.`, category: 'Importado' });
         setView('editor');
     };
 
     const handleStartManualEntry = () => {
-        setFlashcards(current => current.length > 0 ? current : [{ id: 1, question: '', answer: '' }]);
+        if (flashcards.length === 0) {
+            addCard();
+        }
         setProjectDetails(current => current.title ? current : { title: '', description: '', category: '' });
         setView('editor');
     };
@@ -749,7 +788,7 @@ const Step1_Input = ({ flashcards, setFlashcards, setProjectDetails, goToNext }:
             <CardContent className="space-y-4">
                  <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                     {flashcards.map((card, index) => (
-                        <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} onCardDelete={handleCardDelete} />
+                        <FlashcardEditor key={card.localId} card={card} number={index + 1} onCardChange={handleCardChange} onCardDelete={handleCardDelete} />
                     ))}
                 </div>
                 <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
@@ -932,7 +971,7 @@ export default function CreateProjectWizardPage() {
       isPublic: false,
       isCreating: false,
   });
-  const [flashcards, setFlashcards] = useState<FlashcardType[]>([]);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -961,9 +1000,12 @@ export default function CreateProjectWizardPage() {
 
     setProjectDetails(p => ({ ...p, isCreating: true }));
 
+    // Strip localId before sending to server
+    const finalFlashcards = flashcards.map(({ localId, ...rest }) => rest);
+
     const result = await handleCreateProject(
         projectDetails,
-        flashcards,
+        finalFlashcards,
         studyPlan
     );
     
