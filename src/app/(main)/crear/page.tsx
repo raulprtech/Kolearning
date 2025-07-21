@@ -31,7 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject, handleQuizletUrlImport } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -160,9 +160,8 @@ const PasteImportControls = ({
 
 
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
-  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'quizletUrl'>('selection');
+  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
-  const [quizletUrl, setQuizletUrl] = useState('');
 
   const [fileName, setFileName] = useState('');
   const [fileContent, setFileContent] = useState('');
@@ -195,7 +194,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     if (source.isFileBased) {
       setView('upload');
     } else if (source.type === 'quizlet') {
-        setView('quizletUrl');
+        setView('paste');
     } else if (source.type === 'anki') {
         setView('anki');
     } else {
@@ -220,24 +219,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     fileInputRef.current?.click();
   };
   
-  const handleQuizletUrlImportClick = async () => {
-    if (!quizletUrl.trim()) {
-        toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL de Quizlet.' });
-        return;
-    }
-    setIsGenerating(true);
-    const result = await handleQuizletUrlImport(quizletUrl);
-    setIsGenerating(false);
-
-    if (result.error) {
-        toast({ variant: 'destructive', title: 'Error de Importación', description: result.error });
-    } else if (result.project) {
-        onProjectGenerated(result.project);
-        resetState();
-        toast({ title: '¡Set Importado!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
-    }
-  }
-
   const parseGizmoFile = (content: string): Omit<Flashcard, 'id'>[] => {
     const lines = content.split('\n').filter(line => line.trim() !== '');
     const cards: Omit<Flashcard, 'id'>[] = [];
@@ -333,7 +314,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setFileName('');
         setFileContent('');
         setPastedText('');
-        setQuizletUrl('');
         setIsGenerating(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -425,49 +405,12 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </div>
     </>
   );
-
-  const renderQuizletUrlView = () => (
-    <>
-      <DialogHeader className="p-6 pb-2">
-        <div className='flex items-center gap-2'>
-            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
-                <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-                <DialogTitle>Importar set de Quizlet</DialogTitle>
-                <DialogDescription>Introduce la URL del set que quieres importar.</DialogDescription>
-            </div>
-        </div>
-      </DialogHeader>
-      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
-          <Input 
-            placeholder='e.g. https://quizlet.com/...'
-            value={quizletUrl}
-            onChange={(e) => setQuizletUrl(e.target.value)}
-            disabled={isGenerating}
-          />
-          <Button 
-            variant="link" 
-            className="text-primary self-start p-0 h-auto"
-            onClick={() => setView('paste')}
-          >
-            Subida manual (para sets de 100+ tarjetas)
-          </Button>
-      </div>
-       <div className="flex justify-end p-6 pt-4 gap-2">
-          <Button variant="outline" onClick={() => setView('selection')} disabled={isGenerating}>Volver</Button>
-          <Button onClick={handleQuizletUrlImportClick} disabled={!quizletUrl.trim() || isGenerating}>
-              {isGenerating ? 'Importando...' : 'Confirmar'}
-          </Button>
-      </div>
-    </>
-  );
   
   const renderPasteView = () => (
     <>
       <DialogHeader className="p-6 pb-2">
         <div className='flex items-center gap-2'>
-            <Button variant="ghost" size="icon" onClick={() => selectedSource?.type === 'quizlet' ? setView('quizletUrl') : setView('selection')} className="shrink-0">
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
                 <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -541,7 +484,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
          {view === 'upload' && renderUploadView()}
          {view === 'paste' && renderPasteView()}
          {view === 'anki' && renderAnkiView()}
-         {view === 'quizletUrl' && renderQuizletUrlView()}
       </DialogContent>
     </Dialog>
   );
