@@ -8,6 +8,7 @@ import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-ques
 import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-options-for-question';
 import { z } from 'zod';
 import type { Project, Flashcard as FlashcardType } from '@/types';
+import { YoutubeTranscript } from 'youtube-transcript';
 
 // In-memory store for created projects
 let createdProjects: Project[] = [];
@@ -43,6 +44,31 @@ export async function handleGenerateProjectFromText(studyNotes: string) {
   } catch (error) {
     console.error('Error with project generation AI:', error);
     return { error: 'Sorry, I was unable to generate a project from your notes.' };
+  }
+}
+
+export async function handleGenerateProjectFromYouTubeUrl(videoUrl: string) {
+  if (!videoUrl) {
+    return { error: 'YouTube URL cannot be empty.' };
+  }
+
+  try {
+    const transcriptResponse = await YoutubeTranscript.fetchTranscript(videoUrl);
+    if (!transcriptResponse || transcriptResponse.length === 0) {
+      return { error: 'Could not fetch transcript for this video. It might be disabled.' };
+    }
+
+    const studyNotes = transcriptResponse.map(item => item.text).join(' ');
+    
+    const result = await generateDeckFromText({ studyNotes });
+    return { project: result };
+
+  } catch (error) {
+    console.error('Error with YouTube project generation:', error);
+    if (error instanceof Error && error.message.includes('@youtube-transcript')) {
+      return { error: 'This video ID is invalid or the video has no transcript.' };
+    }
+    return { error: 'Sorry, I was unable to generate a project from this video.' };
   }
 }
 

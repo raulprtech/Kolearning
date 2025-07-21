@@ -31,7 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -160,12 +160,13 @@ const PasteImportControls = ({
 
 
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
-  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki'>('selection');
+  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
 
   const [fileName, setFileName] = useState('');
   const [fileContent, setFileContent] = useState('');
   const [pastedText, setPastedText] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
   
   const [termSeparator, setTermSeparator] = useState('tab');
   const [customTermSeparator, setCustomTermSeparator] = useState('-');
@@ -197,6 +198,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setView('paste');
     } else if (source.type === 'anki') {
         setView('anki');
+    } else if (source.type === 'youtube') {
+        setView('youtube');
     } else {
       toast({ variant: 'destructive', title: 'Función no disponible', description: 'Esta opción de importación aún no está implementada.' });
     }
@@ -306,6 +309,25 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     }
   };
 
+  const handleYoutubeImport = async () => {
+    if (!youtubeUrl) {
+      toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL de YouTube.' });
+      return;
+    }
+    setIsGenerating(true);
+    
+    const result = await handleGenerateProjectFromYouTubeUrl(youtubeUrl);
+    setIsGenerating(false);
+
+    if (result.error) {
+      toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
+    } else if (result.project) {
+      onProjectGenerated(result.project);
+      resetState();
+      toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
+    }
+  };
+
   const resetState = () => {
     setIsOpen(false);
     setTimeout(() => {
@@ -314,6 +336,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setFileName('');
         setFileContent('');
         setPastedText('');
+        setYoutubeUrl('');
         setIsGenerating(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -462,17 +485,41 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
               className="h-40 resize-none"
           />
       </div>
-      <div className="flex justify-end p-6 pt-4 gap-2">
-            <Button variant="outline" onClick={() => setView('selection')}>
-                Volver
-            </Button>
+      <div className="flex justify-end p-6 pt-4">
           <Button onClick={handlePastedTextImport} disabled={isGenerating || !pastedText}>
               {isGenerating ? 'Importando...' : 'Confirmar'}
           </Button>
       </div>
     </>
   );
-
+  
+  const renderYoutubeView = () => (
+    <>
+      <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Importar desde YouTube</DialogTitle>
+                <DialogDescription>Pega la URL del video y Koli creará las tarjetas de estudio.</DialogDescription>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
+        <Input 
+          placeholder="https://www.youtube.com/watch?v=..."
+          value={youtubeUrl}
+          onChange={(e) => setYoutubeUrl(e.target.value)}
+        />
+      </div>
+      <div className="flex justify-end p-6 pt-4">
+          <Button onClick={handleYoutubeImport} disabled={isGenerating || !youtubeUrl} className="w-full">
+              {isGenerating ? 'Generando...' : 'Generar con IA'}
+          </Button>
+      </div>
+    </>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -484,6 +531,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
          {view === 'upload' && renderUploadView()}
          {view === 'paste' && renderPasteView()}
          {view === 'anki' && renderAnkiView()}
+         {view === 'youtube' && renderYoutubeView()}
       </DialogContent>
     </Dialog>
   );
