@@ -160,8 +160,9 @@ const PasteImportControls = ({
 
 
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
-  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki'>('selection');
+  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'quizletUrl'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
+  const [quizletUrl, setQuizletUrl] = useState('');
 
   const [fileName, setFileName] = useState('');
   const [fileContent, setFileContent] = useState('');
@@ -194,7 +195,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     if (source.isFileBased) {
       setView('upload');
     } else if (source.type === 'quizlet') {
-        setView('paste');
+        setView('quizletUrl');
     } else if (source.type === 'anki') {
         setView('anki');
     } else {
@@ -218,6 +219,10 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const handleFileClick = () => {
     fileInputRef.current?.click();
   };
+  
+  const handleQuizletUrlImport = () => {
+    toast({ variant: 'destructive', title: 'Función no disponible', description: 'La importación desde URL de Quizlet todavía no está implementada.' });
+  }
 
   const parseGizmoFile = (content: string): Omit<Flashcard, 'id'>[] => {
     const lines = content.split('\n').filter(line => line.trim() !== '');
@@ -405,12 +410,48 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </div>
     </>
   );
+
+  const renderQuizletUrlView = () => (
+    <>
+      <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Importar set de Quizlet</DialogTitle>
+                <DialogDescription>Introduce la URL del set que quieres importar.</DialogDescription>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
+          <Input 
+            placeholder='e.g. https://quizlet.com/...'
+            value={quizletUrl}
+            onChange={(e) => setQuizletUrl(e.target.value)}
+          />
+          <Button 
+            variant="link" 
+            className="text-primary self-start p-0 h-auto"
+            onClick={() => setView('paste')}
+          >
+            Subida manual (para sets de 100+ tarjetas)
+          </Button>
+      </div>
+       <div className="flex justify-end p-6 pt-4 gap-2">
+          <Button variant="outline" onClick={() => setView('selection')}>Volver</Button>
+          <Button onClick={handleQuizletUrlImport} disabled={!quizletUrl.trim()}>
+              Confirmar
+          </Button>
+      </div>
+    </>
+  );
   
   const renderPasteView = () => (
     <>
       <DialogHeader className="p-6 pb-2">
         <div className='flex items-center gap-2'>
-            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+            <Button variant="ghost" size="icon" onClick={() => selectedSource?.type === 'quizlet' ? setView('quizletUrl') : setView('selection')} className="shrink-0">
                 <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -484,6 +525,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
          {view === 'upload' && renderUploadView()}
          {view === 'paste' && renderPasteView()}
          {view === 'anki' && renderAnkiView()}
+         {view === 'quizletUrl' && renderQuizletUrlView()}
       </DialogContent>
     </Dialog>
   );
@@ -561,15 +603,14 @@ export default function CreateProjectPage() {
             description: "Tu proyecto ha sido creado."
         });
         router.push(`/proyecto/${result.slug}/details`);
-        setIsCreating(false);
     } else {
         toast({
             variant: "destructive",
             title: "Error al crear el proyecto",
             description: result?.error || "Ocurrió un error inesperado."
         });
-        setIsCreating(false);
     }
+    setIsCreating(false);
   };
 
   return (
