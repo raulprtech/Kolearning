@@ -32,7 +32,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -165,7 +165,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
 
   const [fileName, setFileName] = useState('');
-  const [fileContent, setFileContent] = useState('');
+  const [fileContent, setFileContent] = useState<string | ArrayBuffer | null>(null); // Can be text or data URI
+  
   const [pastedText, setPastedText] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   
@@ -208,14 +209,17 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (file && selectedSource) {
       setFileName(file.name);
       const reader = new FileReader();
       reader.onload = (e) => {
-        const text = e.target?.result as string;
-        setFileContent(text);
+        setFileContent(e.target?.result || null);
       };
-      reader.readAsText(file);
+      if (selectedSource.type === 'pdf') {
+          reader.readAsDataURL(file); // Read as Data URL for PDFs
+      } else {
+          reader.readAsText(file); // Read as text for other files
+      }
     }
   };
   
@@ -224,8 +228,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   };
   
   const handleGizmoImport = async () => {
-    if (!fileContent) {
-      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo.' });
+    if (!fileContent || typeof fileContent !== 'string') {
+      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo de texto.' });
       return;
     }
     setIsGenerating(true);
@@ -266,8 +270,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   };
 
   const handleAiImport = async () => {
-    if (!fileContent) {
-      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo para generar tarjetas.' });
+    if (!fileContent || typeof fileContent !== 'string') {
+      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo de texto para generar tarjetas.' });
       return;
     }
     setIsGenerating(true);
@@ -284,6 +288,25 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
     }
   };
+
+  const handlePdfImport = async () => {
+    if (!fileContent || typeof fileContent !== 'string') {
+        toast({ variant: 'destructive', title: 'Archivo no válido', description: 'Por favor, sube un archivo PDF.' });
+        return;
+    }
+    setIsGenerating(true);
+    const result = await handleGenerateProjectFromPdf(fileContent, fileName);
+    setIsGenerating(false);
+
+    if (result.error) {
+      toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
+    } else if (result.project) {
+      onProjectGenerated(result.project);
+      resetState();
+      toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
+    }
+  };
+
 
   const handleYoutubeImport = async () => {
     if (!youtubeUrl) {
@@ -396,6 +419,10 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             <Button onClick={handleGizmoImport} disabled={isGenerating || !fileContent} className="w-full">
                 {isGenerating ? 'Importando...' : 'Importar Tarjetas'}
             </Button>
+          ) : selectedSource?.type === 'pdf' ? (
+            <Button onClick={handlePdfImport} disabled={isGenerating || !fileContent} className="w-full">
+                {isGenerating ? 'Generando desde PDF...' : 'Generar con IA'}
+            </Button>
           ) : (
              <Button onClick={handleAiImport} disabled={isGenerating || !fileContent} className="w-full">
                 {isGenerating ? 'Generando...' : 'Generar con IA'}
@@ -506,7 +533,9 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             </Button>
             <div>
                 <DialogTitle>Importar desde Hoja de Cálculo</DialogTitle>
-                <DialogDescription>Cada fila debe tener 1 columna (para tarjetas simples) o 2 columnas (para anverso y reverso).</DialogDescription>
+                <DialogDescription>
+                  Cada fila debe tener 1 columna (para tarjetas simples) o 2 columnas (para anverso y reverso).
+                </DialogDescription>
             </div>
         </div>
       </DialogHeader>
@@ -575,11 +604,12 @@ export default function CreateProjectPage() {
     setFlashcards(newFlashcards);
   };
 
-  const handleProjectParsed = (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[]) => {
+  const handleProjectParsed = async (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[] | Promise<Omit<Flashcard, 'id'>[]>) => {
+    const resolvedCards = await parsedCards;
     setTitle(parsedTitle);
-    setDescription(`Un conjunto de ${parsedCards.length} tarjetas importadas.`);
+    setDescription(`Un conjunto de ${resolvedCards.length} tarjetas importadas.`);
     setCategory('Importado');
-    const newFlashcards = parsedCards.map((card, index) => ({
+    const newFlashcards = resolvedCards.map((card, index) => ({
         ...card,
         id: Date.now() + index
     }));
@@ -697,5 +727,3 @@ export default function CreateProjectPage() {
     </div>
   );
 }
-
-    

@@ -10,9 +10,10 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { Document } from '@genkit-ai/googleai';
 
 const GenerateDeckFromTextInputSchema = z.object({
-  studyNotes: z.string().describe('The study notes to generate a flashcard deck from. Can include Markdown and LaTeX.'),
+  studyNotes: z.string().describe('The study notes to generate a flashcard deck from. Can be plain text, Markdown, LaTeX, or a Data URI for a PDF.'),
 });
 export type GenerateDeckFromTextInput = z.infer<typeof GenerateDeckFromTextInputSchema>;
 
@@ -44,7 +45,7 @@ const prompt = ai.definePrompt({
       },
     ],
   },
-  prompt: `You are an expert at creating study materials. Your task is to analyze the following study notes and convert them into a structured flashcard deck. The notes may include Markdown for formatting and LaTeX for mathematical formulas.
+  prompt: `You are an expert at creating study materials. Your task is to analyze the following study notes and convert them into a structured flashcard deck. The notes may be plain text, include Markdown for formatting, LaTeX for mathematical formulas, or be a full document like a PDF.
 
 Based on the content, generate a suitable title and a one-sentence description for the deck.
 
@@ -56,9 +57,11 @@ ${JSON.stringify(GenerateDeckFromTextOutputSchema.shape, null, 2)}
 \`\`\`
 
 Study Notes:
-"""
-{{studyNotes}}
-"""
+{{#if (stringStartsWith studyNotes "data:")}}
+{{media url=studyNotes}}
+{{else}}
+{{{studyNotes}}}
+{{/if}}
 `,
 });
 

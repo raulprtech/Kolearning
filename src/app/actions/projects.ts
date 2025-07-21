@@ -31,6 +31,19 @@ function createSlug(title: string) {
       .replace(/-+/g, '-'); // remove consecutive hyphens
 }
 
+export async function handleGenerateProjectFromPdf(pdfDataUri: string, fileName: string) {
+  if (!pdfDataUri) {
+    return { error: 'PDF data cannot be empty.' };
+  }
+  
+  try {
+    const result = await generateDeckFromText({ studyNotes: pdfDataUri });
+    return { project: result };
+  } catch (error) {
+    console.error('Error with PDF project generation:', error);
+    return { error: 'Sorry, I was unable to generate a project from your PDF.' };
+  }
+}
 
 export async function handleGenerateProjectFromText(studyNotes: string) {
   if (!studyNotes) {
