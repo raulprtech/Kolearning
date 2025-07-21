@@ -14,18 +14,10 @@ import {
   Undo, 
   Redo, 
   Trash2, 
-  GripVertical, 
   Wand2, 
-  ImageIcon,
-  PlusCircle,
-  FileText,
-  Lock,
-  Mic,
-  Palette,
-  Type,
+  UploadCloud,
   ZoomIn,
-  ZoomOut,
-  UploadCloud
+  ZoomOut
 } from 'lucide-react';
 import {
   Dialog,
@@ -34,14 +26,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose
 } from '@/components/ui/dialog';
 import { handleGenerateDeckFromText } from '@/app/actions/decks';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import 'katex/dist/katex.min.css';
 import { useToast } from '@/hooks/use-toast';
@@ -62,9 +52,6 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
             <span className="text-muted-foreground font-medium">{number}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="cursor-grab">
-              <GripVertical className="h-5 w-5 text-muted-foreground" />
-            </Button>
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => onCardDelete(card.id)}>
               <Trash2 className="h-5 w-5" />
             </Button>
@@ -80,22 +67,14 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
             />
             <Label className="text-xs text-muted-foreground pl-2">TÉRMINO</Label>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 grid gap-2">
-                <Textarea
-                    placeholder="Definición" 
-                    className="bg-background/50 h-24 resize-none"
-                    value={card.answer}
-                    onChange={(e) => onCardChange(card.id, 'answer', e.target.value)}
-                />
-                <Label className="text-xs text-muted-foreground pl-2">DEFINICIÓN</Label>
-            </div>
-            <div className="grid gap-2 text-center">
-                <button className="h-12 w-24 border-2 border-dashed border-muted-foreground/50 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
-                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                </button>
-                 <Label className="text-xs text-muted-foreground">IMAGEN</Label>
-            </div>
+          <div className="flex-1 grid gap-2">
+              <Textarea
+                  placeholder="Definición" 
+                  className="bg-background/50 h-24 resize-none"
+                  value={card.answer}
+                  onChange={(e) => onCardChange(card.id, 'answer', e.target.value)}
+              />
+              <Label className="text-xs text-muted-foreground pl-2">DEFINICIÓN</Label>
           </div>
         </div>
       </CardContent>
@@ -132,8 +111,7 @@ const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) =>
     fileInputRef.current?.click();
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async () => {
     if (!fileContent) {
       toast({
         variant: 'destructive',
@@ -176,7 +154,7 @@ const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) =>
             Sube un archivo y la IA creará las tarjetas de estudio por ti.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col md:flex-row gap-6 p-6 pt-4 min-h-0">
+        <div className="flex-1 flex flex-col md:flex-row gap-6 p-6 pt-4 min-h-0">
           <div className="flex-1 min-h-0 flex flex-col">
             <div 
               className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
@@ -204,7 +182,7 @@ const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) =>
                   <Button type="button" variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
                 </div>
               </div>
-              <CardContent className="p-4 flex-grow">
+              <CardContent className="p-4 flex-grow overflow-auto">
                 {fileContent ? (
                   <div className={cn('prose prose-invert max-w-none', sizeClasses[previewSize])}>
                     <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
@@ -220,11 +198,11 @@ const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) =>
             </Card>
           </div>
           <div className="md:col-span-2 flex justify-end absolute bottom-6 right-6">
-            <Button type="submit" disabled={isGenerating}>
+            <Button onClick={handleSubmit} disabled={isGenerating}>
               {isGenerating ? 'Generando...' : 'Generar Tarjetas'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
