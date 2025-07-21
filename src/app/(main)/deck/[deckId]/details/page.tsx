@@ -29,48 +29,12 @@ import {
 import type { Deck, Flashcard } from '@/types';
 import { getGeneratedDeck } from '@/app/actions/decks';
 
-// Mock data fetching functions - in a real app, these would fetch from a database
 async function getDeckDetails(deckId: string): Promise<(Deck & { flashcards?: Flashcard[] }) | null> {
   // For generated decks, fetch from our temporary store
   if (deckId.startsWith('gen-')) {
     return getGeneratedDeck(deckId);
   }
-
-  // Fallback for other decks (if any were created differently)
-  const mockDecks: Record<string, Deck> = {
-    '1': {
-      id: '1',
-      title: 'JavaScript Fundamentals',
-      description:
-        'Master the basics of JavaScript programming with essential concepts and syntax.',
-      category: 'Programming',
-      author: 'User',
-      size: 20,
-      bibliography: ['"JavaScript: The Good Parts" by Douglas Crockford'],
-    },
-    '2': {
-      id: '2',
-      title: 'React Essentials',
-      description:
-        'Learn the core concepts of React including components, props, state, and hooks.',
-      category: 'Programming',
-      author: 'User',
-      size: 25,
-      bibliography: ['Official React Documentation'],
-    },
-    '3': {
-      id: '3',
-      title: 'Web Development Basics',
-      description:
-        'Fundamental concepts every web developer should know about HTML, CSS, and web technologies.',
-      category: 'Web Development',
-      author: 'User',
-      size: 30,
-      bibliography: [],
-    },
-  };
-
-  return mockDecks[deckId] || null;
+  return null;
 }
 
 const sessions = [
@@ -80,10 +44,11 @@ const sessions = [
 ];
 
 export default async function DeckDetailsPage({
-  params: { deckId },
+  params,
 }: {
   params: { deckId: string };
 }) {
+  const { deckId } = params;
   const deck = await getDeckDetails(deckId);
 
   if (!deck) {
