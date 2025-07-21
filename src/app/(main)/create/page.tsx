@@ -85,7 +85,7 @@ const FlashcardEditor = ({ card, number }: { card: Flashcard; number: number }) 
 };
 
 
-export default function CreateUnitPage() {
+export default function CreateProjectPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [flashcards, setFlashcards] = useState<Flashcard[]>([
@@ -107,7 +107,7 @@ export default function CreateUnitPage() {
         {/* Header */}
         <header className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Crear una nueva unidad</h1>
+            <h1 className="text-3xl font-bold">Crear un nuevo proyecto</h1>
             <p className="text-sm text-muted-foreground">Guardada hace menos de 1 minuto</p>
           </div>
           <div className="flex items-center gap-2">
