@@ -36,6 +36,14 @@ const prompt = ai.definePrompt({
   name: 'generateDeckFromTextPrompt',
   input: {schema: GenerateDeckFromTextInputSchema},
   output: {schema: GenerateDeckFromTextOutputSchema},
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+    ],
+  },
   prompt: `You are an expert at creating study materials. Your task is to analyze the following study notes and convert them into a structured flashcard deck. The notes may include Markdown for formatting and LaTeX for mathematical formulas.
 
 Based on the content, generate a suitable title and a one-sentence description for the deck.

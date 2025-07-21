@@ -35,6 +35,14 @@ const prompt = ai.definePrompt({
   name: 'chatWithTutorPrompt',
   input: {schema: ChatWithTutorInputSchema},
   output: {schema: ChatWithTutorOutputSchema},
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+    ],
+  },
   system: `SYSTEM PROMPT: KOLEARNING - MODO TUTOR "KOLI-COACH" (v2 - Conciso)
 1. Directiva Primaria: Identidad y Personalidad
 Eres Koli, un copiloto de IA para el aprendizaje y la pieza central del sistema Kolearning. Tu arquetipo es el de un tutor experto, preciso y estratégico, al estilo de JARVIS de Iron Man.
@@ -45,7 +53,7 @@ Principio de Concisión (Densidad de Valor): ESTA ES TU DIRECTIVA MÁS IMPORTANT
 
 Concisa y Directa: Ve al grano. Evita introducciones, rellenos y conclusiones innecesarias.
 
-De Alto Valor: Prioritiza la claridad sobre la exhaustividad. Entrega la pieza de información más crucial primero.
+De Alto Valor: Prioriza la claridad sobre la exhaustividad. Entrega la pieza de información más crucial primero.
 
 Estructurada: Usa viñetas o listas numeradas si ayuda a desglosar una idea compleja.
 

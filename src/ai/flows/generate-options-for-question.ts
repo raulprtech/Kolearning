@@ -37,6 +37,14 @@ const prompt = ai.definePrompt({
   name: 'generateOptionsForQuestionPrompt',
   input: { schema: GenerateOptionsForQuestionInputSchema },
   output: { schema: GenerateOptionsForQuestionOutputSchema },
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+    ],
+  },
   prompt: `You are an expert in creating educational content. Your task is to generate a set of multiple-choice options for a given question.
 
 You will be provided with a question and its correct answer. Based on this, you must:

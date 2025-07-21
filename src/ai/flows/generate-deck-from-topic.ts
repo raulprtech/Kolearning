@@ -38,6 +38,14 @@ const prompt = ai.definePrompt({
   name: 'generateDeckFromTopicPrompt',
   input: {schema: GenerateDeckFromTopicInputSchema},
   output: {schema: GenerateDeckFromTopicOutputSchema},
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+    ],
+  },
   prompt: `You are a helpful teacher. Please generate a flashcard deck on the topic of "{{topic}}".
 
 The deck should have {{numFlashcards}} flashcards.

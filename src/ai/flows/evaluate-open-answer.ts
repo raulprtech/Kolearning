@@ -42,6 +42,14 @@ const prompt = ai.definePrompt({
   name: 'evaluateOpenAnswerPrompt',
   input: { schema: EvaluateOpenAnswerInputSchema },
   output: { schema: EvaluateOpenAnswerOutputSchema },
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+    ],
+  },
   prompt: `You are an expert evaluator for a learning application. Your task is to assess a user's answer to a question and provide constructive, personalized feedback.
 
 Analyze the user's answer and determine if it is substantially correct when compared to the provided correct answer. Minor differences in wording are acceptable as long as the core concepts are accurate.
