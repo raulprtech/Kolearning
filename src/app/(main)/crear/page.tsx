@@ -678,73 +678,80 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
 };
 
 
-const Step1_Input = ({ setFlashcards, setProjectDetails, goToNext }: { setFlashcards: (cards: Flashcard[]) => void, setProjectDetails: (details: any) => void, goToNext: () => void }) => {
-    const [showManual, setShowManual] = useState(false);
-    const [manualFlashcards, setManualFlashcards] = useState<Flashcard[]>([{ id: 1, question: '', answer: '' }]);
-
+const Step1_Input = ({ flashcards, setFlashcards, setProjectDetails, goToNext }: { flashcards: Flashcard[], setFlashcards: (cards: Flashcard[]) => void, setProjectDetails: (details: any) => void, goToNext: () => void }) => {
+    const [view, setView] = useState<'options' | 'editor'>('options');
+    
     const addCard = () => {
-        setManualFlashcards(current => [...current, { id: Date.now(), question: '', answer: '' }]);
+        setFlashcards(current => [...current, { id: Date.now(), question: '', answer: '' }]);
     };
     
     const handleCardChange = (id: number | string, field: 'question' | 'answer', value: string) => {
-        setManualFlashcards(current => current.map(card => card.id === id ? { ...card, [field]: value } : card));
+        setFlashcards(current => current.map(card => card.id === id ? { ...card, [field]: value } : card));
     };
 
     const handleCardDelete = (id: number | string) => {
-        setManualFlashcards(current => current.filter(card => card.id !== id));
+        setFlashcards(current => current.filter(card => card.id !== id));
     };
 
     const handleProjectGenerated = (project: any) => {
         const newFlashcards = project.flashcards.map((fc: any, index: number) => ({ ...fc, id: Date.now() + index }));
         setFlashcards(newFlashcards);
         setProjectDetails({ title: project.title, description: project.description, category: project.category || '' });
-        goToNext();
+        setView('editor');
     };
 
     const handleProjectParsed = (title: string, cards: Omit<Flashcard, 'id'>[]) => {
         const newFlashcards = cards.map((card, index) => ({ ...card, id: Date.now() + index }));
         setFlashcards(newFlashcards);
         setProjectDetails({ title, description: `Un conjunto de ${cards.length} tarjetas importadas.`, category: 'Importado' });
-        goToNext();
+        setView('editor');
     };
 
-    const handleContinueWithManual = () => {
-        if (manualFlashcards.some(fc => !fc.question.trim() || !fc.answer.trim())) {
-            // Optional: Add toast notification
-            return;
-        }
-        setFlashcards(manualFlashcards);
+    const handleStartManualEntry = () => {
+        setFlashcards([{ id: 1, question: '', answer: '' }]);
         setProjectDetails({ title: '', description: '', category: '' });
-        goToNext();
+        setView('editor');
     };
+
+    if (view === 'options') {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Ingresa tu material de estudio</CardTitle>
+                    <CardDescription>Importa tu material usando IA o agrégalo manualmente.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center gap-4">
+                    <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
+                    <Button variant="outline" size="lg" onClick={handleStartManualEntry}>
+                        <PencilIcon className="mr-2 h-5 w-5" /> Agregar manualmente
+                    </Button>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Ingresa tu material de estudio</CardTitle>
-                <CardDescription>Importa tu material usando IA o agrégalo manualmente.</CardDescription>
+                <CardTitle>Revisa tus Tarjetas</CardTitle>
+                <CardDescription>Añade, edita o elimina tarjetas para perfeccionar tu mazo de estudio.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
-                <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
-                <Button variant="outline" size="lg" onClick={() => setShowManual(prev => !prev)}>
-                    <PencilIcon className="mr-2 h-5 w-5" /> Agregar manualmente
+            <CardContent className="space-y-4">
+                 <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                    {flashcards.map((card, index) => (
+                        <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} onCardDelete={handleCardDelete} />
+                    ))}
+                </div>
+                <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
+                    <Plus className="mr-2 h-5 w-5" /> Añadir tarjeta
                 </Button>
-                {showManual && (
-                    <div className="w-full mt-4 space-y-4">
-                        <div className="space-y-4">
-                            {manualFlashcards.map((card, index) => (
-                                <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} onCardDelete={handleCardDelete} />
-                            ))}
-                        </div>
-                        <Button variant="outline" className="w-full h-12 border-dashed" onClick={addCard}>
-                            <Plus className="mr-2 h-5 w-5" /> Añadir tarjeta
-                        </Button>
-                        <Button onClick={handleContinueWithManual} className="w-full">
-                            Continuar con tarjetas manuales <ChevronRight className="ml-2 h-4 w-4" />
-                        </Button>
-                    </div>
-                )}
             </CardContent>
+            <CardFooter className="flex justify-between">
+                <Button variant="ghost" onClick={() => setView('options')}><ChevronLeft className="mr-2 h-4 w-4"/> Volver</Button>
+                <Button onClick={goToNext} disabled={flashcards.length === 0}>
+                    Continuar al siguiente paso <ChevronRight className="ml-2 h-4 w-4"/>
+                </Button>
+            </CardFooter>
         </Card>
     );
 };
@@ -971,6 +978,7 @@ export default function CreateProjectWizardPage() {
     switch (step) {
       case 1:
         return <Step1_Input 
+            flashcards={flashcards}
             setFlashcards={setFlashcards} 
             setProjectDetails={(details) => setProjectDetails(current => ({...current, ...details}))} 
             goToNext={goToNext} 
@@ -1010,4 +1018,3 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
-
