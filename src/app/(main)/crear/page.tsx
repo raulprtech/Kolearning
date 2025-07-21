@@ -32,7 +32,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogDescription as DialogDescriptionComponent
 } from '@/components/ui/dialog';
 import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
@@ -751,7 +750,7 @@ const Step1_Input = ({ setFlashcards, setProjectDetails, goToNext }: { setFlashc
 
 // --- Step 2 Components ---
 
-const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, goToNext }: { projectDetails: any, setProjectDetails: (details: any) => void, flashcards: Flashcard[], goBack: () => void, goToNext: () => void }) => {
+const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, goToNext }: { projectDetails: ProjectDetails, setProjectDetails: (details: ProjectDetails) => void, flashcards: Flashcard[], goBack: () => void, goToNext: () => void }) => {
     const { title, description, category, isPublic } = projectDetails;
     const [isRefining, setIsRefining] = useState(false);
     const { toast } = useToast();
@@ -778,6 +777,10 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
       setIsRefining(false);
     };
 
+    const handleDetailsChange = (field: keyof ProjectDetails, value: string | boolean) => {
+        setProjectDetails({ ...projectDetails, [field]: value });
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -787,19 +790,19 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
             <CardContent className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="title">Título</Label>
-                    <Input id="title" placeholder="e.g., Fundamentos de JavaScript" value={title} onChange={(e) => setProjectDetails({ ...projectDetails, title: e.target.value })} />
+                    <Input id="title" placeholder="e.g., Fundamentos de JavaScript" value={title} onChange={(e) => handleDetailsChange('title', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="description">Descripción</Label>
-                    <Textarea id="description" placeholder="Un breve resumen de lo que aprenderás." value={description} onChange={(e) => setProjectDetails({ ...projectDetails, description: e.target.value })} />
+                    <Textarea id="description" placeholder="Un breve resumen de lo que aprenderás." value={description} onChange={(e) => handleDetailsChange('description', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="category">Categoría</Label>
-                    <Input id="category" placeholder="e.g., Programación, Historia" value={category} onChange={(e) => setProjectDetails({ ...projectDetails, category: e.target.value })} />
+                    <Input id="category" placeholder="e.g., Programación, Historia" value={category} onChange={(e) => handleDetailsChange('category', e.target.value)} />
                 </div>
                 <div className="flex items-center justify-between">
                     <Label htmlFor="visibility">¿Hacer público?</Label>
-                    <Switch id="visibility" checked={isPublic} onCheckedChange={(checked) => setProjectDetails({ ...projectDetails, isPublic: checked })} />
+                    <Switch id="visibility" checked={isPublic} onCheckedChange={(checked) => handleDetailsChange('isPublic', checked)} />
                 </div>
                 <Button variant="outline" onClick={handleRefine} disabled={isRefining} className="w-full">
                   <Bot className="mr-2 h-4 w-4" />
@@ -911,7 +914,7 @@ export default function CreateProjectWizardPage() {
       isPublic: false,
       isCreating: false,
   });
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [flashcards, setFlashcards] = useState<FlashcardType[]>([]);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -941,9 +944,7 @@ export default function CreateProjectWizardPage() {
     setProjectDetails(p => ({ ...p, isCreating: true }));
 
     const result = await handleCreateProject(
-        projectDetails.title,
-        projectDetails.description,
-        projectDetails.category,
+        projectDetails,
         flashcards,
         studyPlan
     );
@@ -968,11 +969,26 @@ export default function CreateProjectWizardPage() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1_Input setFlashcards={setFlashcards} setProjectDetails={setProjectDetails} goToNext={goToNext} />;
+        return <Step1_Input 
+            setFlashcards={setFlashcards} 
+            setProjectDetails={(details) => setProjectDetails(current => ({...current, ...details}))} 
+            goToNext={goToNext} 
+        />;
       case 2:
-        return <Step2_Details projectDetails={projectDetails} setProjectDetails={setProjectDetails} flashcards={flashcards} goBack={goBack} goToNext={goToNext} />;
+        return <Step2_Details 
+            projectDetails={projectDetails} 
+            setProjectDetails={setProjectDetails} 
+            flashcards={flashcards} 
+            goBack={goBack} 
+            goToNext={goToNext} 
+        />;
       case 3:
-        return <Step3_Plan projectDetails={projectDetails} flashcards={flashcards} goBack={goBack} createProject={handleCreateFinalProject} />;
+        return <Step3_Plan 
+            projectDetails={projectDetails} 
+            flashcards={flashcards} 
+            goBack={goBack} 
+            createProject={handleCreateFinalProject} 
+        />;
       default:
         return <div>Paso desconocido</div>;
     }

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ProjectCard } from '@/components/deck/ProjectCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,54 +20,8 @@ import {
 } from '@/components/ui/popover';
 import type { Project } from '@/types';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import { getAllProjects } from '@/app/actions/projects';
 
-// In a real app, this would be an API call. For now, we define the data here.
-const allProjects: Project[] = [
-  {
-    id: '1',
-    slug: 'algebra-basica',
-    title: 'Álgebra Básica',
-    description: 'Aprende los fundamentos del álgebra.',
-    category: 'Matemáticas',
-    author: 'Kolearning',
-    school: 'Universidad Politécnica',
-    size: 6,
-    bibliography: ['"Algebra for Dummies" by Mary Jane Sterling'],
-  },
-  {
-    id: '2',
-    slug: 'capitales-del-mundo',
-    title: 'Capitales del Mundo',
-    description: 'Pon a prueba tu conocimiento de las capitales del mundo.',
-    category: 'Geografía',
-    author: 'Kolearning',
-    school: 'Instituto Global',
-    size: 5,
-    bibliography: ['National Geographic Atlas of the World'],
-  },
-  {
-    id: '3',
-    slug: 'vocabulario-de-espanol',
-    title: 'Vocabulario de Español',
-    description: 'Amplía tu vocabulario en español.',
-    category: 'Idiomas',
-    author: 'Community',
-    school: 'Centro de Idiomas',
-    size: 7,
-    bibliography: ['"Madrigal\'s Magic Key to Spanish" by Margarita Madrigal'],
-  },
-  {
-    id: '4',
-    slug: 'conceptos-de-programacion',
-    title: 'Conceptos de Programación',
-    description: 'Bases de la programación, algoritmos y estructuras de datos.',
-    category: 'Programación',
-    author: 'Kolearning',
-    school: 'Universidad Politécnica',
-    size: 15,
-    bibliography: [],
-  },
-];
 
 export default function ProyectosPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,8 +31,19 @@ export default function ProyectosPage() {
   const [searchResults, setSearchResults] = useState<Project[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
 
-  const recommendedProjects = useMemo(() => allProjects.slice(0, 3), []);
+  useEffect(() => {
+    getAllProjects().then(projects => {
+        setAllProjects(projects.filter(p => p.isPublic || p.author === 'Kolearning'));
+    });
+  }, []);
+
+  const recommendedProjects = useMemo(() => {
+    return allProjects
+        .filter(p => p.author === 'Kolearning')
+        .slice(0, 3)
+  }, [allProjects]);
 
   const normalizeText = (text: string) =>
     text

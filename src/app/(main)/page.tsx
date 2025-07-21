@@ -10,51 +10,7 @@ import { DashboardProjectCard } from '@/components/deck/DashboardProjectCard';
 import { Progress } from '@/components/ui/progress';
 import { useUser } from '@/context/UserContext';
 import { useEffect, useState } from 'react';
-
-// In a real app, this would be an API call. For now, we define the data here.
-const myProjectsData: Project[] = [
-    {
-      id: '1',
-      slug: 'javascript-fundamentals',
-      title: 'JavaScript Fundamentals',
-      description: 'Master the basics of JavaScript programming with essential concepts and syntax.',
-      category: 'Programming',
-      author: 'User',
-      size: 20,
-      bibliography: [],
-    },
-    {
-      id: '2',
-      slug: 'react-essentials',
-      title: 'React Essentials',
-      description: 'Learn the core concepts of React including components, props, state, and hooks.',
-      category: 'Programming',
-      author: 'User',
-      size: 25,
-      bibliography: [],
-    },
-    {
-      id: '3',
-      slug: 'web-development-basics',
-      title: 'Web Development Basics',
-      description: 'Fundamental concepts every web developer should know about HTML, CSS, and web technologies.',
-      category: 'Web Development',
-      author: 'User',
-      size: 30,
-      bibliography: [],
-    },
-     {
-      id: 'gen-12345',
-      slug: 'plan-de-estudio-ia-tumores-renales',
-      title: 'Plan de Estudio: IA para Segmentación de Tumores Renales',
-      description: 'Plan de estudio para comprender el estado del arte en el uso de la Inteligencia Artificial para la segmentación de tumores renales, incluyendo aspectos multimodales, optimización y despliegue en hardware.',
-      category: 'AI',
-      author: 'AI',
-      size: 15,
-      bibliography: [],
-    },
-  ];
-
+import { getAllProjects } from '@/app/actions/projects';
 
 export default function DashboardPage() {
     const { user } = useUser();
@@ -62,7 +18,7 @@ export default function DashboardPage() {
 
     useEffect(() => {
         // Simulating async fetch
-        setMyProjects(myProjectsData);
+        getAllProjects().then(setMyProjects);
     }, []);
 
     const currentStreak = user?.currentStreak ?? 0;

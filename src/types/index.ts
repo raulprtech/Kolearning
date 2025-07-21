@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 import { Timestamp } from 'firebase/firestore';
 
@@ -38,6 +39,7 @@ export interface Project {
   school?: string;
   size: number;
   bibliography: string[];
+  isPublic: boolean;
   flashcards?: Flashcard[];
   studyPlan?: StudyPlan;
 }

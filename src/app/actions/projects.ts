@@ -5,12 +5,69 @@ import { generateDeckFromText } from '@/ai/flows/generate-deck-from-text';
 import { refineProjectDetails } from '@/ai/flows/refine-project-details';
 import { generateStudyPlan } from '@/ai/flows/generate-study-plan';
 import { z } from 'zod';
-import type { Project, Flashcard as FlashcardType, StudyPlan } from '@/types';
+import type { Project, Flashcard as FlashcardType, StudyPlan, ProjectDetails } from '@/types';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { redirect } from 'next/navigation';
 
-// In-memory store for created projects
-let createdProjects: Project[] = [];
+// In-memory store for created projects, pre-populated with initial data
+let createdProjects: Project[] = [
+    {
+      id: '1',
+      slug: 'javascript-fundamentals',
+      title: 'JavaScript Fundamentals',
+      description: 'Master the basics of JavaScript programming with essential concepts and syntax.',
+      category: 'Programming',
+      author: 'User',
+      size: 20,
+      bibliography: [],
+      isPublic: false,
+    },
+    {
+      id: '2',
+      slug: 'react-essentials',
+      title: 'React Essentials',
+      description: 'Learn the core concepts of React including components, props, state, and hooks.',
+      category: 'Programming',
+      author: 'User',
+      size: 25,
+      bibliography: [],
+      isPublic: false,
+    },
+    {
+      id: '3',
+      slug: 'web-development-basics',
+      title: 'Web Development Basics',
+      description: 'Fundamental concepts every web developer should know about HTML, CSS, and web technologies.',
+      category: 'Web Development',
+      author: 'User',
+      size: 30,
+      bibliography: [],
+      isPublic: false,
+    },
+    {
+      id: 'gen-12345',
+      slug: 'plan-de-estudio-ia-tumores-renales',
+      title: 'Plan de Estudio: IA para Segmentación de Tumores Renales',
+      description: 'Plan de estudio para comprender el estado del arte en el uso de la Inteligencia Artificial para la segmentación de tumores renales, incluyendo aspectos multimodales, optimización y despliegue en hardware.',
+      category: 'AI',
+      author: 'Kolearning', // Public by default
+      size: 15,
+      bibliography: [],
+      isPublic: true,
+       flashcards: [
+            { id: '1', deckId: 'gen-12345', question: '¿Qué es una IA multimodal?', answer: 'Una IA que puede procesar y relacionar información de múltiples tipos de datos, como texto, imágenes y sonido.' },
+            { id: '2', deckId: 'gen-12345', question: 'Nombra un modelo de IA para segmentación de imágenes.', answer: 'U-Net es una arquitectura de red neuronal convolucional popular para la segmentación de imágenes biomédicas.' },
+        ],
+        studyPlan: {
+            plan: [
+                { section: "Día 1", topic: "Introducción a la IA", sessionType: "Opción Múltiple" },
+                { section: "Día 2", topic: "Modelos de Segmentación", sessionType: "Tutor AI" },
+                { section: "Día 3", topic: "Repaso General", sessionType: "Quiz de Repaso" },
+            ],
+            justification: "Este plan está diseñado para construir una base sólida antes de pasar a temas más complejos."
+        }
+    },
+];
 
 const FlashcardSchema = z.object({
   id: z.number().or(z.string()),
@@ -169,9 +226,7 @@ export async function handleGenerateStudyPlan(input: { projectTitle: string, obj
 
 
 export async function handleCreateProject(
-    title: string, 
-    description: string, 
-    category: string,
+    projectDetails: ProjectDetails,
     flashcards: Omit<FlashcardType, 'deckId'>[],
     studyPlan: StudyPlan
 ) {
@@ -183,23 +238,24 @@ export async function handleCreateProject(
         return { error: 'Invalid flashcard data provided.' };
     }
 
-    if (!title || validation.data.length === 0) {
+    if (!projectDetails.title || validation.data.length === 0) {
         return { error: 'Project must have a title and at least one flashcard.' };
     }
     
-    const slug = createSlug(title);
+    const slug = createSlug(projectDetails.title);
 
     const newProject: Project = {
         id: `gen-${Date.now()}`,
         slug: slug,
-        title: title,
-        description: description,
-        category: category || 'General',
+        title: projectDetails.title,
+        description: projectDetails.description,
+        category: projectDetails.category || 'General',
         author: 'User',
         size: validation.data.length,
         bibliography: [],
         flashcards: validation.data.map(fc => ({...fc, id: fc.id.toString(), deckId: `gen-${Date.now()}`})),
         studyPlan: studyPlan,
+        isPublic: projectDetails.isPublic,
     };
 
     try {
@@ -213,35 +269,13 @@ export async function handleCreateProject(
 
 
 export async function getGeneratedProject(projectSlug: string) {
-    // Add some mock projects if none exist for testing purposes
-    if (createdProjects.length === 0) {
-        const mockFlashcards = [
-            { id: '1', deckId: 'gen-12345', question: '¿Qué es una IA multimodal?', answer: 'Una IA que puede procesar y relacionar información de múltiples tipos de datos, como texto, imágenes y sonido.' },
-            { id: '2', deckId: 'gen-12345', question: 'Nombra un modelo de IA para segmentación de imágenes.', answer: 'U-Net es una arquitectura de red neuronal convolucional popular para la segmentación de imágenes biomédicas.' },
-        ];
-        createdProjects.push({
-            id: 'gen-12345',
-            slug: 'plan-de-estudio-ia-tumores-renales',
-            title: 'Plan de Estudio: IA para Segmentación de Tumores Renales',
-            description: 'Un plan de estudio para comprender el estado del arte en el uso de la Inteligencia Artificial para la segmentación de tumores renales.',
-            category: 'AI',
-            author: 'AI',
-            size: 15,
-            bibliography: [],
-            flashcards: mockFlashcards,
-            studyPlan: {
-                plan: [
-                    { section: "Día 1", topic: "Introducción a la IA", sessionType: "Opción Múltiple" },
-                    { section: "Día 2", topic: "Modelos de Segmentación", sessionType: "Tutor AI" },
-                    { section: "Día 3", topic: "Repaso General", sessionType: "Quiz de Repaso" },
-                ],
-                justification: "Este plan está diseñado para construir una base sólida antes de pasar a temas más complejos."
-            }
-        });
-    }
     const project = createdProjects.find(d => d.slug === projectSlug);
     if (project) {
         return project;
     }
     return null;
+}
+
+export async function getAllProjects() {
+    return createdProjects;
 }
