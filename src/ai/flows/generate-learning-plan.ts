@@ -89,6 +89,14 @@ const prompt = ai.definePrompt({
   name: 'generateLearningPlanPrompt',
   input: { schema: GenerateLearningPlanInputSchema },
   output: { schema: GenerateLearningPlanOutputSchema },
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+    ],
+  },
   prompt: `You are an expert instructional designer. Your task is to create a dynamic and effective learning plan from a given list of flashcards (term/definition pairs).
 
 Based on the provided flashcards for the topic "{{title}}", you will generate a new set of questions. Your goal is to create a pedagogically sound mix of question formats to enhance learning and retention.
