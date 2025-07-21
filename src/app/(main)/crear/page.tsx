@@ -290,7 +290,7 @@ export default function CreateProjectPage() {
             <p className="text-sm text-muted-foreground">Guardada hace menos de 1 minuto</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleCreate} disabled={isCreating}>
+            <Button onClick={handleCreate} disabled={isCreating}>
                 {isCreating ? "Creando..." : "Crear Proyecto"}
             </Button>
           </div>
@@ -350,5 +350,3 @@ export default function CreateProjectPage() {
     </div>
   );
 }
-
-    
