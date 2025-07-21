@@ -194,10 +194,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     setSelectedSource(source);
     if (source.isFileBased) {
       setView('upload');
-    } else if (source.type === 'quizlet') {
+    } else if (source.type === 'quizlet' || source.type === 'anki') {
         setView('paste');
-    } else if (source.type === 'anki') {
-        setView('anki');
     } else if (source.type === 'youtube') {
         setView('youtube');
     } else if (source.type === 'sheets') {
@@ -224,13 +222,13 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     fileInputRef.current?.click();
   };
   
-  const handleGizmoImport = () => {
+  const handleGizmoImport = async () => {
     if (!fileContent) {
       toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo.' });
       return;
     }
     setIsGenerating(true);
-    const parsedCards = handlePastedTextImportAction(fileContent, 'newline', 'newline');
+    const parsedCards = await handlePastedTextImportAction(fileContent, 'newline', 'newline');
     const projectTitle = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
     onProjectParsed(projectTitle, parsedCards);
     setIsGenerating(false);
@@ -238,13 +236,13 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     toast({ title: '¡Tarjetas Importadas!', description: 'Tus tarjetas de Gizmo.ai se han añadido.' });
   };
   
-  const handlePastedTextImport = () => {
+  const handlePastedTextImport = async () => {
       if (!pastedText) {
           toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
           return;
       }
       setIsGenerating(true);
-      const parsedCards = handlePastedTextImportAction(pastedText, termSeparator, rowSeparator, customTermSeparator, customRowSeparator);
+      const parsedCards = await handlePastedTextImportAction(pastedText, termSeparator, rowSeparator, customTermSeparator, customRowSeparator);
       const projectTitle = "Importación de Texto";
       onProjectParsed(projectTitle, parsedCards);
       setIsGenerating(false);
@@ -252,13 +250,13 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       toast({ title: '¡Tarjetas Importadas!', description: `Se han añadido ${parsedCards.length} tarjetas.` });
   };
   
-  const handleSheetsImport = () => {
+  const handleSheetsImport = async () => {
       if (!pastedText) {
           toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
           return;
       }
       setIsGenerating(true);
-      const parsedCards = handlePastedTextImportAction(pastedText, 'tab', 'newline');
+      const parsedCards = await handlePastedTextImportAction(pastedText, 'tab', 'newline');
       const projectTitle = "Importación de Hoja de Cálculo";
       onProjectParsed(projectTitle, parsedCards);
       setIsGenerating(false);
@@ -698,3 +696,5 @@ export default function CreateProjectPage() {
     </div>
   );
 }
+
+    
