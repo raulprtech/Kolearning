@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +23,7 @@ export function DashboardProjectCard({ project }: { project: Project }) {
 
   return (
     <Card className="flex flex-col h-full transition-all duration-300 group bg-card/50 hover:bg-card hover:shadow-primary/20 hover:shadow-lg hover:-translate-y-1">
-      <Link href={`/project/${project.id}/details`} className="block flex-grow">
+      <Link href={`/proyecto/${project.id}/details`} className="block flex-grow">
         <CardContent className="p-6 flex-grow flex flex-col h-full">
             <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 p-2.5 rounded-lg bg-primary/10 text-primary">
@@ -45,7 +46,7 @@ export function DashboardProjectCard({ project }: { project: Project }) {
             <Progress value={progress} className="h-2" />
           </div>
           <Button asChild variant="link" className="p-0 h-auto text-primary font-medium shrink-0">
-            <Link href={`/project/${project.id}`}>
+            <Link href={`/proyecto/${project.id}`}>
               <Play className="h-4 w-4 mr-2"/>
               <span>Empezar</span>
             </Link>

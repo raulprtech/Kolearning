@@ -63,7 +63,7 @@ export async function handleCreateProject(
         return { error: 'Sorry, I was unable to save the project.' };
     }
     
-    redirect(`/project/${newProject.id}/details`);
+    redirect(`/proyecto/${newProject.id}/details`);
 }
 
 

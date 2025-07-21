@@ -170,7 +170,7 @@ export default function DashboardPage() {
                         </Link>
                     </Button>
                     <Button asChild>
-                        <Link href="/create">
+                        <Link href="/crear">
                             <PlusCircle className="mr-2 h-5 w-5" />
                             Nuevo proyecto
                         </Link>
