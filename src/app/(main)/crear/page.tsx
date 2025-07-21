@@ -35,7 +35,7 @@ import {
   DialogTrigger,
   DialogDescription as DialogDescriptionComponent
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails, handleGenerateProjectFromQuizletUrl } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -121,7 +121,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const [pastedText, setPastedText] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [webUrl, setWebUrl] = useState('');
-  const [quizletUrl, setQuizletUrl] = useState('');
   
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -310,25 +309,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     }
   };
 
-  const handleQuizletImport = async () => {
-    if (!quizletUrl) {
-      toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL de Quizlet.' });
-      return;
-    }
-    setIsGenerating(true);
-    
-    const result = await handleGenerateProjectFromQuizletUrl(quizletUrl);
-    setIsGenerating(false);
-
-    if (result.error) {
-      toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
-    } else if (result.project) {
-        onProjectGenerated(result.project);
-        resetState();
-        toast({ title: `¡Tarjetas importadas desde "${result.project.title}"!`, description: 'Tus nuevas tarjetas se han añadido al editor.' });
-    }
-  };
-
   const handleManualTextImport = async (text: string, sourceName: string) => {
     if (!text) {
         toast({ variant: 'destructive', title: 'No hay contenido', description: `Por favor, pega el texto exportado de ${sourceName}.` });
@@ -355,7 +335,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setPastedText('');
         setYoutubeUrl('');
         setWebUrl('');
-        setQuizletUrl('');
         setIsGenerating(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -987,3 +966,5 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
+
+    
