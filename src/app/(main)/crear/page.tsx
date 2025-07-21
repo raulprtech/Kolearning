@@ -183,14 +183,14 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
 
   const sources: SourceInfo[] = [
     { title: 'PDF', type: 'pdf', icon: <FileText />, isFileBased: true, accept: '.pdf' },
-    { title: 'Notes', type: 'notes', icon: <Book />, isFileBased: true, accept: '.txt,.md,.tex' },
+    { title: 'Apuntes', type: 'notes', icon: <Book />, isFileBased: true, accept: '.txt,.md,.tex' },
     { title: 'Imagen', type: 'image', icon: <ImageIcon />, isFileBased: true, accept: '.png,.jpg,.jpeg,.webp' },
     { title: 'Gizmo.ai', type: 'gizmo', icon: <FileQuestion />, isFileBased: true, accept: '.txt' },
     { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
-    { title: 'YouTube video', type: 'youtube', icon: <Youtube />, isFileBased: false },
+    { title: 'Video de YouTube', type: 'youtube', icon: <Youtube />, isFileBased: false },
     { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: false },
-    { title: 'Sheets', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: false },
-    { title: 'Web page', type: 'web', icon: <Globe />, isFileBased: false },
+    { title: 'Hojas de Cálculo', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: false },
+    { title: 'Página Web', type: 'web', icon: <Globe />, isFileBased: false },
   ];
 
   const handleSourceSelect = (source: SourceInfo) => {
@@ -666,8 +666,8 @@ export default function CreateProjectPage() {
     setFlashcards(newFlashcards);
   };
 
-  const handleProjectParsed = async (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[]) => {
-    const resolvedCards = await parsedCards;
+  const handleProjectParsed = async (parsedTitle: string, parsedCardsPromise: Promise<Omit<Flashcard, 'id'>[]>) => {
+    const resolvedCards = await parsedCardsPromise;
     setTitle(parsedTitle);
     setDescription(`Un conjunto de ${resolvedCards.length} tarjetas importadas.`);
     setCategory('Importado');
@@ -789,3 +789,5 @@ export default function CreateProjectPage() {
     </div>
   );
 }
+
+    
