@@ -37,7 +37,7 @@ If the input is one or more images, analyze the content of all images together t
 
 Based on the content, generate a suitable title and a one-sentence description for the deck.
 
-Then, create a minimum of 5 and a maximum of 15 flashcards, focusing on the most important concepts, definitions, and key facts in the text. Preserve and use Markdown and LaTeX formatting in the questions and answers to ensure clarity and accuracy (e.g., for code, lists, or mathematical expressions).
+Then, analyze the **entirety** of the provided resource. Your main priority is to extract **all relevant knowledge** and convert it into flashcards. Do not limit the number of cards; create as many as necessary to comprehensively cover the material. Focus on all concepts, definitions, key facts, and important relationships within the text. Preserve and use Markdown and LaTeX formatting in the questions and answers to ensure clarity and accuracy (e.g., for code, lists, or mathematical expressions).
 
 Your output MUST be a JSON object that follows this schema:
 \`\`\`json

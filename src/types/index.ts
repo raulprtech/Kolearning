@@ -112,9 +112,8 @@ export const GenerateDeckFromTextOutputSchema = z.object({
           ),
       })
     )
-    .min(5)
-    .max(15)
-    .describe('An array of 5 to 15 flashcards based on the key concepts in the notes.'),
+    .min(1)
+    .describe('An array of flashcards based on the key concepts in the notes. All relevant knowledge should be extracted.'),
 });
 export type GenerateDeckFromTextOutput = z.infer<typeof GenerateDeckFromTextOutputSchema>;
 
