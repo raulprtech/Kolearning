@@ -116,7 +116,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
     { title: 'YouTube video', type: 'youtube', icon: <Youtube />, isFileBased: false },
     { title: 'Record Lecture', type: 'lecture', icon: <Mic />, isFileBased: false },
-    { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: true },
+    { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: false },
     { title: 'Sheets', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: true },
     { title: 'Web page', type: 'web', icon: <Globe />, isFileBased: false },
   ];
@@ -125,7 +125,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     setSelectedSource(source);
     if (source.isFileBased) {
       setView('upload');
-    } else if (source.type === 'quizlet') {
+    } else if (source.type === 'quizlet' || source.type === 'anki') {
       setView('paste');
     } else {
       toast({ variant: 'destructive', title: 'Función no disponible', description: 'Esta opción de importación aún no está implementada.' });
@@ -202,14 +202,14 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     toast({ title: '¡Tarjetas Importadas!', description: 'Tus tarjetas de Gizmo.ai se han añadido.' });
   };
   
-  const handleQuizletImport = () => {
+  const handlePastedTextImport = () => {
       if (!pastedText) {
           toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
           return;
       }
       setIsGenerating(true);
       const parsedCards = parsePastedText();
-      const projectTitle = "Importación de Quizlet";
+      const projectTitle = selectedSource?.type === 'anki' ? "Importación de Anki" : "Importación de Quizlet";
       onProjectParsed(projectTitle, parsedCards);
       setIsGenerating(false);
       resetState();
@@ -351,7 +351,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </DialogHeader>
       <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
           <Textarea 
-              placeholder="Pega aquí el texto de Quizlet..."
+              placeholder={`Pega aquí el texto de ${selectedSource?.title}...`}
               value={pastedText}
               onChange={(e) => setPastedText(e.target.value)}
               className="h-40 resize-none"
@@ -408,7 +408,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
           </div>
       </div>
       <div className="flex justify-end p-6 pt-4">
-          <Button onClick={handleQuizletImport} disabled={isGenerating || !pastedText} className="w-full">
+          <Button onClick={handlePastedTextImport} disabled={isGenerating || !pastedText} className="w-full">
               {isGenerating ? 'Importando...' : 'Importar Tarjetas'}
           </Button>
       </div>
@@ -501,7 +501,7 @@ export default function CreateProjectPage() {
             title: "Creación exitosa",
             description: "Tu proyecto ha sido creado."
         });
-        router.push(`/proyecto/${result.slug}/detalles`);
+        router.push(`/proyecto/${result.slug}/details`);
         setIsCreating(false);
     } else {
         toast({
