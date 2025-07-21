@@ -666,12 +666,11 @@ export default function CreateProjectPage() {
     setFlashcards(newFlashcards);
   };
 
-  const handleProjectParsed = async (parsedTitle: string, parsedCardsPromise: Promise<Omit<Flashcard, 'id'>[]>) => {
-    const resolvedCards = await parsedCardsPromise;
+  const handleProjectParsed = async (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[]) => {
     setTitle(parsedTitle);
-    setDescription(`Un conjunto de ${resolvedCards.length} tarjetas importadas.`);
+    setDescription(`Un conjunto de ${parsedCards.length} tarjetas importadas.`);
     setCategory('Importado');
-    const newFlashcards = resolvedCards.map((card, index) => ({
+    const newFlashcards = parsedCards.map((card, index) => ({
         ...card,
         id: Date.now() + index
     }));
