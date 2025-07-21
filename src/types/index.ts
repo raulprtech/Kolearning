@@ -12,6 +12,7 @@ export interface User {
 
 export interface Project {
   id: string;
+  slug: string;
   title: string;
   description: string;
   category: string;

@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject } from '@/app/actions/decks';
+import { handleGenerateProjectFromText, handleCreateProject } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -209,6 +209,7 @@ const MagicImportModal = ({ onProjectGenerated }: { onProjectGenerated: (project
 export default function CreateProjectPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
   const [flashcards, setFlashcards] = useState<Flashcard[]>([
     { id: 1, question: '', answer: '' },
   ]);
@@ -224,9 +225,10 @@ export default function CreateProjectPage() {
     ]);
   };
   
-  const handleProjectGenerated = (project: { title: string; description: string; flashcards: { question: string; answer: string }[] }) => {
+  const handleProjectGenerated = (project: { title: string; description: string; category?: string; flashcards: { question: string; answer: string }[] }) => {
     setTitle(project.title);
     setDescription(project.description);
+    setCategory(project.category || '');
     const newFlashcards = project.flashcards.map((fc, index) => ({
         ...fc,
         id: Date.now() + index, // Ensure unique IDs
@@ -257,7 +259,7 @@ export default function CreateProjectPage() {
     }
     
     setIsCreating(true);
-    const result = await handleCreateProject(title, description, flashcards);
+    const result = await handleCreateProject(title, description, category, flashcards);
     
     if (result?.error) {
         toast({
@@ -265,6 +267,14 @@ export default function CreateProjectPage() {
             title: "Error al crear el proyecto",
             description: result.error
         });
+        setIsCreating(false);
+    } else if (result?.slug) {
+        toast({
+            title: "Creación exitosa",
+            description: "Tu proyecto ha sido creado."
+        });
+        router.push(`/proyecto/${result.slug}/detalles`);
+    } else {
         setIsCreating(false);
     }
   };
@@ -298,6 +308,12 @@ export default function CreateProjectPage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="min-h-[80px] p-4 bg-card/70 border-primary/20"
+          />
+          <Input
+            placeholder="Categoría (e.g., Programación, Historia, etc.)"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="h-12 text-base p-4 bg-card/70 border-primary/20"
           />
         </div>
 
