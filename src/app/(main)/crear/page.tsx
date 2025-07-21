@@ -17,12 +17,12 @@ import {
   UploadCloud,
   FileText,
   Youtube,
-  Mic,
   FileQuestion,
   Book,
   FileSpreadsheet,
   Globe,
-  ArrowLeft
+  ArrowLeft,
+  Image as ImageIcon
 } from 'lucide-react';
 import {
   Dialog,
@@ -91,7 +91,7 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
   );
 };
 
-type ImportSourceType = 'pdf' | 'powerpoint' | 'lecture' | 'notes' | 'youtube' | 'quizlet' | 'anki' | 'sheets' | 'web' | 'gizmo';
+type ImportSourceType = 'pdf' | 'powerpoint' | 'image' | 'notes' | 'youtube' | 'quizlet' | 'anki' | 'sheets' | 'web' | 'gizmo';
 type SourceInfo = { title: string; type: ImportSourceType; icon: React.ReactNode; isFileBased: boolean; accept?: string; };
 
 const PasteImportControls = ({
@@ -183,10 +183,10 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const sources: SourceInfo[] = [
     { title: 'PDF', type: 'pdf', icon: <FileText />, isFileBased: true, accept: '.pdf' },
     { title: 'Notes', type: 'notes', icon: <Book />, isFileBased: true, accept: '.txt,.md,.tex' },
+    { title: 'Imagen', type: 'image', icon: <ImageIcon />, isFileBased: true, accept: '.png,.jpg,.jpeg,.webp' },
     { title: 'Gizmo.ai', type: 'gizmo', icon: <FileQuestion />, isFileBased: true, accept: '.txt' },
     { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
     { title: 'YouTube video', type: 'youtube', icon: <Youtube />, isFileBased: false },
-    { title: 'Record Lecture', type: 'lecture', icon: <Mic />, isFileBased: false },
     { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: false },
     { title: 'Sheets', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: false },
     { title: 'Web page', type: 'web', icon: <Globe />, isFileBased: false },
@@ -215,8 +215,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       reader.onload = (e) => {
         setFileContent(e.target?.result || null);
       };
-      if (selectedSource.type === 'pdf') {
-          reader.readAsDataURL(file); // Read as Data URL for PDFs
+      if (selectedSource.type === 'pdf' || selectedSource.type === 'image') {
+          reader.readAsDataURL(file); // Read as Data URL for PDFs and images
       } else {
           reader.readAsText(file); // Read as text for other files
       }
@@ -288,10 +288,10 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
     }
   };
-
-  const handlePdfImport = async () => {
+  
+  const handleMediaImport = async () => {
     if (!fileContent || typeof fileContent !== 'string') {
-        toast({ variant: 'destructive', title: 'Archivo no válido', description: 'Por favor, sube un archivo PDF.' });
+        toast({ variant: 'destructive', title: 'Archivo no válido', description: `Por favor, sube un archivo ${selectedSource?.type}.` });
         return;
     }
     setIsGenerating(true);
@@ -306,7 +306,6 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
     }
   };
-
 
   const handleYoutubeImport = async () => {
     if (!youtubeUrl) {
@@ -373,7 +372,27 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     </>
   );
 
-  const renderUploadView = () => (
+  const renderUploadView = () => {
+    let buttonAction;
+    let buttonText = 'Generar con IA';
+
+    switch (selectedSource?.type) {
+        case 'gizmo':
+            buttonAction = handleGizmoImport;
+            buttonText = 'Importar Tarjetas';
+            break;
+        case 'pdf':
+        case 'image':
+            buttonAction = handleMediaImport;
+            buttonText = `Generando desde ${selectedSource.title}`;
+            break;
+        case 'notes':
+        default:
+            buttonAction = handleAiImport;
+            break;
+    }
+
+    return (
     <>
        <DialogHeader className="p-6 pb-2">
         <div className='flex items-center gap-2'>
@@ -415,22 +434,13 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         </div>
       </div>
       <div className="flex justify-end p-6 pt-0 gap-4">
-          {selectedSource?.type === 'gizmo' ? (
-            <Button onClick={handleGizmoImport} disabled={isGenerating || !fileContent} className="w-full">
-                {isGenerating ? 'Importando...' : 'Importar Tarjetas'}
-            </Button>
-          ) : selectedSource?.type === 'pdf' ? (
-            <Button onClick={handlePdfImport} disabled={isGenerating || !fileContent} className="w-full">
-                {isGenerating ? 'Generando desde PDF...' : 'Generar con IA'}
-            </Button>
-          ) : (
-             <Button onClick={handleAiImport} disabled={isGenerating || !fileContent} className="w-full">
-                {isGenerating ? 'Generando...' : 'Generar con IA'}
-            </Button>
-          )}
+          <Button onClick={buttonAction} disabled={isGenerating || !fileContent} className="w-full">
+              {isGenerating ? buttonText : 'Generar con IA'}
+          </Button>
       </div>
     </>
-  );
+    );
+  };
   
   const renderPasteView = () => (
     <>
@@ -604,7 +614,7 @@ export default function CreateProjectPage() {
     setFlashcards(newFlashcards);
   };
 
-  const handleProjectParsed = async (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[] | Promise<Omit<Flashcard, 'id'>[]>) => {
+  const handleProjectParsed = async (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[]) => {
     const resolvedCards = await parsedCards;
     setTitle(parsedTitle);
     setDescription(`Un conjunto de ${resolvedCards.length} tarjetas importadas.`);
@@ -727,3 +737,5 @@ export default function CreateProjectPage() {
     </div>
   );
 }
+
+    
