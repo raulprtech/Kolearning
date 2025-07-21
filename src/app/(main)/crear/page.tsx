@@ -32,6 +32,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
   DialogDescription as DialogDescriptionComponent
 } from '@/components/ui/dialog';
 import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
@@ -1009,3 +1010,4 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
+
