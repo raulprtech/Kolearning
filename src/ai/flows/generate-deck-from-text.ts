@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -15,7 +16,7 @@ const GenerateDeckFromTextInputSchema = z.object({
   studyNotes: z
     .string()
     .describe(
-      'The study notes to generate a flashcard deck from. Can be plain text, Markdown, LaTeX, or a Data URI for a PDF.'
+      'The study notes to generate a flashcard deck from. Can be plain text, Markdown, LaTeX, a Data URI for a PDF, or HTML content.'
     ),
 });
 export type GenerateDeckFromTextInput = z.infer<typeof GenerateDeckFromTextInputSchema>;
@@ -60,7 +61,10 @@ const prompt = ai.definePrompt({
       },
     ],
   },
-  prompt: `You are an expert at creating study materials. Your task is to analyze the following study notes and convert them into a structured flashcard deck. The notes may be plain text, include Markdown for formatting, LaTeX for mathematical formulas, or be a full document like a PDF provided as a Data URI.
+  prompt: `You are an expert at creating study materials. Your task is to analyze the following study notes and convert them into a structured flashcard deck.
+The notes may be plain text, Markdown, LaTeX, HTML, or a full document (like a PDF or image) provided as a Data URI.
+
+If the input is HTML, focus on the main content and ignore navigational elements, ads, and footers.
 
 Based on the content, generate a suitable title and a one-sentence description for the deck.
 
@@ -89,18 +93,10 @@ const generateDeckFromTextFlow = ai.defineFlow(
   async ({ studyNotes }) => {
     const isDataUri = studyNotes.startsWith('data:');
     
+    // The prompt expects an object that includes our logic flag `studyNotesIsText`.
     const promptInput = {
-      studyNotes,
+      studyNotes: studyNotes,
       studyNotesIsText: !isDataUri,
-    };
-
-    // The prompt expects an input that matches its defined schema, 
-    // so we pass the original input and extend it with our logic flag.
-    const extendedInput = {
-      ...promptInput,
-      input: {
-        studyNotes: studyNotes
-      }
     };
 
     const { output } = await prompt(promptInput);

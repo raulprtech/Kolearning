@@ -113,6 +113,26 @@ export async function handleGenerateProjectFromYouTubeUrl(videoUrl: string) {
   }
 }
 
+export async function handleGenerateProjectFromWebUrl(webUrl: string) {
+  if (!webUrl) {
+    return { error: 'Web page URL cannot be empty.' };
+  }
+
+  try {
+    const response = await fetch(webUrl);
+    if (!response.ok) {
+      return { error: `Could not fetch content from the URL. Status: ${response.status}` };
+    }
+    const htmlContent = await response.text();
+    const result = await generateDeckFromText({ studyNotes: htmlContent });
+    return { project: result };
+
+  } catch (error) {
+    console.error('Error with web page project generation:', error);
+    return { error: 'Could not process the web page. Please check the URL and try again.' };
+  }
+}
+
 export async function handleCreateProject(
     title: string, 
     description: string, 

@@ -32,7 +32,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -161,7 +161,7 @@ const PasteImportControls = ({
 
 
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
-  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube' | 'sheets'>('selection');
+  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki' | 'youtube' | 'sheets' | 'web'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
 
   const [fileName, setFileName] = useState('');
@@ -169,6 +169,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   
   const [pastedText, setPastedText] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [webUrl, setWebUrl] = useState('');
   
   const [termSeparator, setTermSeparator] = useState('tab');
   const [customTermSeparator, setCustomTermSeparator] = useState('-');
@@ -202,6 +203,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setView('youtube');
     } else if (source.type === 'sheets') {
         setView('sheets');
+    } else if (source.type === 'web') {
+        setView('web');
     } else {
       toast({ variant: 'destructive', title: 'Función no disponible', description: 'Esta opción de importación aún no está implementada.' });
     }
@@ -325,6 +328,25 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
     }
   };
+  
+  const handleWebImport = async () => {
+    if (!webUrl) {
+      toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL.' });
+      return;
+    }
+    setIsGenerating(true);
+    
+    const result = await handleGenerateProjectFromWebUrl(webUrl);
+    setIsGenerating(false);
+
+    if (result.error) {
+      toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
+    } else if (result.project) {
+      onProjectGenerated(result.project);
+      resetState();
+      toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
+    }
+  };
 
   const resetState = () => {
     setIsOpen(false);
@@ -335,6 +357,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         setFileContent('');
         setPastedText('');
         setYoutubeUrl('');
+        setWebUrl('');
         setIsGenerating(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -533,6 +556,34 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </div>
     </>
   );
+
+  const renderWebView = () => (
+    <>
+      <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Importar desde Página Web</DialogTitle>
+                <DialogDescription>Pega la URL de la página y Koli creará las tarjetas de estudio.</DialogDescription>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
+        <Input 
+          placeholder="https://es.wikipedia.org/wiki/..."
+          value={webUrl}
+          onChange={(e) => setWebUrl(e.target.value)}
+        />
+      </div>
+      <div className="flex justify-end p-6 pt-4">
+          <Button onClick={handleWebImport} disabled={isGenerating || !webUrl} className="w-full">
+              {isGenerating ? 'Generando...' : 'Generar con IA'}
+          </Button>
+      </div>
+    </>
+  );
   
   const renderSheetsView = () => (
     <>
@@ -579,6 +630,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
          {view === 'anki' && renderAnkiView()}
          {view === 'youtube' && renderYoutubeView()}
          {view === 'sheets' && renderSheetsView()}
+         {view === 'web' && renderWebView()}
       </DialogContent>
     </Dialog>
   );
@@ -737,5 +789,3 @@ export default function CreateProjectPage() {
     </div>
   );
 }
-
-    
