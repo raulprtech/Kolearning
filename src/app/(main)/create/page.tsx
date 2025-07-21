@@ -10,9 +10,6 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { 
   Plus, 
-  Settings, 
-  Undo, 
-  Redo, 
   Trash2, 
   Wand2, 
   UploadCloud,
@@ -27,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateDeckFromText } from '@/app/actions/decks';
+import { handleGenerateDeckFromText, handleCreateProject } from '@/app/actions/decks';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -197,11 +194,11 @@ const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) =>
               </CardContent>
             </Card>
           </div>
-          <div className="md:col-span-2 flex justify-end absolute bottom-6 right-6">
-            <Button onClick={handleSubmit} disabled={isGenerating}>
-              {isGenerating ? 'Generando...' : 'Generar Tarjetas'}
-            </Button>
-          </div>
+        </div>
+        <div className="md:col-span-2 flex justify-end p-6 pt-0">
+          <Button onClick={handleSubmit} disabled={isGenerating}>
+            {isGenerating ? 'Generando...' : 'Generar Tarjetas'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -215,6 +212,8 @@ export default function CreateProjectPage() {
     { id: 1, question: '', answer: '' },
   ]);
   const [isPublic, setIsPublic] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const { toast } = useToast();
 
   const addCard = () => {
     setFlashcards(currentFlashcards => [
@@ -245,6 +244,21 @@ export default function CreateProjectPage() {
     setFlashcards(currentFlashcards => currentFlashcards.filter(card => card.id !== id));
   };
 
+  const handleCreate = async () => {
+    if (!title.trim() || flashcards.some(fc => !fc.question.trim() || !fc.answer.trim())) {
+        toast({
+            variant: "destructive",
+            title: "Faltan datos",
+            description: "Asegúrate de que el proyecto tenga un título y que todas las tarjetas tengan término y definición."
+        });
+        return;
+    }
+    
+    setIsCreating(true);
+    await handleCreateProject(title, description, flashcards);
+    // The action will handle redirection. If it fails, we might want to show an error.
+    setIsCreating(false);
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -256,8 +270,10 @@ export default function CreateProjectPage() {
             <p className="text-sm text-muted-foreground">Guardada hace menos de 1 minuto</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline">Crear</Button>
-            <Button>Crear y practicar</Button>
+            <Button variant="outline" onClick={handleCreate} disabled={isCreating}>
+                {isCreating ? "Creando..." : "Crear"}
+            </Button>
+            <Button disabled={isCreating}>Crear y practicar</Button>
           </div>
         </header>
 

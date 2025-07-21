@@ -5,6 +5,7 @@ import { evaluateOpenAnswer } from '@/ai/flows/evaluate-open-answer';
 import type { EvaluateOpenAnswerInput } from '@/ai/flows/evaluate-open-answer';
 import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-question';
 import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-options-for-question';
+import { generateLearningPlan } from '@/ai/flows/generate-learning-plan';
 import { redirect } from 'next/navigation';
 
 let createdDecks: any[] = [];
@@ -26,6 +27,43 @@ export async function handleGenerateDeckFromText(studyNotes: string) {
     return { error: 'Sorry, I was unable to generate a deck from your notes.' };
   }
 }
+
+export async function handleCreateProject(
+    title: string, 
+    description: string, 
+    flashcards: { question: string, answer: string }[]
+) {
+    if (!title || flashcards.length === 0) {
+        return { error: 'Project must have a title and at least one flashcard.' };
+    }
+
+    try {
+        const plan = await generateLearningPlan({ title, flashcards });
+
+        // In a real app, this would be saved to a database.
+        // For now, we store it in memory for this session.
+        const newDeck = {
+            id: `gen-${Date.now()}`,
+            title: plan.title,
+            description: plan.description,
+            category: plan.category,
+            author: 'AI',
+            size: plan.questions.length,
+            bibliography: plan.bibliography || [],
+            // The questions would be stored as a subcollection in a real app
+            questions: plan.questions 
+        };
+        createdDecks.push(newDeck);
+
+        // Redirect to the newly created deck's detail page
+        redirect(`/deck/${newDeck.id}/details`);
+
+    } catch (error) {
+        console.error('Error creating learning plan:', error);
+        return { error: 'Sorry, I was unable to create a learning plan.' };
+    }
+}
+
 
 export async function getGeneratedDeck(deckId: string) {
     return createdDecks.find(d => d.id === deckId) || null;
