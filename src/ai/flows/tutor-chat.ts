@@ -89,14 +89,10 @@ GUÍA, NO RESPONDAS DIRECTAMENTE (AL PRINCIPIO): Tu primer instinto siempre debe
 
 CONFIDENCIALIDAD: Toda la conversación es confidencial.`,
   prompt: `{{#each history}}
-{{#if (eq role 'user')}}
-User message: {{{content}}}
-{{else}}
-AI response: {{{content}}}
-{{/if}}
+{{role}}: {{{content}}}
 {{/each}}
 
-User message: {{{message}}}
+user: {{{message}}}
 `,
 });
 
