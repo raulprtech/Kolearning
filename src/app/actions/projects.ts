@@ -65,10 +65,7 @@ export async function handleGenerateProjectFromYouTubeUrl(videoUrl: string) {
 
   } catch (error) {
     console.error('Error with YouTube project generation:', error);
-    if (error instanceof Error && error.message.includes('@youtube-transcript')) {
-      return { error: 'This video ID is invalid or the video has no transcript.' };
-    }
-    return { error: 'Sorry, I was unable to generate a project from this video.' };
+    return { error: 'Could not fetch transcript for this video. It might be disabled.' };
   }
 }
 
