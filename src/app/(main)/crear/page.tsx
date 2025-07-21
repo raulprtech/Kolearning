@@ -39,6 +39,8 @@ import rehypeKatex from 'rehype-katex';
 import { cn } from '@/lib/utils';
 import 'katex/dist/katex.min.css';
 import { useToast } from '@/hooks/use-toast';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Separator } from '@/components/ui/separator';
 
 type Flashcard = {
   id: number;
@@ -86,35 +88,45 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
   );
 };
 
-type ImportSource = 'pdf' | 'powerpoint' | 'lecture' | 'notes' | 'youtube' | 'quizlet' | 'anki' | 'sheets' | 'web' | 'gizmo';
+type ImportSourceType = 'pdf' | 'powerpoint' | 'lecture' | 'notes' | 'youtube' | 'quizlet' | 'anki' | 'sheets' | 'web' | 'gizmo';
+type SourceInfo = { title: string; type: ImportSourceType; icon: React.ReactNode; isFileBased: boolean; accept?: string; };
 
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
-  const [view, setView] = useState<'selection' | 'upload'>('selection');
-  const [selectedSource, setSelectedSource] = useState<{ title: string; type: ImportSource; accept?: string; isFileBased: boolean; } | null>(null);
+  const [view, setView] = useState<'selection' | 'upload' | 'paste'>('selection');
+  const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
 
   const [fileName, setFileName] = useState('');
   const [fileContent, setFileContent] = useState('');
+  const [pastedText, setPastedText] = useState('');
+  
+  const [termSeparator, setTermSeparator] = useState('tab');
+  const [customTermSeparator, setCustomTermSeparator] = useState('-');
+  const [rowSeparator, setRowSeparator] = useState('newline');
+  const [customRowSeparator, setCustomRowSeparator] = useState('\\n\\n');
+
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const sources = [
+  const sources: SourceInfo[] = [
     { title: 'PDF', type: 'pdf', icon: <FileText />, isFileBased: true, accept: '.pdf' },
     { title: 'Notes', type: 'notes', icon: <Book />, isFileBased: true, accept: '.txt,.md,.tex' },
     { title: 'Gizmo.ai', type: 'gizmo', icon: <FileQuestion />, isFileBased: true, accept: '.txt' },
+    { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
     { title: 'YouTube video', type: 'youtube', icon: <Youtube />, isFileBased: false },
     { title: 'Record Lecture', type: 'lecture', icon: <Mic />, isFileBased: false },
-    { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
     { title: 'Anki', type: 'anki', icon: <Book />, isFileBased: true },
     { title: 'Sheets', type: 'sheets', icon: <FileSpreadsheet />, isFileBased: true },
     { title: 'Web page', type: 'web', icon: <Globe />, isFileBased: false },
   ];
 
-  const handleSourceSelect = (source: (typeof sources)[0]) => {
+  const handleSourceSelect = (source: SourceInfo) => {
     setSelectedSource(source);
     if (source.isFileBased) {
       setView('upload');
+    } else if (source.type === 'quizlet') {
+      setView('paste');
     } else {
       toast({ variant: 'destructive', title: 'Función no disponible', description: 'Esta opción de importación aún no está implementada.' });
     }
@@ -150,6 +162,31 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     }
     return cards;
   };
+  
+  const parsePastedText = (): Omit<Flashcard, 'id'>[] => {
+    const getSeparator = (type: 'term' | 'row') => {
+        if (type === 'term') {
+            if (termSeparator === 'tab') return '\t';
+            if (termSeparator === 'comma') return ',';
+            return customTermSeparator;
+        }
+        if (rowSeparator === 'newline') return '\n';
+        if (rowSeparator === 'semicolon') return ';';
+        return customRowSeparator.replace(/\\n/g, '\n');
+    };
+
+    const rowSep = getSeparator('row');
+    const termSep = getSeparator('term');
+
+    const rows = pastedText.split(rowSep).filter(row => row.trim() !== '');
+    return rows.map(row => {
+        const parts = row.split(termSep);
+        return {
+            question: parts[0] || '',
+            answer: parts.slice(1).join(termSep) || ''
+        };
+    }).filter(card => card.question && card.answer);
+  };
 
   const handleGizmoImport = () => {
     if (!fileContent) {
@@ -163,6 +200,20 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     setIsGenerating(false);
     resetState();
     toast({ title: '¡Tarjetas Importadas!', description: 'Tus tarjetas de Gizmo.ai se han añadido.' });
+  };
+  
+  const handleQuizletImport = () => {
+      if (!pastedText) {
+          toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, pega texto para importar.' });
+          return;
+      }
+      setIsGenerating(true);
+      const parsedCards = parsePastedText();
+      const projectTitle = "Importación de Quizlet";
+      onProjectParsed(projectTitle, parsedCards);
+      setIsGenerating(false);
+      resetState();
+      toast({ title: '¡Tarjetas Importadas!', description: `Se han añadido ${parsedCards.length} tarjetas.` });
   };
 
   const handleAiImport = async () => {
@@ -187,14 +238,17 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
 
   const resetState = () => {
     setIsOpen(false);
-    setView('selection');
-    setSelectedSource(null);
-    setFileName('');
-    setFileContent('');
-    setIsGenerating(false);
-    if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-    }
+    setTimeout(() => {
+        setView('selection');
+        setSelectedSource(null);
+        setFileName('');
+        setFileContent('');
+        setPastedText('');
+        setIsGenerating(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    }, 200);
   };
 
   const onOpenChange = (open: boolean) => {
@@ -281,6 +335,85 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       </div>
     </>
   );
+  
+  const renderPasteView = () => (
+    <>
+      <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Importar desde {selectedSource?.title}</DialogTitle>
+                <DialogDescription>Pega tu texto y elige los delimitadores.</DialogDescription>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
+          <Textarea 
+              placeholder="Pega aquí el texto de Quizlet..."
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              className="h-40 resize-none"
+          />
+          <Separator />
+          <div className="grid grid-cols-2 gap-6">
+              <div>
+                  <h4 className="font-medium mb-3">Entre término y definición</h4>
+                  <RadioGroup value={termSeparator} onValueChange={setTermSeparator} className="gap-3">
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="tab" id="tab" />
+                          <Label htmlFor="tab">Tabulador</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="comma" id="comma" />
+                          <Label htmlFor="comma">Coma</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="custom" id="custom_term" />
+                          <Label htmlFor="custom_term">Personalizado</Label>
+                          <Input 
+                              value={customTermSeparator}
+                              onChange={(e) => setCustomTermSeparator(e.target.value)}
+                              disabled={termSeparator !== 'custom'}
+                              className="h-8 w-24 ml-2"
+                          />
+                      </div>
+                  </RadioGroup>
+              </div>
+               <div>
+                  <h4 className="font-medium mb-3">Entre renglones</h4>
+                  <RadioGroup value={rowSeparator} onValueChange={setRowSeparator} className="gap-3">
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="newline" id="newline" />
+                          <Label htmlFor="newline">Línea nueva</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="semicolon" id="semicolon" />
+                          <Label htmlFor="semicolon">Punto y coma</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="custom" id="custom_row" />
+                          <Label htmlFor="custom_row">Personalizado</Label>
+                           <Input 
+                              value={customRowSeparator}
+                              onChange={(e) => setCustomRowSeparator(e.target.value)}
+                              disabled={rowSeparator !== 'custom'}
+                              className="h-8 w-24 ml-2"
+                              placeholder="\n\n"
+                          />
+                      </div>
+                  </RadioGroup>
+              </div>
+          </div>
+      </div>
+      <div className="flex justify-end p-6 pt-4">
+          <Button onClick={handleQuizletImport} disabled={isGenerating || !pastedText} className="w-full">
+              {isGenerating ? 'Importando...' : 'Importar Tarjetas'}
+          </Button>
+      </div>
+    </>
+  );
 
 
   return (
@@ -288,8 +421,10 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       <DialogTrigger asChild>
         <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Importación Mágica</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-xl flex flex-col p-0">
-         {view === 'selection' ? renderSelectionView() : renderUploadView()}
+      <DialogContent className={cn("max-w-xl flex flex-col p-0", view === 'paste' && 'max-w-3xl')}>
+         {view === 'selection' && renderSelectionView()}
+         {view === 'upload' && renderUploadView()}
+         {view === 'paste' && renderPasteView()}
       </DialogContent>
     </Dialog>
   );
@@ -327,8 +462,8 @@ export default function CreateProjectPage() {
 
   const handleProjectParsed = (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[]) => {
     setTitle(parsedTitle);
-    setDescription(`Un conjunto de ${parsedCards.length} tarjetas importadas desde un archivo de Gizmo.ai.`);
-    setCategory('Gizmo Import');
+    setDescription(`Un conjunto de ${parsedCards.length} tarjetas importadas.`);
+    setCategory('Importado');
     const newFlashcards = parsedCards.map((card, index) => ({
         ...card,
         id: Date.now() + index
@@ -448,6 +583,3 @@ export default function CreateProjectPage() {
     </div>
   );
 }
-
-    
-    
