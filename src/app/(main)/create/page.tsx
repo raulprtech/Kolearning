@@ -8,27 +8,19 @@ import { handleGenerateDeckFromText } from '@/app/actions/decks';
 import { Wand2, FileUp, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 export default function CreateDeckPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [text, setText] = useState('');
+  const [text, setText] = useState('## Álgebra Básica\n\nAquí tienes algunas notas sobre álgebra.\n\n### Ecuaciones Lineales\nUna ecuación lineal es una ecuación de primer grado. Por ejemplo:\n$2x + 3 = 7$\n\nPara resolverla, restamos 3 de ambos lados:\n$2x = 4$\n\nLuego dividimos por 2:\n$x = 2$\n\n### Fórmulas Cuadráticas\nLa fórmula cuadrática para $ax^2 + bx + c = 0$ es:\n$$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$\n');
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('');
   const { toast } = useToast();
 
   const processFile = useCallback((fileToProcess: File) => {
-    const allowedTypes = ['text/plain', 'text/markdown'];
-    const isAllowedType = allowedTypes.includes(fileToProcess.type) || fileToProcess.name.endsWith('.md') || fileToProcess.name.endsWith('.txt');
-
-    if (!isAllowedType) {
-      toast({
-        variant: 'destructive',
-        title: 'Tipo de archivo no válido',
-        description: 'Por favor, sube un archivo TXT o MD.',
-      });
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = (e) => {
         const fileText = e.target?.result as string;
@@ -117,66 +109,19 @@ export default function CreateDeckPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="max-w-3xl mx-auto">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2 mb-2">
-              <Wand2 className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl">Importación Mágica</CardTitle>
-            </div>
-            <CardDescription>
-              Pega tus notas de estudio o sube un archivo de texto, y los convertiremos mágicamente en un mazo de tarjetas para ti.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit}>
-              <Tabs defaultValue="paste-text" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="paste-text" disabled={!!file}>Pegar Texto</TabsTrigger>
-                  <TabsTrigger value="upload-file">Subir Archivo</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="paste-text">
-                  <Textarea
-                    name="studyNotesFromText"
-                    placeholder="Ej: El pH de una solución neutra es 7. La mitocondria es la central energética de la célula..."
-                    className="min-h-[250px] text-base"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    disabled={isLoading || !!file}
-                  />
-                </TabsContent>
-
-                <TabsContent value="upload-file">
-                  {!file ? (
-                      <label 
-                          htmlFor="file-upload" 
-                          className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors"
-                          onDragOver={onDragOver}
-                          onDrop={onDrop}
-                      >
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <FileUp className="w-10 h-10 mb-3 text-muted-foreground" />
-                              <p className="mb-2 text-sm text-muted-foreground">
-                                  <span className="font-semibold text-primary">Haz clic para subir</span> o arrastra y suelta
-                              </p>
-                              <p className="text-xs text-muted-foreground">TXT, MD (MÁX. 5MB)</p>
-                          </div>
-                          <input id="file-upload" type="file" className="hidden" accept=".txt,.md,text/plain,text/markdown" onChange={handleFileChange} disabled={isLoading} />
-                      </label>
-                  ) : (
-                       <div className="flex items-center justify-between w-full h-24 border-2 border-dashed rounded-lg p-4 bg-muted">
-                          <p className="font-medium truncate">{fileName}</p>
-                          <Button variant="ghost" size="icon" onClick={clearFile} disabled={isLoading}>
-                              <X className="h-5 w-5" />
-                          </Button>
-                      </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-                
-              <div className="grid w-full gap-4 mt-6">
-                <Button type="submit" size="lg" disabled={isLoading || !text}>
+      <div className="max-w-6xl mx-auto">
+        <form onSubmit={handleSubmit}>
+          <div className="flex justify-between items-start mb-6">
+              <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wand2 className="h-6 w-6 text-primary" />
+                    <h1 className="text-2xl font-bold">Importación Mágica</h1>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Pega tus notas (en Markdown y LaTeX) o sube un archivo, y los convertiremos en un mazo.
+                  </p>
+              </div>
+               <Button type="submit" size="lg" disabled={isLoading || !text}>
                   {isLoading ? (
                     <>
                       <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin mr-2"></span>
@@ -189,10 +134,78 @@ export default function CreateDeckPage() {
                     </>
                   )}
                 </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Editor Column */}
+              <Card>
+                  <CardHeader>
+                      <CardTitle>Editor</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <Tabs defaultValue="paste-text" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2 mb-4">
+                              <TabsTrigger value="paste-text" disabled={!!file}>Pegar Texto</TabsTrigger>
+                              <TabsTrigger value="upload-file">Subir Archivo</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="paste-text">
+                              <Textarea
+                                  name="studyNotesFromText"
+                                  placeholder="Ej: El pH de una solución neutra es 7. La mitocondria es la central energética de la célula..."
+                                  className="min-h-[400px] text-base font-mono"
+                                  value={text}
+                                  onChange={(e) => setText(e.target.value)}
+                                  disabled={isLoading || !!file}
+                              />
+                          </TabsContent>
+                          <TabsContent value="upload-file">
+                              {!file ? (
+                                  <label
+                                      htmlFor="file-upload"
+                                      className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors"
+                                      onDragOver={onDragOver}
+                                      onDrop={onDrop}
+                                  >
+                                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                          <FileUp className="w-10 h-10 mb-3 text-muted-foreground" />
+                                          <p className="mb-2 text-sm text-muted-foreground">
+                                              <span className="font-semibold text-primary">Haz clic para subir</span> o arrastra y suelta
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">TXT, MD (MÁX. 5MB)</p>
+                                      </div>
+                                      <input id="file-upload" type="file" className="hidden" accept=".txt,.md,text/plain,text/markdown" onChange={handleFileChange} disabled={isLoading} />
+                                  </label>
+                              ) : (
+                                  <div className="flex items-center justify-between w-full h-24 border-2 border-dashed rounded-lg p-4 bg-muted">
+                                      <p className="font-medium truncate">{fileName}</p>
+                                      <Button variant="ghost" size="icon" onClick={clearFile} disabled={isLoading}>
+                                          <X className="h-5 w-5" />
+                                      </Button>
+                                  </div>
+                              )}
+                          </TabsContent>
+                      </Tabs>
+                  </CardContent>
+              </Card>
+
+              {/* Preview Column */}
+              <Card>
+                  <CardHeader>
+                      <CardTitle>Vista Previa</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="prose prose-invert max-w-none p-4 border rounded-md min-h-[464px] bg-background/50 prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50">
+                          <ReactMarkdown
+                              remarkPlugins={[remarkGfm, remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                          >
+                              {text}
+                          </ReactMarkdown>
+                      </div>
+                  </CardContent>
+              </Card>
+          </div>
+        </form>
       </div>
     </div>
   );
