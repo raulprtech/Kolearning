@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { handleGenerateDeckFromText } from '@/app/actions/decks';
-import { Wand2, FileUp, X } from 'lucide-react';
+import { Wand2, FileUp, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ReactMarkdown from 'react-markdown';
@@ -13,13 +13,25 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { cn } from '@/lib/utils';
+
+const sizeClasses = ['prose-xs', 'prose-sm', 'prose-base', 'prose-lg', 'prose-xl'];
 
 export default function CreateDeckPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [text, setText] = useState('## Álgebra Básica\n\nAquí tienes algunas notas sobre álgebra.\n\n### Ecuaciones Lineales\nUna ecuación lineal es una ecuación de primer grado. Por ejemplo:\n$2x + 3 = 7$\n\nPara resolverla, restamos 3 de ambos lados:\n$2x = 4$\n\nLuego dividimos por 2:\n$x = 2$\n\n### Fórmulas Cuadráticas\nLa fórmula cuadrática para $ax^2 + bx + c = 0$ es:\n$$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$\n');
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('');
+  const [previewSize, setPreviewSize] = useState(2); // Corresponds to prose-base
   const { toast } = useToast();
+
+  const handleZoomIn = () => {
+    setPreviewSize(prev => Math.min(prev + 1, sizeClasses.length - 1));
+  };
+  
+  const handleZoomOut = () => {
+    setPreviewSize(prev => Math.max(prev - 1, 0));
+  };
 
   const processFile = useCallback((fileToProcess: File) => {
     const reader = new FileReader();
@@ -192,10 +204,20 @@ export default function CreateDeckPage() {
               {/* Preview Column */}
               <Card>
                   <CardHeader>
+                    <div className="flex justify-between items-center">
                       <CardTitle>Vista Previa</CardTitle>
+                      <div className="flex items-center gap-2">
+                          <Button type="button" variant="outline" size="icon" onClick={handleZoomOut} disabled={previewSize === 0}>
+                              <ZoomOut className="h-4 w-4" />
+                          </Button>
+                          <Button type="button" variant="outline" size="icon" onClick={handleZoomIn} disabled={previewSize === sizeClasses.length - 1}>
+                              <ZoomIn className="h-4 w-4" />
+                          </Button>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                      <div className="prose prose-sm md:prose-base prose-invert max-w-none p-4 border rounded-md min-h-[464px] bg-background/50 prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50 prose-headings:text-foreground prose-strong:text-foreground">
+                      <div className={cn("prose prose-invert max-w-none p-4 border rounded-md min-h-[464px] bg-background/50 prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-black/50 prose-headings:text-foreground prose-strong:text-foreground", sizeClasses[previewSize])}>
                           <ReactMarkdown
                               remarkPlugins={[remarkGfm, remarkMath]}
                               rehypePlugins={[rehypeKatex]}
