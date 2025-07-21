@@ -80,7 +80,8 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
   );
 };
 
-const MagicImportModal = ({ onProjectGenerated }: { onProjectGenerated: (project: any) => void }) => {
+const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
+  const [fileName, setFileName] = useState('');
   const [fileContent, setFileContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewSize, setPreviewSize] = useState(1);
@@ -96,6 +97,7 @@ const MagicImportModal = ({ onProjectGenerated }: { onProjectGenerated: (project
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setFileName(file.name);
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
@@ -109,13 +111,37 @@ const MagicImportModal = ({ onProjectGenerated }: { onProjectGenerated: (project
     fileInputRef.current?.click();
   };
 
-  const handleSubmit = async () => {
+  const parseGizmoFile = (content: string): Omit<Flashcard, 'id'>[] => {
+    const lines = content.split('\n').filter(line => line.trim() !== '');
+    const cards: Omit<Flashcard, 'id'>[] = [];
+    for (let i = 0; i < lines.length; i += 2) {
+      if (lines[i] && lines[i+1]) {
+        cards.push({
+          question: lines[i].trim(),
+          answer: lines[i+1].trim(),
+        });
+      }
+    }
+    return cards;
+  };
+
+  const handleGizmoImport = () => {
     if (!fileContent) {
-      toast({
-        variant: 'destructive',
-        title: 'No hay contenido',
-        description: 'Por favor, sube un archivo para generar tarjetas.',
-      });
+      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo.' });
+      return;
+    }
+    setIsGenerating(true);
+    const parsedCards = parseGizmoFile(fileContent);
+    const projectTitle = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
+    onProjectParsed(projectTitle, parsedCards);
+    setIsGenerating(false);
+    setIsOpen(false);
+    toast({ title: '¡Tarjetas Importadas!', description: 'Tus tarjetas de Gizmo.ai se han añadido.' });
+  };
+
+  const handleAiImport = async () => {
+    if (!fileContent) {
+      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo para generar tarjetas.' });
       return;
     }
     setIsGenerating(true);
@@ -125,18 +151,11 @@ const MagicImportModal = ({ onProjectGenerated }: { onProjectGenerated: (project
     setIsGenerating(false);
 
     if (result.error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error de Generación',
-        description: result.error,
-      });
+      toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
     } else if (result.project) {
       onProjectGenerated(result.project);
-      setIsOpen(false); // Close the modal on success
-      toast({
-        title: '¡Tarjetas Generadas!',
-        description: 'Tus nuevas tarjetas se han añadido al editor.',
-      });
+      setIsOpen(false);
+      toast({ title: '¡Tarjetas Generadas!', description: 'Tus nuevas tarjetas se han añadido al editor.' });
     }
   };
 
@@ -149,7 +168,7 @@ const MagicImportModal = ({ onProjectGenerated }: { onProjectGenerated: (project
         <DialogHeader className="p-6 pb-0">
           <DialogTitle>Importación Mágica</DialogTitle>
           <DialogDescription>
-            Sube un archivo y la IA creará las tarjetas de estudio por ti.
+            Sube tus notas y Koli creará las tarjetas de estudio por ti.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 flex flex-col md:flex-row gap-6 p-6 pt-4 min-h-0">
@@ -196,9 +215,12 @@ const MagicImportModal = ({ onProjectGenerated }: { onProjectGenerated: (project
             </Card>
           </div>
         </div>
-        <div className="md:col-span-2 flex justify-end p-6 pt-0">
-          <Button onClick={handleSubmit} disabled={isGenerating}>
-            {isGenerating ? 'Generando...' : 'Generar Tarjetas'}
+        <div className="flex justify-end p-6 pt-0 gap-4">
+          <Button onClick={handleGizmoImport} disabled={isGenerating || !fileContent} variant="secondary">
+            {isGenerating ? 'Procesando...' : 'Importar desde Gizmo.ai'}
+          </Button>
+          <Button onClick={handleAiImport} disabled={isGenerating || !fileContent}>
+            {isGenerating ? 'Generando...' : 'Generar con IA'}
           </Button>
         </div>
       </DialogContent>
@@ -231,7 +253,18 @@ export default function CreateProjectPage() {
     setCategory(project.category || '');
     const newFlashcards = project.flashcards.map((fc, index) => ({
         ...fc,
-        id: Date.now() + index, // Ensure unique IDs
+        id: Date.now() + index,
+    }));
+    setFlashcards(newFlashcards);
+  };
+
+  const handleProjectParsed = (parsedTitle: string, parsedCards: Omit<Flashcard, 'id'>[]) => {
+    setTitle(parsedTitle);
+    setDescription(`Un conjunto de ${parsedCards.length} tarjetas importadas desde un archivo de Gizmo.ai.`);
+    setCategory('Gizmo Import');
+    const newFlashcards = parsedCards.map((card, index) => ({
+        ...card,
+        id: Date.now() + index
     }));
     setFlashcards(newFlashcards);
   };
@@ -261,23 +294,20 @@ export default function CreateProjectPage() {
     setIsCreating(true);
     const result = await handleCreateProject(title, description, category, flashcards);
     
-    if (result?.error) {
-        toast({
-            variant: "destructive",
-            title: "Error al crear el proyecto",
-            description: result.error
-        });
-        setIsCreating(false);
-    } else if (result?.slug) {
+    if (result?.slug) {
         toast({
             title: "Creación exitosa",
             description: "Tu proyecto ha sido creado."
         });
-        router.push(`/proyecto/${result.slug}/detalles`);
-        setIsCreating(false);
+        router.push(`/proyecto/${result.slug}/details`);
     } else {
-        setIsCreating(false);
+        toast({
+            variant: "destructive",
+            title: "Error al crear el proyecto",
+            description: result.error || "Ocurrió un error inesperado."
+        });
     }
+    setIsCreating(false);
   };
 
   return (
@@ -321,7 +351,7 @@ export default function CreateProjectPage() {
         {/* Toolbar */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <MagicImportModal onProjectGenerated={handleProjectGenerated} />
+            <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
@@ -350,3 +380,5 @@ export default function CreateProjectPage() {
     </div>
   );
 }
+
+    
