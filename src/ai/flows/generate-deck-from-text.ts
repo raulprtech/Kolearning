@@ -64,6 +64,8 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert at creating study materials. Your task is to analyze the following study notes and convert them into a structured flashcard deck.
 The notes may be plain text, Markdown, LaTeX, HTML, or a full document (like a PDF or image) provided as a Data URI.
 
+IMPORTANT: The final output (title, description, and flashcards) must be entirely in Spanish.
+
 If the input is HTML, focus on the main content and ignore navigational elements, ads, and footers.
 
 Based on the content, generate a suitable title and a one-sentence description for the deck.
