@@ -49,21 +49,13 @@ import Image from 'next/image';
 import { AnkiExportGuide } from '@/components/deck/AnkiExportGuide';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
+import type { Flashcard as FlashcardType, StudyPlan, ProjectDetails } from '@/types';
 
 type Flashcard = {
   id: number | string;
   question: string;
   answer: string;
   image?: string;
-};
-
-type StudyPlan = {
-  plan: {
-    section: string;
-    topic: string;
-    sessionType: string;
-  }[];
-  justification: string;
 };
 
 // --- Step 1 Components ---
@@ -824,7 +816,7 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
 
 // --- Step 3 Components ---
 
-const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: any) => {
+const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: { projectDetails: ProjectDetails, flashcards: FlashcardType[], goBack: () => void, createProject: (studyPlan: StudyPlan | null) => void }) => {
     const [objective, setObjective] = useState('');
     const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -912,7 +904,7 @@ const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: any) 
 
 export default function CreateProjectWizardPage() {
   const [step, setStep] = useState(1);
-  const [projectDetails, setProjectDetails] = useState({
+  const [projectDetails, setProjectDetails] = useState<ProjectDetails>({
       title: '',
       description: '',
       category: '',

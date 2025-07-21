@@ -5,34 +5,11 @@
  * @fileOverview Generates a personalized study plan based on project details.
  *
  * - generateStudyPlan - Creates a structured learning path.
- * - GenerateStudyPlanInput - The input type for the function.
- * - GenerateStudyPlanOutput - The return type for the function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { GenerateStudyPlanInputSchema, GenerateStudyPlanOutputSchema, type GenerateStudyPlanInput, type GenerateStudyPlanOutput } from '@/types';
 
-const FlashcardSchema = z.object({
-  question: z.string(),
-  answer: z.string(),
-});
-
-export const GenerateStudyPlanInputSchema = z.object({
-  projectTitle: z.string().describe('The title of the study project.'),
-  objective: z.string().describe('The user\'s learning goal (e.g., "pass an exam", "review for an interview").'),
-  flashcards: z.array(FlashcardSchema).describe('The list of knowledge atoms (flashcards) for the project.'),
-});
-export type GenerateStudyPlanInput = z.infer<typeof GenerateStudyPlanInputSchema>;
-
-export const GenerateStudyPlanOutputSchema = z.object({
-  plan: z.array(z.object({
-    section: z.string().describe("The section or day of the plan (e.g., 'Día 1', 'Semana 2', 'Conceptos Fundamentales')."),
-    topic: z.string().describe('The specific topic or concept to be covered in this session.'),
-    sessionType: z.string().describe("The recommended session type ('Opción Múltiple', 'Respuesta Abierta', 'Tutor AI', 'Quiz de Repaso')."),
-  })).describe('A structured array representing the study plan, with 5 to 10 sessions.'),
-  justification: z.string().describe('A brief, encouraging explanation of why the plan is structured this way to help the user achieve their goal.'),
-});
-export type GenerateStudyPlanOutput = z.infer<typeof GenerateStudyPlanOutputSchema>;
 
 export async function generateStudyPlan(input: GenerateStudyPlanInput): Promise<GenerateStudyPlanOutput> {
   return generateStudyPlanFlow(input);

@@ -3,9 +3,9 @@
 
 import { generateDeckFromText } from '@/ai/flows/generate-deck-from-text';
 import { evaluateOpenAnswer } from '@/ai/flows/evaluate-open-answer';
-import type { EvaluateOpenAnswerInput } from '@/ai/flows/evaluate-open-answer';
+import type { EvaluateOpenAnswerInput } from '@/types';
 import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-question';
-import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-options-for-question';
+import type { GenerateOptionsForQuestionInput } from '@/types';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import type { Project, Flashcard as FlashcardType } from '@/types';

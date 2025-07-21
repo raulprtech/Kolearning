@@ -5,44 +5,11 @@
  * @fileOverview Generates a flashcard deck from a blob of text, a PDF, HTML, or one or more images.
  *
  * - generateDeckFromText - A function that generates a flashcard deck.
- * - GenerateDeckFromTextInput - The input type for the generateDeckFromText function.
- * - GenerateDeckFromTextOutput - The return type for the generateDeckFromText function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { GenerateDeckFromTextInputSchema, GenerateDeckFromTextOutputSchema, type GenerateDeckFromTextInput, type GenerateDeckFromTextOutput } from '@/types';
 
-const GenerateDeckFromTextInputSchema = z.object({
-  studyNotes: z.union([z.string(), z.array(z.string())])
-    .describe(
-      'The study notes to generate a flashcard deck from. Can be plain text, Markdown, LaTeX, a Data URI for a PDF, HTML content, or an array of Data URIs for images.'
-    ),
-});
-export type GenerateDeckFromTextInput = z.infer<typeof GenerateDeckFromTextInputSchema>;
-
-const GenerateDeckFromTextOutputSchema = z.object({
-  title: z.string().describe('A concise and relevant title for the generated flashcard deck.'),
-  description: z.string().describe('A brief, one-sentence description of the flashcard deck.'),
-  flashcards: z
-    .array(
-      z.object({
-        question: z
-          .string()
-          .describe(
-            'The flashcard question (supports Markdown and LaTeX). Should be a clear, answerable question based on the notes.'
-          ),
-        answer: z
-          .string()
-          .describe(
-            'The flashcard answer (supports Markdown and LaTeX). Should be a concise and accurate answer to the question.'
-          ),
-      })
-    )
-    .min(5)
-    .max(15)
-    .describe('An array of 5 to 15 flashcards based on the key concepts in the notes.'),
-});
-export type GenerateDeckFromTextOutput = z.infer<typeof GenerateDeckFromTextOutputSchema>;
 
 export async function generateDeckFromText(input: GenerateDeckFromTextInput): Promise<GenerateDeckFromTextOutput> {
   return generateDeckFromTextFlow(input);

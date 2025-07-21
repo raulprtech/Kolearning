@@ -4,28 +4,11 @@
  * @fileOverview Generates multiple-choice options for a given question and answer.
  *
  * - generateOptionsForQuestion - A function that creates plausible distractors for a question.
- * - GenerateOptionsForQuestionInput - The input type for the function.
- * - GenerateOptionsForQuestionOutput - The return type for the function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { GenerateOptionsForQuestionInputSchema, GenerateOptionsForQuestionOutputSchema, type GenerateOptionsForQuestionInput, type GenerateOptionsForQuestionOutput } from '@/types';
 
-const GenerateOptionsForQuestionInputSchema = z.object({
-  question: z.string().describe('The question for which to generate options.'),
-  correctAnswer: z.string().describe('The correct answer to the question.'),
-});
-export type GenerateOptionsForQuestionInput = z.infer<typeof GenerateOptionsForQuestionInputSchema>;
-
-const GenerateOptionsForQuestionOutputSchema = z.object({
-  options: z
-    .array(z.string())
-    .length(4)
-    .describe(
-      'An array of four strings. One string must be the `correctAnswer`. The other three must be plausible but incorrect distractors. The order of the options should be random.'
-    ),
-});
-export type GenerateOptionsForQuestionOutput = z.infer<typeof GenerateOptionsForQuestionOutputSchema>;
 
 export async function generateOptionsForQuestion(
   input: GenerateOptionsForQuestionInput

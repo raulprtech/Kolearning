@@ -4,35 +4,10 @@
  * @fileOverview Evaluates a user's open-ended answer against a correct answer.
  *
  * - evaluateOpenAnswer - A function that evaluates the user's answer.
- * - EvaluateOpenAnswerInput - The input type for the evaluateOpenAnswer function.
- * - EvaluateOpenAnswerOutput - The return type for the evaluateOpenAnswer function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-
-const EvaluateOpenAnswerInputSchema = z.object({
-  question: z.string().describe('The original question that was asked.'),
-  correctAnswer: z.string().describe('The ground truth correct answer to the question.'),
-  userAnswer: z.string().describe("The user's submitted answer."),
-});
-export type EvaluateOpenAnswerInput = z.infer<typeof EvaluateOpenAnswerInputSchema>;
-
-const EvaluateOpenAnswerOutputSchema = z.object({
-  isCorrect: z.boolean().describe("Whether the user's answer is considered correct."),
-  feedback: z
-    .string()
-    .describe(
-      "Personalized feedback based on the user's answer. If correct, provide a short, encouraging message. If incorrect, explain the main error or acknowledge partial correctness (e.g., 'You're on the right track, but...'). Never give him the answer, just clues for him to discover alone."
-    ),
-  rephrasedQuestion: z
-    .string()
-    .optional()
-    .describe(
-      "A rephrased version of the original question to guide the user. This should only be provided if the user's answer is incorrect."
-    ),
-});
-export type EvaluateOpenAnswerOutput = z.infer<typeof EvaluateOpenAnswerOutputSchema>;
+import { EvaluateOpenAnswerInputSchema, EvaluateOpenAnswerOutputSchema, type EvaluateOpenAnswerInput, type EvaluateOpenAnswerOutput } from '@/types';
 
 export async function evaluateOpenAnswer(input: EvaluateOpenAnswerInput): Promise<EvaluateOpenAnswerOutput> {
   return evaluateOpenAnswerFlow(input);
