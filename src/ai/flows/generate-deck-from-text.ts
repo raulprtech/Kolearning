@@ -57,7 +57,7 @@ ${JSON.stringify(GenerateDeckFromTextOutputSchema.shape, null, 2)}
 \`\`\`
 
 Study Notes:
-{{#if (stringStartsWith studyNotes "data:")}}
+{{#if (string.startsWith studyNotes "data:")}}
 {{media url=studyNotes}}
 {{else}}
 {{{studyNotes}}}
