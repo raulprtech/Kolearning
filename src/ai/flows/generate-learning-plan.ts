@@ -16,13 +16,13 @@ const FlashcardSchema = z.object({
   answer: z.string(),
 });
 
-export const GenerateLearningPlanInputSchema = z.object({
+const GenerateLearningPlanInputSchema = z.object({
   title: z.string().describe('The title of the project or deck.'),
   flashcards: z
     .array(FlashcardSchema)
     .describe('The list of question/answer pairs to build the plan from.'),
 });
-export type GenerateLearningPlanInput = z.infer<typeof GenerateLearningPlanInputSchema>;
+type GenerateLearningPlanInput = z.infer<typeof GenerateLearningPlanInputSchema>;
 
 const MultipleChoiceQuestionSchema = z.object({
   type: z.literal('multiple-choice'),
@@ -69,14 +69,14 @@ const AnyQuestionSchema = z.union([
     FillInTheBlankQuestionSchema
 ]);
 
-export const GenerateLearningPlanOutputSchema = z.object({
+const GenerateLearningPlanOutputSchema = z.object({
   title: z.string(),
   description: z.string(),
   questions: z.array(AnyQuestionSchema),
   category: z.string().describe("A suitable category for this learning plan based on its content (e.g., 'Programming', 'Science', 'History')."),
   bibliography: z.array(z.string()).optional().describe("If applicable, suggest one or two book or source recommendations related to the topic.")
 });
-export type GenerateLearningPlanOutput = z.infer<typeof GenerateLearningPlanOutputSchema>;
+type GenerateLearningPlanOutput = z.infer<typeof GenerateLearningPlanOutputSchema>;
 
 
 export async function generateLearningPlan(
