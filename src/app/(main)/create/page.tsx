@@ -214,7 +214,7 @@ export default function CreateProjectPage() {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([
     { id: 1, question: '', answer: '' },
   ]);
-  const [suggestions, setSuggestions] = useState(true);
+  const [isPublic, setIsPublic] = useState(false);
 
   const addCard = () => {
     setFlashcards(currentFlashcards => [
@@ -284,8 +284,8 @@ export default function CreateProjectPage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
-                <Switch id="suggestions" checked={suggestions} onCheckedChange={setSuggestions} />
-                <Label htmlFor="suggestions">Sugerencias</Label>
+                <Switch id="visibility" checked={isPublic} onCheckedChange={setIsPublic} />
+                <Label htmlFor="visibility">{isPublic ? 'Público' : 'Privado'}</Label>
             </div>
              <div className="flex items-center gap-1 p-1 rounded-md bg-card/70">
                 <Button variant="ghost" size="icon" className="h-8 w-8"><Settings className="h-4 w-4" /></Button>
