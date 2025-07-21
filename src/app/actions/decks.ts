@@ -6,7 +6,6 @@ import { evaluateOpenAnswer } from '@/ai/flows/evaluate-open-answer';
 import type { EvaluateOpenAnswerInput } from '@/ai/flows/evaluate-open-answer';
 import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-question';
 import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-options-for-question';
-import { generateLearningPlan } from '@/ai/flows/generate-learning-plan';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
@@ -47,27 +46,18 @@ export async function handleCreateProject(
     }
 
     try {
-        const plan = await generateLearningPlan({ 
-            title, 
-            flashcards: flashcards.map(fc => ({ question: fc.question, answer: fc.answer })) 
-        });
-
-        if (!plan || !plan.questions || plan.questions.length === 0) {
-            throw new Error("Learning plan generation failed to produce questions.");
-        }
-
         // In a real app, this would be saved to a database.
         // For now, we store it in memory for this session.
         const newDeck = {
             id: `gen-${Date.now()}`,
-            title: plan.title,
-            description: plan.description,
-            category: plan.category,
-            author: 'AI',
-            size: plan.questions.length,
-            bibliography: plan.bibliography || [],
-            // The questions would be stored as a subcollection in a real app
-            questions: plan.questions 
+            title: title,
+            description: description,
+            category: 'Custom',
+            author: 'User',
+            size: flashcards.length,
+            bibliography: [],
+            // The flashcards would be stored as a subcollection in a real app
+            flashcards: flashcards 
         };
         createdDecks.push(newDeck);
 
@@ -75,7 +65,7 @@ export async function handleCreateProject(
         redirect(`/deck/${newDeckId}/details`);
 
     } catch (error) {
-        console.error('Error creating learning plan:', error);
+        console.error('Error creating project:', error);
         return { error: 'Sorry, I was unable to create a learning plan.' };
     }
 }
@@ -85,14 +75,8 @@ export async function getGeneratedDeck(deckId: string) {
     // This is a temporary solution for a mock database.
     const deck = createdDecks.find(d => d.id === deckId);
     if (deck) {
-        // Transform the stored questions into Flashcard format for the viewer
-        const flashcards = deck.questions.map((q: any, index: number) => ({
-            id: `${deck.id}-card-${index}`,
-            deckId: deck.id,
-            question: q.question,
-            answer: q.correctAnswerText || "View details for answer.",
-        }));
-        return { ...deck, flashcards };
+        // The flashcards are already in the correct format in the simplified handleCreateProject
+        return deck;
     }
     return null;
 }
