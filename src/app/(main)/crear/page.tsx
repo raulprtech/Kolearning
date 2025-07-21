@@ -208,15 +208,25 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   };
   
   const handleAiImport = async (studyNotes?: string) => {
-    const content = studyNotes || fileContent;
-    if (!content || (typeof content !== 'string' && !Array.isArray(content))) {
-      toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo o pega texto para generar tarjetas.' });
-      return;
-    }
-    setIsGenerating(true);
+    let contentToProcess;
     
-    const result = await handleGenerateProjectFromText(content as string);
+    // Prioritize pasted text. If not available, use file content.
+    if (studyNotes && studyNotes.trim() !== '') {
+        contentToProcess = studyNotes;
+    } else if (fileContent) {
+        contentToProcess = fileContent;
+    } else {
+        toast({ variant: 'destructive', title: 'No hay contenido', description: 'Por favor, sube un archivo o pega texto para generar tarjetas.' });
+        return;
+    }
 
+    if (typeof contentToProcess !== 'string' && !Array.isArray(contentToProcess)) {
+        toast({ variant: 'destructive', title: 'Contenido no válido', description: 'El contenido a procesar no es del tipo esperado.' });
+        return;
+    }
+
+    setIsGenerating(true);
+    const result = await handleGenerateProjectFromText(contentToProcess as string);
     setIsGenerating(false);
 
     if (result.error) {
@@ -579,8 +589,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
             </Button>
             <div>
                 <DialogTitle>Importar desde {sourceName}</DialogTitle>
-                <DialogDescriptionComponent>
-                    {instructions}
+                 <DialogDescriptionComponent asChild>
+                    <div>{instructions}</div>
                 </DialogDescriptionComponent>
             </div>
         </div>
@@ -708,8 +718,8 @@ const Step1_Input = ({ flashcards, setFlashcards, setProjectDetails, goToNext }:
     };
 
     const handleStartManualEntry = () => {
-        setFlashcards([{ id: 1, question: '', answer: '' }]);
-        setProjectDetails({ title: '', description: '', category: '' });
+        setFlashcards(current => current.length > 0 ? current : [{ id: 1, question: '', answer: '' }]);
+        setProjectDetails(current => current.title ? current : { title: '', description: '', category: '' });
         setView('editor');
     };
 
@@ -814,7 +824,7 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
                 </div>
                 <Button variant="outline" onClick={handleRefine} disabled={isRefining} className="w-full">
                   <Bot className="mr-2 h-4 w-4" />
-                  {isRefining ? 'Mejorando...' : 'Ayúdame a mejorar'}
+                  {isRefining ? 'Procesando...' : 'Llenado inteligente'}
                 </Button>
             </CardContent>
             <CardFooter className="flex justify-between">
