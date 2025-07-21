@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose
 } from '@/components/ui/dialog';
 import { handleGenerateDeckFromText } from '@/app/actions/decks';
 import ReactMarkdown from 'react-markdown';
@@ -42,15 +43,16 @@ import rehypeKatex from 'rehype-katex';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import 'katex/dist/katex.min.css';
+import { useToast } from '@/hooks/use-toast';
 
 type Flashcard = {
   id: number;
-  term: string;
-  definition: string;
+  question: string;
+  answer: string;
   image?: string;
 };
 
-const FlashcardEditor = ({ card, number }: { card: Flashcard; number: number }) => {
+const FlashcardEditor = ({ card, number, onCardChange }: { card: Flashcard; number: number, onCardChange: (id: number, field: 'question' | 'answer', value: string) => void }) => {
   return (
     <Card className="bg-card/70 border border-primary/20">
       <CardContent className="p-4">
@@ -71,7 +73,9 @@ const FlashcardEditor = ({ card, number }: { card: Flashcard; number: number }) 
           <div className="flex-1 grid gap-2">
             <Input 
               placeholder="Término" 
-              className="bg-background/50 h-12" 
+              className="bg-background/50 h-12"
+              value={card.question}
+              onChange={(e) => onCardChange(card.id, 'question', e.target.value)}
             />
             <Label className="text-xs text-muted-foreground pl-2">TÉRMINO</Label>
           </div>
@@ -79,7 +83,9 @@ const FlashcardEditor = ({ card, number }: { card: Flashcard; number: number }) 
             <div className="flex-1 grid gap-2">
                 <Input 
                     placeholder="Definición" 
-                    className="bg-background/50 h-12" 
+                    className="bg-background/50 h-12"
+                    value={card.answer}
+                    onChange={(e) => onCardChange(card.id, 'answer', e.target.value)}
                 />
                 <Label className="text-xs text-muted-foreground pl-2">DEFINICIÓN</Label>
             </div>
@@ -96,10 +102,12 @@ const FlashcardEditor = ({ card, number }: { card: Flashcard; number: number }) 
   );
 };
 
-const MagicImportModal = () => {
+const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) => void }) => {
   const [notes, setNotes] = useState('## Álgebra Básica\n\n- **Pregunta:** ¿Qué es `x` en `2x + 3 = 7`?\n- **Respuesta:** `x = 2`\n\n- **Pregunta:** ¿Cuál es la fórmula para el área de un círculo?\n- **Respuesta:** $A = \\pi r^2$');
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewSize, setPreviewSize] = useState(1); // 0=sm, 1=base, 2=lg, 3=xl
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
 
   const sizeClasses = ['prose-sm', 'prose-base', 'prose-lg', 'prose-xl', 'prose-2xl'];
 
@@ -109,17 +117,33 @@ const MagicImportModal = () => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsGenerating(true);
-    const formData = new FormData(event.currentTarget);
-    await handleGenerateDeckFromText(formData);
-    // The redirect will happen in the server action, no need to set isGenerating to false
+    
+    const result = await handleGenerateDeckFromText(notes);
+
+    setIsGenerating(false);
+
+    if (result.error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error de Generación',
+        description: result.error,
+      });
+    } else if (result.deck) {
+      onDeckGenerated(result.deck);
+      setIsOpen(false); // Close the modal on success
+      toast({
+        title: '¡Tarjetas Generadas!',
+        description: 'Tus nuevas tarjetas se han añadido al editor.',
+      });
+    }
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Importación Mágica</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl h-[70vh]">
+      <DialogContent className="max-w-4xl h-[70vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Importación Mágica</DialogTitle>
           <DialogDescription>
@@ -155,8 +179,8 @@ const MagicImportModal = () => {
                     </TabsList>
                   </Tabs>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
                   </div>
                 </div>
                 <div className="p-4 overflow-auto flex-grow">
@@ -184,15 +208,33 @@ export default function CreateProjectPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [flashcards, setFlashcards] = useState<Flashcard[]>([
-    { id: 1, term: '', definition: '' },
+    { id: 1, question: '', answer: '' },
   ]);
   const [suggestions, setSuggestions] = useState(true);
 
   const addCard = () => {
     setFlashcards([
       ...flashcards,
-      { id: Date.now(), term: '', definition: '' },
+      { id: Date.now(), question: '', answer: '' },
     ]);
+  };
+  
+  const handleDeckGenerated = (deck: { title: string; description: string; flashcards: { question: string; answer: string }[] }) => {
+    setTitle(deck.title);
+    setDescription(deck.description);
+    const newFlashcards = deck.flashcards.map((fc, index) => ({
+        ...fc,
+        id: Date.now() + index, // Ensure unique IDs
+    }));
+    setFlashcards(newFlashcards);
+  };
+
+  const handleCardChange = (id: number, field: 'question' | 'answer', value: string) => {
+    setFlashcards(currentFlashcards => 
+      currentFlashcards.map(card => 
+        card.id === id ? { ...card, [field]: value } : card
+      )
+    );
   };
 
   return (
@@ -229,7 +271,7 @@ export default function CreateProjectPage() {
         {/* Toolbar */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <MagicImportModal />
+            <MagicImportModal onDeckGenerated={handleDeckGenerated} />
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
@@ -248,7 +290,7 @@ export default function CreateProjectPage() {
         {/* Flashcard List */}
         <div className="space-y-4">
             {flashcards.map((card, index) => (
-                <FlashcardEditor key={card.id} card={card} number={index + 1} />
+                <FlashcardEditor key={card.id} card={card} number={index + 1} onCardChange={handleCardChange} />
             ))}
         </div>
 
