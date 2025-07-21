@@ -29,6 +29,14 @@ import {
 } from 'lucide-react';
 import type { Project, Flashcard } from '@/types';
 import { getGeneratedProject } from '@/app/actions/decks';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 async function getProjectDetails(projectId: string): Promise<(Project & { flashcards?: Flashcard[] }) | null> {
   // For generated projects, fetch from our temporary store
@@ -64,6 +72,7 @@ export default async function ProjectDetailsPage({
   }
 
   const knowledgeAtoms = project.flashcards || [];
+  const knowledgeAtomsPreview = knowledgeAtoms.slice(0, 5);
 
   return (
     <div className="container mx-auto py-8">
@@ -146,12 +155,43 @@ export default async function ProjectDetailsPage({
         <section className="mb-10">
            <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Átomos de conocimiento</h2>
-              <Button variant="outline">Ver todos ({project.size})</Button>
+               <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Ver todos ({knowledgeAtoms.length})</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl">
+                  <DialogHeader>
+                    <DialogTitle>Todos los Átomos de Conocimiento</DialogTitle>
+                  </DialogHeader>
+                  <ScrollArea className="max-h-[60vh] pr-4">
+                    <Table>
+                      <TableBody>
+                        {knowledgeAtoms.map(atom => (
+                          <TableRow key={atom.id}>
+                            <TableCell className="font-medium w-1/3 align-top">{atom.question}</TableCell>
+                            <TableCell className="text-muted-foreground w-2/3 align-top">{atom.answer}</TableCell>
+                            <TableCell className="w-auto align-top">
+                              <Button variant="ghost" size="icon">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                            <TableCell className="w-auto align-top">
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </DialogContent>
+              </Dialog>
            </div>
            <Card className="bg-card/70">
             <Table>
                 <TableBody>
-                    {knowledgeAtoms.map(atom => (
+                    {knowledgeAtomsPreview.map(atom => (
                         <TableRow key={atom.id}>
                             <TableCell className="font-medium w-1/3">{atom.question}</TableCell>
                             <TableCell className="text-muted-foreground w-2/3">{atom.answer}</TableCell>
