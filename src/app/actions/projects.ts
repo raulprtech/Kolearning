@@ -128,7 +128,7 @@ export async function handleQuizletUrlImport(quizletUrl: string) {
         
         const title = setDetails.title;
         const description = setDetails.description;
-        const category = setDetails.subject.name || 'Quizlet Import';
+        const category = setDetails.subject?.name || 'Quizlet Import';
 
         // Find flashcard terms
         const terms = Object.values(data.term.byId);
