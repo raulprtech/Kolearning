@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical, MenuSquare } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -22,7 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { handleTutorChat } from '@/app/actions/tutor';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
-import { handleEvaluateOpenAnswer } from '@/app/actions/decks';
+import { handleEvaluateOpenAnswer, handleGenerateOptionsForQuestion } from '@/app/actions/decks';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const initialSessionQuestions = [
@@ -368,7 +368,7 @@ type QuickChatMessage = {
   text: string;
 };
 
-const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, isAnswered: boolean }) => {
+const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, onConvertToMultipleChoice, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, onConvertToMultipleChoice: (options: any[]) => void, isAnswered: boolean }) => {
     const router = useRouter();
     const { user, decrementEnergy } = useUser();
     const hasEnergy = user && user.energy > 0;
@@ -463,6 +463,21 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         setIsLoading(false);
     };
 
+    const handleConvertToMultipleChoiceClick = async () => {
+        setIsLoading(true);
+        const result = await handleGenerateOptionsForQuestion({
+            question: currentQuestion.question,
+            correctAnswer: currentQuestion.correctAnswerText || currentQuestion.correctAnswer
+        });
+        setIsLoading(false);
+        if (result.options) {
+            onConvertToMultipleChoice(result.options);
+            setIsPopoverOpen(false);
+        } else {
+            // handle error
+        }
+    };
+
     const handleQuickQuestionSubmit = async () => {
         if (!quickQuestionText.trim()) return;
 
@@ -508,8 +523,8 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     };
     
     const renderContent = () => {
-        if (isLoading && activeView !== 'explanation') {
-            return (
+        if (isLoading && activeView === 'main') {
+             return (
                  <div className="flex items-center gap-2 text-muted-foreground h-36 justify-center">
                     <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-0"></span>
                     <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-150"></span>
@@ -539,7 +554,15 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                         <Button variant="ghost" size="sm" onClick={resetView}>Volver</Button>
                     </div>
                     <div className="text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{hintText}</ReactMarkdown>
+                       {isLoading ? (
+                           <div className="flex items-center gap-2 text-muted-foreground justify-center py-4">
+                               <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-0"></span>
+                               <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-150"></span>
+                               <span className="w-2 h-2 bg-foreground rounded-full animate-pulse delay-300"></span>
+                           </div>
+                       ) : (
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{hintText}</ReactMarkdown>
+                       )}
                     </div>
                 </div>
             )
@@ -628,6 +651,11 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                   {!isAnswered ? (
                     <>
                       <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleHintClick)} disabled={!hasEnergy}><Lightbulb className="mr-2 h-4 w-4" /> Pista</Button>
+                       {(currentQuestion.type === 'open-answer' || currentQuestion.type === 'fill-in-the-blank') && (
+                        <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleConvertToMultipleChoiceClick)} disabled={!hasEnergy}>
+                          <MenuSquare className="mr-2 h-4 w-4" /> Convertir a Opción Múltiple
+                        </Button>
+                      )}
                       <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick)} disabled={!hasEnergy}><Eye className="mr-2 h-4 w-4" /> Ver Respuesta</Button>
                       <Button variant="outline" onClick={() => handleActionWithEnergyCheck(handleRephraseClick)} disabled={!hasEnergy}><RefreshCw className="mr-2 h-4 w-4" /> Reformular</Button>
                     </>
@@ -692,6 +720,7 @@ export default function AprenderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentOpenAnswerText, setCurrentOpenAnswerText] = useState('');
   const [openAnswerFeedback, setOpenAnswerFeedback] = useState<string | null>(null);
+  const [revealedAnswer, setRevealedAnswer] = useState<string | null>(null);
 
   const { user } = useUser();
   const hasEnergy = user && user.energy > 0;
@@ -785,6 +814,7 @@ export default function AprenderPage() {
         const nextAttempt = attempts + 1;
         if (nextAttempt >= 3) {
             updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: nextAttempt });
+            setRevealedAnswer(currentQuestion.correctAnswerText);
         } else {
             // Try again
             if (result.evaluation?.feedback) {
@@ -815,9 +845,12 @@ export default function AprenderPage() {
           handleCorrectAnswer('open-answer');
           updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentQuestion.correctAnswerText });
           setCurrentOpenAnswerText(currentQuestion.correctAnswerText);
+          setRevealedAnswer(null); // Clear revealed answer since it's now in the textarea
       } else if (currentQuestion.type === 'fill-in-the-blank') {
-          handleGenericAnswer(true, 'fill-in-the-blank');
-          setCurrentOpenAnswerText((currentQuestion as any).correctAnswer);
+          const correctAnswer = (currentQuestion as any).correctAnswer;
+          handleCorrectAnswer('fill-in-the-blank');
+          updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: correctAnswer });
+          setCurrentOpenAnswerText(correctAnswer);
       }
   };
   
@@ -831,11 +864,31 @@ export default function AprenderPage() {
       setTimeout(() => setIsPulsing(false), 1000); // Duration of the pulse animation
   };
 
+  const handleConvertToMultipleChoice = (options: string[]) => {
+      setSessionQuestions(prevQuestions => {
+          const updatedQuestions = [...prevQuestions];
+          const newQ = { ...updatedQuestions[currentIndex] };
+          
+          newQ.type = 'multiple-choice';
+          (newQ as any).options = options.map((opt, i) => ({
+              id: String.fromCharCode(65 + i),
+              text: opt
+          }));
+
+          const correctOption = (newQ as any).options.find((o: any) => o.text === (newQ.correctAnswerText || newQ.correctAnswer));
+          (newQ as any).correctAnswer = correctOption.id;
+
+          updatedQuestions[currentIndex] = newQ;
+          return updatedQuestions;
+      });
+  };
+
   const goToNext = () => {
       if (currentIndex < sessionQuestions.length - 1) {
           setCurrentIndex(prev => prev + 1);
           setOpenAnswerFeedback(null);
           setCurrentOpenAnswerText('');
+          setRevealedAnswer(null);
       }
   };
 
@@ -939,7 +992,7 @@ export default function AprenderPage() {
               userAnswer={currentAnswerState.isAnswered ? (currentAnswerState.userAnswer || '') : currentOpenAnswerText}
               onUserAnswerChange={handleOpenAnswerTextChange}
               feedback={openAnswerFeedback}
-              revealedAnswer={null}
+              revealedAnswer={revealedAnswer}
             />
           )}
 
@@ -947,11 +1000,12 @@ export default function AprenderPage() {
               <FillInTheBlankQuestion 
                   question={currentQuestion}
                   isAnswered={currentAnswerState.isAnswered}
-                  userAnswer={currentAnswerState.isAnswered ? (currentQuestion as any).correctAnswer : currentOpenAnswerText}
+                  userAnswer={currentAnswerState.isAnswered ? ((currentAnswerState.userAnswer || (currentQuestion as any).correctAnswer)) : currentOpenAnswerText}
                   onUserAnswerChange={setCurrentOpenAnswerText}
                   onAnswerSubmit={() => {
                       const isCorrect = currentOpenAnswerText.trim().toLowerCase() === (currentQuestion as any).correctAnswer.toLowerCase();
                       handleGenericAnswer(isCorrect, 'fill-in-the-blank');
+                      updateAnswer(currentIndex, { userAnswer: currentOpenAnswerText });
                       if (!isCorrect) {
                         setCurrentOpenAnswerText('');
                       }
@@ -1011,6 +1065,7 @@ export default function AprenderPage() {
             correctAnswer={currentQuestion.correctAnswerText || ''}
             onShowAnswer={handleShowAnswer}
             onRephrase={handleRephrase}
+            onConvertToMultipleChoice={handleConvertToMultipleChoice}
             isAnswered={currentAnswerState.isAnswered}
           />
        </div>

@@ -3,6 +3,8 @@
 import { generateDeckFromText } from '@/ai/flows/generate-deck-from-text';
 import { evaluateOpenAnswer } from '@/ai/flows/evaluate-open-answer';
 import type { EvaluateOpenAnswerInput } from '@/ai/flows/evaluate-open-answer';
+import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-question';
+import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-options-for-question';
 import { redirect } from 'next/navigation';
 
 let createdDecks: any[] = [];
@@ -49,4 +51,14 @@ export async function handleEvaluateOpenAnswer(input: EvaluateOpenAnswerInput) {
     console.error('Error evaluating answer:', error);
     return { error: 'Sorry, I was unable to evaluate your answer.' };
   }
+}
+
+export async function handleGenerateOptionsForQuestion(input: GenerateOptionsForQuestionInput) {
+    try {
+        const result = await generateOptionsForQuestion(input);
+        return { options: result.options };
+    } catch (error) {
+        console.error('Error generating options:', error);
+        return { error: 'Sorry, I was unable to generate options for this question.' };
+    }
 }
