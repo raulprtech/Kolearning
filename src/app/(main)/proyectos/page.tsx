@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { DeckCard } from '@/components/deck/DeckCard';
+import { ProjectCard } from '@/components/deck/ProjectCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,11 +18,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import type { Deck } from '@/types';
+import type { Project } from '@/types';
 import { Search, SlidersHorizontal } from 'lucide-react';
 
 // In a real app, this would be an API call. For now, we define the data here.
-const allDecks: Deck[] = [
+const allProjects: Project[] = [
   {
     id: '1',
     title: 'Álgebra Básica',
@@ -70,11 +70,11 @@ export default function ProyectosPage() {
   const [authorFilter, setAuthorFilter] = useState('all');
   const [themeFilter, setThemeFilter] = useState('');
   const [schoolFilter, setSchoolFilter] = useState('');
-  const [searchResults, setSearchResults] = useState<Deck[]>([]);
+  const [searchResults, setSearchResults] = useState<Project[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-  const recommendedDecks = useMemo(() => allDecks.slice(0, 3), []);
+  const recommendedProjects = useMemo(() => allProjects.slice(0, 3), []);
 
   const normalizeText = (text: string) =>
     text
@@ -89,31 +89,31 @@ export default function ProyectosPage() {
     const normalizedTheme = normalizeText(themeFilter);
     const normalizedSchool = normalizeText(schoolFilter);
 
-    let results = allDecks;
+    let results = allProjects;
 
     // Filter by search query
     if (searchTerms.length > 0) {
-      results = results.filter((deck) => {
-        const deckText = normalizeText(
-          `${deck.title} ${deck.description} ${deck.category}`
+      results = results.filter((project) => {
+        const projectText = normalizeText(
+          `${project.title} ${project.description} ${project.category}`
         );
-        return searchTerms.every(term => deckText.includes(term));
+        return searchTerms.every(term => projectText.includes(term));
       });
     }
 
     // Filter by theme (category)
     if (normalizedTheme) {
-      results = results.filter(deck => normalizeText(deck.category).includes(normalizedTheme));
+      results = results.filter(project => normalizeText(project.category).includes(normalizedTheme));
     }
     
     // Filter by school
     if (normalizedSchool) {
-        results = results.filter(deck => deck.school && normalizeText(deck.school).includes(normalizedSchool));
+        results = results.filter(project => project.school && normalizeText(project.school).includes(normalizedSchool));
     }
 
     // Filter by author
     if (authorFilter && authorFilter !== 'all') {
-      results = results.filter(deck => deck.author === authorFilter);
+      results = results.filter(project => project.author === authorFilter);
     }
 
     setSearchResults(results);
@@ -206,8 +206,8 @@ export default function ProyectosPage() {
           <h2 className="text-2xl font-bold mb-4">Resultados de la búsqueda</h2>
           {searchResults.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {searchResults.map((deck) => (
-                <DeckCard key={deck.id} deck={deck} />
+              {searchResults.map((project) => (
+                <ProjectCard key={project.id} project={project} />
               ))}
             </div>
           ) : (
@@ -224,8 +224,8 @@ export default function ProyectosPage() {
       <section>
         <h2 className="text-2xl font-bold mb-4">Recomendados</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recommendedDecks.map((deck) => (
-            <DeckCard key={deck.id} deck={deck} />
+          {recommendedProjects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
           ))}
         </div>
       </section>

@@ -10,7 +10,7 @@ export interface User {
   energy: number;
 }
 
-export interface Deck {
+export interface Project {
   id: string;
   title: string;
   description: string;
@@ -19,6 +19,7 @@ export interface Deck {
   school?: string;
   size: number;
   bibliography: string[];
+  flashcards?: Flashcard[];
 }
 
 export interface Flashcard {

@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { handleGenerateDeckFromText, handleCreateProject } from '@/app/actions/decks';
+import { handleGenerateProjectFromText, handleCreateProject } from '@/app/actions/decks';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -80,7 +80,7 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
   );
 };
 
-const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) => void }) => {
+const MagicImportModal = ({ onProjectGenerated }: { onProjectGenerated: (project: any) => void }) => {
   const [fileContent, setFileContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewSize, setPreviewSize] = useState(1);
@@ -120,7 +120,7 @@ const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) =>
     }
     setIsGenerating(true);
     
-    const result = await handleGenerateDeckFromText(fileContent);
+    const result = await handleGenerateProjectFromText(fileContent);
 
     setIsGenerating(false);
 
@@ -130,8 +130,8 @@ const MagicImportModal = ({ onDeckGenerated }: { onDeckGenerated: (deck: any) =>
         title: 'Error de Generación',
         description: result.error,
       });
-    } else if (result.deck) {
-      onDeckGenerated(result.deck);
+    } else if (result.project) {
+      onProjectGenerated(result.project);
       setIsOpen(false); // Close the modal on success
       toast({
         title: '¡Tarjetas Generadas!',
@@ -224,10 +224,10 @@ export default function CreateProjectPage() {
     ]);
   };
   
-  const handleDeckGenerated = (deck: { title: string; description: string; flashcards: { question: string; answer: string }[] }) => {
-    setTitle(deck.title);
-    setDescription(deck.description);
-    const newFlashcards = deck.flashcards.map((fc, index) => ({
+  const handleProjectGenerated = (project: { title: string; description: string; flashcards: { question: string; answer: string }[] }) => {
+    setTitle(project.title);
+    setDescription(project.description);
+    const newFlashcards = project.flashcards.map((fc, index) => ({
         ...fc,
         id: Date.now() + index, // Ensure unique IDs
     }));
@@ -265,10 +265,8 @@ export default function CreateProjectPage() {
             title: "Error al crear el proyecto",
             description: result.error
         });
+        setIsCreating(false);
     }
-    // If successful, the server action handles the redirection, so no need for router.push here.
-    
-    setIsCreating(false);
   };
 
   return (
@@ -307,7 +305,7 @@ export default function CreateProjectPage() {
         {/* Toolbar */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <MagicImportModal onDeckGenerated={handleDeckGenerated} />
+            <MagicImportModal onProjectGenerated={handleProjectGenerated} />
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">

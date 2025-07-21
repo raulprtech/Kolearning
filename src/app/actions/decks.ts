@@ -8,17 +8,17 @@ import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-ques
 import type { GenerateOptionsForQuestionInput } from '@/ai/flows/generate-options-for-question';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import type { Project, Flashcard as FlashcardType } from '@/types';
 
-let createdDecks: any[] = [];
+let createdProjects: Project[] = [];
 
-// Helper Zod schema for flashcards to be passed to the action
 const FlashcardSchema = z.object({
   id: z.number(),
   question: z.string(),
   answer: z.string(),
 });
 
-export async function handleGenerateDeckFromText(studyNotes: string) {
+export async function handleGenerateProjectFromText(studyNotes: string) {
   if (!studyNotes) {
     return { error: 'Study notes cannot be empty.' };
   }
@@ -28,11 +28,11 @@ export async function handleGenerateDeckFromText(studyNotes: string) {
     
     // In a real app, you would save this to a database.
     // For now, we just return the result to be displayed on the client.
-    return { deck: result };
+    return { project: result };
 
   } catch (error) {
-    console.error('Error with deck generation AI:', error);
-    return { error: 'Sorry, I was unable to generate a deck from your notes.' };
+    console.error('Error with project generation AI:', error);
+    return { error: 'Sorry, I was unable to generate a project from your notes.' };
   }
 }
 
@@ -45,7 +45,7 @@ export async function handleCreateProject(
         return { error: 'Project must have a title and at least one flashcard.' };
     }
 
-    const newDeck = {
+    const newProject: Project & { flashcards: FlashcardType[] } = {
         id: `gen-${Date.now()}`,
         title: title,
         description: description,
@@ -53,29 +53,24 @@ export async function handleCreateProject(
         author: 'User',
         size: flashcards.length,
         bibliography: [],
-        flashcards: flashcards.map(fc => ({...fc, id: fc.id.toString()}))
+        flashcards: flashcards.map(fc => ({...fc, id: fc.id.toString(), deckId: `gen-${Date.now()}`}))
     };
 
     try {
-        // In a real app, this would be a database write operation.
-        // We keep the try...catch in case we add database logic later.
-        createdDecks.push(newDeck);
+        createdProjects.push(newProject);
     } catch (error) {
         console.error('Error creating project:', error);
-        return { error: 'Sorry, I was unable to save the learning plan.' };
+        return { error: 'Sorry, I was unable to save the project.' };
     }
     
-    // Redirect must happen outside the try...catch block
-    redirect(`/deck/${newDeck.id}/details`);
+    redirect(`/project/${newProject.id}/details`);
 }
 
 
-export async function getGeneratedDeck(deckId: string) {
-    // This is a temporary solution for a mock database.
-    const deck = createdDecks.find(d => d.id === deckId);
-    if (deck) {
-        // The flashcards are already in the correct format in the simplified handleCreateProject
-        return deck;
+export async function getGeneratedProject(projectId: string) {
+    const project = createdProjects.find(d => d.id === projectId);
+    if (project) {
+        return project;
     }
     return null;
 }

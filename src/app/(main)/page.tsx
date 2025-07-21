@@ -5,14 +5,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Zap, Play, PlusCircle, Search, Flame, TrendingUp } from 'lucide-react';
-import type { Deck } from '@/types';
-import { DashboardDeckCard } from '@/components/deck/DashboardDeckCard';
+import type { Project } from '@/types';
+import { DashboardProjectCard } from '@/components/deck/DashboardProjectCard';
 import { Progress } from '@/components/ui/progress';
 import { useUser } from '@/context/UserContext';
 import { useEffect, useState } from 'react';
 
 // In a real app, this would be an API call. For now, we define the data here.
-const myDecksData: Deck[] = [
+const myProjectsData: Project[] = [
     {
       id: '1',
       title: 'JavaScript Fundamentals',
@@ -54,11 +54,11 @@ const myDecksData: Deck[] = [
 
 export default function DashboardPage() {
     const { user } = useUser();
-    const [myDecks, setMyDecks] = useState<Deck[]>([]);
+    const [myProjects, setMyProjects] = useState<Project[]>([]);
 
     useEffect(() => {
         // Simulating async fetch
-        setMyDecks(myDecksData);
+        setMyProjects(myProjectsData);
     }, []);
 
     const currentStreak = user?.currentStreak ?? 0;
@@ -177,10 +177,10 @@ export default function DashboardPage() {
                     </Button>
                 </div>
             </div>
-             {myDecks.length > 0 ? (
+             {myProjects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    {myDecks.map((deck) => (
-                        <DashboardDeckCard key={deck.id} deck={deck} />
+                    {myProjects.map((project) => (
+                        <DashboardProjectCard key={project.id} project={project} />
                     ))}
                 </div>
             ) : (
