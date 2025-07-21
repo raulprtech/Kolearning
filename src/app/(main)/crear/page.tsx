@@ -41,6 +41,8 @@ import 'katex/dist/katex.min.css';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
+import Image from 'next/image';
+import { AnkiExportGuide } from '@/components/deck/AnkiExportGuide';
 
 type Flashcard = {
   id: number;
@@ -91,8 +93,74 @@ const FlashcardEditor = ({ card, number, onCardChange, onCardDelete }: { card: F
 type ImportSourceType = 'pdf' | 'powerpoint' | 'lecture' | 'notes' | 'youtube' | 'quizlet' | 'anki' | 'sheets' | 'web' | 'gizmo';
 type SourceInfo = { title: string; type: ImportSourceType; icon: React.ReactNode; isFileBased: boolean; accept?: string; };
 
+const PasteImportControls = ({
+    pastedText, setPastedText,
+    termSeparator, setTermSeparator, customTermSeparator, setCustomTermSeparator,
+    rowSeparator, setRowSeparator, customRowSeparator, setCustomRowSeparator
+}: any) => (
+    <>
+        <Textarea
+            placeholder="Pega aquí tu texto..."
+            value={pastedText}
+            onChange={(e) => setPastedText(e.target.value)}
+            className="h-40 resize-none"
+        />
+        <Separator />
+        <div className="grid grid-cols-2 gap-6">
+            <div>
+                <h4 className="font-medium mb-3">Entre término y definición</h4>
+                <RadioGroup value={termSeparator} onValueChange={setTermSeparator} className="gap-3">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="tab" id="tab" />
+                        <Label htmlFor="tab">Tabulador</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="comma" id="comma" />
+                        <Label htmlFor="comma">Coma</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="custom" id="custom_term" />
+                        <Label htmlFor="custom_term">Personalizado</Label>
+                        <Input
+                            value={customTermSeparator}
+                            onChange={(e) => setCustomTermSeparator(e.target.value)}
+                            disabled={termSeparator !== 'custom'}
+                            className="h-8 w-24 ml-2"
+                        />
+                    </div>
+                </RadioGroup>
+            </div>
+            <div>
+                <h4 className="font-medium mb-3">Entre renglones</h4>
+                <RadioGroup value={rowSeparator} onValueChange={setRowSeparator} className="gap-3">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="newline" id="newline" />
+                        <Label htmlFor="newline">Línea nueva</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="semicolon" id="semicolon" />
+                        <Label htmlFor="semicolon">Punto y coma</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="custom" id="custom_row" />
+                        <Label htmlFor="custom_row">Personalizado</Label>
+                        <Input
+                            value={customRowSeparator}
+                            onChange={(e) => setCustomRowSeparator(e.target.value)}
+                            disabled={rowSeparator !== 'custom'}
+                            className="h-8 w-24 ml-2"
+                            placeholder="\n\n"
+                        />
+                    </div>
+                </RadioGroup>
+            </div>
+        </div>
+    </>
+);
+
+
 const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGenerated: (project: any) => void, onProjectParsed: (title: string, cards: Omit<Flashcard, 'id'>[]) => void }) => {
-  const [view, setView] = useState<'selection' | 'upload' | 'paste'>('selection');
+  const [view, setView] = useState<'selection' | 'upload' | 'paste' | 'anki'>('selection');
   const [selectedSource, setSelectedSource] = useState<SourceInfo | null>(null);
 
   const [fileName, setFileName] = useState('');
@@ -125,8 +193,10 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
     setSelectedSource(source);
     if (source.isFileBased) {
       setView('upload');
-    } else if (source.type === 'quizlet' || source.type === 'anki') {
-      setView('paste');
+    } else if (source.type === 'quizlet') {
+        setView('paste');
+    } else if (source.type === 'anki') {
+        setView('anki');
     } else {
       toast({ variant: 'destructive', title: 'Función no disponible', description: 'Esta opción de importación aún no está implementada.' });
     }
@@ -209,7 +279,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       }
       setIsGenerating(true);
       const parsedCards = parsePastedText();
-      const projectTitle = selectedSource?.type === 'anki' ? "Importación de Anki" : "Importación de Quizlet";
+      const projectTitle = "Importación de Texto";
       onProjectParsed(projectTitle, parsedCards);
       setIsGenerating(false);
       resetState();
@@ -350,66 +420,54 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         </div>
       </DialogHeader>
       <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
-          <Textarea 
-              placeholder={`Pega aquí el texto de ${selectedSource?.title}...`}
-              value={pastedText}
-              onChange={(e) => setPastedText(e.target.value)}
-              className="h-40 resize-none"
+          <PasteImportControls
+              pastedText={pastedText}
+              setPastedText={setPastedText}
+              termSeparator={termSeparator}
+              setTermSeparator={setTermSeparator}
+              customTermSeparator={customTermSeparator}
+              setCustomTermSeparator={setCustomTermSeparator}
+              rowSeparator={rowSeparator}
+              setRowSeparator={setRowSeparator}
+              customRowSeparator={customRowSeparator}
+              setCustomRowSeparator={setCustomRowSeparator}
           />
-          <Separator />
-          <div className="grid grid-cols-2 gap-6">
-              <div>
-                  <h4 className="font-medium mb-3">Entre término y definición</h4>
-                  <RadioGroup value={termSeparator} onValueChange={setTermSeparator} className="gap-3">
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="tab" id="tab" />
-                          <Label htmlFor="tab">Tabulador</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="comma" id="comma" />
-                          <Label htmlFor="comma">Coma</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="custom" id="custom_term" />
-                          <Label htmlFor="custom_term">Personalizado</Label>
-                          <Input 
-                              value={customTermSeparator}
-                              onChange={(e) => setCustomTermSeparator(e.target.value)}
-                              disabled={termSeparator !== 'custom'}
-                              className="h-8 w-24 ml-2"
-                          />
-                      </div>
-                  </RadioGroup>
-              </div>
-               <div>
-                  <h4 className="font-medium mb-3">Entre renglones</h4>
-                  <RadioGroup value={rowSeparator} onValueChange={setRowSeparator} className="gap-3">
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="newline" id="newline" />
-                          <Label htmlFor="newline">Línea nueva</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="semicolon" id="semicolon" />
-                          <Label htmlFor="semicolon">Punto y coma</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="custom" id="custom_row" />
-                          <Label htmlFor="custom_row">Personalizado</Label>
-                           <Input 
-                              value={customRowSeparator}
-                              onChange={(e) => setCustomRowSeparator(e.target.value)}
-                              disabled={rowSeparator !== 'custom'}
-                              className="h-8 w-24 ml-2"
-                              placeholder="\n\n"
-                          />
-                      </div>
-                  </RadioGroup>
-              </div>
-          </div>
       </div>
       <div className="flex justify-end p-6 pt-4">
           <Button onClick={handlePastedTextImport} disabled={isGenerating || !pastedText} className="w-full">
               {isGenerating ? 'Importando...' : 'Importar Tarjetas'}
+          </Button>
+      </div>
+    </>
+  );
+  
+  const renderAnkiView = () => (
+    <>
+      <DialogHeader className="p-6 pb-2">
+        <div className='flex items-center gap-2'>
+            <Button variant="ghost" size="icon" onClick={() => setView('selection')} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+                <DialogTitle>Importar desde Anki</DialogTitle>
+            </div>
+        </div>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col p-6 pt-4 gap-4 min-h-0">
+          <AnkiExportGuide />
+           <Textarea 
+              placeholder="Copia y pega aquí tu archivo 'Notas en Texto Plano (*.txt)' exportado de Anki..."
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              className="h-40 resize-none"
+          />
+      </div>
+      <div className="flex justify-end p-6 pt-4 gap-2">
+            <Button variant="outline" onClick={() => setView('selection')}>
+                Volver
+            </Button>
+          <Button onClick={handlePastedTextImport} disabled={isGenerating || !pastedText}>
+              {isGenerating ? 'Importando...' : 'Confirmar'}
           </Button>
       </div>
     </>
@@ -421,10 +479,11 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
       <DialogTrigger asChild>
         <Button variant="outline"><Wand2 className="mr-2 h-4 w-4" /> Importación Mágica</Button>
       </DialogTrigger>
-      <DialogContent className={cn("max-w-xl flex flex-col p-0", view === 'paste' && 'max-w-3xl')}>
+      <DialogContent className={cn("max-w-xl flex flex-col p-0", (view === 'paste' || view === 'anki') && 'max-w-3xl')}>
          {view === 'selection' && renderSelectionView()}
          {view === 'upload' && renderUploadView()}
          {view === 'paste' && renderPasteView()}
+         {view === 'anki' && renderAnkiView()}
       </DialogContent>
     </Dialog>
   );
