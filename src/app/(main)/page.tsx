@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,7 +33,7 @@ export default function DashboardPage() {
     const energy = user?.energy ?? 0;
     const maxEnergy = 10;
     const energyPercentage = (energy / maxEnergy) * 100;
-    const dominionPoints = 40;
+    const dominionPoints = user?.dominionPoints ?? 0;
     const nextLevelPoints = 100;
     const progressPercentage = (dominionPoints / nextLevelPoints) * 100;
 

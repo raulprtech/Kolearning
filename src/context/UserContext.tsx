@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
@@ -9,6 +10,8 @@ interface UserContextType {
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   decrementEnergy: (cost?: number) => void;
+  addCoins: (amount: number) => void;
+  addDominionPoints: (amount: number) => void;
   tutorSession: TutorSession | null;
   setTutorSession: React.Dispatch<React.SetStateAction<TutorSession | null>>;
 }
@@ -30,6 +33,7 @@ async function getUserData(uid: string): Promise<User | null> {
         currentStreak: 5,
         coins: 142,
         energy: 10,
+        dominionPoints: 40,
     };
 }
 
@@ -52,8 +56,26 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const addCoins = (amount: number) => {
+    setUser(currentUser => {
+        if (currentUser) {
+            return { ...currentUser, coins: currentUser.coins + amount };
+        }
+        return currentUser;
+    });
+  };
+
+  const addDominionPoints = (amount: number) => {
+    setUser(currentUser => {
+        if (currentUser) {
+            return { ...currentUser, dominionPoints: currentUser.dominionPoints + amount };
+        }
+        return currentUser;
+    });
+  };
+
   return (
-    <UserContext.Provider value={{ user, setUser, decrementEnergy, tutorSession, setTutorSession }}>
+    <UserContext.Provider value={{ user, setUser, decrementEnergy, addCoins, addDominionPoints, tutorSession, setTutorSession }}>
       {children}
     </UserContext.Provider>
   );
@@ -66,3 +88,5 @@ export const useUser = () => {
   }
   return context;
 };
+
+    

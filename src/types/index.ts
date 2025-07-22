@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -10,6 +11,7 @@ export interface User {
   currentStreak: number;
   coins: number;
   energy: number;
+  dominionPoints: number;
 }
 
 export interface StudyPlan {
@@ -195,3 +197,5 @@ export const GenerateStudyPlanOutputSchema = z.object({
   expectedProgress: z.string().describe("A brief explanation of the expected progress after each major section or day of the plan."),
 });
 export type GenerateStudyPlanOutput = z.infer<typeof GenerateStudyPlanOutputSchema>;
+
+    

@@ -921,7 +921,7 @@ function AprenderPageComponent() {
                   </CardContent>
                   <CardFooter>
                       <Button size="lg" className="w-full" asChild>
-                          <Link href={`/mis-proyectos/${project.slug}`}>
+                          <Link href={`/mis-proyectos/${project.slug}?mastery=${masteryProgress}&credits=${cognitiveCredits}`}>
                               Continuar
                           </Link>
                       </Button>
@@ -1119,3 +1119,5 @@ export default function AprenderPage() {
         </Suspense>
     );
 }
+
+    
