@@ -1,5 +1,8 @@
+// This file is intentionally structured to have a Server Component (`ProjectDetailsPage`)
+// fetch the data and pass it to a Client Component (`ProjectDetailsView`).
+// This is the recommended pattern in Next.js App Router to avoid issues with
+// accessing `params` directly in Client Components that need to fetch data.
 
-'use client';
 import Link from 'next/link';
 import {
   Card,
@@ -39,9 +42,11 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { notFound } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// ############################################################################
+// Client Component: Renders the UI and handles user interactions
+// ############################################################################
 function ProjectDetailsView({ project }: { project: Project }) {
   const knowledgeAtoms = project.flashcards || [];
   const knowledgeAtomsPreview = knowledgeAtoms.slice(0, 5);
@@ -200,55 +205,22 @@ function ProjectDetailsView({ project }: { project: Project }) {
   );
 }
 
-// This is the Server Component that fetches the data
-export default function ProjectDetailsPageLoader({
+// ############################################################################
+// Server Component: Fetches data and passes it to the Client Component
+// ############################################################################
+export default async function ProjectDetailsPage({
   params,
 }: {
   params: { projectId: string };
 }) {
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadProject() {
-      const projectSlug = params.projectId;
-      const projects = await getAllProjects();
-      const foundProject = projects.find(p => p.slug === projectSlug);
-      
-      if (foundProject) {
-        setProject(foundProject);
-      }
-      setLoading(false);
-    }
-    loadProject();
-  }, [params.projectId]);
-
-  if (loading) {
-    return (
-        <div className="container mx-auto py-8">
-            <div className="space-y-6">
-                <Skeleton className="h-12 w-1/2" />
-                <div className="grid grid-cols-3 gap-6">
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-24 w-full" />
-                </div>
-                <Skeleton className="h-10 w-1/4" />
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-10 w-1/4" />
-                <Skeleton className="h-48 w-full" />
-            </div>
-        </div>
-    );
-  }
+  const projectSlug = params.projectId;
+  const projects = await getAllProjects();
+  const project = projects.find(p => p.slug === projectSlug);
 
   if (!project) {
     notFound();
-    return null;
   }
-  
-  // This is a Client Component that receives the data and renders the UI
+
+  // The Client Component for the view receives the fetched project data as a prop.
   return <ProjectDetailsView project={project} />;
 }
-
-    
