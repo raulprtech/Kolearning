@@ -30,6 +30,8 @@ export interface ProjectDetails {
     timeLimit: string;
     masteryLevel: string;
     isCreating: boolean;
+    cognitiveProfile?: string[];
+    learningChallenge?: string;
 }
 
 export interface Project {
@@ -179,6 +181,8 @@ export const GenerateStudyPlanInputSchema = z.object({
   timeLimit: z.string().describe('The time frame the user has to study (e.g., "2 weeks", "1 month").'),
   masteryLevel: z.string().describe('The user\'s self-assessed mastery level (e.g., "Beginner", "Intermediate").'),
   flashcards: z.array(StudyPlanFlashcardSchema).describe('The list of knowledge atoms (flashcards) for the project.'),
+  cognitiveProfile: z.array(z.string()).optional().describe("User's preferred learning styles (e.g., 'Visual', 'Practical Examples')."),
+  learningChallenge: z.string().optional().describe("User's biggest self-reported learning challenge."),
 });
 export type GenerateStudyPlanInput = z.infer<typeof GenerateStudyPlanInputSchema>;
 

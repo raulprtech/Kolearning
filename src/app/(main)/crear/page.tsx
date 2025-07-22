@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useRef, ReactNode, useEffect } from 'react';
@@ -30,6 +31,8 @@ import {
   TrendingUp,
   BrainCircuit,
   CalendarIcon,
+  Sparkles,
+  Info
 } from 'lucide-react';
 import {
   Dialog,
@@ -42,6 +45,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
@@ -845,7 +850,7 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
       setIsRefining(false);
     };
 
-    const handleDetailsChange = (field: keyof ProjectDetails, value: string | boolean | number) => {
+    const handleDetailsChange = (field: keyof ProjectDetails, value: string | boolean | number | string[]) => {
         setProjectDetails({ ...projectDetails, [field]: value });
     };
 
@@ -931,10 +936,101 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
 
 // --- Step 3 Components ---
 
-const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: { projectDetails: ProjectDetails, flashcards: FlashcardType[], goBack: () => void, createProject: (studyPlan: StudyPlan) => void }) => {
+const CalibrationModal = ({ onCalibrate, projectDetails }: { onCalibrate: (profile: any, challenge: string) => void, projectDetails: ProjectDetails }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [step, setStep] = useState(1);
+    const [cognitiveProfile, setCognitiveProfile] = useState<string[]>([]);
+    const [learningChallenge, setLearningChallenge] = useState<string>('');
+    
+    const profileOptions = [
+        "Ejemplos Prácticos y Casos Reales",
+        "Analogías y Metáforas Simples",
+        "Definiciones Técnicas y Precisas",
+        "Estructuras Visuales (como Mapas Mentales)",
+    ];
+
+    const challengeOptions = [
+        "Mantenerme concentrado y evitar distracciones",
+        "Entender conceptos muy teóricos o abstractos",
+        "Memorizar un gran volumen de datos específicos (fórmulas, fechas, etc.)",
+        "Conectar la teoría con su aplicación práctica",
+    ];
+
+    const handleProfileChange = (option: string, checked: boolean) => {
+        setCognitiveProfile(prev => 
+            checked ? [...prev, option] : prev.filter(item => item !== option)
+        );
+    };
+
+    const handleSubmit = () => {
+        onCalibrate(cognitiveProfile, learningChallenge);
+        setIsOpen(false);
+        setStep(1); // Reset for next time
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="link" className="text-primary text-xs">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    ¿Quieres un mayor nivel de personalización? Responde un breve test para calibrar tu plan.
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>{step === 1 ? 'Paso 1 de 2: Perfil Cognitivo' : 'Paso 2 de 2: Diagnóstico de Desafío'}</DialogTitle>
+                    <DialogDescriptionComponent>
+                        {step === 1 ? '¿Qué tipo de explicaciones te ayudan a entender mejor?' : '¿Cuál suele ser tu mayor desafío al estudiar este tipo de material?'}
+                    </DialogDescriptionComponent>
+                </DialogHeader>
+                {step === 1 ? (
+                    <div className="grid gap-4 py-4">
+                        {profileOptions.map(option => (
+                            <div key={option} className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id={option}
+                                    onCheckedChange={(checked) => handleProfileChange(option, checked as boolean)}
+                                    checked={cognitiveProfile.includes(option)}
+                                />
+                                <label htmlFor={option} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    {option}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid gap-4 py-4">
+                        <RadioGroup onValueChange={setLearningChallenge} value={learningChallenge}>
+                             {challengeOptions.map(option => (
+                                <div key={option} className="flex items-center space-x-2">
+                                    <RadioGroupItem value={option} id={option} />
+                                    <Label htmlFor={option}>{option}</Label>
+                                </div>
+                            ))}
+                        </RadioGroup>
+                    </div>
+                )}
+                <CardFooter>
+                    {step === 1 ? (
+                        <Button onClick={() => setStep(2)} disabled={cognitiveProfile.length === 0} className="w-full">Siguiente</Button>
+                    ) : (
+                        <div className="flex w-full gap-2">
+                             <Button variant="outline" onClick={() => setStep(1)}>Volver</Button>
+                             <Button onClick={handleSubmit} disabled={!learningChallenge} className="flex-grow">Finalizar y Regenerar Plan</Button>
+                        </div>
+                    )}
+                </CardFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+
+const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject, onCalibratePlan }: { projectDetails: ProjectDetails, flashcards: FlashcardType[], goBack: () => void, createProject: (studyPlan: StudyPlan) => void, onCalibratePlan: (profile: string[], challenge: string) => void }) => {
     const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const { toast } = useToast();
+    const [isCalibrated, setIsCalibrated] = useState(false);
 
     useEffect(() => {
         const generatePlan = async () => {
@@ -946,6 +1042,8 @@ const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: { pro
                 timeLimit: projectDetails.timeLimit,
                 masteryLevel: projectDetails.masteryLevel,
                 flashcards: flashcards,
+                cognitiveProfile: projectDetails.cognitiveProfile,
+                learningChallenge: projectDetails.learningChallenge,
             });
 
             if (result.plan) {
@@ -958,6 +1056,11 @@ const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: { pro
 
         generatePlan();
     }, [projectDetails, flashcards, toast]);
+
+    const handleCalibrate = (profile: string[], challenge: string) => {
+        setIsCalibrated(true);
+        onCalibratePlan(profile, challenge);
+    };
 
     if (isGenerating) {
         return (
@@ -1031,6 +1134,19 @@ const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: { pro
                         </Card>
                     </div>
                 </div>
+                 <div className="text-center pt-4">
+                    {isCalibrated ? (
+                        <div className="text-sm text-green-400 bg-green-500/10 p-3 rounded-md flex items-center justify-center gap-2">
+                            <CheckCircle className="h-4 w-4" />
+                            <span>¡Perfecto! Tu plan ha sido recalibrado según tus preferencias.</span>
+                        </div>
+                    ) : (
+                        <p className="text-xs text-muted-foreground mb-2">
+                           Este plan no es definitivo, se adaptará según tu progreso.
+                        </p>
+                    )}
+                     {!isCalibrated && <CalibrationModal onCalibrate={handleCalibrate} projectDetails={projectDetails} />}
+                </div>
             </CardContent>
             <CardFooter className="flex justify-between">
                 <Button variant="outline" onClick={goBack}><ChevronLeft className="mr-2 h-4 w-4"/> Volver</Button>
@@ -1054,6 +1170,8 @@ export default function CreateProjectWizardPage() {
       timeLimit: '',
       masteryLevel: 'Intermedio',
       isCreating: false,
+      cognitiveProfile: [],
+      learningChallenge: '',
   });
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const { toast } = useToast();
@@ -1064,6 +1182,15 @@ export default function CreateProjectWizardPage() {
   const goToNext = () => setStep(s => Math.min(s + 1, 3));
   const goBack = () => setStep(s => Math.max(s - 1, 1));
   
+  const handleCalibratePlan = (profile: string[], challenge: string) => {
+    setProjectDetails(current => ({
+        ...current,
+        cognitiveProfile: profile,
+        learningChallenge: challenge,
+    }));
+    // The useEffect in Step3_Plan will handle the re-generation
+  };
+
   const handleCreateFinalProject = async (studyPlan: StudyPlan | null) => {
     if (!projectDetails.title || flashcards.length === 0) {
       toast({
@@ -1122,7 +1249,7 @@ export default function CreateProjectWizardPage() {
       case 2:
         return <Step2_Details 
             projectDetails={projectDetails} 
-            setProjectDetails={setProjectDetails} 
+            setProjectDetails={(newDetails) => setProjectDetails(current => ({...current, ...newDetails}))} 
             flashcards={flashcards} 
             goBack={goBack} 
             goToNext={goToNext} 
@@ -1133,6 +1260,7 @@ export default function CreateProjectWizardPage() {
             flashcards={flashcards} 
             goBack={goBack} 
             createProject={handleCreateFinalProject} 
+            onCalibratePlan={handleCalibratePlan}
         />;
       default:
         return <div>Paso desconocido</div>;
