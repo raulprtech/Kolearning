@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, ReactNode } from 'react';
+import { useState, useRef, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -25,7 +25,11 @@ import {
   PencilIcon,
   ChevronRight,
   ChevronLeft,
-  Bot
+  Bot,
+  Loader2,
+  CheckCircle,
+  TrendingUp,
+  BrainCircuit
 } from 'lucide-react';
 import {
   Dialog,
@@ -631,9 +635,8 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
           className="h-60 resize-none"
         />
       </div>
-      <div className="flex justify-between p-6 pt-4">
-          <Button variant="outline" onClick={() => setView('selection')}>Volver</Button>
-          <Button onClick={() => handleManualTextImport(pastedText, "Hoja de Cálculo")} disabled={isGenerating || !pastedText}>
+      <div className="flex justify-end p-6 pt-4">
+          <Button onClick={() => handleManualTextImport(pastedText, "Hoja de Cálculo")} disabled={isGenerating || !pastedText} className="w-full">
               {isGenerating ? 'Importando...' : `Confirmar`}
           </Button>
       </div>
@@ -808,7 +811,7 @@ const Step1_Input = ({ flashcards, setFlashcards, setProjectDetails, goToNext }:
 // --- Step 2 Components ---
 
 const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, goToNext }: { projectDetails: ProjectDetails, setProjectDetails: (details: ProjectDetails) => void, flashcards: Flashcard[], goBack: () => void, goToNext: () => void }) => {
-    const { title, description, category, isPublic } = projectDetails;
+    const { title, description, category, isPublic, objective, timeLimit, masteryLevel } = projectDetails;
     const [isRefining, setIsRefining] = useState(false);
     const { toast } = useToast();
 
@@ -842,33 +845,50 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
         <Card>
             <CardHeader>
                 <CardTitle>Detalles del Proyecto</CardTitle>
-                <CardDescription>Dale un nombre y describe tu nuevo plan de estudios.</CardDescription>
+                <CardDescription>Define tu proyecto y tus metas para crear el plan perfecto.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="title">Título</Label>
+                    <Label htmlFor="title">Título del Proyecto</Label>
                     <Input id="title" placeholder="e.g., Fundamentos de JavaScript" value={title} onChange={(e) => handleDetailsChange('title', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="description">Descripción</Label>
                     <Textarea id="description" placeholder="Un breve resumen de lo que aprenderás." value={description} onChange={(e) => handleDetailsChange('description', e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="category">Categoría</Label>
-                    <Input id="category" placeholder="e.g., Programación, Historia" value={category} onChange={(e) => handleDetailsChange('category', e.target.value)} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="category">Categoría</Label>
+                        <Input id="category" placeholder="e.g., Programación" value={category} onChange={(e) => handleDetailsChange('category', e.target.value)} />
+                    </div>
+                    <div className="flex items-center space-x-2 pt-8">
+                        <Switch id="visibility" checked={isPublic} onCheckedChange={(checked) => handleDetailsChange('isPublic', checked)} />
+                        <Label htmlFor="visibility">¿Hacer público este proyecto?</Label>
+                    </div>
                 </div>
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="visibility">¿Hacer público?</Label>
-                    <Switch id="visibility" checked={isPublic} onCheckedChange={(checked) => handleDetailsChange('isPublic', checked)} />
-                </div>
-                <Button variant="outline" onClick={handleRefine} disabled={isRefining} className="w-full">
+                 <Button variant="outline" onClick={handleRefine} disabled={isRefining} className="w-full">
                   <Bot className="mr-2 h-4 w-4" />
                   {isRefining ? 'Procesando...' : 'Llenado inteligente'}
                 </Button>
+                <Separator />
+                <div className="space-y-2">
+                    <Label htmlFor="objective">¿Cuál es tu objetivo de estudio?</Label>
+                    <Input id="objective" placeholder="e.g., Pasar mi examen final, repasar para una entrevista..." value={objective} onChange={(e) => handleDetailsChange('objective', e.target.value)} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="timeLimit">Límite de tiempo</Label>
+                        <Input id="timeLimit" placeholder="e.g., 2 semanas, 1 mes" value={timeLimit} onChange={(e) => handleDetailsChange('timeLimit', e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="masteryLevel">Nivel de dominio actual</Label>
+                        <Input id="masteryLevel" placeholder="e.g., Principiante, Intermedio" value={masteryLevel} onChange={(e) => handleDetailsChange('masteryLevel', e.target.value)} />
+                    </div>
+                </div>
             </CardContent>
             <CardFooter className="flex justify-between">
                 <Button variant="outline" onClick={goBack}><ChevronLeft className="mr-2 h-4 w-4"/> Volver</Button>
-                <Button onClick={goToNext} disabled={!title}>Siguiente <ChevronRight className="ml-2 h-4 w-4"/></Button>
+                <Button onClick={goToNext} disabled={!title || !objective}>Siguiente <ChevronRight className="ml-2 h-4 w-4"/></Button>
             </CardFooter>
         </Card>
     );
@@ -876,85 +896,104 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
 
 // --- Step 3 Components ---
 
-const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: { projectDetails: ProjectDetails, flashcards: FlashcardType[], goBack: () => void, createProject: (studyPlan: StudyPlan | null) => void }) => {
-    const [objective, setObjective] = useState('');
+const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: { projectDetails: ProjectDetails, flashcards: FlashcardType[], goBack: () => void, createProject: (studyPlan: StudyPlan) => void }) => {
     const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const { toast } = useToast();
 
-    const handleGeneratePlan = async () => {
-        if (!objective) {
-            toast({ variant: 'destructive', title: 'Falta el objetivo', description: 'Por favor, dinos cuál es tu objetivo de estudio.' });
-            return;
-        }
-        setIsGenerating(true);
-        const result = await handleGenerateStudyPlan({
-            projectTitle: projectDetails.title,
-            objective: objective,
-            flashcards: flashcards,
-        });
+    useEffect(() => {
+        const generatePlan = async () => {
+            setIsGenerating(true);
+            setStudyPlan(null);
+            const result = await handleGenerateStudyPlan({
+                projectTitle: projectDetails.title,
+                objective: projectDetails.objective,
+                timeLimit: projectDetails.timeLimit,
+                masteryLevel: projectDetails.masteryLevel,
+                flashcards: flashcards,
+            });
 
-        if (result.plan) {
-            setStudyPlan(result.plan);
-            toast({ title: "¡Plan de estudios generado!" });
-        } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
-        }
-        setIsGenerating(false);
-    };
+            if (result.plan) {
+                setStudyPlan(result.plan);
+            } else {
+                toast({ variant: 'destructive', title: 'Error al crear el plan', description: result.error });
+            }
+            setIsGenerating(false);
+        };
+
+        generatePlan();
+    }, [projectDetails, flashcards, toast]);
+
+    if (isGenerating) {
+        return (
+             <Card>
+                <CardContent className="p-6 text-center flex flex-col items-center justify-center min-h-[400px]">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                    <h2 className="text-xl font-semibold">Koli está pensando...</h2>
+                    <p className="text-muted-foreground">Creando tu plan de estudios personalizado.</p>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    if (!studyPlan) {
+        return (
+             <Card>
+                <CardContent className="p-6 text-center flex flex-col items-center justify-center min-h-[400px]">
+                     <h2 className="text-xl font-semibold text-destructive">No se pudo generar el plan</h2>
+                    <p className="text-muted-foreground mb-4">Ocurrió un error. Intenta volver y generar de nuevo.</p>
+                     <Button variant="outline" onClick={goBack}><ChevronLeft className="mr-2 h-4 w-4"/> Volver</Button>
+                </CardContent>
+            </Card>
+        )
+    }
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Plan de Estudios Personalizado</CardTitle>
-                <CardDescription>Define tu meta y deja que Koli organice el camino más eficiente para ti.</CardDescription>
+                <CardTitle>¡Conoce tu Plan de Estudios!</CardTitle>
+                <CardDescription>Este es el camino que Koli ha diseñado para que alcances tu objetivo.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="space-y-2">
-                    <Label htmlFor="objective">¿Cuál es tu objetivo con este material?</Label>
-                    <Input id="objective" placeholder="e.g., Pasar mi examen final, repasar para una entrevista..." value={objective} onChange={(e) => setObjective(e.target.value)} />
-                </div>
-
-                {!studyPlan && (
-                    <Button onClick={handleGeneratePlan} disabled={isGenerating} className="w-full">
-                        <Wand2 className="mr-2 h-4 w-4" />
-                        {isGenerating ? 'Creando plan...' : 'Crear mi Plan de Estudios'}
-                    </Button>
-                )}
-                
-                {studyPlan && (
-                    <div className="space-y-4 pt-4 border-t">
-                        <div>
-                            <h3 className="font-semibold mb-2">Previsualización del Plan</h3>
-                            <Card className="bg-card/70 max-h-60 overflow-y-auto">
-                                <CardContent className="p-4 space-y-2">
-                                    {studyPlan.plan.map((item, index) => (
-                                        <div key={index} className="flex items-center justify-between text-sm p-2 rounded-md bg-background/50">
-                                            <div className='flex items-center gap-2'>
-                                                <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{item.section}</span>
-                                                <p>{item.topic}</p>
-                                            </div>
-                                            <p className="text-primary font-medium">{item.sessionType}</p>
+                <div className="space-y-4">
+                    <div>
+                        <h3 className="font-semibold mb-2 text-primary">Ruta de aprendizaje</h3>
+                        <Card className="bg-card/70 max-h-60 overflow-y-auto">
+                            <CardContent className="p-4 space-y-2">
+                                {studyPlan.plan.map((item, index) => (
+                                    <div key={index} className="flex items-center justify-between text-sm p-2 rounded-md bg-background/50">
+                                        <div className='flex items-center gap-2'>
+                                            <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{item.section}</span>
+                                            <p>{item.topic}</p>
                                         </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        </div>
-                         <div>
-                            <h3 className="font-semibold mb-2">Justificación de Koli</h3>
-                             <Card className="bg-card/70">
-                                <CardContent className="p-4 text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{studyPlan.justification}</ReactMarkdown>
-                                </CardContent>
-                            </Card>
-                        </div>
+                                        <p className="text-primary font-medium">{item.sessionType}</p>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
                     </div>
-                )}
+                     <div>
+                        <h3 className="font-semibold mb-2 flex items-center gap-2 text-primary"><BrainCircuit className="h-5 w-5"/> Justificación de Koli</h3>
+                         <Card className="bg-card/70">
+                            <CardContent className="p-4 text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{studyPlan.justification}</ReactMarkdown>
+                            </CardContent>
+                        </Card>
+                    </div>
+                     <div>
+                        <h3 className="font-semibold mb-2 flex items-center gap-2 text-primary"><TrendingUp className="h-5 w-5"/> Progreso Esperado</h3>
+                         <Card className="bg-card/70">
+                            <CardContent className="p-4 text-sm text-muted-foreground prose prose-sm prose-invert max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{studyPlan.expectedProgress}</ReactMarkdown>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
             </CardContent>
             <CardFooter className="flex justify-between">
                 <Button variant="outline" onClick={goBack}><ChevronLeft className="mr-2 h-4 w-4"/> Volver</Button>
-                <Button onClick={() => createProject(studyPlan)} disabled={!studyPlan || projectDetails.isCreating}>
-                    {projectDetails.isCreating ? 'Creando...' : 'Crear Proyecto'}
+                <Button onClick={() => createProject(studyPlan)} disabled={projectDetails.isCreating}>
+                    {projectDetails.isCreating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Creando...</> : <><CheckCircle className="mr-2 h-4 w-4" />Crear Proyecto y Empezar</>}
                 </Button>
             </CardFooter>
         </Card>
@@ -969,6 +1008,9 @@ export default function CreateProjectWizardPage() {
       description: '',
       category: '',
       isPublic: false,
+      objective: '',
+      timeLimit: '',
+      masteryLevel: '',
       isCreating: false,
   });
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);

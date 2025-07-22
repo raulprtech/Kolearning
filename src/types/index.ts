@@ -19,6 +19,7 @@ export interface StudyPlan {
     sessionType: string;
   }[];
   justification: string;
+  expectedProgress: string;
 }
 
 export interface ProjectDetails {
@@ -26,6 +27,9 @@ export interface ProjectDetails {
     description: string;
     category: string;
     isPublic: boolean;
+    objective: string;
+    timeLimit: string;
+    masteryLevel: string;
     isCreating: boolean;
 }
 
@@ -117,8 +121,7 @@ export const GenerateDeckFromTextOutputSchema = z.object({
   description: z.string().describe('A brief, one-sentence description of the flashcard deck.'),
   material_id: z.string().describe("A unique ID for this entire deck (e.g., 'MAT001')."),
   flashcards: z.array(KnowledgeAtomSchema)
-    .min(1)
-    .describe('An array of knowledge atoms (flashcards) based on the key concepts in the notes. All relevant knowledge should be extracted.'),
+    .describe('An array of all relevant knowledge atoms (flashcards) based on the key concepts in the notes. Do not limit the number of cards.'),
 });
 export type GenerateDeckFromTextOutput = z.infer<typeof GenerateDeckFromTextOutputSchema>;
 
@@ -164,23 +167,29 @@ export type RefineProjectDetailsOutput = z.infer<typeof RefineProjectDetailsOutp
 
 // generate-study-plan
 const StudyPlanFlashcardSchema = z.object({
-  question: z.string(),
-  answer: z.string(),
+  atomo_id: z.string(),
+  concepto: z.string(),
+  descripcion: z.string(),
+  atomos_padre: z.array(z.string()),
+  dificultad_inicial: z.string(),
 });
 
 export const GenerateStudyPlanInputSchema = z.object({
   projectTitle: z.string().describe('The title of the study project.'),
   objective: z.string().describe('The user\'s learning goal (e.g., "pass an exam", "review for an interview").'),
+  timeLimit: z.string().describe('The time frame the user has to study (e.g., "2 weeks", "1 month").'),
+  masteryLevel: z.string().describe('The user\'s self-assessed mastery level (e.g., "Beginner", "Intermediate").'),
   flashcards: z.array(StudyPlanFlashcardSchema).describe('The list of knowledge atoms (flashcards) for the project.'),
 });
 export type GenerateStudyPlanInput = z.infer<typeof GenerateStudyPlanInputSchema>;
 
 export const GenerateStudyPlanOutputSchema = z.object({
   plan: z.array(z.object({
-    section: z.string().describe("The section or day of the plan (e.g., 'Día 1', 'Semana 2', 'Conceptos Fundamentales')."),
+    section: z.string().describe("The section or day of the plan (e.g., 'Día 1 - Sesión 1', 'Semana 2')."),
     topic: z.string().describe('The specific topic or concept to be covered in this session.'),
     sessionType: z.string().describe("The recommended session type ('Opción Múltiple', 'Respuesta Abierta', 'Tutor AI', 'Quiz de Repaso')."),
-  })).describe('A structured array representing the study plan, with 5 to 10 sessions.'),
-  justification: z.string().describe('A brief, encouraging explanation of why the plan is structured this way to help the user achieve their goal.'),
+  })).describe('A structured array representing the study plan.'),
+  justification: z.string().describe('A brief, encouraging explanation of why the plan is structured this way.'),
+  expectedProgress: z.string().describe("A brief explanation of the expected progress after each major section or day of the plan."),
 });
 export type GenerateStudyPlanOutput = z.infer<typeof GenerateStudyPlanOutputSchema>;
