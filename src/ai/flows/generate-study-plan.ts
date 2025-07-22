@@ -70,7 +70,6 @@ You must operate with the understanding that each session you define will be pow
         -   **Calibración Inicial**: Use for the very first session to establish a knowledge baseline.
         -   **Incursión**: Use for introducing new sets of concepts for the first time.
         -   **Refuerzo de Dominio**: The most common type, for reinforcing concepts via spaced repetition.
-        -   **Brecha Detectada**: Use strategically after a logical checkpoint to specifically target weaknesses you can infer from the material's structure.
         -   **Prueba de Dominio**: Use as a final "exam" session to verify overall mastery.
         -   **Consulta con Koli**: Use sparingly for particularly complex or abstract topics that would benefit from a deeper, conversational dive, especially if the user's profile indicates this need.
 
