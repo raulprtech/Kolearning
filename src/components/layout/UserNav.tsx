@@ -58,14 +58,18 @@ export function UserNav({ user }: { user: User }) {
                   <span>Perfil</span>
               </DropdownMenuItem>
            </Link>
-             <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Ajustes</span>
-            </DropdownMenuItem>
-             <DropdownMenuItem>
-                <HelpCircle className="mr-2 h-4 w-4" />
-                <span>Preguntas Frecuentes</span>
-            </DropdownMenuItem>
+             <Link href="/ajustes" passHref>
+               <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Ajustes</span>
+              </DropdownMenuItem>
+             </Link>
+             <Link href="/preguntas-frecuentes" passHref>
+               <DropdownMenuItem>
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  <span>Preguntas Frecuentes</span>
+              </DropdownMenuItem>
+             </Link>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
