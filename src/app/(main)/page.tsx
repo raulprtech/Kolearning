@@ -32,7 +32,7 @@ export default function DashboardPage() {
     const currentStreak = user?.currentStreak ?? 0;
     const energy = user?.energy ?? 0;
     const maxEnergy = 10;
-    const energyPercentage = (energy / maxEnergy) * 100;
+    const energyPercentage = maxEnergy > 0 ? (energy / maxEnergy) * 100 : 0;
     const dominionPoints = user?.dominionPoints ?? 0;
     const nextLevelPoints = 100;
     const progressPercentage = (dominionPoints / nextLevelPoints) * 100;
