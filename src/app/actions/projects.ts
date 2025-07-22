@@ -250,11 +250,11 @@ export async function handleCreateProject(
         createdProjects.push(newProject);
     } catch (error) {
         console.error('Error creating project:', error);
+        // We throw here to be caught by the client-side logic
         throw new Error('Sorry, I was unable to save the project.');
     }
 
-    // Redirect must be called outside of a try/catch block
-    // to be handled correctly by Next.js.
+    // Redirect must be called outside of a try/catch block to be handled correctly by Next.js.
     redirect(`/mis-proyectos/${newProject.slug}`);
 }
 

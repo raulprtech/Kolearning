@@ -1212,17 +1212,11 @@ export default function CreateProjectWizardPage() {
     // Strip localId before sending to server
     const finalFlashcards = flashcards.map(({ localId, ...rest }) => rest);
 
-    try {
-        await handleCreateProject(
-            projectDetails,
-            finalFlashcards,
-            studyPlan
-        );
-        toast({
-            title: '¡Creación exitosa!',
-            description: 'Tu nuevo plan de estudios está listo.',
-        });
-    } catch (error: any) {
+    await handleCreateProject(
+        projectDetails,
+        finalFlashcards,
+        studyPlan
+    ).catch((error) => {
         // Only show toast if it's not a Next.js redirect error
         if (typeof error.digest !== 'string' || !error.digest.startsWith('NEXT_REDIRECT')) {
             setProjectDetails(p => ({ ...p, isCreating: false }));
@@ -1232,7 +1226,7 @@ export default function CreateProjectWizardPage() {
                 description: 'Ocurrió un error inesperado al intentar crear el proyecto.',
             });
         }
-    }
+    });
   };
 
 
@@ -1281,3 +1275,5 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
+
+    
