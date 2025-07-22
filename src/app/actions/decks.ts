@@ -8,15 +8,9 @@ import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-ques
 import type { GenerateOptionsForQuestionInput } from '@/types';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import type { Project, Flashcard as FlashcardType } from '@/types';
+import type { Project, Flashcard as FlashcardType, StudyPlan, ProjectDetails } from '@/types';
+import { getGeneratedProject as getProjectBySlug, createdProjects } from './projects';
 
-let createdProjects: Project[] = [];
-
-const FlashcardSchema = z.object({
-  id: z.number(),
-  question: z.string(),
-  answer: z.string(),
-});
 
 export async function handleGenerateProjectFromText(studyNotes: string) {
   if (!studyNotes) {
@@ -34,47 +28,6 @@ export async function handleGenerateProjectFromText(studyNotes: string) {
     console.error('Error with project generation AI:', error);
     return { error: 'Sorry, I was unable to generate a project from your notes.' };
   }
-}
-
-export async function handleCreateProject(
-    title: string, 
-    description: string, 
-    flashcards: z.infer<typeof FlashcardSchema>[]
-) {
-    if (!title || flashcards.length === 0) {
-        return { error: 'Project must have a title and at least one flashcard.' };
-    }
-
-    const newProject: Project & { flashcards: FlashcardType[] } = {
-        id: `gen-${Date.now()}`,
-        slug: `gen-${Date.now()}`,
-        title: title,
-        description: description,
-        category: 'Custom',
-        author: 'User',
-        size: flashcards.length,
-        bibliography: [],
-        isPublic: false,
-        flashcards: flashcards.map(fc => ({...fc, id: fc.id.toString(), deckId: `gen-${Date.now()}`}))
-    };
-
-    try {
-        createdProjects.push(newProject);
-    } catch (error) {
-        console.error('Error creating project:', error);
-        return { error: 'Sorry, I was unable to save the project.' };
-    }
-    
-    redirect(`/proyecto/${newProject.id}/details`);
-}
-
-
-export async function getGeneratedProject(projectSlug: string) {
-    const project = createdProjects.find(d => d.slug === projectSlug);
-    if (project) {
-        return project;
-    }
-    return null;
 }
 
 export async function handleEvaluateOpenAnswer(input: EvaluateOpenAnswerInput) {
