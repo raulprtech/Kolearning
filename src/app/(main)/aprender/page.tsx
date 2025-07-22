@@ -2,13 +2,13 @@
 
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical, MenuSquare, Zap } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical, MenuSquare, Zap, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -20,76 +20,15 @@ import {
 } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { handleTutorChat } from '@/app/actions/tutor';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { handleEvaluateOpenAnswer, handleGenerateOptionsForQuestion } from '@/app/actions/decks';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { getAllProjects } from '@/app/actions/projects';
+import type { Project, Flashcard } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const initialSessionQuestions = [
-  {
-    type: 'multiple-choice',
-    question: '¿Cuál es el resultado del siguiente código?',
-    code: '```javascript\nconsole.log(typeof null);\n```',
-    options: [
-      { id: 'A', text: '`null`' },
-      { id: 'B', text: '`undefined`' },
-      { id: 'C', text: '`object`' },
-      { id: 'D', text: '`string`' },
-    ],
-    correctAnswer: 'C',
-    correctAnswerText: '`object`',
-  },
-  {
-    type: 'open-answer',
-    question: 'Explica la diferencia entre `let`, `const`, y `var` en JavaScript.',
-    correctAnswerText: '`var` tiene alcance de función, mientras que `let` y `const` tienen alcance de bloque. `const` no puede ser reasignada, a diferencia de `let` y `var`.',
-  },
-  {
-    type: 'matching',
-    question: 'Asocia cada hook de React con su propósito principal.',
-    pairs: [
-        { id: 'A', term: '`useState`', definition: 'Gestionar el estado local en un componente.' },
-        { id: 'B', term: '`useEffect`', definition: 'Realizar efectos secundarios (como peticiones de datos) después del renderizado.' },
-        { id: 'C', term: '`useContext`', definition: 'Consumir un valor de un Context de React.' },
-    ],
-    correctAnswerText: 'useState -> Gestionar estado, useEffect -> Realizar efectos secundarios, useContext -> Consumir contexto',
-  },
-  {
-    type: 'ordering',
-    question: 'Ordena los pasos para hacer un componente "Hello, World" en React.',
-    items: [
-        { id: '1', text: 'Importar React.' },
-        { id: '2', text: 'Definir el componente de función.' },
-        { id: '3', text: 'Retornar el JSX `<h1>Hello, World</h1>`.' },
-        { id: '4', text: 'Exportar el componente.' },
-    ],
-    correctAnswerText: 'Importar -> Definir -> Retornar -> Exportar',
-  },
-  {
-    type: 'fill-in-the-blank',
-    question: 'Completa la frase: En React, las props son ________.',
-    textParts: ['En React, las props son ', 'inmutables', '.'],
-    correctAnswer: 'inmutables',
-    correctAnswerText: 'En React, las props son inmutables.',
-  },
-  {
-    type: 'multiple-choice',
-    question: '¿Cuál de estos NO es un tipo de dato primitivo en JavaScript?',
-    options: [
-        { id: 'A', text: '`string`' },
-        { id: 'B', text: '`number`' },
-        { id: 'C', text: '`array`' },
-        { id: 'D', text: '`boolean`' },
-    ],
-    correctAnswer: 'C',
-    correctAnswerText: '`array` (es un tipo de objeto)',
-  },
-   {
-    type: 'open-answer',
-    question: '¿Qué es un closure en JavaScript? Proporciona un ejemplo de código sencillo.',
-    correctAnswerText: 'Un closure es una función que recuerda el entorno en el que fue creada. Ejemplo:\n```javascript\nfunction exterior() {\n  let a = 1;\n  function interior() {\n    console.log(a);\n  }\n  return interior;\n}\nconst miClosure = exterior();\nmiClosure(); // Imprime 1\n```',
-  },
-];
+type SessionQuestion = Flashcard & { type: 'open-answer' | 'multiple-choice' | 'matching' | 'ordering' | 'fill-in-the-blank', options?: any[], code?: string, correctAnswerText?: string, textParts?: string[], pairs?: any[], items?: any[] };
 
 type AnswerState = {
     [key: number]: {
@@ -461,7 +400,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         setIsLoading(true);
         const result = await handleGenerateOptionsForQuestion({
             question: currentQuestion.question,
-            correctAnswer: currentQuestion.correctAnswerText || currentQuestion.correctAnswer
+            correctAnswer: currentQuestion.answer
         });
         setIsLoading(false);
         if (result.options) {
@@ -662,7 +601,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
                       <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleHintClick, HINT_COST)} disabled={!hasEnoughEnergy(HINT_COST)}>
                         <Lightbulb className="mr-2 h-4 w-4" /> Pista <CostIndicator cost={HINT_COST} />
                       </Button>
-                       {(currentQuestion.type === 'open-answer' || currentQuestion.type === 'fill-in-the-blank') && (
+                       {(currentQuestion.type === 'open-answer') && (
                         <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleConvertToMultipleChoiceClick, CONVERT_COST)} disabled={!hasEnoughEnergy(CONVERT_COST)}>
                           <MenuSquare className="mr-2 h-4 w-4" /> Convertir a Opción Múltiple <CostIndicator cost={CONVERT_COST} />
                         </Button>
@@ -722,8 +661,13 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
 };
 
 
-export default function AprenderPage() {
-  const [sessionQuestions, setSessionQuestions] = useState(initialSessionQuestions);
+function AprenderPageComponent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const projectSlug = searchParams.get('project');
+
+  const [project, setProject] = useState<Project | null>(null);
+  const [sessionQuestions, setSessionQuestions] = useState<SessionQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerState>({});
   
@@ -741,12 +685,34 @@ export default function AprenderPage() {
 
   const { user } = useUser();
   const hasEnergy = user && user.energy > 0;
+  
+  const [isSessionFinished, setIsSessionFinished] = useState(false);
+
+  useEffect(() => {
+    async function loadProject() {
+      if (!projectSlug) return;
+      const allProjects = await getAllProjects();
+      const foundProject = allProjects.find(p => p.slug === projectSlug);
+      if (foundProject) {
+        setProject(foundProject);
+        const questions: SessionQuestion[] = (foundProject.flashcards || []).map(fc => ({
+          ...fc,
+          type: 'open-answer', // Default to open-answer for now
+        }));
+        setSessionQuestions(questions);
+      } else {
+        router.push('/'); // Or a 404 page
+      }
+    }
+    loadProject();
+  }, [projectSlug, router]);
+
 
   const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [sessionQuestions, currentIndex]);
   const currentAnswerState = useMemo(() => answers[currentIndex] || { isAnswered: false, openAnswerAttempts: 0 }, [answers, currentIndex]);
   const isCorrect = currentAnswerState.isCorrect;
 
-  const sessionProgress = ((currentIndex + 1) / sessionQuestions.length) * 100;
+  const sessionProgress = sessionQuestions.length > 0 ? ((currentIndex + 1) / sessionQuestions.length) * 100 : 0;
   
   const updateAnswer = (index: number, update: Partial<AnswerState[number]>) => {
     setAnswers(prev => ({
@@ -780,7 +746,7 @@ export default function AprenderPage() {
   };
 
   const handleOptionSelect = (optionId: string) => {
-    if (!hasEnergy) return; // Although button is disabled, good to double check
+    if (!hasEnergy) return; 
     const isAnswerCorrect = currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer;
     
     if (isAnswerCorrect) {
@@ -819,7 +785,7 @@ export default function AprenderPage() {
     
     const result = await handleEvaluateOpenAnswer({
         question: currentQuestion.question,
-        correctAnswer: currentQuestion.correctAnswerText,
+        correctAnswer: currentQuestion.answer,
         userAnswer: currentOpenAnswerText,
     });
 
@@ -831,7 +797,7 @@ export default function AprenderPage() {
         const nextAttempt = attempts + 1;
         if (nextAttempt >= 3) {
             updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: nextAttempt });
-            setOpenAnswerFeedback(`La respuesta correcta es: ${currentQuestion.correctAnswerText}`);
+            setOpenAnswerFeedback(`La respuesta correcta es: ${currentQuestion.answer}`);
         } else {
             // Try again
             if (result.evaluation?.feedback) {
@@ -860,8 +826,8 @@ export default function AprenderPage() {
           handleOptionSelect((currentQuestion as any).correctAnswer);
       } else if (currentQuestion.type === 'open-answer') {
           handleCorrectAnswer('open-answer');
-          updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentQuestion.correctAnswerText });
-          setCurrentOpenAnswerText(currentQuestion.correctAnswerText);
+          updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentQuestion.answer });
+          setCurrentOpenAnswerText(currentQuestion.answer);
       } else if (currentQuestion.type === 'fill-in-the-blank') {
           const correctAnswer = (currentQuestion as any).correctAnswer;
           handleCorrectAnswer('fill-in-the-blank');
@@ -892,9 +858,14 @@ export default function AprenderPage() {
               text: opt
           }));
 
-          const correctOption = (newQ as any).options.find((o: any) => o.text === (newQ.correctAnswerText || newQ.correctAnswer));
-          (newQ as any).correctAnswer = correctOption.id;
-
+          const correctOption = (newQ as any).options.find((o: any) => o.text === newQ.answer);
+          if (correctOption) {
+            (newQ as any).correctAnswer = correctOption.id;
+          } else {
+            // Fallback if correct answer not in options, make first one correct
+            (newQ as any).correctAnswer = 'A';
+          }
+          
           updatedQuestions[currentIndex] = newQ;
           return updatedQuestions;
       });
@@ -905,8 +876,60 @@ export default function AprenderPage() {
           setCurrentIndex(prev => prev + 1);
           setOpenAnswerFeedback(null);
           setCurrentOpenAnswerText('');
+      } else {
+          setIsSessionFinished(true);
       }
   };
+  
+  if (!project || sessionQuestions.length === 0) {
+      return (
+        <div className="container mx-auto py-8">
+            <div className="space-y-4">
+                <Skeleton className="h-10 w-1/4" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-40 w-full" />
+            </div>
+        </div>
+      );
+  }
+  
+  if (isSessionFinished) {
+      return (
+          <div className="container mx-auto py-8 flex items-center justify-center min-h-[calc(100vh-120px)]">
+              <Card className="w-full max-w-lg text-center shadow-2xl shadow-primary/10">
+                  <CardHeader>
+                      <Trophy className="mx-auto h-16 w-16 text-yellow-400" />
+                      <CardTitle className="text-3xl mt-4">¡Sesión Completada!</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                      <p className="text-muted-foreground">¡Felicidades! Has completado la sesión de estudio. Aquí está tu resumen:</p>
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                           <div>
+                                <p className="text-3xl font-bold">+{masteryProgress}</p>
+                                <p className="text-sm text-muted-foreground">Puntos de Dominio</p>
+                           </div>
+                           <div>
+                                <p className="text-3xl font-bold">{currentStreak}</p>
+                                <p className="text-sm text-muted-foreground">Racha</p>
+                           </div>
+                           <div>
+                                <p className="text-3xl font-bold">+{cognitiveCredits}</p>
+                                <p className="text-sm text-muted-foreground">Créditos Cognitivos</p>
+                           </div>
+                      </div>
+                  </CardContent>
+                  <CardFooter>
+                      <Button size="lg" className="w-full" asChild>
+                          <Link href={`/mis-proyectos/${project.slug}`}>
+                              Continuar
+                          </Link>
+                      </Button>
+                  </CardFooter>
+              </Card>
+          </div>
+      )
+  }
 
   return (
     <div className="container mx-auto py-4 sm:py-8">
@@ -915,7 +938,7 @@ export default function AprenderPage() {
         {/* Main Content Column */}
         <div className="xl:col-span-2">
           <div className="mb-4">
-            <Link href="/" className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
+            <Link href={`/mis-proyectos/${projectSlug}`} className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Salir de la sesión
             </Link>
           </div>
@@ -924,7 +947,8 @@ export default function AprenderPage() {
             <CardContent className="p-4 sm:p-6">
                <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6">
                 <div className="mb-4 sm:mb-0">
-                  <h1 className="text-xl md:text-2xl font-bold">Fundamentos de JavaScript</h1>
+                  <h1 className="text-xl md:text-2xl font-bold">{project.title}</h1>
+                  <p className="text-sm text-muted-foreground">{project.studyPlan?.plan[0]?.topic || 'Sesión de Repaso'}</p>
                 </div>
                 <div className="flex items-center gap-4 text-sm shrink-0">
                   <div className="flex items-center gap-2">
@@ -981,9 +1005,9 @@ export default function AprenderPage() {
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {currentQuestion.question}
                   </ReactMarkdown>
-                  {currentQuestion.type === 'multiple-choice' && 'code' in currentQuestion && (
+                  {currentQuestion.type === 'multiple-choice' && currentQuestion.code && (
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {(currentQuestion as any).code}
+                          {currentQuestion.code}
                       </ReactMarkdown>
                   )}
               </div>
@@ -1075,7 +1099,7 @@ export default function AprenderPage() {
        <div className="xl:hidden-for-now">
          <KoliAssistancePopover 
             currentQuestion={currentQuestion} 
-            correctAnswer={currentQuestion.correctAnswerText || ''}
+            correctAnswer={currentQuestion.answer || ''}
             onShowAnswer={handleShowAnswer}
             onRephrase={handleRephrase}
             onConvertToMultipleChoice={handleConvertToMultipleChoice}
@@ -1085,4 +1109,13 @@ export default function AprenderPage() {
 
     </div>
   );
+}
+
+
+export default function AprenderPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <AprenderPageComponent />
+        </Suspense>
+    );
 }

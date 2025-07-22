@@ -1,3 +1,5 @@
+
+'use client';
 import Link from 'next/link';
 import {
   Card,
@@ -27,7 +29,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import type { Project } from '@/types';
-import { getGeneratedProject } from '@/app/actions/projects';
+import { getGeneratedProject, getAllProjects } from '@/app/actions/projects';
 import {
   Dialog,
   DialogContent,
@@ -37,8 +39,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { notFound } from 'next/navigation';
-
-export const dynamic = 'force-dynamic';
+import { useEffect, useState } from 'react';
 
 function ProjectDetailsView({ project }: { project: Project }) {
   const knowledgeAtoms = project.flashcards || [];
@@ -198,16 +199,29 @@ function ProjectDetailsView({ project }: { project: Project }) {
   );
 }
 
-export default async function ProjectDetailsPage({
+export default function ProjectDetailsPage({
   params,
 }: {
   params: { projectId: string };
 }) {
-  const projectSlug = params.projectId;
-  const project = await getGeneratedProject(projectSlug);
+  const [project, setProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+    async function loadProject() {
+      const projectSlug = params.projectId;
+      const projects = await getAllProjects();
+      const foundProject = projects.find(p => p.slug === projectSlug);
+      if (foundProject) {
+        setProject(foundProject);
+      } else {
+        notFound();
+      }
+    }
+    loadProject();
+  }, [params.projectId]);
 
   if (!project) {
-    notFound();
+    return <div>Cargando...</div>;
   }
   
   return <ProjectDetailsView project={project} />;
