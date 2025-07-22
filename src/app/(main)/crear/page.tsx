@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { 
   Plus, 
@@ -29,7 +28,8 @@ import {
   Loader2,
   CheckCircle,
   TrendingUp,
-  BrainCircuit
+  BrainCircuit,
+  CalendarIcon,
 } from 'lucide-react';
 import {
   Dialog,
@@ -39,6 +39,11 @@ import {
   DialogTrigger,
   DialogDescription as DialogDescriptionComponent
 } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Slider } from '@/components/ui/slider';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -47,7 +52,6 @@ import rehypeKatex from 'rehype-katex';
 import { cn } from '@/lib/utils';
 import 'katex/dist/katex.min.css';
 import { useToast } from '@/hooks/use-toast';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { AnkiExportGuide } from '@/components/deck/AnkiExportGuide';
@@ -811,9 +815,12 @@ const Step1_Input = ({ flashcards, setFlashcards, setProjectDetails, goToNext }:
 // --- Step 2 Components ---
 
 const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, goToNext }: { projectDetails: ProjectDetails, setProjectDetails: (details: ProjectDetails) => void, flashcards: Flashcard[], goBack: () => void, goToNext: () => void }) => {
-    const { title, description, category, isPublic, objective, timeLimit, masteryLevel } = projectDetails;
+    const { title, description, category, objective, timeLimit, masteryLevel } = projectDetails;
     const [isRefining, setIsRefining] = useState(false);
     const { toast } = useToast();
+    
+    const masteryLevels = ["Nada", "Principiante", "Intermedio", "Avanzado", "Lo domino"];
+    const [date, setDate] = useState<Date | undefined>(timeLimit ? new Date(timeLimit) : undefined);
 
     const handleRefine = async () => {
       setIsRefining(true);
@@ -837,9 +844,15 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
       setIsRefining(false);
     };
 
-    const handleDetailsChange = (field: keyof ProjectDetails, value: string | boolean) => {
+    const handleDetailsChange = (field: keyof ProjectDetails, value: string | boolean | number) => {
         setProjectDetails({ ...projectDetails, [field]: value });
     };
+
+    useEffect(() => {
+        if (date) {
+            handleDetailsChange('timeLimit', date.toISOString());
+        }
+    }, [date]);
 
     return (
         <Card>
@@ -847,7 +860,7 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
                 <CardTitle>Detalles del Proyecto</CardTitle>
                 <CardDescription>Define tu proyecto y tus metas para crear el plan perfecto.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
                 <div className="space-y-2">
                     <Label htmlFor="title">Título del Proyecto</Label>
                     <Input id="title" placeholder="e.g., Fundamentos de JavaScript" value={title} onChange={(e) => handleDetailsChange('title', e.target.value)} />
@@ -856,17 +869,8 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
                     <Label htmlFor="description">Descripción</Label>
                     <Textarea id="description" placeholder="Un breve resumen de lo que aprenderás." value={description} onChange={(e) => handleDetailsChange('description', e.target.value)} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="category">Categoría</Label>
-                        <Input id="category" placeholder="e.g., Programación" value={category} onChange={(e) => handleDetailsChange('category', e.target.value)} />
-                    </div>
-                    <div className="flex items-center space-x-2 pt-8">
-                        <Switch id="visibility" checked={isPublic} onCheckedChange={(checked) => handleDetailsChange('isPublic', checked)} />
-                        <Label htmlFor="visibility">¿Hacer público este proyecto?</Label>
-                    </div>
-                </div>
-                 <Button variant="outline" onClick={handleRefine} disabled={isRefining} className="w-full">
+
+                <Button variant="outline" onClick={handleRefine} disabled={isRefining} className="w-full">
                   <Bot className="mr-2 h-4 w-4" />
                   {isRefining ? 'Procesando...' : 'Llenado inteligente'}
                 </Button>
@@ -875,14 +879,44 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
                     <Label htmlFor="objective">¿Cuál es tu objetivo de estudio?</Label>
                     <Input id="objective" placeholder="e.g., Pasar mi examen final, repasar para una entrevista..." value={objective} onChange={(e) => handleDetailsChange('objective', e.target.value)} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <div className="space-y-2">
                         <Label htmlFor="timeLimit">Límite de tiempo</Label>
-                        <Input id="timeLimit" placeholder="e.g., 2 semanas, 1 mes" value={timeLimit} onChange={(e) => handleDetailsChange('timeLimit', e.target.value)} />
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !date && "text-muted-foreground"
+                                )}
+                                >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date ? format(date, "PPP", { locale: es }) : <span>Elige una fecha</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="masteryLevel">Nivel de dominio actual</Label>
-                        <Input id="masteryLevel" placeholder="e.g., Principiante, Intermedio" value={masteryLevel} onChange={(e) => handleDetailsChange('masteryLevel', e.target.value)} />
+                        <Slider
+                            defaultValue={[2]}
+                            min={0}
+                            max={4}
+                            step={1}
+                            onValueChange={(value) => handleDetailsChange('masteryLevel', masteryLevels[value[0]])}
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                            {masteryLevels.map((level, index) => <span key={index}>{level}</span>)}
+                        </div>
                     </div>
                 </div>
             </CardContent>
@@ -1010,7 +1044,7 @@ export default function CreateProjectWizardPage() {
       isPublic: false,
       objective: '',
       timeLimit: '',
-      masteryLevel: '',
+      masteryLevel: 'Intermedio',
       isCreating: false,
   });
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
@@ -1112,3 +1146,4 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
+
