@@ -200,7 +200,7 @@ function ProjectDetailsView({ project }: { project: Project }) {
   );
 }
 
-// This is a Server Component that fetches the data
+// This is the Server Component that fetches the data
 export default function ProjectDetailsPageLoader({
   params,
 }: {
@@ -250,3 +250,5 @@ export default function ProjectDetailsPageLoader({
   // This is a Client Component that receives the data and renders the UI
   return <ProjectDetailsView project={project} />;
 }
+
+    
