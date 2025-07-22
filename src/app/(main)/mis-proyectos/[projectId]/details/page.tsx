@@ -37,6 +37,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { notFound } from 'next/navigation';
 
 async function getProjectDetails(projectSlug: string): Promise<Project | null> {
   // For generated projects, fetch from our temporary store
@@ -52,14 +53,7 @@ export default async function ProjectDetailsPage({
   const project = await getProjectDetails(projectSlug);
 
   if (!project) {
-    return (
-      <div className="container mx-auto py-8 text-center">
-        <h1 className="text-2xl font-bold">Proyecto no encontrado</h1>
-        <p className="text-muted-foreground">
-          El proyecto solicitado no pudo ser encontrado.
-        </p>
-      </div>
-    );
+    notFound();
   }
 
   const knowledgeAtoms = project.flashcards || [];
