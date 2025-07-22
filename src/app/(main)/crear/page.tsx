@@ -1216,17 +1216,7 @@ export default function CreateProjectWizardPage() {
         projectDetails,
         finalFlashcards,
         studyPlan
-    ).catch((error) => {
-        // Only show toast if it's not a Next.js redirect error
-        if (typeof error.digest !== 'string' || !error.digest.startsWith('NEXT_REDIRECT')) {
-            setProjectDetails(p => ({ ...p, isCreating: false }));
-            toast({
-                variant: 'destructive',
-                title: 'Error al crear el proyecto',
-                description: 'Ocurrió un error inesperado al intentar crear el proyecto.',
-            });
-        }
-    });
+    );
   };
 
 
