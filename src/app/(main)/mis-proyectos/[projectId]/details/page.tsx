@@ -115,32 +115,38 @@ export default async function ProjectDetailsPage({
             <h2 className="text-2xl font-bold">Plan de Estudios</h2>
           </div>
           <Card className="bg-card/70">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Sesión</TableHead>
-                  <TableHead>¿Qué aprenderás en esta sesión?</TableHead>
-                  <TableHead>Tipo de Sesión</TableHead>
-                  <TableHead className="text-right">Estado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {studyPlan.map((session, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{session.topic}</TableCell>
-                    <TableCell>{session.sessionType}</TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild variant={index > 0 ? 'default' : 'default'} size="sm" disabled={index > 0}>
-                        <Link href={`/aprender?project=${project.slug}`} className={index > 0 ? 'text-muted-foreground' : ''}>
-                          {index > 0 ? 'Bloqueado' : 'Empezar'}
-                        </Link>
-                      </Button>
-                    </TableCell>
+            {studyPlan.length > 0 ? (
+               <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Sesión</TableHead>
+                    <TableHead>¿Qué aprenderás en esta sesión?</TableHead>
+                    <TableHead>Tipo de Sesión</TableHead>
+                    <TableHead className="text-right">Estado</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {studyPlan.map((session, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{session.topic}</TableCell>
+                      <TableCell>{session.sessionType}</TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild variant={index > 0 ? 'default' : 'default'} size="sm" disabled={index > 0}>
+                          <Link href={`/aprender?project=${project.slug}`} className={index > 0 ? 'text-muted-foreground' : ''}>
+                            {index > 0 ? 'Bloqueado' : 'Empezar'}
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <CardContent className="p-6 text-center text-muted-foreground">
+                Este proyecto aún no tiene un plan de estudios.
+              </CardContent>
+            )}
           </Card>
         </section>
 
