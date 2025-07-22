@@ -200,6 +200,7 @@ function ProjectDetailsView({ project }: { project: Project }) {
   );
 }
 
+// This is a Server Component that fetches the data
 export default function ProjectDetailsPageLoader({
   params,
 }: {
@@ -216,8 +217,6 @@ export default function ProjectDetailsPageLoader({
       
       if (foundProject) {
         setProject(foundProject);
-      } else {
-        // Not found on client, let server handle it or show client-side not found
       }
       setLoading(false);
     }
@@ -248,5 +247,6 @@ export default function ProjectDetailsPageLoader({
     return null;
   }
   
+  // This is a Client Component that receives the data and renders the UI
   return <ProjectDetailsView project={project} />;
 }
