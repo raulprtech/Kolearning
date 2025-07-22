@@ -998,7 +998,7 @@ const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: { pro
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Sesión</TableHead>
-                                        <TableHead>Tema</TableHead>
+                                        <TableHead>¿Qué aprenderás en esta sesión?</TableHead>
                                         <TableHead>Tipo de Sesión</TableHead>
                                     </TableRow>
                                 </TableHeader>
