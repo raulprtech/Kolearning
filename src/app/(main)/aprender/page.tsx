@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical, MenuSquare, Zap, Trophy, Loader2 } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical, MenuSquare, Zap, Trophy, Loader2, Award } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -149,7 +149,6 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     const [isSuccess, setIsSuccess] = useState(false);
 
     const [showQuickQuestionInput, setShowQuickQuestionInput] = useState(false);
-    const [quickQuestionText, setQuickQuestionText] = useState('');
     const [quickChatHistory, setQuickChatHistory] = useState<QuickChatMessage[]>([]);
     const [quickQuestionCount, setQuickQuestionCount] = useState(0);
 
@@ -513,6 +512,7 @@ type State = {
     bestStreak: number;
     currentStreak: number;
     isSessionFinished: boolean;
+    finalSessionStats: { masteryProgress: number; cognitiveCredits: number; bestStreak: number; } | null;
 };
 
 type Action =
@@ -548,6 +548,7 @@ const initialState: State = {
     bestStreak: 0,
     currentStreak: 0,
     isSessionFinished: false,
+    finalSessionStats: null,
 };
 
 function reducer(state: State, action: Action): State {
@@ -598,8 +599,8 @@ function reducer(state: State, action: Action): State {
 
         case 'RATE_DIFFICULTY': {
             const { rating } = action.payload;
-            const { srs, currentCardId, isCorrect } = state;
-            if (!srs || !currentCardId) return state;
+            const { srs, currentCardId, isCorrect, project } = state;
+            if (!srs || !currentCardId || !project) return state;
 
             srs.updateCard(currentCardId, rating, isCorrect!);
             const newStats = srs.getStats();
@@ -607,13 +608,24 @@ function reducer(state: State, action: Action): State {
             const nextCardId = srs.getNextCard();
 
             if (!nextCardId) {
-                return { ...state, isSessionFinished: true };
+                 return { ...state, isSessionFinished: true, finalSessionStats: newStats };
             }
 
             const progress = (srs.getReviewedCount() / srs.getTotalCards()) * 100;
 
+            const nextCard = srs.getCard(nextCardId);
+            let nextQuestionType: SessionQuestion['type'] = 'open-answer';
+            if (nextCard && nextCard.formatos_presentacion.includes("Identificación")) {
+                nextQuestionType = 'multiple-choice';
+            }
+            
+            const newQuestions = state.sessionQuestions.map(q =>
+                q.id === nextCardId ? { ...q, type: nextQuestionType } : q
+            );
+
             return {
                 ...state,
+                sessionQuestions: newQuestions,
                 currentCardId: nextCardId,
                 isAnswered: false,
                 isCorrect: null,
@@ -680,7 +692,7 @@ function AprenderPageComponent() {
   const sessionIndexParam = searchParams.get('session');
   
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { user } = useUser();
+  const { user, addCoins, addDominionPoints } = useUser();
   const hasEnergy = user && user.energy > 0;
   
   useEffect(() => {
@@ -707,27 +719,28 @@ function AprenderPageComponent() {
     }
   }, [state.isPulsing]);
 
-  useEffect(() => {
-    if (state.isSessionFinished && state.project && state.srs) {
-        const finishSession = async () => {
-            dispatch({ type: 'SET_FINISHING', payload: true });
-            const performanceSummary = state.srs!.getPerformanceSummary();
-            const result = await handleEndSessionAndRefinePlan(state.project!.slug, parseInt(sessionIndexParam!), performanceSummary);
-            
-            let url = `/mis-proyectos/${projectSlug}?mastery=${state.masteryProgress}&credits=${state.cognitiveCredits}&session=${sessionIndexParam}`;
-            if (result.planUpdated) {
-                url += `&planUpdated=true&reasoning=${encodeURIComponent(result.reasoning || '')}`;
-            }
-            router.push(url);
-        };
-        finishSession();
+  const finishSessionAndRedirect = async () => {
+    if (state.project && state.srs && state.finalSessionStats) {
+        dispatch({ type: 'SET_FINISHING', payload: true });
+
+        addDominionPoints(state.finalSessionStats.masteryProgress);
+        addCoins(state.finalSessionStats.cognitiveCredits);
+
+        const performanceSummary = state.srs!.getPerformanceSummary();
+        const result = await handleEndSessionAndRefinePlan(state.project!.slug, parseInt(sessionIndexParam!), performanceSummary);
+        
+        let url = `/mis-proyectos/${projectSlug}?mastery=${state.finalSessionStats.masteryProgress}&credits=${state.finalSessionStats.cognitiveCredits}&session=${sessionIndexParam}`;
+        if (result.planUpdated) {
+            url += `&planUpdated=true&reasoning=${encodeURIComponent(result.reasoning || '')}`;
+        }
+        router.push(url);
     }
-  }, [state.isSessionFinished, state.project, state.srs, projectSlug, sessionIndexParam, state.masteryProgress, state.cognitiveCredits, router]);
+  };
 
 
   const currentQuestion = useMemo(() => state.sessionQuestions.find(q => q.id === state.currentCardId), [state.sessionQuestions, state.currentCardId]);
 
-  if (state.isLoading || !state.project || !currentQuestion) {
+  if (state.isLoading || !state.project) {
       return (
         <div className="container mx-auto py-8">
             <div className="space-y-4">
@@ -739,6 +752,48 @@ function AprenderPageComponent() {
         </div>
       );
   }
+
+  if (state.isSessionFinished && state.finalSessionStats) {
+     return (
+        <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-120px)] text-center">
+            <Trophy className="h-20 w-20 text-yellow-400 mb-4" />
+            <h1 className="text-4xl font-bold">¡Sesión Completada!</h1>
+            <p className="text-muted-foreground mt-2 mb-8">¡Excelente trabajo! Aquí está tu resumen:</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl w-full mb-10">
+                <Card className="bg-card/70">
+                    <CardHeader>
+                        <CardTitle className="text-lg flex items-center justify-center gap-2 text-blue-400"><TrendingUp /> Puntos de Dominio</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-5xl font-bold">+{state.finalSessionStats.masteryProgress}</p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-card/70">
+                     <CardHeader>
+                        <CardTitle className="text-lg flex items-center justify-center gap-2 text-green-400"><Award /> Créditos Cognitivos</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-5xl font-bold">+{state.finalSessionStats.cognitiveCredits}</p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-card/70">
+                     <CardHeader>
+                        <CardTitle className="text-lg flex items-center justify-center gap-2 text-yellow-400"><Star /> Mejor Racha</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-5xl font-bold">{state.finalSessionStats.bestStreak}</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Button size="lg" onClick={finishSessionAndRedirect} disabled={state.isFinishing}>
+                {state.isFinishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {state.isFinishing ? 'Guardando...' : 'Finalizar Sesión'}
+            </Button>
+        </div>
+    );
+  }
   
   if (state.isFinishing) {
     return (
@@ -747,6 +802,15 @@ function AprenderPageComponent() {
         <h2 className="text-2xl font-bold mt-6">Finalizando sesión...</h2>
         <p className="text-muted-foreground">Koli está analizando tu rendimiento para adaptar tu plan.</p>
       </div>
+    );
+  }
+
+  if (!currentQuestion) {
+     return (
+        <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
+            <Loader2 className="h-16 w-16 text-primary animate-spin" />
+            <h2 className="text-2xl font-bold mt-6">Cargando siguiente pregunta...</h2>
+        </div>
     );
   }
   
@@ -781,6 +845,7 @@ function AprenderPageComponent() {
   };
 
   const handleConvertToMultipleChoice = async () => {
+      if (!currentQuestion) return;
       dispatch({ type: 'SET_LOADING', payload: true });
       const result = await handleGenerateOptionsForQuestion({
           question: currentQuestion.question,
@@ -814,14 +879,14 @@ function AprenderPageComponent() {
                 </div>
                 <div className="flex items-center gap-4 text-sm shrink-0">
                   <div className="flex items-center gap-2">
-                      {'🪙'}
+                      <Award className="h-5 w-5 text-green-400" />
                       <div>
                         <p className="font-bold text-base md:text-lg">{state.cognitiveCredits}</p>
                         <p className="text-xs text-muted-foreground">Creditos Cognitivos</p>
                       </div>
                     </div>
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-400" />
+                    <TrendingUp className="h-5 w-5 text-blue-400" />
                     <div>
                       <p className="font-bold text-base md:text-lg">+{state.masteryProgress}</p>
                       <p className="text-xs text-muted-foreground">Puntos de Dominio</p>

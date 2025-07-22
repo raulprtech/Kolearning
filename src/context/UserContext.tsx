@@ -68,7 +68,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const addDominionPoints = (amount: number) => {
     setUser(currentUser => {
         if (currentUser) {
-            return { ...currentUser, dominionPoints: currentUser.dominionPoints + amount };
+            return { ...currentUser, dominionPoints: (currentUser.dominionPoints || 0) + amount };
         }
         return currentUser;
     });
@@ -88,5 +88,3 @@ export const useUser = () => {
   }
   return context;
 };
-
-    

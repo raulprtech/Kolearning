@@ -82,11 +82,11 @@ const prompt = ai.definePrompt({
     - If the user struggled significantly (e.g., high number of incorrect answers, many difficult cards, multiple attempts/help requests), the plan needs adjustment. Set 'needsChange' to true.
 
 2.  **If 'needsChange' is true, modify the plan.**
-    - Focus on the **next** session (index {{add completedSessionIndex 1}}).
-    - If the user struggled with foundational concepts, consider changing the next session to a "Brecha Detectada" or "Refuerzo de Dominio" type, focusing on the difficult topics.
-    - You might merge a difficult topic into the next session or create a new, dedicated review session.
-    - **Do not change past sessions.** Return the entire plan, including the unchanged past sessions and the modified future sessions.
-    - Provide a brief 'reasoning' for the change, e.g., "Noté que algunos conceptos fueron desafiantes, así que he ajustado la próxima sesión para reforzarlos."
+    - Focus on the difficult topics identified in the performance summary.
+    - **Insert a new review session** immediately after the just-completed session. This new session should be of type "Brecha Detectada" or "Consulta con Koli" if the concepts are very complex.
+    - The new session's topic should clearly state its purpose (e.g., "Repaso de conceptos clave sobre...").
+    - **Do not change past sessions.** Construct the \`updatedPlan\` by taking all sessions up to the \`completedSessionIndex\`, adding your new review session, and then adding the rest of the original future sessions.
+    - Provide a brief 'reasoning' for the change, e.g., "Noté que algunos conceptos fueron desafiantes, así que he añadido una sesión de repaso para reforzarlos antes de continuar."
 
 3.  **If 'needsChange' is false, return the original plan unmodified.**
 
