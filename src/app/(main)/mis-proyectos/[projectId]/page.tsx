@@ -79,7 +79,7 @@ export default async function ProjectDetailsPage({
               <p className="text-muted-foreground mb-2 text-sm">Mejor Racha</p>
               <div className="flex items-center gap-2">
                 <Star className="h-5 w-5 text-yellow-400" />
-                <p className="text-2xl font-bold">1</p>
+                <p className="text-2xl font-bold">0</p>
               </div>
             </CardContent>
           </Card>
@@ -88,7 +88,7 @@ export default async function ProjectDetailsPage({
               <p className="text-muted-foreground mb-2 text-sm">CC ganados</p>
                <div className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-green-400" />
-                <p className="text-2xl font-bold">5</p>
+                <p className="text-2xl font-bold">0</p>
               </div>
             </CardContent>
           </Card>
@@ -97,7 +97,7 @@ export default async function ProjectDetailsPage({
               <p className="text-muted-foreground mb-2 text-sm">Dominio del tema</p>
                <div className="flex items-center gap-2">
                  <TrendingUp className="h-5 w-5 text-blue-400" />
-                <p className="text-2xl font-bold">10%</p>
+                <p className="text-2xl font-bold">0%</p>
               </div>
             </CardContent>
           </Card>
@@ -126,10 +126,14 @@ export default async function ProjectDetailsPage({
                       <TableCell>{session.topic}</TableCell>
                       <TableCell>{session.sessionType}</TableCell>
                       <TableCell className="text-right">
-                        <Button asChild variant={index > 0 ? 'default' : 'default'} size="sm" disabled={index > 0}>
-                          <Link href={`/aprender?project=${project.slug}`} className={index > 0 ? 'text-muted-foreground' : ''}>
-                            {index > 0 ? 'Bloqueado' : 'Empezar'}
-                          </Link>
+                        <Button asChild={index === 0} variant={index > 0 ? 'default' : 'default'} size="sm" disabled={index > 0}>
+                           {index === 0 ? (
+                            <Link href={`/aprender?project=${project.slug}`}>
+                                Empezar
+                            </Link>
+                           ) : (
+                             <span>Bloqueado</span>
+                           )}
                         </Button>
                       </TableCell>
                     </TableRow>
