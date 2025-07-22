@@ -30,7 +30,7 @@ import {
   CheckCircle,
   TrendingUp,
   BrainCircuit,
-  CalendarIcon,
+  Calendar as CalendarIcon,
   Sparkles,
   Info
 } from 'lucide-react';
@@ -630,9 +630,9 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
                 <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-                <DialogTitle>Importar desde Hoja de Cálculo</DialogTitle>
+                <DialogTitle>Importar desde Hojas de Cálculo</DialogTitle>
                 <DialogDescriptionComponent>
-                  Cada fila debe tener 1 columna (para tarjetas simples) o 2 columnas (para tarjetas con anverso y reverso).
+                  Cada fila debe tener 1 columna (para tarjetas simples) o 2 columnas (para anverso y reverso).
                 </DialogDescriptionComponent>
             </div>
         </div>
@@ -831,9 +831,7 @@ const Step2_Details = ({ projectDetails, setProjectDetails, flashcards, goBack, 
     const handleRefine = async () => {
       setIsRefining(true);
       const result = await handleRefineProjectDetails({
-        currentTitle: title,
-        currentDescription: description,
-        flashcards: flashcards,
+        flashcards: flashcards.map(f => ({ question: f.question, answer: f.answer })),
       });
 
       if (result.details) {
@@ -1214,24 +1212,25 @@ export default function CreateProjectWizardPage() {
     // Strip localId before sending to server
     const finalFlashcards = flashcards.map(({ localId, ...rest }) => rest);
 
-    const result = await handleCreateProject(
-        projectDetails,
-        finalFlashcards,
-        studyPlan
-    );
-    
-    if (result?.project?.slug) {
-        toast({
+    // handleCreateProject now handles redirection. We don't need to check the result here.
+    try {
+        await handleCreateProject(
+            projectDetails,
+            finalFlashcards,
+            studyPlan
+        );
+         toast({
             title: '¡Creación exitosa!',
             description: 'Tu nuevo plan de estudios está listo.',
         });
-        router.push(`/proyecto/${result.project.slug}/details`);
-    } else {
+    } catch (error) {
+        // Errors inside server actions are caught by Next.js and will not be caught here.
+        // But if the action itself fails to be called, we can catch it.
         setProjectDetails(p => ({ ...p, isCreating: false }));
         toast({
             variant: 'destructive',
             title: 'Error al crear el proyecto',
-            description: result?.error || 'Ocurrió un error inesperado.',
+            description: 'Ocurrió un error inesperado al intentar crear el proyecto.',
         });
     }
   };
@@ -1282,3 +1281,5 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
+
+      

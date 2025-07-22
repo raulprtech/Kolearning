@@ -60,11 +60,12 @@ let createdProjects: Project[] = [
         ],
         studyPlan: {
             plan: [
-                { section: "Día 1", topic: "Introducción a la IA", sessionType: "Opción Múltiple" },
-                { section: "Día 2", topic: "Modelos de Segmentación", sessionType: "Tutor AI" },
-                { section: "Día 3", topic: "Repaso General", sessionType: "Quiz de Repaso" },
+                { topic: "Introducción a la IA", sessionType: "Opción Múltiple" },
+                { topic: "Modelos de Segmentación", sessionType: "Tutor AI" },
+                { topic: "Repaso General", sessionType: "Quiz de Repaso" },
             ],
-            justification: "Este plan está diseñado para construir una base sólida antes de pasar a temas más complejos."
+            justification: "Este plan está diseñado para construir una base sólida antes de pasar a temas más complejos.",
+            expectedProgress: "Al final del día 1, entenderás los conceptos básicos. Al final del día 2, podrás identificar arquitecturas clave."
         }
     },
 ];
@@ -222,7 +223,7 @@ export async function handleRefineProjectDetails(input: { currentTitle: string, 
     }
 }
 
-export async function handleGenerateStudyPlan(input: { projectTitle: string, objective: string, flashcards: FlashcardType[] }) {
+export async function handleGenerateStudyPlan(input: { projectTitle: string, objective: string, timeLimit: string, masteryLevel: string, flashcards: FlashcardType[], cognitiveProfile?: string[], learningChallenge?: string }) {
     try {
         const result = await generateStudyPlan(input);
         return { plan: result };
@@ -274,11 +275,13 @@ export async function handleCreateProject(
 
     try {
         createdProjects.push(newProject);
-        return { project: newProject };
+        // This will be caught by the page and handled, no need for return
     } catch (error) {
         console.error('Error creating project:', error);
         return { error: 'Sorry, I was unable to save the project.' };
     }
+
+    redirect(`/proyecto/${newProject.slug}/details`);
 }
 
 
@@ -293,3 +296,5 @@ export async function getGeneratedProject(projectSlug: string) {
 export async function getAllProjects() {
     return createdProjects;
 }
+
+      
