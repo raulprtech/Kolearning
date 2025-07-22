@@ -1,9 +1,10 @@
+
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookUser, Code, Bot, LineChart, BookOpen } from 'lucide-react';
 import type { Project } from '@/types';
-import { Badge } from '../ui/badge';
+import { Badge } from '@/components/ui/badge';
 
 const categoryIcons: { [key: string]: React.ReactNode } = {
     Programación: <Code className="w-full h-full" />,
