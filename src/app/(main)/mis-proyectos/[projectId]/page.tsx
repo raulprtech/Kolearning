@@ -52,11 +52,20 @@ function ProjectDetailsView({ project }: { project: Project }) {
 
   const [dominionPoints, setDominionPoints] = useState(0);
   const [earnedCoins, setEarnedCoins] = useState(0);
+  const [completedSessions, setCompletedSessions] = useState(0);
+
 
   useEffect(() => {
     const masteryParam = searchParams.get('mastery');
     const creditsParam = searchParams.get('credits');
+    const sessionParam = searchParams.get('session');
 
+    const sessionIndex = sessionParam ? parseInt(sessionParam, 10) : -1;
+
+    if (sessionIndex >= completedSessions) {
+      setCompletedSessions(sessionIndex + 1);
+    }
+    
     if (masteryParam) {
       const masteryPoints = parseInt(masteryParam, 10);
       setDominionPoints(masteryPoints);
@@ -133,24 +142,35 @@ function ProjectDetailsView({ project }: { project: Project }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {studyPlan.map((session, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{session.topic}</TableCell>
-                    <TableCell>{session.sessionType}</TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild={index === 0} variant={index === 0 ? 'default' : 'secondary'} size="sm" disabled={index > 0}>
-                          {index === 0 ? (
-                          <Link href={`/aprender?project=${project.slug}`}>
-                              Empezar
-                          </Link>
-                          ) : (
-                            <span>Bloqueado</span>
-                          )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {studyPlan.map((session, index) => {
+                  const isCompleted = index < completedSessions;
+                  const isNext = index === completedSessions;
+
+                  return (
+                    <TableRow key={index}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{session.topic}</TableCell>
+                      <TableCell>{session.sessionType}</TableCell>
+                      <TableCell className="text-right">
+                        {isCompleted ? (
+                          <Button variant="outline" size="sm" disabled>
+                            Completado
+                          </Button>
+                        ) : isNext ? (
+                          <Button asChild variant='default' size="sm">
+                            <Link href={`/aprender?project=${project.slug}&session=${index}`}>
+                                Empezar
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button variant='secondary' size="sm" disabled>
+                            Bloqueado
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           ) : (
@@ -281,5 +301,3 @@ export default function ProjectDetailsPage() {
         </div>
     )
 }
-
-    

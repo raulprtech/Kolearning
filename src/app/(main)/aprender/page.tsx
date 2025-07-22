@@ -665,6 +665,7 @@ function AprenderPageComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectSlug = searchParams.get('project');
+  const sessionIndex = searchParams.get('session');
 
   const [project, setProject] = useState<Project | null>(null);
   const [sessionQuestions, setSessionQuestions] = useState<SessionQuestion[]>([]);
@@ -921,7 +922,7 @@ function AprenderPageComponent() {
                   </CardContent>
                   <CardFooter>
                       <Button size="lg" className="w-full" asChild>
-                          <Link href={`/mis-proyectos/${project.slug}?mastery=${masteryProgress}&credits=${cognitiveCredits}`}>
+                          <Link href={`/mis-proyectos/${project.slug}?mastery=${masteryProgress}&credits=${cognitiveCredits}&session=${sessionIndex}`}>
                               Continuar
                           </Link>
                       </Button>
@@ -948,7 +949,7 @@ function AprenderPageComponent() {
                <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6">
                 <div className="mb-4 sm:mb-0">
                   <h1 className="text-xl md:text-2xl font-bold">{project.title}</h1>
-                  <p className="text-sm text-muted-foreground">{project.studyPlan?.plan[0]?.topic || 'Sesión de Repaso'}</p>
+                  <p className="text-sm text-muted-foreground">{project.studyPlan?.plan[parseInt(sessionIndex || '0')]?.topic || 'Sesión de Repaso'}</p>
                 </div>
                 <div className="flex items-center gap-4 text-sm shrink-0">
                   <div className="flex items-center gap-2">
@@ -1119,5 +1120,3 @@ export default function AprenderPage() {
         </Suspense>
     );
 }
-
-    

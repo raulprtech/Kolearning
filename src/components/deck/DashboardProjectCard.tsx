@@ -47,7 +47,7 @@ export function DashboardProjectCard({ project }: { project: Project }) {
             <Progress value={progress} className="h-2" />
           </div>
           <Button asChild variant="link" className="p-0 h-auto text-primary font-medium shrink-0">
-            <Link href={`/aprender?project=${project.slug}`}>
+            <Link href={`/mis-proyectos/${project.slug}`}>
               <Play className="h-4 w-4 mr-2"/>
               <span>Empezar</span>
             </Link>
