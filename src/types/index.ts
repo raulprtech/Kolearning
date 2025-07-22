@@ -49,6 +49,7 @@ export interface Project {
   isPublic: boolean;
   flashcards?: Flashcard[];
   studyPlan?: StudyPlan;
+  completedSessions?: number;
 }
 
 export interface Flashcard {

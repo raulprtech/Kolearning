@@ -51,22 +51,14 @@ export function ProjectDetailsView({ project }: { project: Project }) {
 
   const [dominionPoints, setDominionPoints] = useState(0);
   const [earnedCoins, setEarnedCoins] = useState(0);
-  const [completedSessions, setCompletedSessions] = useState(0);
   const [planUpdateInfo, setPlanUpdateInfo] = useState<{updated: boolean, reason: string | null}>({updated: false, reason: null});
 
 
   useEffect(() => {
     const masteryParam = searchParams.get('mastery');
     const creditsParam = searchParams.get('credits');
-    const sessionParam = searchParams.get('session');
     const planUpdatedParam = searchParams.get('planUpdated');
     const reasoningParam = searchParams.get('reasoning');
-
-    const sessionIndex = sessionParam ? parseInt(sessionParam, 10) : -1;
-
-    if (sessionIndex >= completedSessions) {
-      setCompletedSessions(sessionIndex + 1);
-    }
     
     if (masteryParam) {
       const masteryPoints = parseInt(masteryParam, 10);
@@ -87,6 +79,7 @@ export function ProjectDetailsView({ project }: { project: Project }) {
   const knowledgeAtoms = project.flashcards || [];
   const knowledgeAtomsPreview = knowledgeAtoms.slice(0, 5);
   const studyPlan = project.studyPlan?.plan || [];
+  const completedSessions = project.completedSessions || 0;
 
   return (
     <div className="bg-card/50 p-6 sm:p-8 rounded-xl shadow-lg border">

@@ -34,7 +34,8 @@ let createdProjects: Project[] = [
             ],
             justification: "Este plan está diseñado para construir una base sólida antes de pasar a temas más complejos.",
             expectedProgress: "Al final del día 1, entenderás los conceptos básicos. Al final del día 2, podrás identificar arquitecturas clave."
-        }
+        },
+        completedSessions: 0,
     },
 ];
 
@@ -245,6 +246,7 @@ export async function handleCreateProject(
         flashcards: validation.data,
         studyPlan: studyPlan,
         isPublic: projectDetails.isPublic,
+        completedSessions: 0,
     };
 
     try {
@@ -261,8 +263,18 @@ export async function handleCreateProject(
 
 export async function handleEndSessionAndRefinePlan(projectSlug: string, completedSessionIndex: number, performanceSummary: SessionPerformanceSummary) {
     const projectIndex = createdProjects.findIndex(p => p.slug === projectSlug);
-    if (projectIndex === -1 || !createdProjects[projectIndex].studyPlan) {
-        return { error: 'Project not found or has no study plan.' };
+    if (projectIndex === -1) {
+        return { error: 'Project not found.' };
+    }
+    
+    // Update completed sessions
+    const currentCompleted = createdProjects[projectIndex].completedSessions || 0;
+    if (completedSessionIndex + 1 > currentCompleted) {
+        createdProjects[projectIndex].completedSessions = completedSessionIndex + 1;
+    }
+    
+    if (!createdProjects[projectIndex].studyPlan) {
+        return { success: true, planUpdated: false, reasoning: 'No study plan to refine.' };
     }
 
     const currentPlan = createdProjects[projectIndex].studyPlan!.plan;
