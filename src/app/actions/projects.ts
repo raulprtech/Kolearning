@@ -5,7 +5,7 @@ import { generateDeckFromText } from '@/ai/flows/generate-deck-from-text';
 import { refineProjectDetails } from '@/ai/flows/refine-project-details';
 import { generateStudyPlan } from '@/ai/flows/generate-study-plan';
 import { z } from 'zod';
-import type { Project, Flashcard as FlashcardType, StudyPlan, ProjectDetails } from '@/types';
+import type { Project, Flashcard as FlashcardType, StudyPlan, ProjectDetails, RefineProjectDetailsInput, GenerateStudyPlanInput } from '@/types';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { redirect } from 'next/navigation';
 
@@ -60,9 +60,9 @@ let createdProjects: Project[] = [
         ],
         studyPlan: {
             plan: [
-                { topic: "Introducción a la IA", sessionType: "Opción Múltiple" },
-                { topic: "Modelos de Segmentación", sessionType: "Tutor AI" },
-                { topic: "Repaso General", sessionType: "Quiz de Repaso" },
+                { topic: "Introducción a la IA", sessionType: "Calibración Inicial" },
+                { topic: "Modelos de Segmentación", sessionType: "Incursión" },
+                { topic: "Repaso General", sessionType: "Refuerzo de Dominio" },
             ],
             justification: "Este plan está diseñado para construir una base sólida antes de pasar a temas más complejos.",
             expectedProgress: "Al final del día 1, entenderás los conceptos básicos. Al final del día 2, podrás identificar arquitecturas clave."
@@ -70,7 +70,7 @@ let createdProjects: Project[] = [
     },
 ];
 
-const FlashcardSchema = z.object({
+const CreateProjectInputSchema = z.array(z.object({
   id: z.string(),
   deckId: z.string(),
   question: z.string(),
@@ -83,9 +83,7 @@ const FlashcardSchema = z.object({
   formatos_presentacion: z.array(z.string()),
   dificultad_inicial: z.string(),
   image: z.string().optional(),
-});
-
-const CreateProjectInputSchema = z.array(FlashcardSchema);
+}));
 
 function createSlug(title: string) {
     return title
@@ -213,7 +211,7 @@ export async function handleGenerateProjectFromWebUrl(webUrl: string) {
   }
 }
 
-export async function handleRefineProjectDetails(input: { currentTitle: string, currentDescription: string, flashcards: FlashcardType[] }) {
+export async function handleRefineProjectDetails(input: RefineProjectDetailsInput) {
     try {
         const result = await refineProjectDetails(input);
         return { details: result };
@@ -223,7 +221,7 @@ export async function handleRefineProjectDetails(input: { currentTitle: string, 
     }
 }
 
-export async function handleGenerateStudyPlan(input: { projectTitle: string, objective: string, timeLimit: string, masteryLevel: string, flashcards: FlashcardType[], cognitiveProfile?: string[], learningChallenge?: string }) {
+export async function handleGenerateStudyPlan(input: GenerateStudyPlanInput) {
     try {
         const result = await generateStudyPlan(input);
         return { plan: result };
@@ -240,7 +238,8 @@ export async function handleCreateProject(
     studyPlan: StudyPlan
 ) {
     if (!projectDetails.title || flashcards.length === 0) {
-        return { error: 'Project must have a title and at least one flashcard.' };
+        // This should be handled client-side, but as a safeguard
+        throw new Error('Project must have a title and at least one flashcard.');
     }
     
     const slug = createSlug(projectDetails.title);
@@ -256,7 +255,7 @@ export async function handleCreateProject(
     
     if (!validation.success) {
         console.error("Invalid flashcard data:", validation.error.flatten());
-        return { error: 'Invalid flashcard data provided.' };
+        throw new Error('Invalid flashcard data provided.');
     }
 
     const newProject: Project = {
@@ -275,13 +274,14 @@ export async function handleCreateProject(
 
     try {
         createdProjects.push(newProject);
-        // This will be caught by the page and handled, no need for return
     } catch (error) {
         console.error('Error creating project:', error);
-        return { error: 'Sorry, I was unable to save the project.' };
+        throw new Error('Sorry, I was unable to save the project.');
     }
 
-    redirect(`/proyecto/${newProject.slug}/details`);
+    // Redirect must be called outside of a try/catch block
+    // to be handled correctly by Next.js.
+    redirect(`/mis-proyectos/${newProject.slug}/details`);
 }
 
 
@@ -296,5 +296,3 @@ export async function getGeneratedProject(projectSlug: string) {
 export async function getAllProjects() {
     return createdProjects;
 }
-
-      

@@ -328,7 +328,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
         return;
     }
     setIsGenerating(true);
-    const parsedCards = await handlePastedTextImportAction(text, '\t', '\n');
+    const parsedCards = await handlePastedTextImportAction(text, 'tab', 'newline');
     const projectTitle = `Importado de ${sourceName}`;
     onProjectParsed(projectTitle, parsedCards);
     setIsGenerating(false);
@@ -1212,7 +1212,6 @@ export default function CreateProjectWizardPage() {
     // Strip localId before sending to server
     const finalFlashcards = flashcards.map(({ localId, ...rest }) => rest);
 
-    // handleCreateProject now handles redirection. We don't need to check the result here.
     try {
         await handleCreateProject(
             projectDetails,
@@ -1224,8 +1223,6 @@ export default function CreateProjectWizardPage() {
             description: 'Tu nuevo plan de estudios está listo.',
         });
     } catch (error) {
-        // Errors inside server actions are caught by Next.js and will not be caught here.
-        // But if the action itself fails to be called, we can catch it.
         setProjectDetails(p => ({ ...p, isCreating: false }));
         toast({
             variant: 'destructive',
@@ -1281,5 +1278,3 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
-
-      
