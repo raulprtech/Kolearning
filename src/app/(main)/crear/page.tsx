@@ -1275,5 +1275,3 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
-
-    
