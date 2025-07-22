@@ -264,30 +264,10 @@ export function ProjectDetailsView({ project }: { project: Project }) {
 }
 
 // This is a server component that fetches data and passes it to the client component.
-export default function ProjectDetailsPage({ params }: { params: { projectId: string }}) {
-    const [project, setProject] = useState<Project | null>(null);
-    const [loading, setLoading] = useState(true);
+export default async function ProjectDetailsPage({ params }: { params: { projectId: string }}) {
     const projectSlug = params.projectId;
-
-    useEffect(() => {
-        async function loadProject() {
-            setLoading(true);
-            const allProjects = await getAllProjects();
-            const foundProject = allProjects.find(p => p.slug === projectSlug);
-            
-            if (foundProject) {
-                setProject(foundProject);
-            } else {
-                // To trigger notFound, we can let the project remain null and check outside
-            }
-            setLoading(false);
-        }
-        loadProject();
-    }, [projectSlug]);
-
-    if (loading) {
-        return <Skeleton className="h-96 w-full" />
-    }
+    const allProjects = await getAllProjects();
+    const project = allProjects.find(p => p.slug === projectSlug);
 
     if (!project) {
         notFound();
