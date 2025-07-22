@@ -29,7 +29,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import type { Project } from '@/types';
-import { getGeneratedProject, getAllProjects } from '@/app/actions/projects';
+import { getAllProjects } from '@/app/actions/projects';
 import {
   Dialog,
   DialogContent,
@@ -205,23 +205,33 @@ export default function ProjectDetailsPage({
   params: { projectId: string };
 }) {
   const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadProject() {
       const projectSlug = params.projectId;
       const projects = await getAllProjects();
       const foundProject = projects.find(p => p.slug === projectSlug);
+      
       if (foundProject) {
         setProject(foundProject);
       } else {
-        notFound();
+        // Instead of calling notFound(), just set project to null or handle error state
+        setProject(null);
       }
+      setLoading(false);
     }
     loadProject();
   }, [params.projectId]);
 
-  if (!project) {
+  if (loading) {
     return <div>Cargando...</div>;
+  }
+
+  if (!project) {
+    // This will now be handled correctly on the client side.
+    notFound();
+    return null;
   }
   
   return <ProjectDetailsView project={project} />;
