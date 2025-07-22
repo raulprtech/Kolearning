@@ -21,6 +21,7 @@ export interface StudyPlan {
   }[];
   justification: string;
   expectedProgress: string;
+  category?: string;
 }
 
 export interface ProjectDetails {
@@ -207,5 +208,6 @@ export const GenerateStudyPlanOutputSchema = z.object({
   })).describe('A structured array representing the study plan.'),
   justification: z.string().describe('A brief, encouraging explanation of why the plan is structured this way.'),
   expectedProgress: z.string().describe("A brief explanation of the expected progress after each major section or day of the plan."),
+  category: z.string().describe('A relevant, single-word category for the project in Spanish (e.g., "Programación", "Biología", "Historia").'),
 });
 export type GenerateStudyPlanOutput = z.infer<typeof GenerateStudyPlanOutputSchema>;

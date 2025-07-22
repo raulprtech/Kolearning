@@ -1024,7 +1024,7 @@ const CalibrationModal = ({ onCalibrate, projectDetails }: { onCalibrate: (profi
 };
 
 
-const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject, onCalibratePlan }: { projectDetails: ProjectDetails, flashcards: FlashcardType[], goBack: () => void, createProject: (studyPlan: StudyPlan) => void, onCalibratePlan: (profile: string[], challenge: string) => void }) => {
+const Step3_Plan = ({ projectDetails, setProjectDetails, flashcards, goBack, createProject, onCalibratePlan }: { projectDetails: ProjectDetails, setProjectDetails: (details: ProjectDetails) => void, flashcards: FlashcardType[], goBack: () => void, createProject: (studyPlan: StudyPlan) => void, onCalibratePlan: (profile: string[], challenge: string) => void }) => {
     const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const { toast } = useToast();
@@ -1046,6 +1046,9 @@ const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject, onCalib
 
             if (result.plan) {
                 setStudyPlan(result.plan);
+                if (result.plan.category) {
+                  setProjectDetails({ ...projectDetails, category: result.plan.category });
+                }
             } else {
                 toast({ variant: 'destructive', title: 'Error al crear el plan', description: result.error });
             }
@@ -1053,7 +1056,7 @@ const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject, onCalib
         };
 
         generatePlan();
-    }, [projectDetails, flashcards, toast]);
+    }, [projectDetails.objective, projectDetails.timeLimit, projectDetails.masteryLevel, projectDetails.cognitiveProfile, projectDetails.learningChallenge, flashcards, toast, setStudyPlan, setProjectDetails, projectDetails.title]);
 
     const handleCalibrate = (profile: string[], challenge: string) => {
         setIsCalibrated(true);
@@ -1240,7 +1243,8 @@ export default function CreateProjectWizardPage() {
         />;
       case 3:
         return <Step3_Plan 
-            projectDetails={projectDetails} 
+            projectDetails={projectDetails}
+            setProjectDetails={setProjectDetails}
             flashcards={flashcards} 
             goBack={goBack} 
             createProject={handleCreateFinalProject} 

@@ -60,7 +60,9 @@ You must operate with the understanding that each session you define will be pow
 
 **Your Task:**
 
-1.  **Design a multi-session study plan.**
+1.  **Analyze the flashcards and determine a single, relevant category** for the project (e.g., "Programación", "Biología", "Historia").
+
+2.  **Design a multi-session study plan.**
     -   Analyze the flashcards, their difficulties, and their dependencies ('atomos_padre') to create a logical sequence.
     -   If the user provided a cognitive profile or learning challenge, use that information to tailor the session types and justification. For example, if their challenge is "Entender conceptos muy teóricos o abstractos," strategically include a "Consulta con Koli" session for complex topics.
     -   The plan can have **multiple sessions per day** if needed to meet the user's time limit.
@@ -73,10 +75,10 @@ You must operate with the understanding that each session you define will be pow
         -   **Prueba de Dominio**: Use as a final "exam" session to verify overall mastery.
         -   **Consulta con Koli**: Use sparingly for particularly complex or abstract topics that would benefit from a deeper, conversational dive, especially if the user's profile indicates this need.
 
-2.  **Write a brief, encouraging justification.**
+3.  **Write a brief, encouraging justification.**
     -   Explain the pedagogical reasoning behind your plan's structure, connecting it to the user's stated objective and time limit. If calibration data was provided, mention how it influenced the plan.
 
-3.  **Provide an 'expectedProgress' explanation.**
+4.  **Provide an 'expectedProgress' explanation.**
     -   Briefly describe what the user is expected to have learned or accomplished after completing each major section or day of the plan. This sets clear expectations for their learning journey.
 
 Your output MUST be a JSON object that follows this schema:
