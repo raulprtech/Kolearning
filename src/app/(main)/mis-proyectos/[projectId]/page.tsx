@@ -40,6 +40,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { notFound } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function ProjectDetailsView({ project }: { project: Project }) {
   const knowledgeAtoms = project.flashcards || [];
@@ -199,7 +200,7 @@ function ProjectDetailsView({ project }: { project: Project }) {
   );
 }
 
-export default function ProjectDetailsPage({
+export default function ProjectDetailsPageLoader({
   params,
 }: {
   params: { projectId: string };
@@ -216,8 +217,7 @@ export default function ProjectDetailsPage({
       if (foundProject) {
         setProject(foundProject);
       } else {
-        // Instead of calling notFound(), just set project to null or handle error state
-        setProject(null);
+        // Not found on client, let server handle it or show client-side not found
       }
       setLoading(false);
     }
@@ -225,11 +225,25 @@ export default function ProjectDetailsPage({
   }, [params.projectId]);
 
   if (loading) {
-    return <div>Cargando...</div>;
+    return (
+        <div className="container mx-auto py-8">
+            <div className="space-y-6">
+                <Skeleton className="h-12 w-1/2" />
+                <div className="grid grid-cols-3 gap-6">
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                </div>
+                <Skeleton className="h-10 w-1/4" />
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-10 w-1/4" />
+                <Skeleton className="h-48 w-full" />
+            </div>
+        </div>
+    );
   }
 
   if (!project) {
-    // This will now be handled correctly on the client side.
     notFound();
     return null;
   }
