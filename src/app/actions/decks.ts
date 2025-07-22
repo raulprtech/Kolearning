@@ -47,12 +47,14 @@ export async function handleCreateProject(
 
     const newProject: Project & { flashcards: FlashcardType[] } = {
         id: `gen-${Date.now()}`,
+        slug: `gen-${Date.now()}`,
         title: title,
         description: description,
         category: 'Custom',
         author: 'User',
         size: flashcards.length,
         bibliography: [],
+        isPublic: false,
         flashcards: flashcards.map(fc => ({...fc, id: fc.id.toString(), deckId: `gen-${Date.now()}`}))
     };
 
@@ -67,8 +69,8 @@ export async function handleCreateProject(
 }
 
 
-export async function getGeneratedProject(projectId: string) {
-    const project = createdProjects.find(d => d.id === projectId);
+export async function getGeneratedProject(projectSlug: string) {
+    const project = createdProjects.find(d => d.slug === projectSlug);
     if (project) {
         return project;
     }
