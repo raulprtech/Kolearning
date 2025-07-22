@@ -90,7 +90,7 @@ function createSlug(title: string) {
       .toLowerCase()
       .normalize("NFD") // Decompose accented characters
       .replace(/[\u0300-\u036f]/g, "") // Remove diacritical marks
-      .replace(/[^a-z0-9\s-]/g, '') // Remove remaining non-alphanumeric characters
+      .replace(/[^a-z0-9\s-]/g, '') // Remove remaining non-alphanumeric characters (keep hyphens)
       .trim()
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/-+/g, '-'); // Remove consecutive hyphens
