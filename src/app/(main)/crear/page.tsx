@@ -1218,17 +1218,20 @@ export default function CreateProjectWizardPage() {
             finalFlashcards,
             studyPlan
         );
-         toast({
+        toast({
             title: '¡Creación exitosa!',
             description: 'Tu nuevo plan de estudios está listo.',
         });
-    } catch (error) {
-        setProjectDetails(p => ({ ...p, isCreating: false }));
-        toast({
-            variant: 'destructive',
-            title: 'Error al crear el proyecto',
-            description: 'Ocurrió un error inesperado al intentar crear el proyecto.',
-        });
+    } catch (error: any) {
+        // Only show toast if it's not a Next.js redirect error
+        if (typeof error.digest !== 'string' || !error.digest.startsWith('NEXT_REDIRECT')) {
+            setProjectDetails(p => ({ ...p, isCreating: false }));
+            toast({
+                variant: 'destructive',
+                title: 'Error al crear el proyecto',
+                description: 'Ocurrió un error inesperado al intentar crear el proyecto.',
+            });
+        }
     }
   };
 
