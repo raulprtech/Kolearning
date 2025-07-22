@@ -39,6 +39,8 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { notFound } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 async function getProjectDetails(projectSlug: string): Promise<Project | null> {
   // For generated projects, fetch from our temporary store
   return getGeneratedProject(projectSlug);
