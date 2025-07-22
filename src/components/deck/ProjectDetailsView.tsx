@@ -28,9 +28,9 @@ import {
   FileText,
   Link as LinkIcon,
   Pencil,
+  Info,
 } from 'lucide-react';
 import type { Project } from '@/types';
-import { getAllProjects } from '@/app/actions/projects';
 import {
   Dialog,
   DialogContent,
@@ -39,10 +39,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { notFound, useParams, useSearchParams } from 'next/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useUser } from '@/context/UserContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 export function ProjectDetailsView({ project }: { project: Project }) {
@@ -52,12 +52,15 @@ export function ProjectDetailsView({ project }: { project: Project }) {
   const [dominionPoints, setDominionPoints] = useState(0);
   const [earnedCoins, setEarnedCoins] = useState(0);
   const [completedSessions, setCompletedSessions] = useState(0);
+  const [planUpdateInfo, setPlanUpdateInfo] = useState<{updated: boolean, reason: string | null}>({updated: false, reason: null});
 
 
   useEffect(() => {
     const masteryParam = searchParams.get('mastery');
     const creditsParam = searchParams.get('credits');
     const sessionParam = searchParams.get('session');
+    const planUpdatedParam = searchParams.get('planUpdated');
+    const reasoningParam = searchParams.get('reasoning');
 
     const sessionIndex = sessionParam ? parseInt(sessionParam, 10) : -1;
 
@@ -74,6 +77,9 @@ export function ProjectDetailsView({ project }: { project: Project }) {
       const creditPoints = parseInt(creditsParam, 10);
       setEarnedCoins(creditPoints);
       addCoins(creditPoints);
+    }
+    if (planUpdatedParam === 'true') {
+        setPlanUpdateInfo({ updated: true, reason: reasoningParam ? decodeURIComponent(reasoningParam) : 'Koli ha optimizado tu siguiente sesión.' });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -92,6 +98,16 @@ export function ProjectDetailsView({ project }: { project: Project }) {
         </div>
         <Badge variant="outline" className="border-dashed">{project.category}</Badge>
       </header>
+       
+      {planUpdateInfo.updated && (
+        <Alert className="mb-6 bg-blue-500/10 border-blue-500/20 text-blue-300">
+            <Info className="h-4 w-4 !text-blue-300" />
+            <AlertTitle>¡Plan de Estudio Actualizado!</AlertTitle>
+            <AlertDescription>
+                {planUpdateInfo.reason}
+            </AlertDescription>
+        </Alert>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
