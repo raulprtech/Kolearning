@@ -54,10 +54,13 @@ const MultipleChoiceQuestion = ({ question, answerState, onOptionSelect }: any) 
     return 'opacity-50';
   };
 
+  // Ensure question.options is an array before mapping
+  const options = Array.isArray(question.options) ? question.options : [];
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {question.options.map((option: any) => (
+        {options.map((option: any) => (
           <Card
             key={option.id}
             className={cn(
@@ -527,12 +530,13 @@ type Action =
     | { type: 'SET_SESSION_FINISHED' }
     | { type: 'UPDATE_OPEN_ANSWER_TEXT'; payload: string }
     | { type: 'UPDATE_QUESTION_TEXT'; payload: string }
-    | { type: 'CONVERT_TO_MULTIPLE_CHOICE'; payload: { options: any[], correctAnswerId: string } }
+    | { type: 'CONVERT_TO_MULTIPLE_CHOICE'; payload: { cardId: string; options: any[], correctAnswerId: string } }
     | { type: 'PREPARE_MC_CONVERSION'; payload: any[] }
     | { type: 'FORCE_MC_CONVERSION' }
     | { type: 'SHOW_ANSWER' }
     | { type: 'REQUEST_HINT' }
-    | { type: 'REQUEST_EXPLANATION' };
+    | { type: 'REQUEST_EXPLANATION' }
+    | { type: 'SET_NEXT_QUESTION'; payload: { cardId: string | null, needsMcOptions: boolean }};
 
 const initialState: State = {
     project: null,
@@ -564,7 +568,7 @@ function reducer(state: State, action: Action): State {
             const progressPercentage = (sessionIndex + 1) / (project.studyPlan?.plan.length || 1);
             
             const srs = new SpacedRepetitionSystem(project.flashcards || [], sessionType, progressPercentage);
-            const currentCardId = srs.getNextCard();
+            const nextCard = srs.getNextCard();
             
             const sessionQuestions = project.flashcards!.map(fc => {
                 const type = srs.getQuestionTypeForCard(fc.id);
@@ -576,7 +580,7 @@ function reducer(state: State, action: Action): State {
                 project,
                 srs,
                 sessionQuestions,
-                currentCardId,
+                currentCardId: nextCard?.id || null,
                 isLoading: false,
             };
         }
@@ -642,33 +646,27 @@ function reducer(state: State, action: Action): State {
             }
             return { ...state, isAnswered: true, isCorrect: action.payload.isCorrect };
         }
-
-        case 'RATE_DIFFICULTY': {
-            const { rating } = action.payload;
-            const { srs, currentCardId, isCorrect, project } = state;
-            if (!srs || !currentCardId || !project) return state;
-
-            srs.updateCard(currentCardId, rating, isCorrect!);
-            const newStats = srs.getStats();
-
-            const nextCardId = srs.getNextCard();
-
-            if (!nextCardId) {
+        
+        case 'SET_NEXT_QUESTION': {
+            const { cardId } = action.payload;
+            
+            if (!cardId) {
+                 const newStats = state.srs!.getStats();
                  return { ...state, isSessionFinished: true, finalSessionStats: newStats };
             }
 
-            const progress = (srs.getReviewedCount() / srs.getTotalCards()) * 100;
+            const progress = (state.srs!.getReviewedCount() / state.srs!.getTotalCards()) * 100;
+            const newStats = state.srs!.getStats();
             
-            const nextQuestionType = srs.getQuestionTypeForCard(nextCardId);
-
+            const nextQuestionType = state.srs!.getQuestionTypeForCard(cardId);
             const newQuestions = state.sessionQuestions.map(q =>
-                q.id === nextCardId ? { ...q, type: nextQuestionType } : q
+                q.id === cardId ? { ...q, type: nextQuestionType } : q
             );
 
             return {
                 ...state,
                 sessionQuestions: newQuestions,
-                currentCardId: nextCardId,
+                currentCardId: cardId,
                 isAnswered: false,
                 isCorrect: null,
                 openAnswerText: '',
@@ -677,6 +675,17 @@ function reducer(state: State, action: Action): State {
                 sessionProgress: progress,
                 ...newStats,
             };
+        }
+
+        case 'RATE_DIFFICULTY': {
+            const { rating } = action.payload;
+            const { srs, currentCardId, isCorrect, project } = state;
+            if (!srs || !currentCardId || !project) return state;
+
+            srs.updateCard(currentCardId, rating, isCorrect!);
+            
+            // This will be handled by SET_NEXT_QUESTION now
+            return state;
         }
         
         case 'UPDATE_QUESTION_TEXT': {
@@ -690,7 +699,7 @@ function reducer(state: State, action: Action): State {
         case 'CONVERT_TO_MULTIPLE_CHOICE': {
             if (!state.currentCardId) return state;
             const newQuestions = state.sessionQuestions.map(q => {
-                if (q.id === state.currentCardId) {
+                if (q.id === action.payload.cardId) {
                     return {
                         ...q,
                         type: 'multiple-choice',
@@ -795,6 +804,33 @@ function AprenderPageComponent() {
         }
     }
   }, [state.srs, state.currentCardId, state.isAnswered, currentQuestion?.type, state.mcOptionsForFailedQuestion]);
+  
+  // Effect to generate MC options when a question needs them
+    useEffect(() => {
+        const nextCardInfo = state.srs?.getNextCard();
+        if (nextCardInfo?.needsMcOptions) {
+             const card = state.srs?.getCard(nextCardInfo.id);
+             if (card) {
+                handleGenerateOptionsForQuestion({
+                    question: card.question,
+                    correctAnswer: card.answer,
+                }).then(result => {
+                    if (result.options && card.id) {
+                        const formattedOptions = result.options.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
+                        const correctOption = formattedOptions.find(o => o.text === card.answer);
+                        dispatch({ 
+                            type: 'CONVERT_TO_MULTIPLE_CHOICE', 
+                            payload: { 
+                                cardId: card.id,
+                                options: formattedOptions, 
+                                correctAnswerId: correctOption?.id || 'A' 
+                            } 
+                        });
+                    }
+                });
+             }
+        }
+    }, [state.currentCardId, state.srs]);
 
 
   if (state.isLoading || !state.project) {
@@ -904,6 +940,8 @@ function AprenderPageComponent() {
 
   const handleDifficultyRating = (rating: 0 | 1 | 2 | 3) => {
       dispatch({ type: 'RATE_DIFFICULTY', payload: { rating } });
+      const nextCardInfo = state.srs!.getNextCard();
+      dispatch({ type: 'SET_NEXT_QUESTION', payload: { cardId: nextCardInfo?.id || null, needsMcOptions: nextCardInfo?.needsMcOptions || false }});
   };
 
   const handleShowAnswer = () => {
@@ -920,7 +958,8 @@ function AprenderPageComponent() {
     const correctOption = formattedOptions.find(o => o.text === currentQuestion.answer);
     dispatch({ 
         type: 'CONVERT_TO_MULTIPLE_CHOICE', 
-        payload: { 
+        payload: {
+            cardId: currentQuestion.id,
             options: formattedOptions, 
             correctAnswerId: correctOption?.id || 'A' 
         } 

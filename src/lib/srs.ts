@@ -114,11 +114,16 @@ export class SpacedRepetitionSystem {
         return array;
     }
 
-    public getNextCard(): string | null {
+    public getNextCard(): { id: string, needsMcOptions: boolean } | null {
         if (this.reviewQueue.length === 0) {
             return null; // Session finished
         }
-        return this.reviewQueue[0];
+        const cardId = this.reviewQueue[0];
+        const questionType = this.getQuestionTypeForCard(cardId);
+        return {
+            id: cardId,
+            needsMcOptions: questionType === 'multiple-choice',
+        };
     }
     
     public getCard(id: string): Flashcard | undefined {
