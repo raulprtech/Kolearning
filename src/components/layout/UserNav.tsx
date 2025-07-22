@@ -17,6 +17,7 @@ import type { User } from '@/types';
 import { useTheme } from 'next-themes';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
+import Link from 'next/link';
 
 export function UserNav({ user }: { user: User }) {
   const router = useRouter();
@@ -51,10 +52,12 @@ export function UserNav({ user }: { user: User }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-           <DropdownMenuItem>
-                <UserIcon className="mr-2 h-4 w-4" />
-                <span>Perfil</span>
-            </DropdownMenuItem>
+           <Link href="/perfil" passHref>
+             <DropdownMenuItem>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>Perfil</span>
+              </DropdownMenuItem>
+           </Link>
              <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Ajustes</span>
