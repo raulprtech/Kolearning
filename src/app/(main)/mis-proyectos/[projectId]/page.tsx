@@ -1,4 +1,3 @@
-
 import Link from 'next/link';
 import {
   Card,
@@ -41,18 +40,7 @@ import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ProjectDetailsPage({
-  params,
-}: {
-  params: { projectId: string };
-}) {
-  const projectSlug = params.projectId;
-  const project = await getGeneratedProject(projectSlug);
-
-  if (!project) {
-    notFound();
-  }
-
+function ProjectDetailsView({ project }: { project: Project }) {
   const knowledgeAtoms = project.flashcards || [];
   const knowledgeAtomsPreview = knowledgeAtoms.slice(0, 5);
   const studyPlan = project.studyPlan?.plan || [];
@@ -123,7 +111,7 @@ export default async function ProjectDetailsPage({
                       <TableCell>{session.topic}</TableCell>
                       <TableCell>{session.sessionType}</TableCell>
                       <TableCell className="text-right">
-                        <Button asChild={index === 0} variant={index > 0 ? 'default' : 'default'} size="sm" disabled={index > 0}>
+                        <Button asChild={index === 0} variant={index === 0 ? 'default' : 'secondary'} size="sm" disabled={index > 0}>
                            {index === 0 ? (
                             <Link href={`/aprender?project=${project.slug}`}>
                                 Empezar
@@ -208,4 +196,19 @@ export default async function ProjectDetailsPage({
       </div>
     </div>
   );
+}
+
+export default async function ProjectDetailsPage({
+  params,
+}: {
+  params: { projectId: string };
+}) {
+  const projectSlug = params.projectId;
+  const project = await getGeneratedProject(projectSlug);
+
+  if (!project) {
+    notFound();
+  }
+  
+  return <ProjectDetailsView project={project} />;
 }
