@@ -41,18 +41,13 @@ import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-async function getProjectDetails(projectSlug: string): Promise<Project | null> {
-  // For generated projects, fetch from our temporary store
-  return getGeneratedProject(projectSlug);
-}
-
 export default async function ProjectDetailsPage({
   params,
 }: {
   params: { projectId: string };
 }) {
   const projectSlug = params.projectId;
-  const project = await getProjectDetails(projectSlug);
+  const project = await getGeneratedProject(projectSlug);
 
   if (!project) {
     notFound();
