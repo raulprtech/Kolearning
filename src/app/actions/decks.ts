@@ -6,10 +6,6 @@ import { evaluateOpenAnswer } from '@/ai/flows/evaluate-open-answer';
 import type { EvaluateOpenAnswerInput } from '@/types';
 import { generateOptionsForQuestion } from '@/ai/flows/generate-options-for-question';
 import type { GenerateOptionsForQuestionInput } from '@/types';
-import { redirect } from 'next/navigation';
-import { z } from 'zod';
-import type { Project, Flashcard as FlashcardType, StudyPlan, ProjectDetails } from '@/types';
-import { getGeneratedProject as getProjectBySlug, createdProjects } from './projects';
 
 
 export async function handleGenerateProjectFromText(studyNotes: string) {
