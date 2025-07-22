@@ -35,7 +35,7 @@ export default function ProyectosPage() {
 
   useEffect(() => {
     getAllProjects().then(projects => {
-        setAllProjects(projects.filter(p => p.isPublic || p.author === 'Kolearning'));
+        setAllProjects(projects);
     });
   }, []);
 
