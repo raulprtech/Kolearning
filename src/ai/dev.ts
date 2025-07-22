@@ -9,3 +9,5 @@ import '@/ai/flows/evaluate-open-answer.ts';
 import '@/ai/flows/generate-options-for-question.ts';
 import '@/ai/flows/refine-project-details.ts';
 import '@/ai/flows/generate-study-plan.ts';
+import '@/ai/flows/refine-study-plan.ts';
+

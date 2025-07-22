@@ -2,13 +2,13 @@
 
 'use client';
 
-import { useState, useMemo, useRef, useEffect, Suspense } from 'react';
+import { useState, useMemo, useRef, useEffect, Suspense, useReducer } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical, MenuSquare, Zap, Trophy } from 'lucide-react';
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Lightbulb, Repeat, Frown, Meh, Smile, RefreshCw, Eye, Bot, Star, User2, Check, SendHorizonal, GripVertical, MenuSquare, Zap, Trophy, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -23,22 +23,13 @@ import { handleTutorChat } from '@/app/actions/tutor';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { handleEvaluateOpenAnswer, handleGenerateOptionsForQuestion } from '@/app/actions/decks';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getAllProjects } from '@/app/actions/projects';
-import type { Project, Flashcard } from '@/types';
+import { handleEndSessionAndRefinePlan, getAllProjects } from '@/app/actions/projects';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import type { Project, Flashcard, SessionPerformanceSummary } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SpacedRepetitionSystem, type CardState } from '@/lib/srs';
 
 type SessionQuestion = Flashcard & { type: 'open-answer' | 'multiple-choice' | 'matching' | 'ordering' | 'fill-in-the-blank', options?: any[], code?: string, correctAnswerText?: string, textParts?: string[], pairs?: any[], items?: any[] };
-
-type AnswerState = {
-    [key: number]: {
-        isAnswered: boolean;
-        isCorrect?: boolean;
-        selectedOption?: string;
-        userAnswer?: string;
-        openAnswerAttempts?: number;
-    };
-};
 
 const TutorAvatar = ({ className }: { className?: string }) => (
     <div className={cn("w-8 h-8 rounded-full bg-blue-500/50 flex items-center justify-center shrink-0", className)}>
@@ -132,168 +123,12 @@ const OpenAnswerQuestion = ({ onAnswerSubmit, isAnswered, isLoading, userAnswer,
     );
 };
 
-const FillInTheBlankQuestion = ({ question, isAnswered, onAnswerSubmit, userAnswer, onUserAnswerChange }: any) => {
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onAnswerSubmit(userAnswer);
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-4 mb-6">
-            <div className="prose prose-invert prose-sm md:prose-base flex-grow">
-                {question.textParts[0]}
-                <Input 
-                    type="text" 
-                    className="inline-block w-48 mx-2 bg-card/70 border-primary/20"
-                    value={userAnswer}
-                    onChange={(e) => onUserAnswerChange(e.target.value)}
-                    disabled={isAnswered}
-                    autoFocus
-                />
-                {question.textParts[2]}
-            </div>
-            {!isAnswered && (
-                <Button type="submit">
-                    <Check className="mr-2 h-4 w-4" />
-                    Comprobar
-                </Button>
-            )}
-        </form>
-    );
-};
-
-const MatchingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
-    const { pairs } = question;
-    const [shuffledTerms, setShuffledTerms] = useState<any[]>([]);
-    const [shuffledDefs, setShuffledDefs] = useState<any[]>([]);
-    const [selectedTerm, setSelectedTerm] = useState<any>(null);
-    const [selectedDef, setSelectedDef] = useState<any>(null);
-    const [matchedPairs, setMatchedPairs] = useState<{ [key: string]: string }>({});
-
-    useEffect(() => {
-        const shuffle = (arr: any[]) => [...arr].sort(() => Math.random() - 0.5);
-        setShuffledTerms(shuffle(pairs));
-        setShuffledDefs(shuffle(pairs.map((p: any) => ({ id: p.id, text: p.definition }))));
-    }, [pairs]);
-
-    useEffect(() => {
-        if (selectedTerm && selectedDef) {
-            if (selectedTerm.id === selectedDef.id) {
-                // Correct match
-                setMatchedPairs(prev => ({...prev, [selectedTerm.id]: selectedDef.id}));
-            }
-            // Reset selection after a short delay
-            setTimeout(() => {
-                setSelectedTerm(null);
-                setSelectedDef(null);
-            }, 500);
-        }
-    }, [selectedTerm, selectedDef]);
-
-    useEffect(() => {
-        if (!isAnswered && Object.keys(matchedPairs).length === pairs.length) {
-            onAnswerSubmit(true);
-        }
-    }, [matchedPairs, pairs.length, onAnswerSubmit, isAnswered]);
-
-    const getCardClass = (item: any, type: 'term' | 'def') => {
-        const isSelected = (type === 'term' && selectedTerm?.id === item.id) || (type === 'def' && selectedDef?.id === item.id);
-        const isMatched = (type === 'term' && matchedPairs[item.id]) || (type === 'def' && Object.values(matchedPairs).includes(item.id));
-        
-        if (isMatched) return 'border-green-500 bg-green-500/10 text-green-300 opacity-70';
-        if (isSelected) return 'border-primary bg-primary/20';
-
-        return 'hover:bg-muted/80 hover:border-primary/50 cursor-pointer';
-    };
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="space-y-4">
-                {shuffledTerms.map((term: any) => (
-                    <Card key={term.id} className={cn("transition-all", getCardClass(term, 'term'))} onClick={() => !isAnswered && !matchedPairs[term.id] && setSelectedTerm(term)}>
-                        <CardContent className="p-4">{term.term}</CardContent>
-                    </Card>
-                ))}
-            </div>
-            <div className="space-y-4">
-                 {shuffledDefs.map((def: any) => (
-                    <Card key={def.id} className={cn("transition-all", getCardClass(def, 'def'))} onClick={() => !isAnswered && !Object.values(matchedPairs).includes(def.id) && setSelectedDef(def)}>
-                        <CardContent className="p-4">{def.text}</CardContent>
-                    </Card>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-
-const OrderingQuestion = ({ question, isAnswered, onAnswerSubmit }: any) => {
-    const [items, setItems] = useState<any[]>([]);
-    const dragItem = useRef<number | null>(null);
-    const dragOverItem = useRef<number | null>(null);
-
-    useEffect(() => {
-        setItems([...question.items].sort(() => Math.random() - 0.5));
-    }, [question.items]);
-
-    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
-        dragItem.current = index;
-    };
-
-    const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, index: number) => {
-        dragOverItem.current = index;
-    };
-
-    const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
-        if (dragItem.current !== null && dragOverItem.current !== null) {
-            const newItems = [...items];
-            const draggedItemContent = newItems.splice(dragItem.current, 1)[0];
-            newItems.splice(dragOverItem.current, 0, draggedItemContent);
-            setItems(newItems);
-        }
-        dragItem.current = null;
-        dragOverItem.current = null;
-    };
-
-    const checkOrder = () => {
-        const isCorrect = items.every((item, index) => item.id === (index + 1).toString());
-        onAnswerSubmit(isCorrect);
-    };
-
-    return (
-        <div className="mb-6">
-            <div className="space-y-3 mb-6">
-                {items.map((item, index) => (
-                    <div
-                        key={item.id}
-                        className={cn("flex items-center gap-4 p-4 rounded-lg bg-card/80 border cursor-grab", isAnswered && (items[index].id === (index + 1).toString() ? 'border-green-500' : 'border-red-500'))}
-                        draggable={!isAnswered}
-                        onDragStart={(e) => handleDragStart(e, index)}
-                        onDragEnter={(e) => handleDragEnter(e, index)}
-                        onDragEnd={handleDragEnd}
-                        onDragOver={(e) => e.preventDefault()}
-                    >
-                        <GripVertical className="text-muted-foreground" />
-                        <p>{item.text}</p>
-                    </div>
-                ))}
-            </div>
-            {!isAnswered && (
-                <div className="flex justify-end">
-                    <Button onClick={checkOrder}>Verificar Orden</Button>
-                </div>
-            )}
-        </div>
-    );
-};
-
-
 type QuickChatMessage = {
   role: 'user' | 'model';
   content: string;
 };
 
-const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, onConvertToMultipleChoice, isAnswered }: { currentQuestion: any, correctAnswer: string, onShowAnswer: () => void, onRephrase: (newQuestion: string) => void, onConvertToMultipleChoice: (options: any[]) => void, isAnswered: boolean }) => {
+const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, onRephrase, onConvertToMultipleChoice, isAnswered, onHintRequest, onExplanationRequest }: any) => {
     const router = useRouter();
     const { user, decrementEnergy, setTutorSession } = useUser();
     
@@ -328,6 +163,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         setActiveView('hint');
         setIsLoading(true);
         setHintText('');
+        onHintRequest(); // Notify parent component
 
         const prompt = `Proporciona una pista corta y concisa para la siguiente pregunta. No des la respuesta directamente. Pregunta: "${currentQuestion.question}" ${currentQuestion.code || ''}`;
         
@@ -348,6 +184,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         setShowQuickQuestionInput(false);
         setQuickChatHistory([]);
         setQuickQuestionCount(0);
+        onExplanationRequest(); // Notify parent component
 
         const prompt = `Explica de forma muy breve y concisa por qué la respuesta a esta pregunta es correcta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". Respuesta Correcta: "${correctAnswer}". Ve directo al punto.`;
 
@@ -372,8 +209,6 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
             setTimeout(() => {
                 setIsPopoverOpen(false);
             }, 1000);
-        } else {
-            // Handle error, maybe show a toast
         }
     };
     
@@ -384,6 +219,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         setShowQuickQuestionInput(false);
         setQuickChatHistory([]);
         setQuickQuestionCount(0);
+        onExplanationRequest(); // Notify parent component
 
         const prompt = `Explica de forma breve y concisa el concepto detrás de esta pregunta. Pregunta: "${currentQuestion.question} ${currentQuestion.code || ''}". La respuesta correcta es "${correctAnswer}". Ve directo al punto.`;
 
@@ -406,8 +242,6 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         if (result.options) {
             onConvertToMultipleChoice(result.options);
             setIsPopoverOpen(false);
-        } else {
-            // handle error
         }
     };
 
@@ -418,7 +252,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         
         const newHistory = [...quickChatHistory, userMessage];
         setQuickChatHistory(newHistory);
-        setShowQuickQuestionInput(false);
+setShowQuickQuestionInput(false);
         setIsLoading(true);
 
         const prompt = `Dentro del contexto de la pregunta "${currentQuestion.question}" (cuya respuesta es "${correctAnswer}"), responde a la siguiente duda del usuario de forma concisa: "${quickQuestionText}"`;
@@ -660,229 +494,240 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     );
 };
 
+// Reducer logic
+type State = {
+    project: Project | null;
+    srs: SpacedRepetitionSystem | null;
+    sessionQuestions: SessionQuestion[];
+    currentCardId: string | null;
+    isAnswered: boolean;
+    isCorrect: boolean | null;
+    isLoading: boolean;
+    isFinishing: boolean;
+    isPulsing: boolean;
+    sessionProgress: number;
+    openAnswerText: string;
+    openAnswerFeedback: string | null;
+    masteryProgress: number;
+    cognitiveCredits: number;
+    bestStreak: number;
+    currentStreak: number;
+    isSessionFinished: boolean;
+};
+
+type Action =
+    | { type: 'START_SESSION'; payload: { project: Project; sessionIndex: number } }
+    | { type: 'ANSWER_OPEN_QUESTION'; payload: { evaluation: any; userAnswer: string } }
+    | { type: 'ANSWER_MC_QUESTION'; payload: { isCorrect: boolean; selectedOption: string } }
+    | { type: 'RATE_DIFFICULTY'; payload: { rating: 0 | 1 | 2 | 3 } }
+    | { type: 'SET_LOADING'; payload: boolean }
+    | { type: 'SET_FINISHING'; payload: boolean }
+    | { type: 'SET_SESSION_FINISHED' }
+    | { type: 'UPDATE_OPEN_ANSWER_TEXT'; payload: string }
+    | { type: 'UPDATE_QUESTION_TEXT'; payload: string }
+    | { type: 'CONVERT_TO_MULTIPLE_CHOICE'; payload: { options: any[], correctAnswerId: string } }
+    | { type: 'SHOW_ANSWER' }
+    | { type: 'REQUEST_HINT' }
+    | { type: 'REQUEST_EXPLANATION' };
+
+const initialState: State = {
+    project: null,
+    srs: null,
+    sessionQuestions: [],
+    currentCardId: null,
+    isAnswered: false,
+    isCorrect: null,
+    isLoading: true,
+    isFinishing: false,
+    isPulsing: false,
+    sessionProgress: 0,
+    openAnswerText: '',
+    openAnswerFeedback: null,
+    masteryProgress: 0,
+    cognitiveCredits: 0,
+    bestStreak: 0,
+    currentStreak: 0,
+    isSessionFinished: false,
+};
+
+function reducer(state: State, action: Action): State {
+    switch (action.type) {
+        case 'START_SESSION': {
+            const { project, sessionIndex } = action.payload;
+            const srs = new SpacedRepetitionSystem(project.flashcards || [], project.studyPlan?.plan[sessionIndex]?.topic);
+            const currentCardId = srs.getNextCard();
+            const sessionQuestions = project.flashcards!.map(fc => ({ ...fc, type: 'open-answer' })) as SessionQuestion[];
+            return {
+                ...initialState,
+                project,
+                srs,
+                sessionQuestions,
+                currentCardId,
+                isLoading: false,
+            };
+        }
+        case 'SET_LOADING':
+            return { ...state, isLoading: action.payload };
+        case 'SET_FINISHING':
+            return { ...state, isFinishing: action.payload };
+
+        case 'UPDATE_OPEN_ANSWER_TEXT':
+            return { ...state, openAnswerText: action.payload, openAnswerFeedback: null };
+
+        case 'ANSWER_OPEN_QUESTION': {
+            const { evaluation, userAnswer } = action.payload;
+            const { srs, currentCardId } = state;
+            if (!srs || !currentCardId) return state;
+
+            srs.recordAttempt(currentCardId);
+
+            if (evaluation.isCorrect) {
+                return { ...state, isAnswered: true, isCorrect: true, openAnswerText: userAnswer, isLoading: false };
+            } else {
+                if (srs.getCardState(currentCardId).attempts >= 3) {
+                    return { ...state, isAnswered: true, isCorrect: false, openAnswerText: userAnswer, openAnswerFeedback: `La respuesta correcta es: ${srs.getCard(currentCardId)?.answer}`, isLoading: false };
+                } else {
+                    return { ...state, openAnswerFeedback: evaluation.feedback, openAnswerText: '', isLoading: false };
+                }
+            }
+        }
+
+        case 'ANSWER_MC_QUESTION': {
+            return { ...state, isAnswered: true, isCorrect: action.payload.isCorrect };
+        }
+
+        case 'RATE_DIFFICULTY': {
+            const { rating } = action.payload;
+            const { srs, currentCardId, isCorrect } = state;
+            if (!srs || !currentCardId) return state;
+
+            srs.updateCard(currentCardId, rating, isCorrect!);
+            const newStats = srs.getStats();
+
+            const nextCardId = srs.getNextCard();
+
+            if (!nextCardId) {
+                return { ...state, isSessionFinished: true };
+            }
+
+            const progress = (srs.getReviewedCount() / srs.getTotalCards()) * 100;
+
+            return {
+                ...state,
+                currentCardId: nextCardId,
+                isAnswered: false,
+                isCorrect: null,
+                openAnswerText: '',
+                openAnswerFeedback: null,
+                sessionProgress: progress,
+                ...newStats,
+            };
+        }
+        
+        case 'UPDATE_QUESTION_TEXT': {
+             if (!state.currentCardId) return state;
+             const newQuestions = state.sessionQuestions.map(q =>
+                q.id === state.currentCardId ? { ...q, question: action.payload } : q
+             );
+             return { ...state, sessionQuestions: newQuestions, isPulsing: true };
+        }
+
+        case 'CONVERT_TO_MULTIPLE_CHOICE': {
+            if (!state.currentCardId) return state;
+            const newQuestions = state.sessionQuestions.map(q => {
+                if (q.id === state.currentCardId) {
+                    return {
+                        ...q,
+                        type: 'multiple-choice',
+                        options: action.payload.options,
+                        correctAnswer: action.payload.correctAnswerId
+                    }
+                }
+                return q;
+            });
+            return { ...state, sessionQuestions: newQuestions };
+        }
+
+        case 'SHOW_ANSWER': {
+            if (!state.srs || !state.currentCardId) return state;
+            const card = state.srs.getCard(state.currentCardId);
+            if (!card) return state;
+            return { ...state, isAnswered: true, isCorrect: true, openAnswerText: card.answer };
+        }
+
+        case 'REQUEST_HINT': {
+             if (!state.srs || !state.currentCardId) return state;
+             state.srs.recordHelp(state.currentCardId, 'hint');
+             return state;
+        }
+
+        case 'REQUEST_EXPLANATION': {
+             if (!state.srs || !state.currentCardId) return state;
+             state.srs.recordHelp(state.currentCardId, 'explanation');
+             return state;
+        }
+
+        default:
+            return state;
+    }
+}
+
 
 function AprenderPageComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectSlug = searchParams.get('project');
-  const sessionIndex = searchParams.get('session');
-
-  const [project, setProject] = useState<Project | null>(null);
-  const [sessionQuestions, setSessionQuestions] = useState<SessionQuestion[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<AnswerState>({});
+  const sessionIndexParam = searchParams.get('session');
   
-  // Session Stats
-  const [masteryProgress, setMasteryProgress] = useState(0);
-  const [cognitiveCredits, setCognitiveCredits] = useState(0);
-  const [bestStreak, setBestStreak] = useState(0);
-  const [currentStreak, setCurrentStreak] = useState(0);
-
-  // Question-specific state
-  const [isPulsing, setIsPulsing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentOpenAnswerText, setCurrentOpenAnswerText] = useState('');
-  const [openAnswerFeedback, setOpenAnswerFeedback] = useState<string | null>(null);
-
+  const [state, dispatch] = useReducer(reducer, initialState);
   const { user } = useUser();
   const hasEnergy = user && user.energy > 0;
   
-  const [isSessionFinished, setIsSessionFinished] = useState(false);
-
   useEffect(() => {
     async function loadProject() {
-      if (!projectSlug) return;
+      if (!projectSlug || !sessionIndexParam) {
+          router.push('/');
+          return;
+      };
       const allProjects = await getAllProjects();
       const foundProject = allProjects.find(p => p.slug === projectSlug);
       if (foundProject) {
-        setProject(foundProject);
-        const questions: SessionQuestion[] = (foundProject.flashcards || []).map(fc => ({
-          ...fc,
-          type: 'open-answer', // Default to open-answer for now
-        }));
-        setSessionQuestions(questions);
+        dispatch({ type: 'START_SESSION', payload: { project: foundProject, sessionIndex: parseInt(sessionIndexParam) }});
       } else {
         router.push('/'); // Or a 404 page
       }
     }
     loadProject();
-  }, [projectSlug, router]);
-
-
-  const currentQuestion = useMemo(() => sessionQuestions[currentIndex], [sessionQuestions, currentIndex]);
-  const currentAnswerState = useMemo(() => answers[currentIndex] || { isAnswered: false, openAnswerAttempts: 0 }, [answers, currentIndex]);
-  const isCorrect = currentAnswerState.isCorrect;
-
-  const sessionProgress = sessionQuestions.length > 0 ? ((currentIndex + 1) / sessionQuestions.length) * 100 : 0;
+  }, [projectSlug, sessionIndexParam, router]);
   
-  const updateAnswer = (index: number, update: Partial<AnswerState[number]>) => {
-    setAnswers(prev => ({
-      ...prev,
-      [index]: { ...(prev[index] || { isAnswered: false, openAnswerAttempts: 0 }), ...update }
-    }));
-  }
-
-  const handleCorrectAnswer = (type: string) => {
-    const newStreak = currentStreak + 1;
-    setCurrentStreak(newStreak);
-    if (newStreak > bestStreak) {
-      setBestStreak(newStreak);
+  useEffect(() => {
+    if (state.isPulsing) {
+      const timer = setTimeout(() => dispatch({ type: 'SET_LOADING', payload: false }), 1000);
+      return () => clearTimeout(timer);
     }
+  }, [state.isPulsing]);
 
-    const pointsMap: { [key: string]: { mastery: number, credits: number } } = {
-        'multiple-choice': { mastery: 10, credits: 5 },
-        'open-answer': { mastery: 20, credits: 10 },
-        'matching': { mastery: 15, credits: 8 },
-        'ordering': { mastery: 15, credits: 8 },
-        'fill-in-the-blank': { mastery: 10, credits: 5 },
-    };
-
-    const points = pointsMap[type] || { mastery: 0, credits: 0 };
-    setMasteryProgress(prev => prev + points.mastery);
-    setCognitiveCredits(prev => prev + points.credits);
-  };
-
-  const handleIncorrectAnswer = () => {
-    setCurrentStreak(0);
-  };
-
-  const handleOptionSelect = (optionId: string) => {
-    if (!hasEnergy) return; 
-    const isAnswerCorrect = currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer;
-    
-    if (isAnswerCorrect) {
-      handleCorrectAnswer('multiple-choice');
-    } else {
-      handleIncorrectAnswer();
-    }
-    
-    updateAnswer(currentIndex, { selectedOption: optionId, isAnswered: true, isCorrect: isAnswerCorrect });
-  };
-  
-  const handleGenericAnswer = (isCorrect: boolean, questionType: string) => {
-      if (isCorrect) {
-          handleCorrectAnswer(questionType);
-      } else {
-          handleIncorrectAnswer();
-      }
-      updateAnswer(currentIndex, { isAnswered: true, isCorrect });
-  };
-
-
-  const handleOpenAnswerTextChange = (text: string) => {
-    setCurrentOpenAnswerText(text);
-    if (openAnswerFeedback) {
-        setOpenAnswerFeedback(null);
-    }
-  };
-
-  const handleOpenAnswerSubmit = async () => {
-    if (!currentOpenAnswerText.trim()) return;
-
-    setIsLoading(true);
-    setOpenAnswerFeedback(null);
-
-    const attempts = currentAnswerState.openAnswerAttempts || 0;
-    
-    const result = await handleEvaluateOpenAnswer({
-        question: currentQuestion.question,
-        correctAnswer: currentQuestion.answer,
-        userAnswer: currentOpenAnswerText,
-    });
-
-    if (result.evaluation?.isCorrect) {
-        handleCorrectAnswer('open-answer');
-        updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentOpenAnswerText, openAnswerAttempts: attempts + 1 });
-    } else {
-        handleIncorrectAnswer();
-        const nextAttempt = attempts + 1;
-        if (nextAttempt >= 3) {
-            updateAnswer(currentIndex, { isAnswered: true, isCorrect: false, userAnswer: currentOpenAnswerText, openAnswerAttempts: nextAttempt });
-            setOpenAnswerFeedback(`La respuesta correcta es: ${currentQuestion.answer}`);
-        } else {
-            // Try again
-            if (result.evaluation?.feedback) {
-                setOpenAnswerFeedback(result.evaluation.feedback);
+  useEffect(() => {
+    if (state.isSessionFinished && state.project && state.srs) {
+        const finishSession = async () => {
+            dispatch({ type: 'SET_FINISHING', payload: true });
+            const performanceSummary = state.srs!.getPerformanceSummary();
+            const result = await handleEndSessionAndRefinePlan(state.project!.slug, parseInt(sessionIndexParam!), performanceSummary);
+            
+            let url = `/mis-proyectos/${projectSlug}?mastery=${state.masteryProgress}&credits=${state.cognitiveCredits}&session=${sessionIndexParam}`;
+            if (result.planUpdated) {
+                url += `&planUpdated=true&reasoning=${encodeURIComponent(result.reasoning || '')}`;
             }
-            if (result.evaluation?.rephrasedQuestion) {
-                setSessionQuestions(prevQuestions => {
-                    const updatedQuestions = [...prevQuestions];
-                    updatedQuestions[currentIndex].question = result.evaluation!.rephrasedQuestion!;
-                    return updatedQuestions;
-                });
-                setIsPulsing(true);
-                setTimeout(() => setIsPulsing(false), 1000);
-            }
-             updateAnswer(currentIndex, { openAnswerAttempts: nextAttempt, userAnswer: currentOpenAnswerText });
-        }
+            router.push(url);
+        };
+        finishSession();
     }
-    
-    setCurrentOpenAnswerText('');
-    setIsLoading(false);
-  };
+  }, [state.isSessionFinished, state.project, state.srs, projectSlug, sessionIndexParam, state.masteryProgress, state.cognitiveCredits, router]);
 
 
-  const handleShowAnswer = () => {
-      if (currentQuestion.type === 'multiple-choice') {
-          handleOptionSelect((currentQuestion as any).correctAnswer);
-      } else if (currentQuestion.type === 'open-answer') {
-          handleCorrectAnswer('open-answer');
-          updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: currentQuestion.answer });
-          setCurrentOpenAnswerText(currentQuestion.answer);
-      } else if (currentQuestion.type === 'fill-in-the-blank') {
-          const correctAnswer = (currentQuestion as any).correctAnswer;
-          handleCorrectAnswer('fill-in-the-blank');
-          handleGenericAnswer(true, 'fill-in-the-blank');
-          updateAnswer(currentIndex, { isAnswered: true, isCorrect: true, userAnswer: correctAnswer });
-          setCurrentOpenAnswerText(correctAnswer);
-      }
-  };
-  
-  const handleRephrase = (newQuestionText: string) => {
-      setSessionQuestions(prevQuestions => {
-          const updatedQuestions = [...prevQuestions];
-          updatedQuestions[currentIndex].question = newQuestionText;
-          return updatedQuestions;
-      });
-      setIsPulsing(true);
-      setTimeout(() => setIsPulsing(false), 1000); // Duration of the pulse animation
-  };
+  const currentQuestion = useMemo(() => state.sessionQuestions.find(q => q.id === state.currentCardId), [state.sessionQuestions, state.currentCardId]);
 
-  const handleConvertToMultipleChoice = (options: string[]) => {
-      setSessionQuestions(prevQuestions => {
-          const updatedQuestions = [...prevQuestions];
-          const newQ = { ...updatedQuestions[currentIndex] };
-          
-          newQ.type = 'multiple-choice';
-          (newQ as any).options = options.map((opt, i) => ({
-              id: String.fromCharCode(65 + i),
-              text: opt
-          }));
-
-          const correctOption = (newQ as any).options.find((o: any) => o.text === newQ.answer);
-          if (correctOption) {
-            (newQ as any).correctAnswer = correctOption.id;
-          } else {
-            // Fallback if correct answer not in options, make first one correct
-            (newQ as any).correctAnswer = 'A';
-          }
-          
-          updatedQuestions[currentIndex] = newQ;
-          return updatedQuestions;
-      });
-  };
-
-  const goToNext = () => {
-      if (currentIndex < sessionQuestions.length - 1) {
-          setCurrentIndex(prev => prev + 1);
-          setOpenAnswerFeedback(null);
-          setCurrentOpenAnswerText('');
-      } else {
-          setIsSessionFinished(true);
-      }
-  };
-  
-  if (!project || sessionQuestions.length === 0) {
+  if (state.isLoading || !state.project || !currentQuestion) {
       return (
         <div className="container mx-auto py-8">
             <div className="space-y-4">
@@ -895,48 +740,64 @@ function AprenderPageComponent() {
       );
   }
   
-  if (isSessionFinished) {
-      return (
-          <div className="container mx-auto py-8 flex items-center justify-center min-h-[calc(100vh-120px)]">
-              <Card className="w-full max-w-lg text-center shadow-2xl shadow-primary/10">
-                  <CardHeader>
-                      <Trophy className="mx-auto h-16 w-16 text-yellow-400" />
-                      <CardTitle className="text-3xl mt-4">¡Sesión Completada!</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                      <p className="text-muted-foreground">¡Felicidades! Has completado la sesión de estudio. Aquí está tu resumen:</p>
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                           <div>
-                                <p className="text-3xl font-bold">+{masteryProgress}</p>
-                                <p className="text-sm text-muted-foreground">Puntos de Dominio</p>
-                           </div>
-                           <div>
-                                <p className="text-3xl font-bold">{currentStreak}</p>
-                                <p className="text-sm text-muted-foreground">Racha</p>
-                           </div>
-                           <div>
-                                <p className="text-3xl font-bold">+{cognitiveCredits}</p>
-                                <p className="text-sm text-muted-foreground">Créditos Cognitivos</p>
-                           </div>
-                      </div>
-                  </CardContent>
-                  <CardFooter>
-                      <Button size="lg" className="w-full" asChild>
-                          <Link href={`/mis-proyectos/${project.slug}?mastery=${masteryProgress}&credits=${cognitiveCredits}&session=${sessionIndex}`}>
-                              Continuar
-                          </Link>
-                      </Button>
-                  </CardFooter>
-              </Card>
-          </div>
-      )
+  if (state.isFinishing) {
+    return (
+      <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
+        <Loader2 className="h-16 w-16 text-primary animate-spin" />
+        <h2 className="text-2xl font-bold mt-6">Finalizando sesión...</h2>
+        <p className="text-muted-foreground">Koli está analizando tu rendimiento para adaptar tu plan.</p>
+      </div>
+    );
   }
+  
+  const handleOpenAnswerSubmit = async () => {
+    if (!state.openAnswerText.trim() || !currentQuestion) return;
+    dispatch({ type: 'SET_LOADING', payload: true });
+
+    const result = await handleEvaluateOpenAnswer({
+        question: currentQuestion.question,
+        correctAnswer: currentQuestion.answer,
+        userAnswer: state.openAnswerText,
+    });
+    dispatch({ type: 'ANSWER_OPEN_QUESTION', payload: { evaluation: result.evaluation, userAnswer: state.openAnswerText } });
+  };
+  
+  const handleOptionSelect = (optionId: string) => {
+    if (!hasEnergy || !currentQuestion) return; 
+    const isCorrect = currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer;
+    dispatch({ type: 'ANSWER_MC_QUESTION', payload: { isCorrect, selectedOption: optionId } });
+  };
+
+  const handleDifficultyRating = (rating: 0 | 1 | 2 | 3) => {
+      dispatch({ type: 'RATE_DIFFICULTY', payload: { rating } });
+  };
+
+  const handleShowAnswer = () => {
+    dispatch({ type: 'SHOW_ANSWER' });
+  };
+  
+  const handleRephrase = (newQuestionText: string) => {
+      dispatch({ type: 'UPDATE_QUESTION_TEXT', payload: newQuestionText });
+  };
+
+  const handleConvertToMultipleChoice = async () => {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const result = await handleGenerateOptionsForQuestion({
+          question: currentQuestion.question,
+          correctAnswer: currentQuestion.answer
+      });
+      if (result.options) {
+          const options = result.options.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
+          const correctOption = options.find(o => o.text === currentQuestion.answer);
+          dispatch({ type: 'CONVERT_TO_MULTIPLE_CHOICE', payload: { options, correctAnswerId: correctOption?.id || 'A' } });
+      }
+      dispatch({ type: 'SET_LOADING', payload: false });
+  };
+
 
   return (
     <div className="container mx-auto py-4 sm:py-8">
       <div className="xl:grid xl:grid-cols-3 xl:gap-8">
-
-        {/* Main Content Column */}
         <div className="xl:col-span-2">
           <div className="mb-4">
             <Link href={`/mis-proyectos/${projectSlug}`} className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
@@ -948,28 +809,28 @@ function AprenderPageComponent() {
             <CardContent className="p-4 sm:p-6">
                <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6">
                 <div className="mb-4 sm:mb-0">
-                  <h1 className="text-xl md:text-2xl font-bold">{project.title}</h1>
-                  <p className="text-sm text-muted-foreground">{project.studyPlan?.plan[parseInt(sessionIndex || '0')]?.topic || 'Sesión de Repaso'}</p>
+                  <h1 className="text-xl md:text-2xl font-bold">{state.project.title}</h1>
+                  <p className="text-sm text-muted-foreground">{state.project.studyPlan?.plan[parseInt(sessionIndexParam || '0')]?.topic || 'Sesión de Repaso'}</p>
                 </div>
                 <div className="flex items-center gap-4 text-sm shrink-0">
                   <div className="flex items-center gap-2">
                       {'🪙'}
                       <div>
-                        <p className="font-bold text-base md:text-lg">{cognitiveCredits}</p>
+                        <p className="font-bold text-base md:text-lg">{state.cognitiveCredits}</p>
                         <p className="text-xs text-muted-foreground">Creditos Cognitivos</p>
                       </div>
                     </div>
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-green-400" />
                     <div>
-                      <p className="font-bold text-base md:text-lg">+{masteryProgress}</p>
+                      <p className="font-bold text-base md:text-lg">+{state.masteryProgress}</p>
                       <p className="text-xs text-muted-foreground">Puntos de Dominio</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Star className="h-5 w-5 text-yellow-400" />
                      <div>
-                      <p className="font-bold text-base md:text-lg">{bestStreak}</p>
+                      <p className="font-bold text-base md:text-lg">{state.bestStreak}</p>
                       <p className="text-xs text-muted-foreground">Mejor Racha</p>
                     </div>
                   </div>
@@ -977,17 +838,17 @@ function AprenderPageComponent() {
               </div>
 
               <div>
-                <Progress value={sessionProgress} />
+                <Progress value={state.sessionProgress} />
               </div>
             </CardContent>
           </Card>
 
-          <Card className={cn("mb-3 sm:mb-6 bg-card/70", isPulsing && "animate-pulse border-primary/50")}>
+          <Card className={cn("mb-3 sm:mb-6 bg-card/70", state.isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta {currentQuestion.type === 'open-answer' && !currentAnswerState.isAnswered && currentAnswerState.openAnswerAttempts > 0 ? `(Intento ${currentAnswerState.openAnswerAttempts + 1})` : ''}</CardTitle>
-              {currentAnswerState.isAnswered && (
+              <CardTitle className="text-lg md:text-xl">Pregunta {currentQuestion.type === 'open-answer' && !state.isAnswered && (state.srs?.getCardState(currentQuestion.id)?.attempts || 0) > 0 ? `(Intento ${state.srs!.getCardState(currentQuestion.id).attempts + 1})` : ''}</CardTitle>
+              {state.isAnswered && (
                  <div className="flex items-center gap-4">
-                    { isCorrect ? (
+                    { state.isCorrect ? (
                         <div className="flex items-center gap-2">
                             <CheckCircle className="h-5 sm:h-6 w-5 sm:w-6 text-green-500" />
                             <p className="font-bold text-base md:text-lg">¡Correcto!</p>
@@ -1018,7 +879,7 @@ function AprenderPageComponent() {
           {currentQuestion.type === 'multiple-choice' && (
             <MultipleChoiceQuestion 
               question={currentQuestion}
-              answerState={currentAnswerState}
+              answerState={{ isAnswered: state.isAnswered }}
               onOptionSelect={handleOptionSelect}
             />
           )}
@@ -1026,63 +887,30 @@ function AprenderPageComponent() {
           {currentQuestion.type === 'open-answer' && (
             <OpenAnswerQuestion 
               onAnswerSubmit={handleOpenAnswerSubmit}
-              isAnswered={currentAnswerState.isAnswered}
-              isLoading={isLoading}
-              userAnswer={currentAnswerState.isAnswered ? (currentAnswerState.userAnswer || '') : currentOpenAnswerText}
-              onUserAnswerChange={handleOpenAnswerTextChange}
-              feedback={openAnswerFeedback}
+              isAnswered={state.isAnswered}
+              isLoading={state.isLoading}
+              userAnswer={state.isAnswered ? state.openAnswerText : state.openAnswerText}
+              onUserAnswerChange={(text: string) => dispatch({ type: 'UPDATE_OPEN_ANSWER_TEXT', payload: text })}
+              feedback={state.openAnswerFeedback}
             />
           )}
-
-          {currentQuestion.type === 'fill-in-the-blank' && (
-              <FillInTheBlankQuestion 
-                  question={currentQuestion}
-                  isAnswered={currentAnswerState.isAnswered}
-                  userAnswer={currentAnswerState.isAnswered ? ((currentAnswerState.userAnswer || (currentQuestion as any).correctAnswer)) : currentOpenAnswerText}
-                  onUserAnswerChange={setCurrentOpenAnswerText}
-                  onAnswerSubmit={() => {
-                      const isCorrect = currentOpenAnswerText.trim().toLowerCase() === (currentQuestion as any).correctAnswer.toLowerCase();
-                      handleGenericAnswer(isCorrect, 'fill-in-the-blank');
-                      updateAnswer(currentIndex, { userAnswer: currentOpenAnswerText });
-                      if (!isCorrect) {
-                        setCurrentOpenAnswerText('');
-                      }
-                  }}
-              />
-          )}
-
-          {currentQuestion.type === 'matching' && (
-              <MatchingQuestion
-                  question={currentQuestion}
-                  isAnswered={currentAnswerState.isAnswered}
-                  onAnswerSubmit={(isCorrect: boolean) => handleGenericAnswer(isCorrect, 'matching')}
-              />
-          )}
-
-          {currentQuestion.type === 'ordering' && (
-              <OrderingQuestion
-                  question={currentQuestion}
-                  isAnswered={currentAnswerState.isAnswered}
-                  onAnswerSubmit={(isCorrect: boolean) => handleGenericAnswer(isCorrect, 'ordering')}
-              />
-          )}
           
-          {currentAnswerState.isAnswered && (
+          {state.isAnswered && (
                <div className="flex justify-end items-center bg-card/70 border rounded-lg p-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                      <Button variant="outline" size="sm" onClick={goToNext}>
+                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(0)}>
                         <Frown className="mr-2 h-4 w-4" />
                         Muy Difícil
                       </Button>
-                      <Button variant="outline" size="sm" onClick={goToNext}>
-                        <Frown className="mr-2 h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(1)}>
+                        <Meh className="mr-2 h-4 w-4" />
                         Difícil
                       </Button>
-                      <Button variant="outline" size="sm" onClick={goToNext}>
-                        <Meh className="mr-2 h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(2)}>
+                        <Smile className="mr-2 h-4 w-4" />
                         Bien
                       </Button>
-                      <Button variant="outline" size="sm" onClick={goToNext}>
+                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(3)}>
                         <Smile className="mr-2 h-4 w-4" />
                         Fácil
                       </Button>
@@ -1091,7 +919,6 @@ function AprenderPageComponent() {
           )}
         </div>
 
-        {/* Help Column is not used with the Popover approach */}
         <div className="hidden xl:block">
             {/* Placeholder for potential future side panel */}
         </div>
@@ -1104,7 +931,9 @@ function AprenderPageComponent() {
             onShowAnswer={handleShowAnswer}
             onRephrase={handleRephrase}
             onConvertToMultipleChoice={handleConvertToMultipleChoice}
-            isAnswered={currentAnswerState.isAnswered}
+            isAnswered={state.isAnswered}
+            onHintRequest={() => dispatch({ type: 'REQUEST_HINT' })}
+            onExplanationRequest={() => dispatch({ type: 'REQUEST_EXPLANATION' })}
           />
        </div>
 

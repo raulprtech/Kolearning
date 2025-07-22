@@ -72,6 +72,17 @@ export interface TutorSession {
   exchangesLeft: number;
 }
 
+export interface SessionPerformanceSummary {
+    totalCards: number;
+    correctCards: number;
+    incorrectCards: number;
+    difficultCards: {
+        question: string;
+        attempts: number;
+        timesAskedForHelp: number;
+    }[];
+}
+
 
 // AI Flow Schemas and Types
 
@@ -197,5 +208,3 @@ export const GenerateStudyPlanOutputSchema = z.object({
   expectedProgress: z.string().describe("A brief explanation of the expected progress after each major section or day of the plan."),
 });
 export type GenerateStudyPlanOutput = z.infer<typeof GenerateStudyPlanOutputSchema>;
-
-    

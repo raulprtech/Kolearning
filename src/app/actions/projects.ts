@@ -4,8 +4,9 @@
 import { generateDeckFromText } from '@/ai/flows/generate-deck-from-text';
 import { refineProjectDetails } from '@/ai/flows/refine-project-details';
 import { generateStudyPlan } from '@/ai/flows/generate-study-plan';
+import { refineStudyPlan } from '@/ai/flows/refine-study-plan';
 import { z } from 'zod';
-import type { Project, Flashcard as FlashcardType, StudyPlan, ProjectDetails, RefineProjectDetailsInput, GenerateStudyPlanInput } from '@/types';
+import type { Project, Flashcard as FlashcardType, StudyPlan, ProjectDetails, RefineProjectDetailsInput, GenerateStudyPlanInput, SessionPerformanceSummary } from '@/types';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { redirect } from 'next/navigation';
 
@@ -13,7 +14,7 @@ import { redirect } from 'next/navigation';
 let createdProjects: Project[] = [
     {
       id: 'gen-12345',
-      slug: 'plan-de-estudio-ia-tumores-renales',
+      slug: 'plan-de-estudio-ia-tumores-renales-12345',
       title: 'Plan de Estudio: IA para Segmentación de Tumores Renales',
       description: 'Plan de estudio para comprender el estado del arte en el uso de la Inteligencia Artificial para la segmentación de tumores renales, incluyendo aspectos multimodales, optimización y despliegue en hardware.',
       category: 'AI',
@@ -258,6 +259,39 @@ export async function handleCreateProject(
     redirect(`/mis-proyectos/${newProject.slug}`);
 }
 
+export async function handleEndSessionAndRefinePlan(projectSlug: string, completedSessionIndex: number, performanceSummary: SessionPerformanceSummary) {
+    const projectIndex = createdProjects.findIndex(p => p.slug === projectSlug);
+    if (projectIndex === -1 || !createdProjects[projectIndex].studyPlan) {
+        return { error: 'Project not found or has no study plan.' };
+    }
+
+    const currentPlan = createdProjects[projectIndex].studyPlan!.plan;
+
+    try {
+        const result = await refineStudyPlan({
+            currentPlan,
+            completedSessionIndex,
+            performanceSummary,
+        });
+
+        let planUpdated = false;
+        if (result.needsChange && result.updatedPlan) {
+            createdProjects[projectIndex].studyPlan!.plan = result.updatedPlan;
+            planUpdated = true;
+        }
+
+        return {
+            success: true,
+            planUpdated,
+            reasoning: result.reasoning,
+        };
+
+    } catch (error) {
+        console.error('Error refining study plan:', error);
+        return { error: 'Sorry, I was unable to refine the study plan.' };
+    }
+}
+
 
 export async function getGeneratedProject(projectSlug: string) {
     const project = createdProjects.find(d => d.slug === projectSlug);
@@ -270,5 +304,3 @@ export async function getGeneratedProject(projectSlug: string) {
 export async function getAllProjects() {
     return createdProjects;
 }
-
-    
