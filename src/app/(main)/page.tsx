@@ -12,22 +12,26 @@ import { Progress } from '@/components/ui/progress';
 import { useUser } from '@/context/UserContext';
 import { useEffect, useState } from 'react';
 import { getAllProjects } from '@/app/actions/projects';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
     const { user } = useUser();
-    const [myProjects, setMyProjects] = useState<Project[]>([]);
+    const [allProjects, setAllProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadProjects() {
             setLoading(true);
-            const allProjects = await getAllProjects();
-            // Filter projects where author is 'User'
-            setMyProjects(allProjects.filter(p => p.author === 'User'));
+            const projects = await getAllProjects();
+            setAllProjects(projects);
             setLoading(false);
         }
         loadProjects();
     }, []);
+    
+    const myProjects = allProjects.filter(p => p.author === 'User');
+    const recommendedProjects = allProjects.filter(p => p.author === 'Kolearning').slice(0, 4);
+
 
     const currentStreak = user?.currentStreak ?? 0;
     const energy = user?.energy ?? 10;
@@ -56,10 +60,10 @@ export default function DashboardPage() {
             <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
             <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
           </div>
-          <Button size="lg" className="bg-primary/80 hover:bg-primary text-primary-foreground" asChild>
-            <Link href="/aprender">
-                <Play className="mr-2 h-4 w-4" />
-                Aprender
+           <Button size="lg" className="bg-primary/80 hover:bg-primary text-primary-foreground" asChild>
+            <Link href="/crear">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Crear Proyecto
             </Link>
           </Button>
         </div>
@@ -130,25 +134,17 @@ export default function DashboardPage() {
         <div className="mb-12">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-bold">Mis Proyectos de Estudio</h2>
-                <div className="flex gap-4">
-                    <Button asChild variant="secondary">
-                        <Link href="/proyectos">
-                            <Search className="mr-2 h-5 w-5" />
-                            Buscar proyecto
-                        </Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href="/crear">
-                            <PlusCircle className="mr-2 h-5 w-5" />
-                            Nuevo proyecto
-                        </Link>
-                    </Button>
-                </div>
+                 <Button asChild variant="secondary">
+                    <Link href="/proyectos">
+                        <Search className="mr-2 h-5 w-5" />
+                        Explorar todos
+                    </Link>
+                </Button>
             </div>
              {loading ? (
-                 <div className="text-center py-16 border-2 border-dashed rounded-lg">
-                    <p className="text-muted-foreground mt-2">Cargando tus proyectos...</p>
-                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-56 w-full" />)}
+                </div>
              ) : myProjects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {myProjects.map((project) => (
@@ -157,10 +153,31 @@ export default function DashboardPage() {
                 </div>
             ) : (
                 <div className="text-center py-16 border-2 border-dashed rounded-lg">
-                    <h2 className="text-xl font-semibold">No tienes mazos todavía</h2>
+                    <h2 className="text-xl font-semibold">No tienes proyectos todavía</h2>
                     <p className="text-muted-foreground mt-2">
-                        Usa la importación mágica para crear tu primer mazo.
+                        Usa la importación mágica o explora los proyectos de la comunidad para empezar.
                     </p>
+                </div>
+            )}
+        </div>
+
+        <div className="mb-12">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold">Recomendado para ti</h2>
+            </div>
+             {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-56 w-full" />)}
+                </div>
+             ) : recommendedProjects.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {recommendedProjects.map((project) => (
+                        <DashboardProjectCard key={project.id} project={project} />
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                     <p className="text-muted-foreground mt-2">No hay proyectos recomendados en este momento.</p>
                 </div>
             )}
         </div>
@@ -168,5 +185,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
