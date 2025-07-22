@@ -17,8 +17,12 @@ export default function DashboardPage() {
     const [myProjects, setMyProjects] = useState<Project[]>([]);
 
     useEffect(() => {
-        // Simulating async fetch
-        getAllProjects().then(setMyProjects);
+        async function loadProjects() {
+            const allProjects = await getAllProjects();
+            // Filter projects where author is 'User'
+            setMyProjects(allProjects.filter(p => p.author === 'User'));
+        }
+        loadProjects();
     }, []);
 
     const currentStreak = user?.currentStreak ?? 0;
