@@ -22,8 +22,8 @@ const getCategoryIcon = (category: string) => {
 
 export function ProjectCard({ project }: { project: Project }) {
   const detailsUrl = project.author === 'User' 
-    ? `/mis-proyectos/${project.slug}/details` 
-    : `/proyectos/${project.slug}/details`;
+    ? `/mis-proyectos/${project.slug}` 
+    : `/proyectos/${project.slug}`;
 
   return (
     <Card className="flex flex-col h-full transition-all duration-300 group bg-card/50 hover:bg-card hover:shadow-primary/20 hover:shadow-lg hover:-translate-y-1">

@@ -287,7 +287,7 @@ export async function handleCreateProject(
 
     // Redirect must be called outside of a try/catch block
     // to be handled correctly by Next.js.
-    redirect(`/mis-proyectos/${newProject.slug}/details`);
+    redirect(`/mis-proyectos/${newProject.slug}`);
 }
 
 
