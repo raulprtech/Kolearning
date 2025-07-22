@@ -153,6 +153,7 @@ export function ProjectDetailsView({ project }: { project: Project }) {
                 {studyPlan.map((session, index) => {
                   const isCompleted = index < completedSessions;
                   const isNext = index === completedSessions;
+                  const sessionUrl = `/aprender?project=${project.slug}&session=${index}`;
 
                   return (
                     <TableRow key={index}>
@@ -166,7 +167,7 @@ export function ProjectDetailsView({ project }: { project: Project }) {
                           </Button>
                         ) : isNext ? (
                           <Button asChild variant='default' size="sm">
-                            <Link href={`/aprender?project=${project.slug}&session=${index}`}>
+                            <Link href={sessionUrl}>
                                 Empezar
                             </Link>
                           </Button>

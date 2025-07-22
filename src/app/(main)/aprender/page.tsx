@@ -698,7 +698,7 @@ function AprenderPageComponent() {
   
   useEffect(() => {
     async function loadProject() {
-      if (!projectSlug || !sessionIndexParam) {
+      if (!projectSlug || sessionIndexParam === null) {
           router.push('/');
           return;
       };
