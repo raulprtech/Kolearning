@@ -1,7 +1,5 @@
 
 
-'use client';
-
 import Link from 'next/link';
 import {
   Card,
@@ -47,6 +45,7 @@ import { useUser } from '@/context/UserContext';
 
 
 function ProjectDetailsView({ project }: { project: Project }) {
+  'use client';
   const searchParams = useSearchParams();
   const { addDominionPoints, addCoins } = useUser();
 
