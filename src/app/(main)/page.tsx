@@ -15,12 +15,15 @@ import { getAllProjects } from '@/app/actions/projects';
 export default function DashboardPage() {
     const { user } = useUser();
     const [myProjects, setMyProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadProjects() {
+            setLoading(true);
             const allProjects = await getAllProjects();
             // Filter projects where author is 'User'
             setMyProjects(allProjects.filter(p => p.author === 'User'));
+            setLoading(false);
         }
         loadProjects();
     }, []);
@@ -141,7 +144,11 @@ export default function DashboardPage() {
                     </Button>
                 </div>
             </div>
-             {myProjects.length > 0 ? (
+             {loading ? (
+                 <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground mt-2">Cargando tus proyectos...</p>
+                 </div>
+             ) : myProjects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {myProjects.map((project) => (
                         <DashboardProjectCard key={project.id} project={project} />
@@ -160,3 +167,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

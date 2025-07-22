@@ -269,3 +269,5 @@ export async function getGeneratedProject(projectSlug: string) {
 export async function getAllProjects() {
     return createdProjects;
 }
+
+    
