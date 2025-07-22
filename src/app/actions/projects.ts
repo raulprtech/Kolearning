@@ -215,8 +215,9 @@ export async function handleCreateProject(
         throw new Error('Project must have a title and at least one flashcard.');
     }
     
-    const slug = createSlug(projectDetails.title);
     const newProjectId = `gen-${Date.now()}`;
+    const titleSlug = createSlug(projectDetails.title);
+    const slug = `${titleSlug}-${newProjectId.slice(-6)}`;
 
     const processedFlashcards = flashcards.map(fc => ({
       ...fc,
