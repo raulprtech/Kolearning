@@ -70,18 +70,33 @@ export class SpacedRepetitionSystem {
     public getQuestionTypeForCard(cardId: string): SessionQuestion['type'] {
         const card = this.allCardsMap.get(cardId);
         if (!card) return 'open-answer'; // Default fallback
+        
+        // Calibration sessions should only be multiple choice to gauge knowledge without friction.
+        if (this.sessionType.startsWith('Calibración')) {
+            return 'multiple-choice';
+        }
 
-        // In "Incursión", prioritize interactive formats.
+        // Mastery tests should prioritize recall (open answer).
+        if (this.sessionType === 'Prueba de Dominio') {
+            // We can add more complex logic here later, but for now, prioritize open-answer.
+            // If the card format is simple identification, MC is a fallback.
+            if (card.formatos_presentacion.includes('Identificación')) {
+                 return Math.random() > 0.3 ? 'open-answer' : 'multiple-choice';
+            }
+            return 'open-answer';
+        }
+
+        // "Incursión" (Incursion) should prioritize interactive formats.
         if (this.sessionType === 'Incursión') {
             if (card.formatos_presentacion.includes("Identificación")) return 'multiple-choice';
             // Add logic for 'matching' and 'ordering' when those types are implemented
         }
 
-        // In "Refuerzo de Dominio", gradually introduce harder questions.
+        // "Refuerzo de Dominio" (Mastery Reinforcement) should gradually introduce harder questions.
         if (this.sessionType === 'Refuerzo de Dominio') {
             const randomFactor = Math.random();
             // Early in the plan, less chance of open-answer.
-            if (this.planProgress < 0.5 && randomFactor > this.planProgress) {
+            if (this.planProgress < 0.5 && randomFactor > (this.planProgress * 1.5)) { // Make it a bit harder to get open-answer early on
                  if (card.formatos_presentacion.includes("Identificación")) return 'multiple-choice';
             }
         }
