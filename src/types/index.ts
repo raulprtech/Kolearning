@@ -14,7 +14,6 @@ export interface User {
 
 export interface StudyPlan {
   plan: {
-    section: string;
     topic: string;
     sessionType: string;
   }[];
@@ -185,9 +184,8 @@ export type GenerateStudyPlanInput = z.infer<typeof GenerateStudyPlanInputSchema
 
 export const GenerateStudyPlanOutputSchema = z.object({
   plan: z.array(z.object({
-    section: z.string().describe("The section or day of the plan (e.g., 'Día 1 - Sesión 1', 'Semana 2')."),
     topic: z.string().describe('The specific topic or concept to be covered in this session.'),
-    sessionType: z.string().describe("The recommended session type ('Opción Múltiple', 'Respuesta Abierta', 'Tutor AI', 'Quiz de Repaso')."),
+    sessionType: z.string().describe("The recommended session type (e.g., 'Calibración Inicial', 'Refuerzo de Dominio', 'Consulta con Koli')."),
   })).describe('A structured array representing the study plan.'),
   justification: z.string().describe('A brief, encouraging explanation of why the plan is structured this way.'),
   expectedProgress: z.string().describe("A brief explanation of the expected progress after each major section or day of the plan."),

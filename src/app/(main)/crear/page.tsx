@@ -57,6 +57,7 @@ import Image from 'next/image';
 import { AnkiExportGuide } from '@/components/deck/AnkiExportGuide';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Flashcard as FlashcardType, StudyPlan, ProjectDetails } from '@/types';
 
 type Flashcard = FlashcardType & { localId: number | string };
@@ -993,17 +994,24 @@ const Step3_Plan = ({ projectDetails, flashcards, goBack, createProject }: { pro
                     <div>
                         <h3 className="font-semibold mb-2 text-primary">Ruta de aprendizaje</h3>
                         <Card className="bg-card/70 max-h-60 overflow-y-auto">
-                            <CardContent className="p-4 space-y-2">
-                                {studyPlan.plan.map((item, index) => (
-                                    <div key={index} className="flex items-center justify-between text-sm p-2 rounded-md bg-background/50">
-                                        <div className='flex items-center gap-2'>
-                                            <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{item.section}</span>
-                                            <p>{item.topic}</p>
-                                        </div>
-                                        <p className="text-primary font-medium">{item.sessionType}</p>
-                                    </div>
-                                ))}
-                            </CardContent>
+                           <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Sesión</TableHead>
+                                        <TableHead>Tema</TableHead>
+                                        <TableHead>Tipo de Sesión</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {studyPlan.plan.map((item, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>{index + 1}</TableCell>
+                                            <TableCell>{item.topic}</TableCell>
+                                            <TableCell>{item.sessionType}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </Card>
                     </div>
                      <div>
@@ -1146,4 +1154,3 @@ export default function CreateProjectWizardPage() {
     </div>
   );
 }
-
