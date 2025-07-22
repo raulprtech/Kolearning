@@ -1212,6 +1212,7 @@ export default function CreateProjectWizardPage() {
     // Strip localId before sending to server
     const finalFlashcards = flashcards.map(({ localId, ...rest }) => rest);
 
+    // Don't catch the error here, let Next.js handle the redirect error if it occurs
     await handleCreateProject(
         projectDetails,
         finalFlashcards,
