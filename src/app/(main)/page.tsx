@@ -30,7 +30,7 @@ export default function DashboardPage() {
     }, []);
 
     const currentStreak = user?.currentStreak ?? 0;
-    const energy = user?.energy ?? 0;
+    const energy = user?.energy ?? 10;
     const maxEnergy = 10;
     const energyPercentage = maxEnergy > 0 ? (energy / maxEnergy) * 100 : 0;
     const dominionPoints = user?.dominionPoints ?? 0;
@@ -129,7 +129,7 @@ export default function DashboardPage() {
         
         <div className="mb-12">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold">Mis Planes de Estudio</h2>
+                <h2 className="text-3xl font-bold">Mis Proyectos de Estudio</h2>
                 <div className="flex gap-4">
                     <Button asChild variant="secondary">
                         <Link href="/proyectos">
