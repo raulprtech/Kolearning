@@ -245,58 +245,20 @@ function ProjectDetailsView({ project }: { project: Project }) {
   );
 }
 
-function ProjectDetailsPageLoader() {
-  const params = useParams();
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
+// This is a server component that fetches data and passes it to the client component.
+export default async function ProjectDetailsPage({ params }: { params: { projectId: string }}) {
+    const projectSlug = params.projectId;
+    const allProjects = await getAllProjects();
+    const project = allProjects.find(p => p.slug === projectSlug);
 
-  useEffect(() => {
-    async function loadProject() {
-      if (typeof params.projectId !== 'string') {
-        setLoading(false);
-        return;
-      }
-      const projectSlug = params.projectId;
-      const allProjects = await getAllProjects();
-      const foundProject = allProjects.find(p => p.slug === projectSlug);
-      if (foundProject) {
-        setProject(foundProject);
-      }
-      setLoading(false);
+    if (!project) {
+        notFound();
     }
-    loadProject();
-  }, [params.projectId]);
 
-  if (loading) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="space-y-4">
-            <Skeleton className="h-12 w-1/2" />
-            <Skeleton className="h-8 w-1/4" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-            </div>
-            <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-40 w-full" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!project) {
-    notFound();
-  }
-
-  return <ProjectDetailsView project={project} />;
-}
-
-export default function ProjectDetailsPage() {
     return (
         <div className="container mx-auto py-8">
-            <Suspense fallback={<div>Cargando...</div>}>
-                <ProjectDetailsPageLoader />
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <ProjectDetailsView project={project} />
             </Suspense>
         </div>
     )
