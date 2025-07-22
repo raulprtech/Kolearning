@@ -1,6 +1,7 @@
 import type { Flashcard, SessionPerformanceSummary } from "@/types";
 
 export type CardRating = 0 | 1 | 2 | 3; // 0: Muy Difícil, 1: Difícil, 2: Bien, 3: Fácil
+export type SessionType = 'Calibración Inicial' | 'Incursión' | 'Refuerzo de Dominio' | 'Prueba de Dominio' | 'Consulta con Koli' | 'Brecha Detectada';
 
 export type CardState = {
     id: string;
@@ -21,9 +22,13 @@ export class SpacedRepetitionSystem {
     private cardStates: Map<string, CardState> = new Map();
     private reviewQueue: string[] = [];
     private allCardsMap: Map<string, Flashcard>;
+    private sessionType: SessionType;
+    private planProgress: number; // 0.0 to 1.0
 
-    constructor(cards: Flashcard[], sessionTopic?: string) {
+    constructor(cards: Flashcard[], sessionType: SessionType, planProgress: number) {
         this.cards = cards;
+        this.sessionType = sessionType;
+        this.planProgress = planProgress;
         this.allCardsMap = new Map(cards.map(c => [c.id, c]));
 
         cards.forEach(card => {
@@ -40,10 +45,51 @@ export class SpacedRepetitionSystem {
             });
         });
 
-        // Simple initialization: review all cards in order for now.
-        // A more advanced implementation would prioritize cards based on their state.
-        this.reviewQueue = this.shuffleArray([...cards.map(c => c.id)]);
+        this.initializeReviewQueue();
     }
+
+    private initializeReviewQueue() {
+        let eligibleCards = [...this.cards];
+
+        if (this.sessionType === 'Incursión') {
+            // "Incursión" sessions focus on interactive formats, avoiding open-ended questions.
+            const interactiveFormats = ["Identificación", "Comparación", "Procedimiento", "Ejemplificación"];
+            eligibleCards = this.cards.filter(card => 
+                card.formatos_presentacion.some(fp => interactiveFormats.includes(fp))
+            );
+        }
+        
+        // If for some reason filtering leaves no cards, fall back to all cards to avoid an empty session.
+        if (eligibleCards.length === 0) {
+            eligibleCards = [...this.cards];
+        }
+
+        this.reviewQueue = this.shuffleArray(eligibleCards.map(c => c.id));
+    }
+    
+    public getQuestionTypeForCard(cardId: string): SessionQuestion['type'] {
+        const card = this.allCardsMap.get(cardId);
+        if (!card) return 'open-answer'; // Default fallback
+
+        // In "Incursión", prioritize interactive formats.
+        if (this.sessionType === 'Incursión') {
+            if (card.formatos_presentacion.includes("Identificación")) return 'multiple-choice';
+            // Add logic for 'matching' and 'ordering' when those types are implemented
+        }
+
+        // In "Refuerzo de Dominio", gradually introduce harder questions.
+        if (this.sessionType === 'Refuerzo de Dominio') {
+            const randomFactor = Math.random();
+            // Early in the plan, less chance of open-answer.
+            if (this.planProgress < 0.5 && randomFactor > this.planProgress) {
+                 if (card.formatos_presentacion.includes("Identificación")) return 'multiple-choice';
+            }
+        }
+        
+        // Default to open-answer if no other type fits
+        return 'open-answer';
+    }
+
 
     private shuffleArray(array: any[]) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -218,3 +264,5 @@ export class SpacedRepetitionSystem {
         }
     }
 }
+
+type SessionQuestion = Flashcard & { type: 'open-answer' | 'multiple-choice' | 'matching' | 'ordering' | 'fill-in-the-blank' };

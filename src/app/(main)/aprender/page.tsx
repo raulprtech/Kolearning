@@ -514,6 +514,7 @@ type State = {
     currentStreak: number;
     isSessionFinished: boolean;
     finalSessionStats: { masteryProgress: number; cognitiveCredits: number; bestStreak: number; } | null;
+    mcOptionsForFailedQuestion: any[] | null;
 };
 
 type Action =
@@ -527,6 +528,8 @@ type Action =
     | { type: 'UPDATE_OPEN_ANSWER_TEXT'; payload: string }
     | { type: 'UPDATE_QUESTION_TEXT'; payload: string }
     | { type: 'CONVERT_TO_MULTIPLE_CHOICE'; payload: { options: any[], correctAnswerId: string } }
+    | { type: 'PREPARE_MC_CONVERSION'; payload: any[] }
+    | { type: 'FORCE_MC_CONVERSION' }
     | { type: 'SHOW_ANSWER' }
     | { type: 'REQUEST_HINT' }
     | { type: 'REQUEST_EXPLANATION' };
@@ -550,15 +553,24 @@ const initialState: State = {
     currentStreak: 0,
     isSessionFinished: false,
     finalSessionStats: null,
+    mcOptionsForFailedQuestion: null,
 };
 
 function reducer(state: State, action: Action): State {
     switch (action.type) {
         case 'START_SESSION': {
             const { project, sessionIndex } = action.payload;
-            const srs = new SpacedRepetitionSystem(project.flashcards || [], project.studyPlan?.plan[sessionIndex]?.topic);
+            const sessionType = project.studyPlan?.plan[sessionIndex]?.sessionType || 'Refuerzo de Dominio';
+            const progressPercentage = (sessionIndex + 1) / (project.studyPlan?.plan.length || 1);
+            
+            const srs = new SpacedRepetitionSystem(project.flashcards || [], sessionType, progressPercentage);
             const currentCardId = srs.getNextCard();
-            const sessionQuestions = project.flashcards!.map(fc => ({ ...fc, type: 'open-answer' })) as SessionQuestion[];
+            
+            const sessionQuestions = project.flashcards!.map(fc => {
+                const type = srs.getQuestionTypeForCard(fc.id);
+                return { ...fc, type };
+            }) as SessionQuestion[];
+
             return {
                 ...initialState,
                 project,
@@ -586,15 +598,48 @@ function reducer(state: State, action: Action): State {
             if (evaluation.isCorrect) {
                 return { ...state, isAnswered: true, isCorrect: true, openAnswerText: userAnswer, isLoading: false };
             } else {
-                if (srs.getCardState(currentCardId).attempts >= 3) {
-                    return { ...state, isAnswered: true, isCorrect: false, openAnswerText: userAnswer, openAnswerFeedback: `La respuesta correcta es: ${srs.getCard(currentCardId)?.answer}`, isLoading: false };
+                 if (srs.getCardState(currentCardId)!.attempts >= 2) {
+                    // This will trigger the automatic conversion
+                    return { ...state, isLoading: false, openAnswerFeedback: evaluation.feedback };
                 } else {
                     return { ...state, openAnswerFeedback: evaluation.feedback, openAnswerText: '', isLoading: false };
                 }
             }
         }
+        
+        case 'FORCE_MC_CONVERSION': {
+            const { srs, currentCardId, mcOptionsForFailedQuestion, sessionQuestions } = state;
+            if (!srs || !currentCardId || !mcOptionsForFailedQuestion) return state;
+            
+            const card = srs.getCard(currentCardId);
+            if (!card) return state;
+
+            const formattedOptions = mcOptionsForFailedQuestion.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
+            const correctOption = formattedOptions.find(o => o.text === card.answer);
+
+            const newQuestions = sessionQuestions.map(q => {
+                if (q.id === currentCardId) {
+                    return {
+                        ...q,
+                        type: 'multiple-choice',
+                        options: formattedOptions,
+                        correctAnswer: correctOption?.id || 'A'
+                    }
+                }
+                return q;
+            });
+            return { ...state, sessionQuestions: newQuestions, openAnswerFeedback: "Se ha agotado el número de intentos. Intenta ahora con opción múltiple.", mcOptionsForFailedQuestion: null };
+        }
+        
+        case 'PREPARE_MC_CONVERSION': {
+            return { ...state, mcOptionsForFailedQuestion: action.payload };
+        }
 
         case 'ANSWER_MC_QUESTION': {
+            const { currentCardId, srs } = state;
+            if (currentCardId && srs) {
+                 srs.recordAttempt(currentCardId);
+            }
             return { ...state, isAnswered: true, isCorrect: action.payload.isCorrect };
         }
 
@@ -613,13 +658,9 @@ function reducer(state: State, action: Action): State {
             }
 
             const progress = (srs.getReviewedCount() / srs.getTotalCards()) * 100;
-
-            const nextCard = srs.getCard(nextCardId);
-            let nextQuestionType: SessionQuestion['type'] = 'open-answer';
-            if (nextCard && nextCard.formatos_presentacion.includes("Identificación")) {
-                nextQuestionType = 'multiple-choice';
-            }
             
+            const nextQuestionType = srs.getQuestionTypeForCard(nextCardId);
+
             const newQuestions = state.sessionQuestions.map(q =>
                 q.id === nextCardId ? { ...q, type: nextQuestionType } : q
             );
@@ -632,6 +673,7 @@ function reducer(state: State, action: Action): State {
                 isCorrect: null,
                 openAnswerText: '',
                 openAnswerFeedback: null,
+                mcOptionsForFailedQuestion: null,
                 sessionProgress: progress,
                 ...newStats,
             };
@@ -665,7 +707,7 @@ function reducer(state: State, action: Action): State {
             if (!state.srs || !state.currentCardId) return state;
             const card = state.srs.getCard(state.currentCardId);
             if (!card) return state;
-            return { ...state, isAnswered: true, isCorrect: true, openAnswerText: card.answer };
+            return { ...state, isAnswered: true, isCorrect: false, openAnswerText: card.answer };
         }
 
         case 'REQUEST_HINT': {
@@ -698,20 +740,23 @@ function AprenderPageComponent() {
   
   useEffect(() => {
     async function loadProject() {
-      if (!projectSlug || sessionIndexParam === null) {
+      const projSlug = searchParams.get('project');
+      const sessIdx = searchParams.get('session');
+      
+      if (!projSlug || sessIdx === null) {
           router.push('/');
           return;
       };
       const allProjects = await getAllProjects();
-      const foundProject = allProjects.find(p => p.slug === projectSlug);
+      const foundProject = allProjects.find(p => p.slug === projSlug);
       if (foundProject) {
-        dispatch({ type: 'START_SESSION', payload: { project: foundProject, sessionIndex: parseInt(sessionIndexParam) }});
+        dispatch({ type: 'START_SESSION', payload: { project: foundProject, sessionIndex: parseInt(sessIdx) }});
       } else {
         router.push('/'); // Or a 404 page
       }
     }
     loadProject();
-  }, [projectSlug, sessionIndexParam, router]);
+  }, [projectSlug, sessionIndexParam, router, searchParams]);
   
   useEffect(() => {
     if (state.isPulsing) {
@@ -740,6 +785,17 @@ function AprenderPageComponent() {
 
 
   const currentQuestion = useMemo(() => state.sessionQuestions.find(q => q.id === state.currentCardId), [state.sessionQuestions, state.currentCardId]);
+
+  // Effect to handle automatic MC conversion on 3rd attempt
+  useEffect(() => {
+    const cardState = state.srs?.getCardState(state.currentCardId || '');
+    if (cardState && cardState.attempts >= 2 && currentQuestion?.type === 'open-answer' && !state.isAnswered) {
+        if (state.mcOptionsForFailedQuestion) {
+            dispatch({ type: 'FORCE_MC_CONVERSION' });
+        }
+    }
+  }, [state.srs, state.currentCardId, state.isAnswered, currentQuestion?.type, state.mcOptionsForFailedQuestion]);
+
 
   if (state.isLoading || !state.project) {
       return (
@@ -819,6 +875,19 @@ function AprenderPageComponent() {
     if (!state.openAnswerText.trim() || !currentQuestion) return;
     dispatch({ type: 'SET_LOADING', payload: true });
 
+    // Pre-fetch MC options on first failure
+    const cardState = state.srs?.getCardState(currentQuestion.id);
+    if (cardState?.attempts === 0) {
+        handleGenerateOptionsForQuestion({
+            question: currentQuestion.question,
+            correctAnswer: currentQuestion.answer,
+        }).then(result => {
+            if (result.options) {
+                dispatch({ type: 'PREPARE_MC_CONVERSION', payload: result.options });
+            }
+        });
+    }
+
     const result = await handleEvaluateOpenAnswer({
         question: currentQuestion.question,
         correctAnswer: currentQuestion.answer,
@@ -828,7 +897,7 @@ function AprenderPageComponent() {
   };
   
   const handleOptionSelect = (optionId: string) => {
-    if (!hasEnergy || !currentQuestion) return; 
+    if (!currentQuestion) return; 
     const isCorrect = currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer;
     dispatch({ type: 'ANSWER_MC_QUESTION', payload: { isCorrect, selectedOption: optionId } });
   };
@@ -909,7 +978,7 @@ function AprenderPageComponent() {
 
           <Card className={cn("mb-3 sm:mb-6 bg-card/70", state.isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta {currentQuestion.type === 'open-answer' && !state.isAnswered && (state.srs?.getCardState(currentQuestion.id)?.attempts || 0) > 0 ? `(Intento ${state.srs!.getCardState(currentQuestion.id).attempts + 1})` : ''}</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Pregunta {currentQuestion.type === 'open-answer' && !state.isAnswered && (state.srs?.getCardState(currentQuestion.id)?.attempts || 0) > 0 ? `(Intento ${state.srs!.getCardState(currentQuestion.id)!.attempts + 1})` : ''}</CardTitle>
               {state.isAnswered && (
                  <div className="flex items-center gap-4">
                     { state.isCorrect ? (
@@ -943,7 +1012,7 @@ function AprenderPageComponent() {
           {currentQuestion.type === 'multiple-choice' && (
             <MultipleChoiceQuestion 
               question={currentQuestion}
-              answerState={{ isAnswered: state.isAnswered }}
+              answerState={{ isAnswered: state.isAnswered, selectedOption: (state as any).selectedOption }}
               onOptionSelect={handleOptionSelect}
             />
           )}
@@ -1008,7 +1077,7 @@ function AprenderPageComponent() {
 
 export default function AprenderPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense>
             <AprenderPageComponent />
         </Suspense>
     );
