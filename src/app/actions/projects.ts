@@ -88,10 +88,12 @@ const CreateProjectInputSchema = z.array(z.object({
 function createSlug(title: string) {
     return title
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '') // remove non-alphanumeric characters
+      .normalize("NFD") // Decompose accented characters
+      .replace(/[\u0300-\u036f]/g, "") // Remove diacritical marks
+      .replace(/[^a-z0-9\s-]/g, '') // Remove remaining non-alphanumeric characters
       .trim()
-      .replace(/\s+/g, '-') // replace spaces with hyphens
-      .replace(/-+/g, '-'); // remove consecutive hyphens
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-'); // Remove consecutive hyphens
 }
 
 export async function handleGenerateProjectFromPdf(pdfDataUri: string, fileName: string) {
