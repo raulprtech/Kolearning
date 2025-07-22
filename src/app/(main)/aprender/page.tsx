@@ -29,7 +29,7 @@ import type { Project, Flashcard, SessionPerformanceSummary } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SpacedRepetitionSystem, type CardState } from '@/lib/srs';
 
-type SessionQuestion = Flashcard & { type: 'open-answer' | 'multiple-choice' | 'matching' | 'ordering' | 'fill-in-the-blank', options?: any[], code?: string, correctAnswerText?: string, textParts?: string[], pairs?: any[], items?: any[] };
+type SessionQuestion = Flashcard & { type: 'open-answer' | 'multiple-choice' | 'matching' | 'ordering' | 'fill-in-the-blank', options?: any[], code?: string, correctAnswerText?: string, textParts?: string[], pairs?: any[], items?: any[], correctAnswer?: string };
 
 const TutorAvatar = ({ className }: { className?: string }) => (
     <div className={cn("w-8 h-8 rounded-full bg-blue-500/50 flex items-center justify-center shrink-0", className)}>
@@ -151,6 +151,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     const [showQuickQuestionInput, setShowQuickQuestionInput] = useState(false);
     const [quickChatHistory, setQuickChatHistory] = useState<QuickChatMessage[]>([]);
     const [quickQuestionCount, setQuickQuestionCount] = useState(0);
+    const [quickQuestionText, setQuickQuestionText] = useState('');
 
     const handleActionWithEnergyCheck = (action: (...args: any[]) => void, cost: number, ...args: any[]) => {
         if (!hasEnoughEnergy(cost)) return;
@@ -844,20 +845,18 @@ function AprenderPageComponent() {
       dispatch({ type: 'UPDATE_QUESTION_TEXT', payload: newQuestionText });
   };
 
-  const handleConvertToMultipleChoice = async () => {
-      if (!currentQuestion) return;
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const result = await handleGenerateOptionsForQuestion({
-          question: currentQuestion.question,
-          correctAnswer: currentQuestion.answer
-      });
-      if (result.options) {
-          const options = result.options.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
-          const correctOption = options.find(o => o.text === currentQuestion.answer);
-          dispatch({ type: 'CONVERT_TO_MULTIPLE_CHOICE', payload: { options, correctAnswerId: correctOption?.id || 'A' } });
-      }
-      dispatch({ type: 'SET_LOADING', payload: false });
-  };
+  const handleConvertToMultipleChoice = async (options: string[]) => {
+    if (!currentQuestion) return;
+    const formattedOptions = options.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
+    const correctOption = formattedOptions.find(o => o.text === currentQuestion.answer);
+    dispatch({ 
+        type: 'CONVERT_TO_MULTIPLE_CHOICE', 
+        payload: { 
+            options: formattedOptions, 
+            correctAnswerId: correctOption?.id || 'A' 
+        } 
+    });
+};
 
 
   return (
