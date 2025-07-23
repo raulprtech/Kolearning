@@ -18,11 +18,13 @@ export function middleware(request: NextRequest) {
   });
 
   // If trying to access a protected route without a session cookie, redirect to login
+  /*
   if (isProtectedRoute && !sessionCookie) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
+  */
 
   // If on the login page with a session cookie, redirect to the dashboard
   if (pathname === '/login' && sessionCookie) {
