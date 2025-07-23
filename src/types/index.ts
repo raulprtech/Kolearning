@@ -1,11 +1,13 @@
 
 
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
 export interface User {
   uid: string;
   email: string;
+  displayName?: string;
   createdAt: Timestamp;
   lastSessionAt: Timestamp;
   currentStreak: number;

@@ -9,35 +9,9 @@ import { z } from 'zod';
 import type { Project, Flashcard as FlashcardType, StudyPlan, ProjectDetails, RefineProjectDetailsInput, GenerateStudyPlanInput, SessionPerformanceSummary } from '@/types';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { redirect } from 'next/navigation';
-
-// In-memory store for created projects, pre-populated with initial data
-let createdProjects: Project[] = [
-    {
-      id: 'gen-12345',
-      slug: 'plan-de-estudio-ia-tumores-renales-12345',
-      title: 'Plan de Estudio: IA para Segmentación de Tumores Renales',
-      description: 'Plan de estudio para comprender el estado del arte en el uso de la Inteligencia Artificial para la segmentación de tumores renales, incluyendo aspectos multimodales, optimización y despliegue en hardware.',
-      category: 'AI',
-      author: 'Kolearning', // Public by default
-      size: 15,
-      bibliography: [],
-      isPublic: true,
-       flashcards: [
-            { id: '1', deckId: 'gen-12345', atomo_id: "AI001", material_id: "MAT001", question: '¿Qué es una IA multimodal?', answer: 'Una IA que puede procesar y relacionar información de múltiples tipos de datos, como texto, imágenes y sonido.', concepto: 'IA Multimodal', descripcion: 'Una IA que puede procesar y relacionar información de múltiples tipos de datos, como texto, imágenes y sonido.', atomos_padre: [], formatos_presentacion: ["Identificación"], dificultad_inicial: "Fundamental" },
-            { id: '2', deckId: 'gen-12345', atomo_id: "AI002", material_id: "MAT001", question: 'Nombra un modelo de IA para segmentación de imágenes.', answer: 'U-Net es una arquitectura de red neuronal convolucional popular para la segmentación de imágenes biomédicas.', concepto: 'Modelo de Segmentación', descripcion: 'U-Net es una arquitectura de red neuronal convolucional popular para la segmentación de imágenes biomédicas.', atomos_padre: ["AI001"], formatos_presentacion: ["Ejemplificación"], dificultad_inicial: "Intermedio" },
-        ],
-        studyPlan: {
-            plan: [
-                { topic: "Introducción a la IA", sessionType: "Calibración Inicial" },
-                { topic: "Modelos de Segmentación", sessionType: "Incursión" },
-                { topic: "Repaso General", sessionType: "Refuerzo de Dominio" },
-            ],
-            justification: "Este plan está diseñado para construir una base sólida antes de pasar a temas más complejos.",
-            expectedProgress: "Al final del día 1, entenderás los conceptos básicos. Al final del día 2, podrás identificar arquitecturas clave."
-        },
-        completedSessions: 0,
-    },
-];
+import { getAuthSession } from '@/lib/auth';
+import { adminDb } from '@/lib/firebase/admin';
+import { v4 as uuidv4 } from 'uuid';
 
 const CreateProjectInputSchema = z.array(z.object({
   id: z.string(),
@@ -212,18 +186,22 @@ export async function handleCreateProject(
     flashcards: FlashcardType[],
     studyPlan: StudyPlan
 ) {
+    const session = await getAuthSession();
+    if (!session) {
+        throw new Error('Unauthorized');
+    }
+
     if (!projectDetails.title || flashcards.length === 0) {
-        // This should be handled client-side, but as a safeguard
         throw new Error('Project must have a title and at least one flashcard.');
     }
     
-    const newProjectId = `gen-${Date.now()}`;
+    const newProjectId = uuidv4();
     const titleSlug = createSlug(projectDetails.title);
-    const slug = `${titleSlug}-${newProjectId.slice(-6)}`;
+    const slug = `${titleSlug}-${newProjectId.slice(0, 8)}`;
 
     const processedFlashcards = flashcards.map(fc => ({
       ...fc,
-      id: fc.id || fc.atomo_id,
+      id: fc.id || fc.atomo_id || uuidv4(),
       deckId: newProjectId
     }));
 
@@ -240,7 +218,7 @@ export async function handleCreateProject(
         title: projectDetails.title,
         description: projectDetails.description,
         category: projectDetails.category || 'General',
-        author: 'User',
+        author: session.uid, // Set author to the current user's UID
         size: validation.data.length,
         bibliography: [],
         flashcards: validation.data,
@@ -249,29 +227,41 @@ export async function handleCreateProject(
         completedSessions: 0,
     };
 
-    createdProjects.push(newProject);
-
-    // Redirect must be called outside of a try/catch block to be handled correctly by Next.js.
+    try {
+        await adminDb.collection('projects').doc(newProjectId).set(newProject);
+    } catch(error) {
+        console.error("Error creating project in Firestore:", error);
+        throw new Error("Could not save project to the database.");
+    }
+    
     redirect(`/mis-proyectos/${newProject.slug}`);
 }
 
 export async function handleEndSessionAndRefinePlan(projectSlug: string, completedSessionIndex: number, performanceSummary: SessionPerformanceSummary) {
-    const projectIndex = createdProjects.findIndex(p => p.slug === projectSlug);
-    if (projectIndex === -1) {
+    const session = await getAuthSession();
+    if (!session) {
+        return { error: 'Unauthorized' };
+    }
+    
+    const projectQuery = await adminDb.collection('projects').where('slug', '==', projectSlug).limit(1).get();
+    if (projectQuery.empty) {
         return { error: 'Project not found.' };
     }
-    
+    const projectDoc = projectQuery.docs[0];
+    const project = projectDoc.data() as Project;
+    const projectRef = projectDoc.ref;
+
     // Update completed sessions
-    const currentCompleted = createdProjects[projectIndex].completedSessions || 0;
+    const currentCompleted = project.completedSessions || 0;
     if (completedSessionIndex + 1 > currentCompleted) {
-        createdProjects[projectIndex].completedSessions = completedSessionIndex + 1;
+        await projectRef.update({ completedSessions: completedSessionIndex + 1 });
     }
     
-    if (!createdProjects[projectIndex].studyPlan) {
+    if (!project.studyPlan) {
         return { success: true, planUpdated: false, reasoning: 'No study plan to refine.' };
     }
 
-    const currentPlan = createdProjects[projectIndex].studyPlan!.plan;
+    const currentPlan = project.studyPlan.plan;
 
     try {
         const result = await refineStudyPlan({
@@ -282,7 +272,7 @@ export async function handleEndSessionAndRefinePlan(projectSlug: string, complet
 
         let planUpdated = false;
         if (result.needsChange && result.updatedPlan) {
-            createdProjects[projectIndex].studyPlan!.plan = result.updatedPlan;
+            await projectRef.update({ 'studyPlan.plan': result.updatedPlan });
             planUpdated = true;
         }
 
@@ -298,15 +288,15 @@ export async function handleEndSessionAndRefinePlan(projectSlug: string, complet
     }
 }
 
-
-export async function getGeneratedProject(projectSlug: string) {
-    const project = createdProjects.find(d => d.slug === projectSlug);
-    if (project) {
-        return project;
+export async function getAllProjects(): Promise<Project[]> {
+  try {
+    const projectsSnapshot = await adminDb.collection('projects').get();
+    if (projectsSnapshot.empty) {
+      return [];
     }
-    return null;
-}
-
-export async function getAllProjects() {
-    return createdProjects;
+    return projectsSnapshot.docs.map(doc => doc.data() as Project);
+  } catch (error) {
+    console.error("Error fetching all projects:", error);
+    return [];
+  }
 }

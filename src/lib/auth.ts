@@ -1,17 +1,18 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 import { adminAuth } from './firebase/admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 
-export async function getAuthSession() {
-  return {
-    uid: 'mock-user-id',
-    email: 'test@example.com',
-    name: 'Test User',
-    picture: '',
-    iat: 0,
-    exp: 0,
-    auth_time: 0,
-    firebase: { identities: {}, sign_in_provider: '' },
-  };
+export async function getAuthSession(): Promise<DecodedIdToken | null> {
+  const sessionCookie = cookies().get('__session')?.value;
+  if (!sessionCookie) {
+    return null;
+  }
+  try {
+    const decodedIdToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+    return decodedIdToken;
+  } catch (error) {
+    console.error('Error verifying session cookie:', error);
+    return null;
+  }
 }

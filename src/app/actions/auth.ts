@@ -16,20 +16,33 @@ export async function createSession(idToken: string) {
   }
 }
 
-export async function createUserInFirestore(uid: string, email: string) {
-    try {
-        const userRef = adminDb.collection('users').doc(uid);
-        await userRef.set({
-            email,
-            createdAt: Timestamp.now(),
-            lastSessionAt: Timestamp.now(),
-            currentStreak: 0,
-        });
-        return { success: true };
-    } catch (error) {
-        console.error('Error creating user in Firestore:', error);
-        return { success: false, error: 'Failed to create user data.' };
+export async function createUserInFirestore(uid: string, email: string, displayName: string | null) {
+    const userRef = adminDb.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+
+    // Only create the document if it doesn't already exist
+    if (!userDoc.exists) {
+        try {
+            await userRef.set({
+                email,
+                displayName: displayName || email.split('@')[0],
+                createdAt: Timestamp.now(),
+                lastSessionAt: Timestamp.now(),
+                currentStreak: 0,
+                coins: 100, // Starting coins
+                energy: 10,  // Starting energy
+                dominionPoints: 0,
+                rank: 'G',
+                lastSessionCompletedAt: null,
+                weeklyActivity: [false, false, false, false, false, false, false],
+            });
+            return { success: true, isNew: true };
+        } catch (error) {
+            console.error('Error creating user in Firestore:', error);
+            return { success: false, error: 'Failed to create user data.' };
+        }
     }
+    return { success: true, isNew: false };
 }
 
 
