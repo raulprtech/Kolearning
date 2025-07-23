@@ -53,7 +53,7 @@ const calculateRank = (dominionPoints: number) => {
 
   const pointsForNextRank = nextRank.requiredPoints - currentRank.requiredPoints;
   const pointsProgress = dominionPoints - currentRank.requiredPoints;
-  const progressPercentage = pointsForNextRank > 0 ? (pointsProgress / pointsForNextRank) * 100 : 100;
+  const progressPercentage = pointsForNextRank > 0 ? (pointsProgress / pointsForNextRank) * 100 : 0;
 
   return {
     currentRankLetter: currentRank.rank,
@@ -130,11 +130,11 @@ export default function DashboardPage() {
               <div>
                 <div className="flex items-center justify-center gap-2 text-green-500">
                   <TrendingUp className="h-6 w-6" />
-                  <p className="text-muted-foreground text-sm">Progreso de Aprendizaje</p>
+                  <p className="text-muted-foreground text-sm">Rango de Aprendedor</p>
                 </div>
               </div>
               <div className="my-4">
-                <p className="text-3xl font-bold">{rankInfo?.currentRankName || 'Aprendedor Rango G'}</p>
+                <p className="text-5xl font-bold">{rankInfo?.currentRankLetter || 'G'}</p>
               </div>
               <div className="w-full">
                 <Progress value={rankInfo?.progressPercentage ?? 0} className="h-2" />
@@ -254,4 +254,5 @@ export default function DashboardPage() {
 }
 
     
+
 
