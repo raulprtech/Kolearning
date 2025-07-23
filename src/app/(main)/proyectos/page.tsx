@@ -82,7 +82,7 @@ export default function ProyectosPage() {
 
     // Filter by author
     if (authorFilter && authorFilter !== 'all') {
-      results = results.filter(project => (project.author === 'Community' && project.author !== 'Kolearning' && project.author !== 'User') || project.author === authorFilter);
+      results = results.filter(project => project.author === authorFilter || (authorFilter === 'Community' && project.author !== 'Kolearning' && project.author !== 'User'));
     }
 
     setSearchResults(results);
@@ -156,6 +156,7 @@ export default function ProyectosPage() {
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="Kolearning">Kolearning</SelectItem>
                     <SelectItem value="Community">Comunidad</SelectItem>
+                    <SelectItem value="User">Mis Proyectos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
