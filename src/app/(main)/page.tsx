@@ -56,6 +56,7 @@ const calculateRank = (dominionPoints: number) => {
   const progressPercentage = pointsForNextRank > 0 ? (pointsProgress / pointsForNextRank) * 100 : 100;
 
   return {
+    currentRankLetter: currentRank.rank,
     currentRankName: currentRank.name,
     pointsToNextLevel: nextRank.requiredPoints - dominionPoints,
     progressPercentage,
@@ -141,7 +142,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="my-4">
-                <p className="text-2xl font-bold">{rankInfo?.currentRankName || 'Cargando...'}</p>
+                <p className="text-5xl font-bold">{rankInfo?.currentRankLetter || 'G'}</p>
+                <p className="text-xs text-muted-foreground mt-1">{rankInfo?.currentRankName || 'Aventurero de Rango G'}</p>
               </div>
               <div className="w-full">
                 <Progress value={rankInfo?.progressPercentage ?? 0} className="h-2" />
@@ -259,3 +261,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
