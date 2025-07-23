@@ -82,7 +82,7 @@ export default function ProyectosPage() {
 
     // Filter by author
     if (authorFilter && authorFilter !== 'all') {
-      results = results.filter(project => project.author === authorFilter);
+      results = results.filter(project => (project.author === 'Community' && project.author !== 'Kolearning' && project.author !== 'User') || project.author === authorFilter);
     }
 
     setSearchResults(results);
