@@ -13,6 +13,8 @@ export interface User {
   energy: number;
   dominionPoints: number;
   rank: string;
+  lastSessionCompletedAt?: string;
+  weeklyActivity: boolean[];
 }
 
 export interface StudyPlan {

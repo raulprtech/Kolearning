@@ -92,16 +92,8 @@ export default function DashboardPage() {
         return calculateRank(user.dominionPoints);
     }, [user]);
 
-    const weeklyActivity = [
-        { day: 'Lun', active: true },
-        { day: 'Mar', active: true },
-        { day: 'Mié', active: false },
-        { day: 'Jue', active: false },
-        { day: 'Vie', active: true },
-        { day: 'Sáb', active: true },
-        { day: 'Dom', active: true },
-    ];
-
+    const weeklyActivity = user?.weeklyActivity || [false, false, false, false, false, false, false];
+    const dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   return (
     <div className="bg-background text-foreground min-h-screen p-8">
@@ -185,12 +177,12 @@ export default function DashboardPage() {
                 <p className="text-5xl font-bold">{currentStreak}</p>
               </div>
               <div className="flex justify-center gap-3 w-full">
-                {weeklyActivity.map((dayActivity) => (
-                  <div key={dayActivity.day} className="flex flex-col items-center gap-2">
-                    <p className="text-xs text-muted-foreground">{dayActivity.day}</p>
+                {weeklyActivity.map((active, index) => (
+                  <div key={index} className="flex flex-col items-center gap-2">
+                    <p className="text-xs text-muted-foreground">{dayLabels[index]}</p>
                     <div
-                      className={`h-6 w-6 rounded-full ${dayActivity.active ? 'bg-orange-500' : 'bg-muted'}`}
-                      title={`${dayActivity.day}: ${dayActivity.active ? 'Activo' : 'Inactivo'}`}
+                      className={`h-6 w-6 rounded-full ${active ? 'bg-orange-500' : 'bg-muted'}`}
+                      title={`${dayLabels[index]}: ${active ? 'Activo' : 'Inactivo'}`}
                     ></div>
                   </div>
                 ))}

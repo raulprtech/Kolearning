@@ -14,6 +14,7 @@ interface UserContextType {
   addCoins: (amount: number) => void;
   subtractCoins: (amount: number) => void;
   addDominionPoints: (amount: number) => void;
+  completeSessionForToday: () => void;
   tutorSession: TutorSession | null;
   setTutorSession: React.Dispatch<React.SetStateAction<TutorSession | null>>;
 }
@@ -37,8 +38,17 @@ async function getUserData(uid: string): Promise<User | null> {
         energy: 10,
         dominionPoints: 40,
         rank: 'G',
+        lastSessionCompletedAt: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(), // Yesterday
+        weeklyActivity: [true, true, false, false, true, true, false],
     };
 }
+
+const isSameDay = (date1: Date, date2: Date) => {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+};
+
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -124,8 +134,56 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const completeSessionForToday = () => {
+    setUser(currentUser => {
+        if (!currentUser) return null;
+
+        const today = new Date();
+        const lastSessionDate = currentUser.lastSessionCompletedAt ? new Date(currentUser.lastSessionCompletedAt) : null;
+        
+        let newStreak = currentUser.currentStreak;
+        let newWeeklyActivity = [...(currentUser.weeklyActivity || Array(7).fill(false))];
+
+        const todayIndex = (today.getDay() + 6) % 7; // Monday is 0, Sunday is 6
+        newWeeklyActivity[todayIndex] = true;
+
+        if (lastSessionDate) {
+            if (isSameDay(today, lastSessionDate)) {
+                // Same day, do nothing to streak
+            } else {
+                const yesterday = new Date();
+                yesterday.setDate(today.getDate() - 1);
+
+                if (isSameDay(yesterday, lastSessionDate)) {
+                    // Consecutive days, increase streak
+                    newStreak += 1;
+                } else {
+                    // Gap in days, reset streak to 1
+                    newStreak = 1;
+                }
+            }
+        } else {
+            // First session ever
+            newStreak = 1;
+        }
+
+        // Shift weekly activity if a new week starts
+        if (lastSessionDate && today.getDay() < lastSessionDate.getDay()) {
+            newWeeklyActivity = Array(7).fill(false);
+            newWeeklyActivity[todayIndex] = true;
+        }
+
+        return {
+            ...currentUser,
+            currentStreak: newStreak,
+            lastSessionCompletedAt: today.toISOString(),
+            weeklyActivity: newWeeklyActivity,
+        };
+    });
+  };
+
   return (
-    <UserContext.Provider value={{ user, setUser, decrementEnergy, addEnergy, addCoins, subtractCoins, addDominionPoints, tutorSession, setTutorSession }}>
+    <UserContext.Provider value={{ user, setUser, decrementEnergy, addEnergy, addCoins, subtractCoins, addDominionPoints, completeSessionForToday, tutorSession, setTutorSession }}>
       {children}
     </UserContext.Provider>
   );

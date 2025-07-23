@@ -750,7 +750,7 @@ function AprenderPageComponent() {
   const sessionIndexParam = searchParams.get('session');
   
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { user, addCoins, addDominionPoints } = useUser();
+  const { user, addCoins, addDominionPoints, completeSessionForToday } = useUser();
   const hasEnergy = user && user.energy > 0;
   
   useEffect(() => {
@@ -784,8 +784,11 @@ function AprenderPageComponent() {
     if (state.project && state.srs && state.finalSessionStats) {
         dispatch({ type: 'SET_FINISHING', payload: true });
 
+        // Update global user state
         addDominionPoints(state.finalSessionStats.masteryProgress);
         addCoins(state.finalSessionStats.cognitiveCredits);
+        completeSessionForToday();
+
 
         const performanceSummary = state.srs!.getPerformanceSummary();
         const result = await handleEndSessionAndRefinePlan(state.project!.slug, parseInt(sessionIndexParam!), performanceSummary);
