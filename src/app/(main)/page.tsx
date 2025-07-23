@@ -95,10 +95,6 @@ export default function DashboardPage() {
             <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
             <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
           </div>
-          <Button size="lg" className="bg-primary/80 hover:bg-primary text-primary-foreground" disabled={myProjects.length === 0}>
-            <BookOpen className="mr-2 h-4 w-4" />
-            Aprender
-          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
