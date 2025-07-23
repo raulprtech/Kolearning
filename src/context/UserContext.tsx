@@ -48,6 +48,35 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     // In a real app, you'd get the UID from the session.
     const uid = 'mock-user-id'; 
     getUserData(uid).then(setUser);
+
+    const energyRecoveryInterval = setInterval(() => {
+        setUser(currentUser => {
+            if (!currentUser || currentUser.energy >= 10) {
+                return currentUser;
+            }
+
+            const now = new Date().getTime();
+            const lastRecoveryString = localStorage.getItem('lastEnergyRecoveryTimestamp');
+            const lastRecovery = lastRecoveryString ? parseInt(lastRecoveryString, 10) : now;
+            
+            const hoursPassed = (now - lastRecovery) / (1000 * 60 * 60);
+
+            if (hoursPassed >= 2) {
+                const energyToRecover = Math.floor(hoursPassed / 2);
+                const newEnergy = Math.min(10, currentUser.energy + energyToRecover);
+
+                if (newEnergy > currentUser.energy) {
+                    localStorage.setItem('lastEnergyRecoveryTimestamp', now.toString());
+                    return { ...currentUser, energy: newEnergy };
+                }
+            }
+            
+            return currentUser;
+        });
+    }, 60000); // Check every minute
+
+    return () => clearInterval(energyRecoveryInterval);
+
   }, []);
 
   const decrementEnergy = (cost: number = 1) => {
