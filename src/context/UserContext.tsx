@@ -36,6 +36,7 @@ async function getUserData(uid: string): Promise<User | null> {
         coins: 142,
         energy: 10,
         dominionPoints: 40,
+        rank: 'G',
     };
 }
 

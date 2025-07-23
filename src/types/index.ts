@@ -12,6 +12,7 @@ export interface User {
   coins: number;
   energy: number;
   dominionPoints: number;
+  rank: string;
 }
 
 export interface StudyPlan {

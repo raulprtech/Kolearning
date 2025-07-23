@@ -10,9 +10,49 @@ import type { Project } from '@/types';
 import { DashboardProjectCard } from '@/components/deck/DashboardProjectCard';
 import { Progress } from '@/components/ui/progress';
 import { useUser } from '@/context/UserContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getAllProjects } from '@/app/actions/projects';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const adventurerRanks = [
+  { rank: 'G', name: 'Aventurero de Rango G', requiredPoints: 0 },
+  { rank: 'F', name: 'Aventurero de Rango F', requiredPoints: 100 },
+  { rank: 'E', name: 'Aventurero de Rango E', requiredPoints: 300 },
+  { rank: 'D', name: 'Aventurero de Rango D', requiredPoints: 600 },
+  { rank: 'C', name: 'Aventurero de Rango C', requiredPoints: 1000 },
+  { rank: 'B', name: 'Aventurero de Rango B', requiredPoints: 1500 },
+  { rank: 'A', name: 'Aventurero de Rango A', requiredPoints: 2500 },
+  { rank: 'S', name: 'Aventurero de Rango S', requiredPoints: 5000 },
+];
+
+const calculateRank = (dominionPoints: number) => {
+  let currentRank = adventurerRanks[0];
+  let nextRank = adventurerRanks[1];
+
+  for (let i = 0; i < adventurerRanks.length; i++) {
+    if (dominionPoints >= adventurerRanks[i].requiredPoints) {
+      currentRank = adventurerRanks[i];
+      if (i + 1 < adventurerRanks.length) {
+        nextRank = adventurerRanks[i + 1];
+      } else {
+        // Max rank reached
+        nextRank = currentRank;
+      }
+    } else {
+      break;
+    }
+  }
+
+  const pointsForNextRank = nextRank.requiredPoints - currentRank.requiredPoints;
+  const pointsProgress = dominionPoints - currentRank.requiredPoints;
+  const progressPercentage = pointsForNextRank > 0 ? (pointsProgress / pointsForNextRank) * 100 : 100;
+
+  return {
+    currentRankName: currentRank.name,
+    pointsToNextLevel: nextRank.requiredPoints - dominionPoints,
+    progressPercentage,
+  };
+};
 
 export default function DashboardPage() {
     const { user } = useUser();
@@ -37,9 +77,11 @@ export default function DashboardPage() {
     const energy = user?.energy ?? 10;
     const maxEnergy = 10;
     const energyPercentage = maxEnergy > 0 ? (energy / maxEnergy) * 100 : 0;
-    const dominionPoints = user?.dominionPoints ?? 0;
-    const nextLevelPoints = 100;
-    const progressPercentage = (dominionPoints / nextLevelPoints) * 100;
+    
+    const rankInfo = useMemo(() => {
+        if (!user) return null;
+        return calculateRank(user.dominionPoints);
+    }, [user]);
 
     const weeklyActivity = [
         { day: 'Lun', active: true },
@@ -78,12 +120,15 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="my-4">
-                <p className="text-2xl font-bold">Aprendiz en ascenso</p>
+                <p className="text-2xl font-bold">{rankInfo?.currentRankName || 'Cargando...'}</p>
               </div>
               <div className="w-full">
-                <Progress value={progressPercentage} className="h-2" />
+                <Progress value={rankInfo?.progressPercentage ?? 0} className="h-2" />
                 <p className="text-xs text-muted-foreground mt-1 text-right">
-                  {dominionPoints}/{nextLevelPoints} para el siguiente nivel
+                  {rankInfo?.pointsToNextLevel && rankInfo.pointsToNextLevel > 0 
+                    ? `${rankInfo.pointsToNextLevel} para el siguiente nivel`
+                    : '¡Rango máximo alcanzado!'
+                  }
                 </p>
               </div>
             </CardContent>
