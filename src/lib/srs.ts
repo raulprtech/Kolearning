@@ -25,6 +25,10 @@ export class SpacedRepetitionSystem {
     private sessionType: SessionType;
     private planProgress: number; // 0.0 to 1.0
 
+    // Streak tracking
+    private currentStreak: number = 0;
+    private bestStreak: number = 0;
+
     constructor(cards: Flashcard[], sessionType: SessionType, planProgress: number) {
         this.cards = cards;
         this.sessionType = sessionType;
@@ -157,7 +161,18 @@ export class SpacedRepetitionSystem {
         
         // Remove the reviewed card from the front of the queue
         this.reviewQueue.shift();
+        
+        // Streak logic
+        if (isCorrect) {
+            this.currentStreak++;
+            if (this.currentStreak > this.bestStreak) {
+                this.bestStreak = this.currentStreak;
+            }
+        } else {
+            this.currentStreak = 0;
+        }
 
+        // SM-2 algorithm implementation
         if (!isCorrect) {
             // If incorrect, reset progress and move to back of learning queue
             state.repetitions = 0;
@@ -166,12 +181,11 @@ export class SpacedRepetitionSystem {
             this.reviewQueue.push(cardId);
             return;
         }
-
-        // SM-2 algorithm implementation
+        
         if (rating < 2) { // 0 or 1 (Forgot, but was marked as correct, e.g. via "Show Answer" or just difficult)
             state.repetitions = 0;
             state.interval = 1;
-             this.reviewQueue.push(cardId); // See again in this session
+            // Don't re-queue if it was marked correct, even if difficult. Let the algorithm handle the next interval.
         } else { // 2 or 3 (Remembered well)
             if (state.repetitions === 0) {
                 state.interval = 1;
@@ -181,9 +195,8 @@ export class SpacedRepetitionSystem {
                 state.interval = Math.round(state.interval * state.easeFactor);
             }
             state.repetitions += 1;
-            // If the user answered correctly and found it easy/good, we don't re-add it to the current session queue.
         }
-
+        
         state.easeFactor = state.easeFactor + (0.1 - (4 - rating) * (0.08 + (4 - rating) * 0.02));
         if (state.easeFactor < 1.3) state.easeFactor = 1.3;
 
@@ -207,31 +220,6 @@ export class SpacedRepetitionSystem {
     }
 
     public getStats() {
-        let correct = 0;
-        let incorrect = 0;
-        let currentStreak = 0;
-        let bestStreak = 0;
-
-        this.cardStates.forEach(state => {
-            if (state.isCorrect === true) {
-                correct++;
-                currentStreak++;
-            } else if (state.isCorrect === false) {
-                incorrect++;
-                if (currentStreak > bestStreak) {
-                    bestStreak = currentStreak;
-                }
-                currentStreak = 0;
-            }
-        });
-        
-        if (currentStreak > bestStreak) {
-            bestStreak = currentStreak;
-        }
-        
-        const masteryPointsMap = { 3: 20, 2: 15, 1: 5, 0: 0 };
-        const creditsMap = { 3: 10, 2: 8, 1: 2, 0: 0 };
-
         const masteryProgress = Array.from(this.cardStates.values()).reduce((acc, state) => {
             // Simplified points logic for now
             return acc + (state.isCorrect ? 10 : 0);
@@ -246,8 +234,8 @@ export class SpacedRepetitionSystem {
         return {
             masteryProgress,
             cognitiveCredits,
-            bestStreak,
-            currentStreak,
+            bestStreak: this.bestStreak,
+            currentStreak: this.currentStreak,
         };
     }
     

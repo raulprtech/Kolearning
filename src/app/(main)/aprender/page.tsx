@@ -790,7 +790,7 @@ function AprenderPageComponent() {
         const performanceSummary = state.srs!.getPerformanceSummary();
         const result = await handleEndSessionAndRefinePlan(state.project!.slug, parseInt(sessionIndexParam!), performanceSummary);
         
-        let url = `/mis-proyectos/${projectSlug}?mastery=${state.finalSessionStats.masteryProgress}&credits=${state.finalSessionStats.cognitiveCredits}&session=${sessionIndexParam}`;
+        let url = `/mis-proyectos/${projectSlug}?mastery=${state.finalSessionStats.masteryProgress}&credits=${state.finalSessionStats.cognitiveCredits}&session=${sessionIndexParam}&streak=${state.finalSessionStats.bestStreak}`;
         if (result.planUpdated) {
             url += `&planUpdated=true&reasoning=${encodeURIComponent(result.reasoning || '')}`;
         }

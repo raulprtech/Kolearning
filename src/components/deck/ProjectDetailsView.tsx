@@ -51,12 +51,14 @@ export function ProjectDetailsView({ project }: { project: Project }) {
 
   const [dominionPoints, setDominionPoints] = useState(0);
   const [earnedCoins, setEarnedCoins] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
   const [planUpdateInfo, setPlanUpdateInfo] = useState<{updated: boolean, reason: string | null}>({updated: false, reason: null});
 
 
   useEffect(() => {
     const masteryParam = searchParams.get('mastery');
     const creditsParam = searchParams.get('credits');
+    const streakParam = searchParams.get('streak');
     const planUpdatedParam = searchParams.get('planUpdated');
     const reasoningParam = searchParams.get('reasoning');
     
@@ -69,6 +71,10 @@ export function ProjectDetailsView({ project }: { project: Project }) {
       const creditPoints = parseInt(creditsParam, 10);
       setEarnedCoins(creditPoints);
       addCoins(creditPoints);
+    }
+    if (streakParam) {
+      const streakPoints = parseInt(streakParam, 10);
+      setBestStreak(streakPoints);
     }
     if (planUpdatedParam === 'true') {
         setPlanUpdateInfo({ updated: true, reason: reasoningParam ? decodeURIComponent(reasoningParam) : 'Koli ha optimizado tu siguiente sesión.' });
@@ -109,7 +115,7 @@ export function ProjectDetailsView({ project }: { project: Project }) {
             <p className="text-muted-foreground mb-2 text-sm">Mejor Racha</p>
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 text-yellow-400" />
-              <p className="text-2xl font-bold">0</p>
+              <p className="text-2xl font-bold">{bestStreak}</p>
             </div>
           </CardContent>
         </Card>
