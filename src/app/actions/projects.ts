@@ -163,9 +163,9 @@ export async function handleCreateProject(
     studyPlan: StudyPlan
 ) {
     const session = await getAuthSession();
-    // if (!session) {
-    //     throw new Error('Unauthorized');
-    // }
+    if (!session) {
+        throw new Error('Unauthorized');
+    }
 
     if (!projectDetails.title || flashcards.length === 0) {
         throw new Error('Project must have a title and at least one flashcard.');
@@ -194,7 +194,7 @@ export async function handleCreateProject(
         title: projectDetails.title,
         description: projectDetails.description,
         category: projectDetails.category || 'General',
-        author: session?.uid || 'User', // Set author to the current user's UID or a fallback
+        author: session.uid,
         size: validation.data.length,
         bibliography: [],
         flashcards: validation.data,

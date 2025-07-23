@@ -21,6 +21,8 @@ import {
 import type { Project } from '@/types';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { getAllProjects } from '@/app/actions/projects';
+import { getAuthSession } from '@/lib/auth';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 
 
 export default function ProyectosPage() {
@@ -32,11 +34,16 @@ export default function ProyectosPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [session, setSession] = useState<DecodedIdToken | null>(null);
 
   useEffect(() => {
-    getAllProjects().then(projects => {
+    async function loadData() {
+        const projects = await getAllProjects();
         setAllProjects(projects);
-    });
+        const authSession = await getAuthSession();
+        setSession(authSession);
+    }
+    loadData();
   }, []);
 
   const recommendedProjects = useMemo(() => {
@@ -82,7 +89,13 @@ export default function ProyectosPage() {
 
     // Filter by author
     if (authorFilter && authorFilter !== 'all') {
-      results = results.filter(project => project.author === authorFilter || (authorFilter === 'Community' && project.author !== 'Kolearning' && project.author !== 'User'));
+       if (authorFilter === 'User' && session) {
+         results = results.filter(project => project.author === session.uid);
+       } else if (authorFilter === 'Community') {
+         results = results.filter(project => project.author !== 'Kolearning' && project.author !== session?.uid);
+       } else {
+         results = results.filter(project => project.author === authorFilter);
+       }
     }
 
     setSearchResults(results);

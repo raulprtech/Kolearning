@@ -13,6 +13,8 @@ import { useUser } from '@/context/UserContext';
 import { useEffect, useState, useMemo } from 'react';
 import { getAllProjects } from '@/app/actions/projects';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getAuthSession } from '@/lib/auth';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 
 const adventurerRanks = [
   { rank: 'G', name: 'Aprendedor Rango G', requiredPoints: 0 },
@@ -59,18 +61,25 @@ export default function DashboardPage() {
     const { user } = useUser();
     const [allProjects, setAllProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
+    const [session, setSession] = useState<DecodedIdToken | null>(null);
 
     useEffect(() => {
-        async function loadProjects() {
+        async function loadData() {
             setLoading(true);
             const projects = await getAllProjects();
             setAllProjects(projects);
+            const authSession = await getAuthSession();
+            setSession(authSession);
             setLoading(false);
         }
-        loadProjects();
+        loadData();
     }, []);
     
-    const myProjects = allProjects.filter(p => p.author === 'User');
+    const myProjects = useMemo(() => {
+        if (!session) return [];
+        return allProjects.filter(p => p.author === session.uid);
+    }, [allProjects, session]);
+    
     const recommendedProjects = allProjects.filter(p => p.author === 'Kolearning').slice(0, 4);
 
 
