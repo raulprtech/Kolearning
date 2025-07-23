@@ -13,6 +13,14 @@ import { useUser } from '@/context/UserContext';
 import { useEffect, useState, useMemo } from 'react';
 import { getAllProjects } from '@/app/actions/projects';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const adventurerRanks = [
   { rank: 'G', name: 'Aventurero de Rango G', requiredPoints: 0 },
@@ -102,12 +110,25 @@ export default function DashboardPage() {
             <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
             <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
           </div>
-           <Button size="lg" className="bg-primary/80 hover:bg-primary text-primary-foreground" asChild>
-            <Link href="/proyectos">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Aprender
-            </Link>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button size="lg" className="bg-primary/80 hover:bg-primary text-primary-foreground" disabled={myProjects.length === 0}>
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Aprender
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuLabel>Continuar Proyecto</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {myProjects.map(project => (
+                    <Link key={project.id} href={`/aprender?project=${project.slug}&session=${project.completedSessions || 0}`} passHref>
+                        <DropdownMenuItem>
+                            {project.title}
+                        </DropdownMenuItem>
+                    </Link>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
