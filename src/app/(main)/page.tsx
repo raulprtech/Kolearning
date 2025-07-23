@@ -57,6 +57,7 @@ const calculateRank = (dominionPoints: number) => {
 
   return {
     currentRankName: currentRank.name,
+    currentRankLetter: currentRank.rank,
     pointsToNextLevel: nextRank.requiredPoints - dominionPoints,
     progressPercentage,
   };
@@ -141,7 +142,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="my-4">
-                <p className="text-2xl font-bold">{rankInfo?.currentRankName || 'Cargando...'}</p>
+                <p className="text-5xl font-bold">{rankInfo?.currentRankLetter || 'G'}</p>
+                 <p className="text-sm text-muted-foreground">{rankInfo?.currentRankName || 'Cargando...'}</p>
               </div>
               <div className="w-full">
                 <Progress value={rankInfo?.progressPercentage ?? 0} className="h-2" />
