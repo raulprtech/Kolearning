@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -21,7 +22,7 @@ import {
 import type { Project } from '@/types';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { getAllProjects } from '@/app/actions/projects';
-import { getAuthSession } from '@/lib/auth';
+import { getAuthSession } from '@/app/actions/auth';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 
 

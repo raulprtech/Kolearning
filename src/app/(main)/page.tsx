@@ -13,7 +13,7 @@ import { useUser } from '@/context/UserContext';
 import { useEffect, useState, useMemo } from 'react';
 import { getAllProjects } from '@/app/actions/projects';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getAuthSession } from '@/lib/auth';
+import { getAuthSession } from '@/app/actions/auth';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 
 const adventurerRanks = [
