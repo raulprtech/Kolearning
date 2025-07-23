@@ -159,9 +159,6 @@ export class SpacedRepetitionSystem {
         state.isCorrect = isCorrect;
         state.lastReviewed = new Date();
         
-        // Remove the reviewed card from the front of the queue
-        this.reviewQueue.shift();
-        
         // Streak logic
         if (isCorrect) {
             this.currentStreak++;
@@ -172,41 +169,50 @@ export class SpacedRepetitionSystem {
             this.currentStreak = 0;
         }
 
-        // SM-2 algorithm implementation
-        if (!isCorrect) {
-            // If incorrect, reset progress and move to back of learning queue
-            state.repetitions = 0;
-            state.interval = 1;
-            // Move card to the back of the queue to be seen again soon
-            this.reviewQueue.push(cardId);
-            return;
-        }
-        
-        if (rating < 2) { // 0 or 1 (Forgot, but was marked as correct, e.g. via "Show Answer" or just difficult)
-            state.repetitions = 0;
-            state.interval = 1;
-            // Don't re-queue if it was marked correct, even if difficult. Let the algorithm handle the next interval.
-        } else { // 2 or 3 (Remembered well)
-            if (state.repetitions === 0) {
-                state.interval = 1;
-            } else if (state.repetitions === 1) {
-                state.interval = 6;
-            } else {
-                state.interval = Math.round(state.interval * state.easeFactor);
+        if (isCorrect) {
+             // If correct, remove from queue permanently for this session
+            this.reviewQueue.shift();
+        } else {
+            // If incorrect, move to back of learning queue
+            const reviewedCard = this.reviewQueue.shift();
+            if (reviewedCard) {
+                this.reviewQueue.push(reviewedCard);
             }
-            state.repetitions += 1;
         }
-        
-        state.easeFactor = state.easeFactor + (0.1 - (4 - rating) * (0.08 + (4 - rating) * 0.02));
-        if (state.easeFactor < 1.3) state.easeFactor = 1.3;
+
+        // SM-2 algorithm implementation
+        if (isCorrect) {
+            if (rating < 2) { // Forgot, but was marked as correct (e.g. via "Show Answer")
+                state.repetitions = 0;
+                state.interval = 1;
+            } else { // Remembered well
+                if (state.repetitions === 0) {
+                    state.interval = 1;
+                } else if (state.repetitions === 1) {
+                    state.interval = 6;
+                } else {
+                    state.interval = Math.round(state.interval * state.easeFactor);
+                }
+                state.repetitions += 1;
+            }
+            state.easeFactor = state.easeFactor + (0.1 - (4 - rating) * (0.08 + (4 - rating) * 0.02));
+            if (state.easeFactor < 1.3) state.easeFactor = 1.3;
+        } else {
+             // If incorrect, reset progress
+             state.repetitions = 0;
+             state.interval = 1;
+        }
 
         // If card was very difficult, inject parent atoms into the queue
-        if (rating === 0) { // 'Muy Difícil'
+        if (isCorrect && rating === 0) { // 'Muy Difícil'
             const card = this.allCardsMap.get(cardId);
             if (card && card.atomos_padre && card.atomos_padre.length > 0) {
-                const parentIds = card.atomos_padre.filter(pId => this.allCardsMap.has(pId));
+                const parentIds = card.atomos_padre.filter(pId => this.allCardsMap.has(pId) && !this.reviewQueue.includes(pId));
                 // Add parents to the front of the queue, avoiding duplicates
-                this.reviewQueue = [...new Set([...parentIds.reverse(), ...this.reviewQueue])];
+                 if (parentIds.length > 0) {
+                    const currentCardIndex = 1; // Insert after the upcoming card
+                    this.reviewQueue.splice(currentCardIndex, 0, ...parentIds.reverse());
+                }
             }
         }
     }
@@ -220,16 +226,15 @@ export class SpacedRepetitionSystem {
     }
 
     public getStats() {
-        const masteryProgress = Array.from(this.cardStates.values()).reduce((acc, state) => {
-            // Simplified points logic for now
+        const answeredCards = Array.from(this.cardStates.values()).filter(s => s.isCorrect !== null);
+
+        const masteryProgress = answeredCards.reduce((acc, state) => {
             return acc + (state.isCorrect ? 10 : 0);
         }, 0);
         
-         const cognitiveCredits = Array.from(this.cardStates.values()).reduce((acc, state) => {
-            // Simplified credits logic for now
+         const cognitiveCredits = answeredCards.reduce((acc, state) => {
             return acc + (state.isCorrect ? 5 : 0);
         }, 0);
-
 
         return {
             masteryProgress,
