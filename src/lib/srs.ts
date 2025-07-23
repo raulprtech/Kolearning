@@ -168,11 +168,11 @@ export class SpacedRepetitionSystem {
         }
 
         // SM-2 algorithm implementation
-        if (rating < 2) { // 0 or 1 (Forgot, but was marked as correct, e.g. via "Show Answer")
+        if (rating < 2) { // 0 or 1 (Forgot, but was marked as correct, e.g. via "Show Answer" or just difficult)
             state.repetitions = 0;
             state.interval = 1;
              this.reviewQueue.push(cardId); // See again in this session
-        } else { // 2 or 3 (Remembered)
+        } else { // 2 or 3 (Remembered well)
             if (state.repetitions === 0) {
                 state.interval = 1;
             } else if (state.repetitions === 1) {
@@ -181,6 +181,7 @@ export class SpacedRepetitionSystem {
                 state.interval = Math.round(state.interval * state.easeFactor);
             }
             state.repetitions += 1;
+            // If the user answered correctly and found it easy/good, we don't re-add it to the current session queue.
         }
 
         state.easeFactor = state.easeFactor + (0.1 - (4 - rating) * (0.08 + (4 - rating) * 0.02));

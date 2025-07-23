@@ -511,6 +511,7 @@ type State = {
     sessionProgress: number;
     openAnswerText: string;
     openAnswerFeedback: string | null;
+    openAnswerAttempts: number;
     masteryProgress: number;
     cognitiveCredits: number;
     bestStreak: number;
@@ -552,6 +553,7 @@ const initialState: State = {
     sessionProgress: 0,
     openAnswerText: '',
     openAnswerFeedback: null,
+    openAnswerAttempts: 0,
     masteryProgress: 0,
     cognitiveCredits: 0,
     bestStreak: 0,
@@ -600,15 +602,15 @@ function reducer(state: State, action: Action): State {
             if (!srs || !currentCardId) return state;
 
             srs.recordAttempt(currentCardId);
+            const newAttempts = state.openAnswerAttempts + 1;
 
             if (evaluation.isCorrect) {
-                return { ...state, isAnswered: true, isCorrect: true, openAnswerText: userAnswer, isLoading: false };
+                return { ...state, isAnswered: true, isCorrect: true, openAnswerText: userAnswer, isLoading: false, openAnswerAttempts: newAttempts };
             } else {
-                 if (srs.getCardState(currentCardId)!.attempts >= 2) {
-                    // This will trigger the automatic conversion
-                    return { ...state, isLoading: false, openAnswerFeedback: evaluation.feedback };
+                 if (newAttempts >= 2) {
+                    return { ...state, isLoading: false, openAnswerFeedback: evaluation.feedback, openAnswerAttempts: newAttempts };
                 } else {
-                    return { ...state, openAnswerFeedback: evaluation.feedback, openAnswerText: '', isLoading: false };
+                    return { ...state, openAnswerFeedback: evaluation.feedback, openAnswerText: '', isLoading: false, openAnswerAttempts: newAttempts };
                 }
             }
         }
@@ -673,6 +675,7 @@ function reducer(state: State, action: Action): State {
                 isCorrect: null,
                 openAnswerText: '',
                 openAnswerFeedback: null,
+                openAnswerAttempts: 0,
                 mcOptionsForFailedQuestion: null,
                 selectedMcOption: null,
                 sessionProgress: progress,
@@ -800,13 +803,12 @@ function AprenderPageComponent() {
 
   // Effect to handle automatic MC conversion on 3rd attempt
   useEffect(() => {
-    const cardState = state.srs?.getCardState(state.currentCardId || '');
-    if (cardState && cardState.attempts >= 2 && currentQuestion?.type === 'open-answer' && !state.isAnswered) {
+    if (state.openAnswerAttempts >= 2 && currentQuestion?.type === 'open-answer' && !state.isAnswered) {
         if (state.mcOptionsForFailedQuestion) {
             dispatch({ type: 'FORCE_MC_CONVERSION' });
         }
     }
-  }, [state.srs, state.currentCardId, state.isAnswered, currentQuestion?.type, state.mcOptionsForFailedQuestion]);
+  }, [state.openAnswerAttempts, currentQuestion?.type, state.isAnswered, state.mcOptionsForFailedQuestion]);
   
   // Effect to generate MC options when a question needs them
     useEffect(() => {
@@ -830,7 +832,7 @@ function AprenderPageComponent() {
                 }
             });
         }
-    }, [currentQuestion, state.srs]);
+    }, [currentQuestion]);
 
 
   if (state.isLoading || !state.project) {
@@ -912,8 +914,7 @@ function AprenderPageComponent() {
     dispatch({ type: 'SET_LOADING', payload: true });
 
     // Pre-fetch MC options on first failure
-    const cardState = state.srs?.getCardState(currentQuestion.id);
-    if (cardState?.attempts === 1) { // Will become 2nd attempt, fetch options for 3rd
+    if (state.openAnswerAttempts === 0) {
         handleGenerateOptionsForQuestion({
             question: currentQuestion.question,
             correctAnswer: currentQuestion.answer,
@@ -1017,7 +1018,7 @@ function AprenderPageComponent() {
 
           <Card className={cn("mb-3 sm:mb-6 bg-card/70", state.isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta {currentQuestion.type === 'open-answer' && !state.isAnswered && (state.srs?.getCardState(currentQuestion.id)?.attempts || 0) > 0 ? `(Intento ${state.srs!.getCardState(currentQuestion.id)!.attempts + 1})` : ''}</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Pregunta {currentQuestion.type === 'open-answer' && !state.isAnswered && state.openAnswerAttempts > 0 ? `(Intento ${state.openAnswerAttempts + 1})` : ''}</CardTitle>
               {state.isAnswered && (
                  <div className="flex items-center gap-4">
                     { state.isCorrect ? (
