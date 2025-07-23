@@ -23,14 +23,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 const adventurerRanks = [
-  { rank: 'G', name: 'Aventurero de Rango G', requiredPoints: 0 },
-  { rank: 'F', name: 'Aventurero de Rango F', requiredPoints: 100 },
-  { rank: 'E', name: 'Aventurero de Rango E', requiredPoints: 300 },
-  { rank: 'D', name: 'Aventurero de Rango D', requiredPoints: 600 },
-  { rank: 'C', name: 'Aventurero de Rango C', requiredPoints: 1000 },
-  { rank: 'B', name: 'Aventurero de Rango B', requiredPoints: 1500 },
-  { rank: 'A', name: 'Aventurero de Rango A', requiredPoints: 2500 },
-  { rank: 'S', name: 'Aventurero de Rango S', requiredPoints: 5000 },
+  { rank: 'G', name: 'Aprendedor Rango G', requiredPoints: 0 },
+  { rank: 'F', name: 'Aprendedor Rango F', requiredPoints: 100 },
+  { rank: 'E', name: 'Aprendedor Rango E', requiredPoints: 300 },
+  { rank: 'D', name: 'Aprendedor Rango D', requiredPoints: 600 },
+  { rank: 'C', name: 'Aprendedor Rango C', requiredPoints: 1000 },
+  { rank: 'B', name: 'Aprendedor Rango B', requiredPoints: 1500 },
+  { rank: 'A', name: 'Aprendedor Rango A', requiredPoints: 2500 },
+  { rank: 'S', name: 'Aprendedor Rango S', requiredPoints: 5000 },
 ];
 
 const calculateRank = (dominionPoints: number) => {
@@ -134,14 +134,13 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="my-4">
-                <p className="text-5xl font-bold">{rankInfo?.currentRankLetter || 'G'}</p>
-                <p className="text-xs text-muted-foreground mt-1">{rankInfo?.currentRankName || 'Aventurero de Rango G'}</p>
+                <p className="text-3xl font-bold">{rankInfo?.currentRankName || 'Aprendedor Rango G'}</p>
               </div>
               <div className="w-full">
                 <Progress value={rankInfo?.progressPercentage ?? 0} className="h-2" />
                 <p className="text-xs text-muted-foreground mt-1 text-right">
                   {rankInfo?.pointsToNextLevel && rankInfo.pointsToNextLevel > 0 
-                    ? `${rankInfo.pointsToNextLevel} para el siguiente nivel`
+                    ? `${rankInfo.pointsToNextLevel} para el siguiente rango`
                     : '¡Rango máximo alcanzado!'
                   }
                 </p>
@@ -255,3 +254,4 @@ export default function DashboardPage() {
 }
 
     
+
