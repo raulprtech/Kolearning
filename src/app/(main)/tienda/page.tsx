@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Zap, ArrowLeft, ShoppingCart, Gem } from 'lucide-react';
 import Link from 'next/link';
+import { useUser } from '@/context/UserContext';
+import { cn } from '@/lib/utils';
 
 const CoinIcon = (props: React.HTMLAttributes<HTMLSpanElement>) => (
     <span {...props}>🪙</span>
@@ -19,11 +21,24 @@ const energyPacks = [
 
 export default function ShopPage() {
   const { toast } = useToast();
+  const { user, addEnergy, subtractCoins } = useUser();
 
-  const handlePurchase = (packName: string) => {
+  const handlePurchase = (pack: typeof energyPacks[number]) => {
+    if (!user || user.coins < pack.price) {
+        toast({
+            variant: 'destructive',
+            title: 'Créditos insuficientes',
+            description: `No tienes suficientes créditos para comprar el ${pack.name}.`,
+        });
+        return;
+    }
+
+    subtractCoins(pack.price);
+    addEnergy(pack.amount);
+
     toast({
-      title: 'Compra Exitosa',
-      description: `Has comprado un ${packName} de energía.`,
+      title: '¡Compra Exitosa!',
+      description: `Has comprado un ${pack.name} de energía por ${pack.price} créditos.`,
     });
   };
 
@@ -48,7 +63,7 @@ export default function ShopPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {energyPacks.map((pack) => (
-              <Card key={pack.name} className="text-center hover:shadow-lg transition-shadow">
+              <Card key={pack.name} className={cn("text-center hover:shadow-lg transition-shadow", user && user.coins < pack.price && "bg-muted/50 opacity-60")}>
                 <CardContent className="p-6 flex flex-col items-center gap-4">
                   <div className="p-4 bg-muted rounded-full">
                     {pack.icon}
@@ -58,7 +73,11 @@ export default function ShopPage() {
                         <CoinIcon />
                         <span>{pack.price}</span>
                    </div>
-                  <Button className="w-full" onClick={() => handlePurchase(pack.name)}>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handlePurchase(pack)}
+                    disabled={!user || user.coins < pack.price}
+                  >
                     Comprar
                   </Button>
                 </CardContent>

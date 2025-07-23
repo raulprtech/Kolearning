@@ -10,7 +10,9 @@ interface UserContextType {
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   decrementEnergy: (cost?: number) => void;
+  addEnergy: (amount: number) => void;
   addCoins: (amount: number) => void;
+  subtractCoins: (amount: number) => void;
   addDominionPoints: (amount: number) => void;
   tutorSession: TutorSession | null;
   setTutorSession: React.Dispatch<React.SetStateAction<TutorSession | null>>;
@@ -56,6 +58,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const addEnergy = (amount: number) => {
+    setUser(currentUser => {
+        if (currentUser) {
+            return { ...currentUser, energy: currentUser.energy + amount };
+        }
+        return currentUser;
+    });
+  };
+
   const addCoins = (amount: number) => {
     setUser(currentUser => {
         if (currentUser) {
@@ -63,6 +74,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
         return currentUser;
     });
+  };
+
+  const subtractCoins = (amount: number) => {
+      setUser(currentUser => {
+          if (currentUser && currentUser.coins >= amount) {
+              return { ...currentUser, coins: currentUser.coins - amount };
+          }
+          return currentUser;
+      });
   };
 
   const addDominionPoints = (amount: number) => {
@@ -75,7 +95,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser, decrementEnergy, addCoins, addDominionPoints, tutorSession, setTutorSession }}>
+    <UserContext.Provider value={{ user, setUser, decrementEnergy, addEnergy, addCoins, subtractCoins, addDominionPoints, tutorSession, setTutorSession }}>
       {children}
     </UserContext.Provider>
   );
