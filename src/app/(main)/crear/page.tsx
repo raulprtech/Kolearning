@@ -49,7 +49,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { handleGenerateProjectFromText, handleCreateProject, handleGenerateProjectFromYouTubeUrl, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
+import { handleGenerateProjectFromText, handleCreateProject, handlePastedTextImport as handlePastedTextImportAction, handleGenerateProjectFromPdf, handleGenerateProjectFromWebUrl, handleGenerateProjectFromImages, handleGenerateStudyPlan, handleRefineProjectDetails } from '@/app/actions/projects';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -131,7 +131,7 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   const sources: SourceInfo[] = [
     { title: 'Apuntes', type: 'notes', icon: <Book />, isFileBased: false, accept: '.txt,.md,.tex' },
     { title: 'PDF', type: 'pdf', icon: <FileText />, isFileBased: true, accept: '.pdf' },
-    { title: 'Video de YouTube', type: 'youtube', icon: <Youtube />, isFileBased: false },
+    // { title: 'Video de YouTube', type: 'youtube', icon: <Youtube />, isFileBased: false },
     { title: 'Página Web', type: 'web', icon: <Globe />, isFileBased: false },
     { title: 'Imagen', type: 'image', icon: <ImageIcon />, isFileBased: true, accept: '.png,.jpg,.jpeg,.webp', multiple: true },
     { title: 'Quizlet', type: 'quizlet', icon: <FileQuestion />, isFileBased: false },
@@ -285,22 +285,25 @@ const MagicImportModal = ({ onProjectGenerated, onProjectParsed }: { onProjectGe
   };
 
   const handleYoutubeImport = async () => {
-    if (!youtubeUrl) {
-      toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL de YouTube.' });
-      return;
-    }
-    setIsGenerating(true);
+    // This function is temporarily disabled.
+    toast({ variant: 'destructive', title: 'Función no disponible', description: 'La importación desde YouTube está temporalmente desactivada.' });
+    return;
+    // if (!youtubeUrl) {
+    //   toast({ variant: 'destructive', title: 'URL Vacía', description: 'Por favor, introduce una URL de YouTube.' });
+    //   return;
+    // }
+    // setIsGenerating(true);
     
-    const result = await handleGenerateProjectFromYouTubeUrl(youtubeUrl);
-    setIsGenerating(false);
+    // const result = await handleGenerateProjectFromYouTubeUrl(youtubeUrl);
+    // setIsGenerating(false);
 
-    if (result.error) {
-      toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
-    } else if (result.project) {
-      onProjectGenerated(result.project);
-      resetState();
-      toast({ title: `¡Tarjetas Generadas desde "${result.project.title}"!`, description: 'Tus nuevas tarjetas se han añadido al editor.' });
-    }
+    // if (result.error) {
+    //   toast({ variant: 'destructive', title: 'Error de Generación', description: result.error });
+    // } else if (result.project) {
+    //   onProjectGenerated(result.project);
+    //   resetState();
+    //   toast({ title: `¡Tarjetas Generadas desde "${result.project.title}"!`, description: 'Tus nuevas tarjetas se han añadido al editor.' });
+    // }
   };
   
   const handleWebImport = async () => {

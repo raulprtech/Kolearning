@@ -6,7 +6,6 @@ import { generateStudyPlan } from '@/ai/flows/generate-study-plan';
 import { refineStudyPlan } from '@/ai/flows/refine-study-plan';
 import { z } from 'zod';
 import type { Project, Flashcard as FlashcardType, StudyPlan, ProjectDetails, RefineProjectDetailsInput, GenerateStudyPlanInput, SessionPerformanceSummary } from '@/types';
-import { YoutubeTranscript } from 'youtube-transcript';
 import { redirect } from 'next/navigation';
 import { getAuthSession } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase/admin';
@@ -116,28 +115,6 @@ export async function handlePastedTextImport(
     
     return parsedCards;
 };
-
-export async function handleGenerateProjectFromYouTubeUrl(videoUrl: string) {
-  if (!videoUrl) {
-    return { error: 'YouTube URL cannot be empty.' };
-  }
-
-  try {
-    const transcriptResponse = await YoutubeTranscript.fetchTranscript(videoUrl);
-    if (!transcriptResponse || transcriptResponse.length === 0) {
-      return { error: 'Could not fetch transcript for this video. It might be disabled or private.' };
-    }
-
-    const studyNotes = transcriptResponse.map(item => item.text).join(' ');
-    
-    const result = await generateDeckFromText({ studyNotes });
-    return { project: result };
-
-  } catch (error) {
-    console.error('Error with YouTube project generation:', error);
-    return { error: 'This video ID is invalid or the video has no transcript.' };
-  }
-}
 
 export async function handleGenerateProjectFromWebUrl(webUrl: string) {
   if (!webUrl) {
