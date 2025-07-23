@@ -155,21 +155,22 @@ export class SpacedRepetitionSystem {
         state.isCorrect = isCorrect;
         state.lastReviewed = new Date();
         
+        // Remove the reviewed card from the front of the queue
+        this.reviewQueue.shift();
+
         if (!isCorrect) {
             // If incorrect, reset progress and move to back of learning queue
             state.repetitions = 0;
             state.interval = 1;
             // Move card to the back of the queue to be seen again soon
-            this.reviewQueue.shift(); // remove from front
             this.reviewQueue.push(cardId);
             return;
         }
 
         // SM-2 algorithm implementation
-        if (rating < 2) { // 0 or 1 (Forgot)
+        if (rating < 2) { // 0 or 1 (Forgot, but was marked as correct, e.g. via "Show Answer")
             state.repetitions = 0;
             state.interval = 1;
-             this.reviewQueue.shift();
              this.reviewQueue.push(cardId); // See again in this session
         } else { // 2 or 3 (Remembered)
             if (state.repetitions === 0) {
@@ -194,9 +195,6 @@ export class SpacedRepetitionSystem {
                 this.reviewQueue = [...new Set([...parentIds.reverse(), ...this.reviewQueue])];
             }
         }
-        
-        // Remove the reviewed card from the front of the queue
-        this.reviewQueue.shift();
     }
     
     public getReviewedCount(): number {

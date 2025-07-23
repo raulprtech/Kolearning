@@ -243,7 +243,7 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
         });
         setIsLoading(false);
         if (result.options) {
-            onConvertToMultipleChoice(result.options);
+            onConvertToMultipleChoice(result.options, currentQuestion.answer);
             setIsPopoverOpen(false);
         }
     };
@@ -518,6 +518,7 @@ type State = {
     isSessionFinished: boolean;
     finalSessionStats: { masteryProgress: number; cognitiveCredits: number; bestStreak: number; } | null;
     mcOptionsForFailedQuestion: any[] | null;
+    selectedMcOption: string | null;
 };
 
 type Action =
@@ -558,6 +559,7 @@ const initialState: State = {
     isSessionFinished: false,
     finalSessionStats: null,
     mcOptionsForFailedQuestion: null,
+    selectedMcOption: null,
 };
 
 function reducer(state: State, action: Action): State {
@@ -644,7 +646,7 @@ function reducer(state: State, action: Action): State {
             if (currentCardId && srs) {
                  srs.recordAttempt(currentCardId);
             }
-            return { ...state, isAnswered: true, isCorrect: action.payload.isCorrect };
+            return { ...state, isAnswered: true, isCorrect: action.payload.isCorrect, selectedMcOption: action.payload.selectedOption };
         }
         
         case 'SET_NEXT_QUESTION': {
@@ -672,6 +674,7 @@ function reducer(state: State, action: Action): State {
                 openAnswerText: '',
                 openAnswerFeedback: null,
                 mcOptionsForFailedQuestion: null,
+                selectedMcOption: null,
                 sessionProgress: progress,
                 ...newStats,
             };
@@ -807,30 +810,27 @@ function AprenderPageComponent() {
   
   // Effect to generate MC options when a question needs them
     useEffect(() => {
-        const nextCardInfo = state.srs?.getNextCard();
-        if (nextCardInfo?.needsMcOptions) {
-             const card = state.srs?.getCard(nextCardInfo.id);
-             if (card) {
-                handleGenerateOptionsForQuestion({
-                    question: card.question,
-                    correctAnswer: card.answer,
-                }).then(result => {
-                    if (result.options && card.id) {
-                        const formattedOptions = result.options.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
-                        const correctOption = formattedOptions.find(o => o.text === card.answer);
-                        dispatch({ 
-                            type: 'CONVERT_TO_MULTIPLE_CHOICE', 
-                            payload: { 
-                                cardId: card.id,
-                                options: formattedOptions, 
-                                correctAnswerId: correctOption?.id || 'A' 
-                            } 
-                        });
-                    }
-                });
-             }
+        const card = currentQuestion;
+        if (card && card.type === 'multiple-choice' && !card.options) {
+            handleGenerateOptionsForQuestion({
+                question: card.question,
+                correctAnswer: card.answer,
+            }).then(result => {
+                if (result.options && card.id) {
+                    const formattedOptions = result.options.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
+                    const correctOption = formattedOptions.find(o => o.text === card.answer);
+                    dispatch({ 
+                        type: 'CONVERT_TO_MULTIPLE_CHOICE', 
+                        payload: { 
+                            cardId: card.id,
+                            options: formattedOptions, 
+                            correctAnswerId: correctOption?.id || 'A' 
+                        } 
+                    });
+                }
+            });
         }
-    }, [state.currentCardId, state.srs]);
+    }, [currentQuestion, state.srs]);
 
 
   if (state.isLoading || !state.project) {
@@ -913,7 +913,7 @@ function AprenderPageComponent() {
 
     // Pre-fetch MC options on first failure
     const cardState = state.srs?.getCardState(currentQuestion.id);
-    if (cardState?.attempts === 0) {
+    if (cardState?.attempts === 1) { // Will become 2nd attempt, fetch options for 3rd
         handleGenerateOptionsForQuestion({
             question: currentQuestion.question,
             correctAnswer: currentQuestion.answer,
@@ -952,10 +952,10 @@ function AprenderPageComponent() {
       dispatch({ type: 'UPDATE_QUESTION_TEXT', payload: newQuestionText });
   };
 
-  const handleConvertToMultipleChoice = async (options: string[]) => {
+  const handleConvertToMultipleChoice = async (options: string[], correctAnswerText: string) => {
     if (!currentQuestion) return;
     const formattedOptions = options.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
-    const correctOption = formattedOptions.find(o => o.text === currentQuestion.answer);
+    const correctOption = formattedOptions.find(o => o.text === correctAnswerText);
     dispatch({ 
         type: 'CONVERT_TO_MULTIPLE_CHOICE', 
         payload: {
@@ -1051,7 +1051,7 @@ function AprenderPageComponent() {
           {currentQuestion.type === 'multiple-choice' && (
             <MultipleChoiceQuestion 
               question={currentQuestion}
-              answerState={{ isAnswered: state.isAnswered, selectedOption: (state as any).selectedOption }}
+              answerState={{ isAnswered: state.isAnswered, selectedOption: state.selectedMcOption }}
               onOptionSelect={handleOptionSelect}
             />
           )}
