@@ -29,10 +29,10 @@ import { createSession, createUserInFirestore } from '@/app/actions/auth';
 import { BookOpenCheck } from 'lucide-react';
 
 const formSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address.' }),
+  email: z.string().email({ message: 'Correo electrónico inválido.' }),
   password: z
     .string()
-    .min(6, { message: 'Password must be at least 6 characters.' }),
+    .min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -64,7 +64,7 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
+        title: 'Error al iniciar sesión',
         description: error.message,
       });
     } finally {
@@ -88,7 +88,7 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Sign Up Failed',
+        title: 'Error al registrarse',
         description: error.message,
       });
     } finally {
@@ -110,7 +110,7 @@ export default function LoginPage() {
     } catch (error: any) {
        toast({
         variant: 'destructive',
-        title: 'Google Sign-In Failed',
+        title: 'Error al iniciar sesión con Google',
         description: error.message,
       });
     } finally {
@@ -123,7 +123,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit(isLogin ? handleLogin : handleSignUp)}>
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Correo Electrónico</Label>
             <Input
               id="email"
               type="email"
@@ -134,12 +134,12 @@ export default function LoginPage() {
             {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Input id="password" type="password" {...register('password')} disabled={loading} />
             {errors.password && <p className="text-destructive text-xs">{errors.password.message}</p>}
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Processing...' : isLogin ? 'Login' : 'Create account'}
+            {loading ? 'Procesando...' : isLogin ? 'Iniciar Sesión' : 'Crear cuenta'}
           </Button>
         </div>
       </form>
@@ -148,7 +148,7 @@ export default function LoginPage() {
               <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              <span className="bg-background px-2 text-muted-foreground">O continuar con</span>
           </div>
       </div>
       <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={loading}>
@@ -172,15 +172,15 @@ export default function LoginPage() {
         </div>
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
+            <TabsTrigger value="signup">Registrarse</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
             <Card>
               <CardHeader>
-                <CardTitle>Login</CardTitle>
+                <CardTitle>Iniciar Sesión</CardTitle>
                 <CardDescription>
-                  Enter your credentials to access your account.
+                  Ingresa tus credenciales para acceder a tu cuenta.
                 </CardDescription>
               </CardHeader>
               <CardContent>{renderForm(true)}</CardContent>
@@ -189,9 +189,9 @@ export default function LoginPage() {
           <TabsContent value="signup">
             <Card>
               <CardHeader>
-                <CardTitle>Sign Up</CardTitle>
+                <CardTitle>Registrarse</CardTitle>
                 <CardDescription>
-                  Create a new account to start your learning journey.
+                  Crea una nueva cuenta para comenzar tu viaje de aprendizaje.
                 </CardDescription>
               </CardHeader>
               <CardContent>{renderForm(false)}</CardContent>
