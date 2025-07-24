@@ -102,7 +102,6 @@ export default function LoginPage() {
     try {
       const result = await signInWithPopup(auth, provider);
       const { user } = result;
-      // This will create the user in Firestore if they don't exist
       await createUserInFirestore(user.uid, user.email || '', user.displayName);
       const idToken = await user.getIdToken();
       await createSession(idToken);
@@ -177,7 +176,7 @@ export default function LoginPage() {
           </TabsList>
           <TabsContent value="login">
             <Card>
-              <CardHeader>
+              <CardHeader className="text-center">
                 <CardTitle>Iniciar Sesión</CardTitle>
                 <CardDescription>
                   Ingresa tus credenciales para acceder a tu cuenta.
@@ -188,7 +187,7 @@ export default function LoginPage() {
           </TabsContent>
           <TabsContent value="signup">
             <Card>
-              <CardHeader>
+              <CardHeader className="text-center">
                 <CardTitle>Registrarse</CardTitle>
                 <CardDescription>
                   Crea una nueva cuenta para comenzar tu viaje de aprendizaje.
