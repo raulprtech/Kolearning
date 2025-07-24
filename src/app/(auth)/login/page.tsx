@@ -98,8 +98,8 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    const provider = new GoogleAuthProvider();
     try {
-      const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const { user } = result;
       // This will create the user in Firestore if they don't exist
