@@ -203,3 +203,8 @@ export function useUserContext(): UserContextType {
   }
   return context;
 }
+
+export function useUser(): UserContextType {
+     return useUserContext();
+}
+
