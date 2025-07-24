@@ -19,11 +19,11 @@ if (!getApps().length) {
                 credential: cert(serviceAccount),
             });
         } else {
-            // This is for local development without env vars
+            console.warn("Firebase Admin credentials not found, initializing with default for local dev.");
             app = initializeApp();
         }
     } catch (error) {
-        console.error('Failed to initialize Firebase Admin:', error);
+        console.error('Failed to initialize Firebase Admin SDK:', error);
         // Fallback for local development if env vars are partially set but invalid
         if (!getApps().length) {
           app = initializeApp();
