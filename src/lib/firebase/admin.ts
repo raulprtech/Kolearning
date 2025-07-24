@@ -7,9 +7,9 @@ import { getFirestore } from 'firebase-admin/firestore';
 let app: App;
 
 const serviceAccount = {
-    projectId: process.env.GOOGLE_PROJECT_ID,
-    clientEmail: process.env.GOOGLE_CLIENT_EMAIL,
-    privateKey: (process.env.GOOGLE_PRIVATE_KEY || ''),
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: (process.env.FIREBASE_PRIVATE_KEY || ''),
 };
 
 if (!getApps().length) {
