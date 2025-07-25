@@ -7,10 +7,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 
 export default function SettingsPage() {
     const { theme, setTheme } = useTheme();
+    const { toast } = useToast();
+
+    const handleSaveChanges = () => {
+        toast({
+            title: "Cambios guardados",
+            description: "Tu información de perfil ha sido actualizada.",
+        });
+    }
+
+    const handleDeleteAccount = () => {
+        toast({
+            variant: "destructive",
+            title: "Acción no disponible",
+            description: "La eliminación de cuentas no está habilitada en esta versión.",
+        });
+    }
 
     return (
         <div className="container mx-auto py-8 max-w-2xl">
@@ -34,7 +51,7 @@ export default function SettingsPage() {
                             <Label htmlFor="email">Email</Label>
                             <Input id="email" type="email" placeholder="Tu correo electrónico" defaultValue="test@example.com" disabled />
                         </div>
-                         <Button>Guardar Cambios</Button>
+                         <Button onClick={handleSaveChanges}>Guardar Cambios</Button>
                     </CardContent>
                 </Card>
 
@@ -82,10 +99,10 @@ export default function SettingsPage() {
                  <Card>
                     <CardHeader>
                         <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
-                        <CardDescription>Estas acciones son permanentes e irreversibles.</CardDescription>
+                        <CardDescription>Esta acción es permanente e irreversible.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <Button variant="destructive">Eliminar Cuenta</Button>
+                         <Button variant="destructive" onClick={handleDeleteAccount}>Eliminar Cuenta</Button>
                     </CardContent>
                 </Card>
             </div>
