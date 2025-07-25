@@ -1,5 +1,3 @@
-'use server';
-
 import { getApps, initializeApp, App, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -26,14 +24,19 @@ if (!getApps().length) {
       console.warn(
         'Firebase Admin credentials not found. Initializing with default for local development. This will not work in production.'
       );
-      app = initializeApp();
+      try {
+        app = initializeApp();
+      } catch(e) {
+        console.error("Could not initialize Firebase Admin SDK. Please make sure you have set up Application Default Credentials. See https://firebase.google.com/docs/admin/setup#initialize-sdk for more details.");
+        app = {} as App; // Prevent further errors
+      }
     }
   }
 } else {
   app = getApps()[0];
 }
 
-const adminAuth = getAuth(app);
-const adminDb = getFirestore(app);
+const adminAuth = app.name ? getAuth(app) : undefined;
+const adminDb = app.name ? getFirestore(app) : undefined;
 
 export { adminAuth, adminDb };

@@ -234,7 +234,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md mx-auto">
         <div className="flex justify-center items-center gap-2 mb-6">
           <BookOpenCheck className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold text-center text-primary-foreground">
+          <h1 className="text-3xl font-bold text-center">
             Kolearning
           </h1>
         </div>

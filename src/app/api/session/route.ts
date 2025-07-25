@@ -22,7 +22,9 @@ export async function POST(req: NextRequest) {
     // fails, we still proceed to set the cookie but log a warning. This
     // allows local development without full admin credentials.
     try {
-      await adminAuth.verifyIdToken(idToken);
+      if (adminAuth) {
+        await adminAuth.verifyIdToken(idToken);
+      }
     } catch (err) {
       console.warn('Warning: failed to verify idToken when creating session:', err);
     }
