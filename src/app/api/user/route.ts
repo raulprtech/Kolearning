@@ -10,11 +10,9 @@ import { Timestamp } from 'firebase-admin/firestore';
  * user's Firestore document. If the token is invalid or the user is not found,
  * appropriate error responses are returned.
  *
- * POST: Accepts a JSON body with uid, email, name, and displayName. It derives
- * a username from the provided name, displayName, or the local part of the
- * email. If the user does not exist, a new document is created with default
- * values for energy, coins, dominion points, etc. Missing uid or email
- * results in a 400 error.
+ * POST: Accepts a JSON body with uid, email, and displayName. It creates a new
+ * user document in Firestore if one does not already exist, with all the
+ * necessary default fields for the application to function correctly.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -45,33 +43,42 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { uid, email, name, displayName } = body;
-    // Derive a username from provided fields. Fall back to email local part if needed.
-    const userName = name ?? displayName ?? (email ? email.split('@')[0] : '');
+    const { uid, email, displayName } = body;
+
     if (!uid || !email) {
-      return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Missing required fields: uid and email' }, { status: 400 });
     }
+
     const userRef = adminDb.collection('users').doc(uid);
     const userDoc = await userRef.get();
+
     if (userDoc.exists) {
+      // If user exists, just return their data.
       return NextResponse.json({ success: true, data: userDoc.data() }, { status: 200 });
     }
+    
+    // If user does not exist, create them with the full, correct structure.
     const newUser = {
       uid,
       email,
-      name: userName,
-      energy: 100,
-      coins: 0,
-      dominionPoints: 0,
-      weeklyActivity: [],
-      tutorSession: null,
-      lastEnergyUpdate: Timestamp.now(),
+      displayName: displayName || email.split('@')[0],
       createdAt: Timestamp.now(),
+      lastSessionAt: Timestamp.now(),
+      currentStreak: 0,
+      coins: 180,
+      energy: 10,
+      dominionPoints: 0,
+      rank: "G",
+      lastSessionCompletedAt: null,
+      weeklyActivity: [false, false, false, false, false, false, false],
+      tutorSession: null,
     };
+
     await userRef.set(newUser);
     return NextResponse.json({ success: true, data: newUser }, { status: 201 });
+
   } catch (error) {
-    console.error('Error creating user:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create user' }, { status: 500 });
+    console.error('Error in POST /api/user:', error);
+    return NextResponse.json({ success: false, error: 'Failed to create or retrieve user' }, { status: 500 });
   }
 }
