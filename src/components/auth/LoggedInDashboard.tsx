@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -118,7 +119,7 @@ export function LoggedInDashboard() {
               </div>
               <div className="w-full">
                 <Progress value={rankInfo?.progressPercentage ?? 0} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1 text-right">
+                <p className="text-xs text-muted-foreground mt-1 text-center">
                   {rankInfo?.pointsToNextLevel && rankInfo.pointsToNextLevel > 0 
                     ? `${rankInfo.pointsToNextLevel} para el siguiente rango`
                     : '¡Rango máximo alcanzado!'
@@ -140,7 +141,7 @@ export function LoggedInDashboard() {
               </div>
               <div className="w-full">
                 <Progress value={energyPercentage} className="h-2 [&>div]:bg-primary" />
-                <p className="text-xs text-muted-foreground mt-2 text-right">Recuperas 1 de energía cada 2 horas</p>
+                <p className="text-xs text-muted-foreground mt-2 text-center">Recuperas 1 de energía cada 2 horas</p>
               </div>
             </CardContent>
           </Card>
@@ -224,7 +225,7 @@ export function LoggedInDashboard() {
                 </div>
             ) : (
                 <div className="text-center py-16 border-2 border-dashed rounded-lg">
-                     <p className="text-muted-foreground mt-2">No hay proyectos recomendados en este momento.</p>
+                     <h2 className="text-xl font-semibold">No hay proyectos recomendados en este momento.</h2>
                 </div>
             )}
         </div>
@@ -232,3 +233,5 @@ export function LoggedInDashboard() {
     </div>
   );
 }
+
+    
