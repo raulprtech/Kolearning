@@ -98,11 +98,9 @@ export function LoggedInDashboard() {
   return (
     <div className="bg-background text-foreground min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-10">
-          <div>
-            <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
-            <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
-          </div>
+        <div className="mb-10">
+          <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
+          <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -119,7 +117,7 @@ export function LoggedInDashboard() {
               </div>
               <div className="w-full">
                 <Progress value={rankInfo?.progressPercentage ?? 0} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1 text-center">
+                <p className="text-xs text-muted-foreground mt-2 text-center">
                   {rankInfo?.pointsToNextLevel && rankInfo.pointsToNextLevel > 0 
                     ? `${rankInfo.pointsToNextLevel} para el siguiente rango`
                     : '¡Rango máximo alcanzado!'
@@ -200,7 +198,7 @@ export function LoggedInDashboard() {
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                <div className="text-center py-16">
                     <h2 className="text-xl font-semibold">No tienes proyectos todavía</h2>
                     <p className="text-muted-foreground mt-2">
                         Usa la importación mágica o explora los proyectos de la comunidad para empezar.
@@ -224,7 +222,7 @@ export function LoggedInDashboard() {
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                <div className="text-center py-16">
                      <h2 className="text-xl font-semibold">No hay proyectos recomendados en este momento.</h2>
                 </div>
             )}
@@ -233,3 +231,5 @@ export function LoggedInDashboard() {
     </div>
   );
 }
+
+    
