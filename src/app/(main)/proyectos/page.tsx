@@ -1,6 +1,7 @@
 
+export const dynamic = 'force-dynamic';
 
-'use client';
+// 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { ProjectCard } from '@/components/deck/ProjectCard';

@@ -1,6 +1,6 @@
+export const dynamic = 'force-dynamic';
 
-
-'use client';
+// 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

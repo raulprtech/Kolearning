@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 
 // This is a server component that fetches data and passes it to the client component.
 import { Suspense } from 'react';
