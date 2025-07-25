@@ -27,13 +27,16 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { uid, email, name, displayName } = body;
-    const userName = name || displayName;
-    if (!uid || !email || !userName) {
+    // Derive a username from provided fields. Fall back to the local‑part of the email if none provided.
+    const userName = name ?? displayName ?? (email ? email.split('@')[0] : '');
+    // uid and email are required; userName can be derived. Reject only when uid or email is missing.
+    if (!uid || !email) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
     }
     const userRef = adminDb.collection('users').doc(uid);
     const userDoc = await userRef.get();
     if (userDoc.exists) {
+      // If user already exists, do nothing and return success
       return NextResponse.json({ success: true }, { status: 200 });
     }
     const now = Timestamp.now();
