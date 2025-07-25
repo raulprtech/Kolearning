@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -78,6 +79,9 @@ export function LoggedInDashboard() {
         if (!session) return [];
         return allProjects.filter(p => p.author === session.uid);
     }, [allProjects, session]);
+
+    const lastProject = myProjects.length > 0 ? myProjects[0] : null;
+    const learnUrl = lastProject ? `/aprender?project=${lastProject.slug}&session=${lastProject.completedSessions || 0}` : '/crear';
     
     const recommendedProjects = allProjects.filter(p => p.author === 'Kolearning').slice(0, 4);
 
@@ -98,9 +102,19 @@ export function LoggedInDashboard() {
   return (
     <div className="bg-background text-foreground min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
-          <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
+        <div className="flex justify-between items-center mb-10">
+          <div>
+            <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
+            <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
+          </div>
+          <div>
+            <Button asChild>
+                <Link href={learnUrl}>
+                    <Play className="mr-2 h-5 w-5" />
+                    Aprender
+                </Link>
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
