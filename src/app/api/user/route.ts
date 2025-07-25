@@ -12,6 +12,7 @@ import { Timestamp } from 'firebase-admin/firestore';
  *
  * POST: Accepts a JSON body with uid, email, and displayName. It creates a new
  * user document in Firestore if one does not already exist, with all the
+
  * necessary default fields for the application to function correctly.
  */
 export async function GET(req: NextRequest) {
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
       rank: "G",
       lastSessionCompletedAt: null,
       weeklyActivity: [false, false, false, false, false, false, false],
-      tutorSession: null,
+      tutorSession: { isActive: false, exchangesLeft: 0 },
     };
 
     await userRef.set(newUser);
