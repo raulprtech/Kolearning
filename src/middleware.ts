@@ -2,7 +2,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const protectedRoutes = ['/', '/crear', '/aprender', '/proyectos', '/mis-proyectos', '/perfil', '/tienda', '/tutor', '/ajustes', '/preguntas-frecuentes'];
+// The root route '/' is now public, it will handle showing the landing page or the dashboard.
+const protectedRoutes = ['/crear', '/aprender', '/proyectos', '/mis-proyectos', '/perfil', '/tienda', '/tutor', '/ajustes', '/preguntas-frecuentes'];
 const authRoutes = ['/login'];
 
 export async function middleware(request: NextRequest) {
@@ -17,13 +18,15 @@ export async function middleware(request: NextRequest) {
     }
     return pathname === route;
   });
-
+  
+  // If trying to access a protected route without a session, redirect to login.
   if (isProtectedRoute && !sessionCookie) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
+  // If trying to access an auth route with a session, redirect to the dashboard.
   if (authRoutes.includes(pathname) && sessionCookie) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
@@ -34,9 +37,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Matcher is now more specific to only run middleware where needed.
+  // Matcher now excludes the root route '/' from being always considered protected.
   matcher: [
-    '/',
     '/crear',
     '/aprender',
     '/proyectos/:path*',
