@@ -14,13 +14,15 @@ import { Skeleton } from '../ui/skeleton';
 
 const StatCard = ({ icon, title, value, footer, progress, children }: { icon: React.ReactNode, title: string, value: string | number, footer: string, progress?: number, children?: React.ReactNode }) => (
     <Card className="bg-card/70 flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-start gap-2 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
             {icon}
-            <span className="text-sm text-muted-foreground">{title}</span>
         </CardHeader>
-        <CardContent className="flex-grow flex flex-col justify-center">
-            <div className="text-5xl font-bold text-center mb-2">{value}</div>
-            {children}
+        <CardContent className="flex flex-col flex-grow justify-end">
+            <div className="text-5xl font-bold text-center">{value}</div>
+            <div className="flex-grow">
+                {children}
+            </div>
             {progress !== undefined && <Progress value={progress} className="h-1 my-2" />}
             <p className="text-xs text-muted-foreground text-center">{footer}</p>
         </CardContent>
@@ -71,8 +73,7 @@ export function LoggedInDashboard() {
 
   const weeklyActivityDots = user.weeklyActivity || Array(7).fill(false);
   const energyProgress = (user.energy / 10) * 100;
-  const rankProgress = user.rank === 'A' ? 100 : ((user.rank?.charCodeAt(0) || 71) - 65) / 6 * 100;
-
+  const rankProgress = user.rank === 'A' ? 100 : (((user.rank?.charCodeAt(0) || 71) - 65) / 6) * 100;
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -85,19 +86,19 @@ export function LoggedInDashboard() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard 
-            icon={<Zap className="h-4 w-4"/>} 
+            icon={<Zap className="h-4 w-4 text-muted-foreground"/>} 
             title="Energía Restante" 
             value={user.energy} 
             footer="Recuperas 1 de energía cada 2 horas"
             progress={energyProgress}
         />
         <StatCard 
-            icon={<Flame className="h-4 w-4"/>} 
+            icon={<Flame className="h-4 w-4 text-muted-foreground"/>} 
             title="Racha Actual" 
             value={user.currentStreak} 
             footer=""
         >
-             <div className="flex justify-center gap-3 w-full mb-2">
+             <div className="flex justify-center gap-3 w-full my-4">
                 {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, index) => (
                     <div key={day} className="flex flex-col items-center gap-2">
                         <span className="text-xs text-muted-foreground">{day}</span>
@@ -107,7 +108,7 @@ export function LoggedInDashboard() {
              </div>
         </StatCard>
         <StatCard 
-            icon={<TrendingUp className="h-4 w-4"/>} 
+            icon={<TrendingUp className="h-4 w-4 text-muted-foreground"/>} 
             title="Rango de Aprendedor" 
             value={user.rank || 'G'} 
             footer={user.rank === 'A' ? "¡Rango máximo alcanzado!" : "Sigue estudiando para subir de rango"}
