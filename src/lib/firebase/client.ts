@@ -1,3 +1,4 @@
+'use client';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -17,5 +18,16 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Check if all firebase config values are provided
+if (
+  !firebaseConfig.apiKey ||
+  !firebaseConfig.authDomain ||
+  !firebaseConfig.projectId
+) {
+  console.error(
+    'Firebase config is not set. Please add all NEXT_PUBLIC_FIREBASE_* variables to your environment.',
+  );
+}
 
 export { app, auth, db };
