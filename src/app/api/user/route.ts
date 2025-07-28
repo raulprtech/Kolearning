@@ -55,13 +55,13 @@ export async function POST(req: NextRequest) {
 
     if (userDoc.exists) {
       // If user exists, update their display name if a new one is provided.
-      const updateData: { [key: string]: any } = {};
+      const updateData: { [key: string]: any } = {
+        lastSessionAt: Timestamp.now(),
+      };
       if (displayName && displayName !== userDoc.data()?.displayName) {
         updateData.displayName = displayName;
       }
-      if (Object.keys(updateData).length > 0) {
-        await userRef.update(updateData);
-      }
+      await userRef.update(updateData);
       const updatedDoc = await userRef.get();
       return NextResponse.json({ success: true, data: updatedDoc.data() }, { status: 200 });
     }
