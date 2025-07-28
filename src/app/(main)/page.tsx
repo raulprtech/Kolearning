@@ -1,6 +1,4 @@
 
-'use server';
-
 import { Suspense } from 'react';
 import { getAuthSession } from '@/app/actions/auth';
 import { LoggedInDashboard } from '@/components/dashboard/LoggedInDashboard';
