@@ -207,4 +207,3 @@ export function useUserContext(): UserContextType {
 export function useUser(): UserContextType {
      return useUserContext();
 }
-

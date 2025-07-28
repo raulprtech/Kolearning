@@ -36,6 +36,33 @@ const NoProjectsCard = ({ title, description }: { title: string, description: st
     </div>
 );
 
+function DashboardSkeleton() {
+    return (
+        <div className="p-4 md:p-8 space-y-8 animate-pulse">
+            <div className="space-y-2">
+                <Skeleton className="h-8 w-1/4" />
+                <Skeleton className="h-4 w-1/3" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-36 w-full" />
+                <Skeleton className="h-36 w-full" />
+                <Skeleton className="h-36 w-full" />
+            </div>
+            <div className="flex items-center justify-between my-8">
+                <Skeleton className="h-8 w-1/3" />
+                <div className="flex items-center gap-2">
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-36" />
+                </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+               <Skeleton className="h-56 w-full" />
+               <Skeleton className="h-56 w-full" />
+            </div>
+        </div>
+    )
+}
+
 
 export function LoggedInDashboard() {
   const { user } = useUser();
@@ -56,19 +83,7 @@ export function LoggedInDashboard() {
   }, [user]);
 
   if (!user) {
-    return (
-        <div className="p-4 md:p-8 space-y-8">
-            <div className="space-y-2">
-                <Skeleton className="h-8 w-1/4" />
-                <Skeleton className="h-4 w-1/3" />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Skeleton className="h-28 w-full" />
-                <Skeleton className="h-28 w-full" />
-                <Skeleton className="h-28 w-full" />
-            </div>
-        </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const weeklyActivityDots = user.weeklyActivity || Array(7).fill(false);
