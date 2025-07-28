@@ -54,8 +54,16 @@ export async function POST(req: NextRequest) {
     const userDoc = await userRef.get();
 
     if (userDoc.exists) {
-      // If user exists, just return their data.
-      return NextResponse.json({ success: true, data: userDoc.data() }, { status: 200 });
+      // If user exists, update their display name if a new one is provided.
+      const updateData: { [key: string]: any } = {};
+      if (displayName && displayName !== userDoc.data()?.displayName) {
+        updateData.displayName = displayName;
+      }
+      if (Object.keys(updateData).length > 0) {
+        await userRef.update(updateData);
+      }
+      const updatedDoc = await userRef.get();
+      return NextResponse.json({ success: true, data: updatedDoc.data() }, { status: 200 });
     }
     
     // If user does not exist, create them with the full, correct structure.

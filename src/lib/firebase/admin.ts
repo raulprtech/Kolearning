@@ -49,4 +49,10 @@ try {
 const adminAuth = app.name ? getAuth(app) : undefined;
 const adminDb = app.name ? getFirestore(app) : undefined;
 
+if (!adminAuth || !adminDb) {
+  console.error(
+    'CRITICAL: Firebase Admin SDK is not initialized. adminAuth or adminDb is undefined. This is likely due to missing environment variables or invalid credentials.'
+  );
+}
+
 export { adminAuth, adminDb };

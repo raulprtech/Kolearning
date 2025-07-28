@@ -59,6 +59,19 @@ export default function LoginPage() {
         email,
         password
       );
+      const { user } = userCredential;
+
+      // Ensure user exists in Firestore
+      await fetch('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          uid: user.uid, 
+          email: user.email, 
+          displayName: user.displayName 
+        }),
+      });
+
       const idToken = await userCredential.user.getIdToken();
       const res = await fetch('/api/session', {
         method: 'POST',
