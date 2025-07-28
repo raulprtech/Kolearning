@@ -1,8 +1,6 @@
 
 import { Suspense } from 'react';
-import { getAuthSession } from '@/app/actions/auth';
 import { LoggedInDashboard } from '@/components/dashboard/LoggedInDashboard';
-import { PublicHomePage } from '@/components/dashboard/PublicHomePage';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const dynamic = 'force-dynamic';
@@ -31,12 +29,6 @@ function DashboardSkeleton() {
 }
 
 export default async function DashboardPage() {
-  const session = await getAuthSession();
-
-  if (!session?.uid) {
-    return <PublicHomePage />;
-  }
-
   return (
     <Suspense fallback={<DashboardSkeleton />}>
       <LoggedInDashboard />
