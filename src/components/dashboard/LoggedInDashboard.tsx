@@ -73,28 +73,36 @@ export function LoggedInDashboard() {
     async function fetchProjects() {
       if (user) {
         setIsLoadingProjects(true);
-        const allProjects = await getAllProjects();
-        const userProjects = allProjects.filter(p => p.author === user.uid);
-        setProjects(userProjects);
-        setIsLoadingProjects(false);
+        try {
+          const allProjects = await getAllProjects();
+          const userProjects = allProjects.filter(p => p.author === user.uid);
+          setProjects(userProjects);
+        } catch (error) {
+          console.error("Failed to fetch projects:", error);
+        } finally {
+          setIsLoadingProjects(false);
+        }
       }
     }
-    
-    if (!isUserLoading && user) {
+
+    if (!isUserLoading) {
+      if (user) {
         fetchProjects();
-    } else if (!isUserLoading && !user) {
+      } else {
+        // If there's no user and we are not loading, there are no projects to fetch.
         setIsLoadingProjects(false);
+      }
     }
   }, [user, isUserLoading]);
 
   if (isUserLoading) {
     return <DashboardSkeleton />;
   }
-  
+
+  // This case should ideally be handled by middleware redirecting to /login
+  // but as a fallback, we can show a message or a skeleton.
   if (!user) {
-      // This case should ideally be handled by middleware redirecting to /login
-      // but as a fallback, we can show a message or a skeleton.
-      return <DashboardSkeleton />;
+    return <DashboardSkeleton />;
   }
 
   const weeklyActivityDots = user.weeklyActivity || Array(7).fill(false);

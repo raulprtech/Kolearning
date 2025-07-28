@@ -57,8 +57,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setIsLoading(true);
       if (firebaseUser) {
-        const data = await getUserData(firebaseUser.uid);
-        setUser(data);
+        try {
+          const userData = await getUserData(firebaseUser.uid);
+          setUser(userData);
+        } catch (error) {
+          console.error("Error fetching user data on auth change:", error);
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
