@@ -1,3 +1,4 @@
+import { AppSidebar } from '@/components/layout/AppSidebar';
 import { Header } from '@/components/layout/Header';
 import { UserProvider } from '@/context/UserContext';
 import { getAuthSession } from '@/app/actions/auth';
@@ -12,9 +13,14 @@ export default async function MainLayout({
 
   return (
     <UserProvider>
-      <div className="flex min-h-screen flex-col">
-        <Header isLoggedIn={isLoggedIn} />
-        <main className="flex-1 w-full mx-auto">{children}</main>
+      <div className="flex min-h-screen w-full flex-col bg-muted/40">
+        <AppSidebar />
+        <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+            <Header isLoggedIn={isLoggedIn} />
+            <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+                {children}
+            </main>
+        </div>
       </div>
     </UserProvider>
   );

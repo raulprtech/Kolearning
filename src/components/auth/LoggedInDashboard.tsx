@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -100,47 +98,15 @@ export function LoggedInDashboard() {
     const dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   return (
-    <div className="bg-background text-foreground min-h-screen p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-10">
-          <div>
-            <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
-            <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
-          </div>
-          <div>
-            <Button asChild>
-                <Link href={learnUrl}>
-                    <Play className="mr-2 h-5 w-5" />
-                    Aprender
-                </Link>
-            </Button>
-          </div>
+    <div className="bg-muted/40 text-foreground min-h-screen p-8 -m-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-10">
+          <h1 className="text-4xl font-bold">¡Bienvenido de nuevo!</h1>
+          <p className="text-muted-foreground mt-2">¿Qué aprenderás hoy?</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <Card className="bg-card/50">
-            <CardContent className="p-6 flex flex-col justify-between text-center h-full">
-              <div>
-                <div className="flex items-center justify-center gap-2 text-green-500">
-                  <TrendingUp className="h-6 w-6" />
-                  <p className="text-muted-foreground text-sm">Rango de Aprendedor</p>
-                </div>
-              </div>
-              <div className="my-4">
-                <p className="text-5xl font-bold">{rankInfo?.currentRankLetter || 'G'}</p>
-              </div>
-              <div className="w-full">
-                <Progress value={rankInfo?.progressPercentage ?? 0} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  {rankInfo?.pointsToNextLevel && rankInfo.pointsToNextLevel > 0 
-                    ? `${rankInfo.pointsToNextLevel} para el siguiente rango`
-                    : '¡Rango máximo alcanzado!'
-                  }
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-           <Card className="bg-card/50">
+          <Card className="bg-card">
             <CardContent className="p-6 flex flex-col justify-between text-center h-full">
               <div>
                 <div className="flex items-center justify-center gap-2 text-primary">
@@ -157,7 +123,7 @@ export function LoggedInDashboard() {
               </div>
             </CardContent>
           </Card>
-           <Card className="bg-card/50">
+           <Card className="bg-card">
             <CardContent className="p-6 flex flex-col justify-between text-center h-full">
                <div>
                   <div className="flex items-center justify-center gap-2 text-orange-500">
@@ -178,6 +144,28 @@ export function LoggedInDashboard() {
                     ></div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardContent className="p-6 flex flex-col justify-between text-center h-full">
+              <div>
+                <div className="flex items-center justify-center gap-2 text-green-500">
+                  <TrendingUp className="h-6 w-6" />
+                  <p className="text-muted-foreground text-sm">Rango de Aprendedor</p>
+                </div>
+              </div>
+              <div className="my-4">
+                <p className="text-5xl font-bold">{rankInfo?.currentRankLetter || 'G'}</p>
+              </div>
+              <div className="w-full">
+                <Progress value={rankInfo?.progressPercentage ?? 0} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  {rankInfo?.pointsToNextLevel && rankInfo.pointsToNextLevel > 0 
+                    ? `${rankInfo.pointsToNextLevel} para el siguiente rango`
+                    : '¡Rango máximo alcanzado!'
+                  }
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -245,5 +233,3 @@ export function LoggedInDashboard() {
     </div>
   );
 }
-
-    
