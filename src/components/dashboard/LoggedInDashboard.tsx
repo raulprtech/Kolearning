@@ -65,25 +65,36 @@ function DashboardSkeleton() {
 
 
 export function LoggedInDashboard() {
-  const { user } = useUser();
+  const { user, isLoading: isUserLoading } = useUser();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
 
   useEffect(() => {
     async function fetchProjects() {
       if (user) {
-        setIsLoading(true);
+        setIsLoadingProjects(true);
         const allProjects = await getAllProjects();
         const userProjects = allProjects.filter(p => p.author === user.uid);
         setProjects(userProjects);
-        setIsLoading(false);
+        setIsLoadingProjects(false);
       }
     }
-    fetchProjects();
-  }, [user]);
+    
+    if (!isUserLoading && user) {
+        fetchProjects();
+    } else if (!isUserLoading && !user) {
+        setIsLoadingProjects(false);
+    }
+  }, [user, isUserLoading]);
 
-  if (!user) {
+  if (isUserLoading) {
     return <DashboardSkeleton />;
+  }
+  
+  if (!user) {
+      // This case should ideally be handled by middleware redirecting to /login
+      // but as a fallback, we can show a message or a skeleton.
+      return <DashboardSkeleton />;
   }
 
   const weeklyActivityDots = user.weeklyActivity || Array(7).fill(false);
@@ -150,7 +161,7 @@ export function LoggedInDashboard() {
                 </Button>
             </div>
           </div>
-          {isLoading ? (
+          {isLoadingProjects ? (
              <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
                 <Skeleton className="h-56 w-full" />
                 <Skeleton className="h-56 w-full" />

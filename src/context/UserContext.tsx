@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -32,6 +33,7 @@ async function getUserData(uid: string): Promise<User | null> {
 
 interface UserContextType {
   user: User | null;
+  isLoading: boolean;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   decrementEnergy: (cost?: number) => void;
   addEnergy: (amount: number) => void;
@@ -47,17 +49,20 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [tutorSession, setTutorSession] = useState<TutorSession | null>(null);
 
   // Listen to auth state and load user profile
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      setIsLoading(true);
       if (firebaseUser) {
         const data = await getUserData(firebaseUser.uid);
         setUser(data);
       } else {
         setUser(null);
       }
+      setIsLoading(false);
     });
 
     // Recover energy every minute if at least 2 hours have passed since last recovery
@@ -182,6 +187,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value: UserContextType = {
     user,
+    isLoading,
     setUser,
     decrementEnergy,
     addEnergy,
