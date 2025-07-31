@@ -158,11 +158,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addDominionPoints = (amount: number) => {
     if (!user) return;
-    const newPoints = (user.dominionPoints || 0) + amount;
-    setUser({ ...user, dominionPoints: newPoints });
+    const newPoints = (user.dominion_points || 0) + amount;
+    setUser({ ...user, dominion_points: newPoints });
     supabase
       .from('users')
-      .update({ dominionPoints: newPoints })
+      .update({ dominion_points: newPoints })
       .eq('id', user.id)
       .catch((err) => console.error('Failed to add dominion points:', err));
   };
@@ -171,10 +171,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
     const today = new Date();
     const lastSessionDate =
-      user.lastSessionCompletedAt ? new Date(user.lastSessionCompletedAt) : null;
-    let newStreak = user.currentStreak || 0;
-    let weeklyActivity = user.weeklyActivity
-      ? [...user.weeklyActivity]
+      user.last_session_completed_at ? new Date(user.last_session_completed_at) : null;
+    let newStreak = user.current_streak || 0;
+    let weeklyActivity = user.weekly_activity
+      ? [...user.weekly_activity]
       : Array(7).fill(false);
     const todayIndex = (today.getDay() + 6) % 7; // Monday = 0
 
@@ -201,17 +201,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const updatedUser: User = {
       ...user,
-      currentStreak: newStreak,
-      lastSessionCompletedAt: today.toISOString(),
-      weeklyActivity,
+      current_streak: newStreak,
+      last_session_completed_at: today.toISOString(),
+      weekly_activity: weeklyActivity,
     };
     setUser(updatedUser);
     supabase
       .from('users')
       .update({
-        currentStreak: newStreak,
-        lastSessionCompletedAt: updatedUser.lastSessionCompletedAt,
-        weeklyActivity,
+        current_streak: newStreak,
+        last_session_completed_at: updatedUser.last_session_completed_at,
+        weekly_activity: weeklyActivity,
       })
       .eq('id', user.id)
       .catch((err) => console.error('Failed to complete session:', err));

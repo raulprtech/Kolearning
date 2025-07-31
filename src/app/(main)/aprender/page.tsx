@@ -531,7 +531,7 @@ type State = {
 type Action =
     | { type: 'START_SESSION'; payload: { project: Project; isGuest: boolean; } }
     | { type: 'EVALUATE_ANSWER'; payload: { isCorrect: boolean; } }
-    | { type: 'RATE_DIFFICULTY'; payload: { rating: UserRating } }
+    | { type: 'RATE_DIFFICULTY'; payload: { rating: UserRating, retrievabilityChange: number } }
     | { type: 'SET_LOADING'; payload: boolean }
     | { type: 'SET_FINISHING'; payload: boolean }
     | { type: 'SET_SESSION_FINISHED' }
@@ -567,7 +567,7 @@ function reducer(state: State, action: Action): State {
         case 'START_SESSION': {
             const { project, isGuest } = action.payload;
 
-            const srs = new SpacedRepetitionSystem(project.flashcards || []);
+            const srs = new SpacedRepetitionSystem(project.flashcards || [], project.studyPlan?.plan[0]?.sessionType || 'Refuerzo de Dominio');
             const nextCardId = srs.getNextCardId();
 
             return {
@@ -617,14 +617,15 @@ function reducer(state: State, action: Action): State {
         }
 
         case 'RATE_DIFFICULTY': {
-            const { rating } = action.payload;
-            const { srs, currentCardId } = state;
-            if (!srs || !currentCardId) return state;
+            const { rating, retrievabilityChange } = action.payload;
+            const masteryPointsGained = Math.round(retrievabilityChange * 100);
 
-            srs.updateCard(currentCardId, rating);
-            
-            // This will be handled by SET_NEXT_QUESTION now
-            return { ...state, isAnswered: true, userRating: rating };
+            return { 
+                ...state, 
+                isAnswered: true, 
+                userRating: rating,
+                masteryProgress: state.masteryProgress + masteryPointsGained,
+            };
         }
         
         case 'UPDATE_QUESTION_TEXT': {
@@ -704,7 +705,7 @@ function AprenderPageComponent() {
             completedSessions: (state.project.completedSessions || 0) + 1,
         };
         localStorage.setItem('guestProject', JSON.stringify(updatedProject));
-        router.push(`/mis-proyectos/${state.project.slug}?sessionCompleted=true`);
+        router.push(`/mis-proyectos/guest-project?sessionCompleted=true`);
         return;
     }
 
@@ -775,7 +776,10 @@ function AprenderPageComponent() {
   };
 
   const handleDifficultyRating = (rating: UserRating) => {
-      dispatch({ type: 'RATE_DIFFICULTY', payload: { rating } });
+      if (!state.srs || !state.currentCardId) return;
+      const retrievabilityChange = state.srs.updateCard(state.currentCardId, rating);
+      dispatch({ type: 'RATE_DIFFICULTY', payload: { rating, retrievabilityChange } });
+
       // After rating, automatically move to the next question
       setTimeout(() => {
         dispatch({ type: 'SET_NEXT_QUESTION' });

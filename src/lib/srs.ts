@@ -40,7 +40,7 @@ export class SpacedRepetitionSystem {
     private reviewQueue: string[] = [];
     private allCardsMap: Map<string, Flashcard>;
 
-    constructor(cards: Flashcard[], existingStates?: CardMemoryState[]) {
+    constructor(cards: Flashcard[], sessionType: SessionType, existingStates?: CardMemoryState[]) {
         this.cards = cards;
         this.allCardsMap = new Map(cards.map(c => [c.id, c]));
 
@@ -60,12 +60,13 @@ export class SpacedRepetitionSystem {
             }
         });
 
-        this.initializeReviewQueue();
+        this.initializeReviewQueue(sessionType);
     }
 
-    private initializeReviewQueue() {
+    private initializeReviewQueue(sessionType: SessionType) {
         // For now, we review all cards in a random order.
-        // A more advanced implementation would prioritize cards based on their nextReview date.
+        // A more advanced implementation would prioritize cards based on their nextReview date
+        // and the session type.
         this.reviewQueue = this.shuffleArray(this.cards.map(c => c.id));
     }
 
@@ -84,23 +85,26 @@ export class SpacedRepetitionSystem {
      * @returns The retrievability (R) from 0 to 1.
      */
     public calculateRetrievability(state: CardMemoryState, now: Date): number {
-        if (!state.lastReviewed) return 1; // Not reviewed yet
+        if (!state.lastReviewed) return 1; // Not reviewed yet, perfect recall assumed
+        if (state.stability <= 0) return 0; // If stability is 0, it's forgotten
         const daysSinceLastReview = (now.getTime() - state.lastReviewed.getTime()) / (1000 * 60 * 60 * 24);
         return Math.pow(1 + daysSinceLastReview / (FACTOR * state.stability), DECAY);
     }
     
     /**
      * The core FSRS algorithm update function.
-     * This is executed every time a user rates a card.
      * @param cardId The ID of the card being reviewed.
      * @param userRating The user's self-assessed rating (1-4).
+     * @returns The change in retrievability for this review.
      */
-    public updateCard(cardId: string, userRating: UserRating) {
+    public updateCard(cardId: string, userRating: UserRating): number {
         let state = this.cardStates.get(cardId);
-        if (!state) return;
+        if (!state) return 0;
 
         const ratingIndex = userRating - 1;
         const now = new Date();
+        
+        const oldRetrievability = this.calculateRetrievability(state, now);
 
         // If this is the first review, initialize D and S.
         const isFirstReview = state.stability === 0;
@@ -140,6 +144,11 @@ export class SpacedRepetitionSystem {
 
         // Remove the card from the current session's queue
         this.reviewQueue = this.reviewQueue.filter(id => id !== cardId);
+
+        // After updating, the new retrievability is 1 (or close to it)
+        const newRetrievability = 1; 
+
+        return newRetrievability - oldRetrievability;
     }
     
     public getNextCardId(): string | null {
