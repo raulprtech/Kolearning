@@ -28,7 +28,7 @@ import { handleEndSessionAndRefinePlan, getAllProjects } from '@/app/actions/pro
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { Project, Flashcard, SessionPerformanceSummary } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SpacedRepetitionSystem, type CardState } from '@/lib/srs';
+import { SpacedRepetitionSystem, type UserRating } from '@/lib/srs';
 
 type SessionQuestion = Flashcard & { type: 'open-answer' | 'multiple-choice' | 'matching' | 'ordering' | 'fill-in-the-blank', options?: any[], code?: string, correctAnswerText?: string, textParts?: string[], pairs?: any[], items?: any[], correctAnswer?: string };
 
@@ -509,10 +509,9 @@ setShowQuickQuestionInput(false);
 type State = {
     project: Project | null;
     srs: SpacedRepetitionSystem | null;
-    sessionQuestions: SessionQuestion[];
     currentCardId: string | null;
     isAnswered: boolean;
-    isCorrect: boolean | null;
+    userRating: UserRating | null;
     isLoading: boolean;
     isFinishing: boolean;
     isPulsing: boolean;
@@ -526,36 +525,27 @@ type State = {
     currentStreak: number;
     isSessionFinished: boolean;
     finalSessionStats: { masteryProgress: number; cognitiveCredits: number; bestStreak: number; } | null;
-    mcOptionsForFailedQuestion: any[] | null;
-    selectedMcOption: string | null;
     isGuestSession: boolean;
 };
 
 type Action =
-    | { type: 'START_SESSION'; payload: { project: Project; sessionIndex: number; isGuest: boolean; } }
-    | { type: 'ANSWER_OPEN_QUESTION'; payload: { evaluation: any; userAnswer: string } }
-    | { type: 'ANSWER_MC_QUESTION'; payload: { isCorrect: boolean; selectedOption: string } }
-    | { type: 'RATE_DIFFICULTY'; payload: { rating: 0 | 1 | 2 | 3 } }
+    | { type: 'START_SESSION'; payload: { project: Project; isGuest: boolean; } }
+    | { type: 'EVALUATE_ANSWER'; payload: { isCorrect: boolean; } }
+    | { type: 'RATE_DIFFICULTY'; payload: { rating: UserRating } }
     | { type: 'SET_LOADING'; payload: boolean }
     | { type: 'SET_FINISHING'; payload: boolean }
     | { type: 'SET_SESSION_FINISHED' }
     | { type: 'UPDATE_OPEN_ANSWER_TEXT'; payload: string }
     | { type: 'UPDATE_QUESTION_TEXT'; payload: string }
-    | { type: 'CONVERT_TO_MULTIPLE_CHOICE'; payload: { cardId: string; options: any[], correctAnswerId: string } }
-    | { type: 'PREPARE_MC_CONVERSION'; payload: any[] }
-    | { type: 'FORCE_MC_CONVERSION' }
     | { type: 'SHOW_ANSWER' }
-    | { type: 'REQUEST_HINT' }
-    | { type: 'REQUEST_EXPLANATION' }
-    | { type: 'SET_NEXT_QUESTION'; payload: { cardId: string | null, needsMcOptions: boolean }};
+    | { type: 'SET_NEXT_QUESTION' };
 
 const initialState: State = {
     project: null,
     srs: null,
-    sessionQuestions: [],
     currentCardId: null,
     isAnswered: false,
-    isCorrect: null,
+    userRating: null,
     isLoading: true,
     isFinishing: false,
     isPulsing: false,
@@ -569,45 +559,22 @@ const initialState: State = {
     currentStreak: 0,
     isSessionFinished: false,
     finalSessionStats: null,
-    mcOptionsForFailedQuestion: null,
-    selectedMcOption: null,
     isGuestSession: false,
 };
 
 function reducer(state: State, action: Action): State {
     switch (action.type) {
         case 'START_SESSION': {
-            const { project, sessionIndex, isGuest } = action.payload;
+            const { project, isGuest } = action.payload;
 
-            // Robustness: If studyPlan is missing (e.g., guest flow issue), create a default one.
-            const projectWithPlan = { ...project };
-            if (!projectWithPlan.studyPlan || !projectWithPlan.studyPlan.plan) {
-                projectWithPlan.studyPlan = {
-                    plan: [{ topic: 'Sesión de Prueba', sessionType: 'Refuerzo de Dominio' }],
-                    justification: '',
-                    expectedProgress: ''
-                };
-            }
-
-            const sessionType = projectWithPlan.studyPlan?.plan[sessionIndex]?.sessionType;
-            const progressPercentage = projectWithPlan.studyPlan?.plan?.length
-              ? (sessionIndex + 1) / projectWithPlan.studyPlan.plan.length
-              : 0;
-            
-            const srs = new SpacedRepetitionSystem(projectWithPlan.flashcards || [], sessionType, progressPercentage);
-            const nextCard = srs.getNextCard();
-            
-            const sessionQuestions = (projectWithPlan.flashcards || []).map(fc => {
-                const type = srs.getQuestionTypeForCard(fc.id);
-                return { ...fc, type };
-            }) as SessionQuestion[];
+            const srs = new SpacedRepetitionSystem(project.flashcards || []);
+            const nextCardId = srs.getNextCardId();
 
             return {
                 ...initialState,
-                project: projectWithPlan,
+                project: project,
                 srs,
-                sessionQuestions,
-                currentCardId: nextCard?.id || null,
+                currentCardId: nextCardId,
                 isLoading: false,
                 isGuestSession: isGuest,
             };
@@ -620,145 +587,59 @@ function reducer(state: State, action: Action): State {
         case 'UPDATE_OPEN_ANSWER_TEXT':
             return { ...state, openAnswerText: action.payload, openAnswerFeedback: null };
 
-        case 'ANSWER_OPEN_QUESTION': {
-            const { evaluation, userAnswer } = action.payload;
-            const { srs, currentCardId } = state;
-            if (!srs || !currentCardId) return state;
-
-            srs.recordAttempt(currentCardId);
-            const newAttempts = state.openAnswerAttempts + 1;
-
-            if (evaluation.isCorrect) {
-                return { ...state, isAnswered: true, isCorrect: true, openAnswerText: userAnswer, isLoading: false, openAnswerAttempts: newAttempts };
-            } else {
-                 if (newAttempts >= 2) {
-                    return { ...state, isLoading: false, openAnswerFeedback: evaluation.feedback, openAnswerAttempts: newAttempts };
-                } else {
-                    return { ...state, openAnswerFeedback: evaluation.feedback, openAnswerText: '', isLoading: false, openAnswerAttempts: newAttempts };
-                }
-            }
-        }
-        
-        case 'FORCE_MC_CONVERSION': {
-            const { srs, currentCardId, mcOptionsForFailedQuestion, sessionQuestions } = state;
-            if (!srs || !currentCardId || !mcOptionsForFailedQuestion) return state;
-            
-            const card = srs.getCard(currentCardId);
-            if (!card) return state;
-
-            const formattedOptions = mcOptionsForFailedQuestion.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
-            const correctOption = formattedOptions.find(o => o.text === card.answer);
-
-            const newQuestions = sessionQuestions.map(q => {
-                if (q.id === currentCardId) {
-                    return {
-                        ...q,
-                        type: 'multiple-choice',
-                        options: formattedOptions,
-                        correctAnswer: correctOption?.id || 'A'
-                    }
-                }
-                return q;
-            });
-            return { ...state, sessionQuestions: newQuestions, openAnswerFeedback: "Se ha agotado el número de intentos. Intenta ahora con opción múltiple.", mcOptionsForFailedQuestion: null };
-        }
-        
-        case 'PREPARE_MC_CONVERSION': {
-            return { ...state, mcOptionsForFailedQuestion: action.payload };
+        case 'EVALUATE_ANSWER': {
+            // This action now only serves to show the answer and feedback,
+            // the actual SRS update happens in RATE_DIFFICULTY.
+            const { isCorrect } = action.payload;
+            return { ...state, isAnswered: true, userRating: isCorrect ? 3 : 1, isLoading: false };
         }
 
-        case 'ANSWER_MC_QUESTION': {
-            const { currentCardId, srs } = state;
-            if (currentCardId && srs) {
-                 srs.recordAttempt(currentCardId);
-            }
-            return { ...state, isAnswered: true, isCorrect: action.payload.isCorrect, selectedMcOption: action.payload.selectedOption };
-        }
-        
         case 'SET_NEXT_QUESTION': {
-            const { cardId } = action.payload;
-            
-            if (!cardId) {
-                 const newStats = state.srs!.getStats();
-                 return { ...state, isSessionFinished: true, finalSessionStats: newStats };
+            if (!state.srs) return state;
+            const nextCardId = state.srs.getNextCardId();
+
+            if (!nextCardId) {
+                // Session is finished, logic to handle this will be added
+                return { ...state, isSessionFinished: true };
             }
 
-            const progress = (state.srs!.getReviewedCount() / state.srs!.getTotalCards()) * 100;
-            const newStats = state.srs!.getStats();
+            const progress = state.srs.getSessionProgress();
             
-            const nextQuestionType = state.srs!.getQuestionTypeForCard(cardId);
-            const newQuestions = state.sessionQuestions.map(q =>
-                q.id === cardId ? { ...q, type: nextQuestionType } : q
-            );
-
             return {
                 ...state,
-                sessionQuestions: newQuestions,
-                currentCardId: cardId,
+                currentCardId: nextCardId,
                 isAnswered: false,
-                isCorrect: null,
+                userRating: null,
                 openAnswerText: '',
                 openAnswerFeedback: null,
-                openAnswerAttempts: 0,
-                mcOptionsForFailedQuestion: null,
-                selectedMcOption: null,
                 sessionProgress: progress,
-                ...newStats,
             };
         }
 
         case 'RATE_DIFFICULTY': {
             const { rating } = action.payload;
-            const { srs, currentCardId, isCorrect, project } = state;
-            if (!srs || !currentCardId || !project) return state;
+            const { srs, currentCardId } = state;
+            if (!srs || !currentCardId) return state;
 
-            srs.updateCard(currentCardId, rating, isCorrect!);
+            srs.updateCard(currentCardId, rating);
             
             // This will be handled by SET_NEXT_QUESTION now
-            return state;
+            return { ...state, isAnswered: true, userRating: rating };
         }
         
         case 'UPDATE_QUESTION_TEXT': {
-             if (!state.currentCardId) return state;
-             const newQuestions = state.sessionQuestions.map(q =>
+             if (!state.project || !state.currentCardId) return state;
+             const newFlashcards = state.project.flashcards?.map(q =>
                 q.id === state.currentCardId ? { ...q, question: action.payload } : q
              );
-             return { ...state, sessionQuestions: newQuestions, isPulsing: true };
-        }
-
-        case 'CONVERT_TO_MULTIPLE_CHOICE': {
-            if (!state.currentCardId) return state;
-            const newQuestions = state.sessionQuestions.map(q => {
-                if (q.id === action.payload.cardId) {
-                    return {
-                        ...q,
-                        type: 'multiple-choice',
-                        options: action.payload.options,
-                        correctAnswer: action.payload.correctAnswerId
-                    }
-                }
-                return q;
-            });
-            return { ...state, sessionQuestions: newQuestions };
+             return { ...state, project: {...state.project, flashcards: newFlashcards}, isPulsing: true };
         }
 
         case 'SHOW_ANSWER': {
             if (!state.srs || !state.currentCardId) return state;
             const card = state.srs.getCard(state.currentCardId);
             if (!card) return state;
-            return { ...state, isAnswered: true, isCorrect: false, openAnswerText: card.answer };
-        }
-
-        case 'REQUEST_HINT': {
-             if (!state.srs || !state.currentCardId) return state;
-             state.srs.recordHelp(state.currentCardId, 'hint');
-             return state;
-        }
-
-        case 'REQUEST_EXPLANATION': {
-             if (!state.srs || !state.currentCardId) return state;
-             state.srs.recordHelp(state.currentCardId, 'explanation');
-             return state;
+            return { ...state, isAnswered: true, openAnswerText: card.answer, userRating: 1 }; // Showing answer is equivalent to getting it wrong.
         }
 
         default:
@@ -772,18 +653,14 @@ function AprenderPageComponent() {
   const searchParams = useSearchParams();
   const projectSlug = searchParams.get('project');
   const sessionIndexParam = searchParams.get('session');
-  const isGuestSession = searchParams.get('guest') === 'true';
   
   const [state, dispatch] = useReducer(reducer, initialState);
   const { user, addCoins, addDominionPoints, completeSessionForToday } = useUser();
-  const hasEnergy = user && user.energy > 0;
   
   useEffect(() => {
     async function loadProject() {
       const projSlug = searchParams.get('project');
-      const sessIdxParam = searchParams.get('session');
-      const sessionIndex = sessIdxParam ? parseInt(sessIdxParam, 10) : 0;
-      const isGuest = searchParams.get('guest') === 'true';
+      const isGuest = projSlug === 'guest-project';
 
       let projectToLoad: Project | undefined | null = null;
       
@@ -792,7 +669,6 @@ function AprenderPageComponent() {
         if (guestProjectJson) {
             projectToLoad = JSON.parse(guestProjectJson);
         } else {
-            // If no guest project, redirect to creation page
             router.push('/crear');
             return;
         }
@@ -801,20 +677,18 @@ function AprenderPageComponent() {
             router.push('/');
             return;
         };
-        // For logged-in users, fetch from the database
         const allProjects = await getAllProjects();
         projectToLoad = allProjects.find(p => p.slug === projSlug);
       }
       
       if (projectToLoad) {
-        dispatch({ type: 'START_SESSION', payload: { project: projectToLoad, sessionIndex: sessionIndex, isGuest }});
+        dispatch({ type: 'START_SESSION', payload: { project: projectToLoad, isGuest }});
       } else if (!isGuest) {
-        // Only redirect if it was a real project that wasn't found
-        router.push('/'); // Or a 404 page
+        router.push('/');
       }
     }
     loadProject();
-  }, [projectSlug, sessionIndexParam, isGuestSession, router, searchParams]);
+  }, [projectSlug, router, searchParams]);
   
   useEffect(() => {
     if (state.isPulsing) {
@@ -825,73 +699,24 @@ function AprenderPageComponent() {
 
   const finishSessionAndRedirect = async () => {
     if (state.isGuestSession && state.project) {
-        // Update guest project in localStorage
         const updatedProject = {
             ...state.project,
             completedSessions: (state.project.completedSessions || 0) + 1,
         };
         localStorage.setItem('guestProject', JSON.stringify(updatedProject));
-        router.push(`/mis-proyectos/${state.project.slug}?guest=true&sessionCompleted=true`);
+        router.push(`/mis-proyectos/${state.project.slug}?sessionCompleted=true`);
         return;
     }
 
-    if (state.project && state.srs && state.finalSessionStats) {
+    if (state.project && state.srs) {
         dispatch({ type: 'SET_FINISHING', payload: true });
-
-        // Update global user state
-        addDominionPoints(state.finalSessionStats.masteryProgress);
-        addCoins(state.finalSessionStats.cognitiveCredits);
-        completeSessionForToday();
-
-
-        const performanceSummary = state.srs!.getPerformanceSummary();
-        const result = await handleEndSessionAndRefinePlan(state.project!.id, parseInt(sessionIndexParam!), performanceSummary);
-        
-        let url = `/mis-proyectos/${projectSlug}?mastery=${state.finalSessionStats.masteryProgress}&credits=${state.finalSessionStats.cognitiveCredits}&session=${sessionIndexParam}&streak=${state.finalSessionStats.bestStreak}`;
-        if (result.planUpdated) {
-            url += `&planUpdated=true&reasoning=${encodeURIComponent(result.reasoning || '')}`;
-        }
-        router.push(url);
+        router.push(`/mis-proyectos/${projectSlug}`);
     }
   };
 
 
-  const currentQuestion = useMemo(() => state.sessionQuestions.find(q => q.id === state.currentCardId), [state.sessionQuestions, state.currentCardId]);
-
-  // Effect to handle automatic MC conversion on 3rd attempt
-  useEffect(() => {
-    if (state.openAnswerAttempts >= 2 && currentQuestion?.type === 'open-answer' && !state.isAnswered) {
-        if (state.mcOptionsForFailedQuestion) {
-            dispatch({ type: 'FORCE_MC_CONVERSION' });
-        }
-    }
-  }, [state.openAnswerAttempts, currentQuestion?.type, state.isAnswered, state.mcOptionsForFailedQuestion]);
+  const currentQuestion = useMemo(() => state.project?.flashcards?.find(q => q.id === state.currentCardId), [state.project, state.currentCardId]);
   
-  // Effect to generate MC options when a question needs them
-    useEffect(() => {
-        const card = currentQuestion;
-        if (card && card.type === 'multiple-choice' && !card.options) {
-            handleGenerateOptionsForQuestion({
-                question: card.question,
-                correctAnswer: card.answer,
-            }).then(result => {
-                if (result.options && card.id) {
-                    const formattedOptions = result.options.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
-                    const correctOption = formattedOptions.find(o => o.text === card.answer);
-                    dispatch({ 
-                        type: 'CONVERT_TO_MULTIPLE_CHOICE', 
-                        payload: { 
-                            cardId: card.id,
-                            options: formattedOptions, 
-                            correctAnswerId: correctOption?.id || 'A' 
-                        } 
-                    });
-                }
-            });
-        }
-    }, [currentQuestion]);
-
-
   if (state.isLoading || !state.project) {
       return (
         <div className="container mx-auto py-8">
@@ -905,45 +730,15 @@ function AprenderPageComponent() {
       );
   }
 
-  if (state.isSessionFinished && state.finalSessionStats) {
+  if (state.isSessionFinished) {
      return (
         <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-120px)] text-center">
             <Trophy className="h-20 w-20 text-yellow-400 mb-4" />
             <h1 className="text-4xl font-bold">¡Sesión Completada!</h1>
-                <>
-                <p className="text-muted-foreground mt-2 mb-8">¡Excelente trabajo! Aquí está tu resumen:</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl w-full mb-10">
-                    <Card className="bg-card/70">
-                        <CardHeader>
-                            <CardTitle className="text-lg flex items-center justify-center gap-2 text-blue-400"><TrendingUp /> Puntos de Dominio</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-5xl font-bold">+{state.finalSessionStats.masteryProgress}</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-card/70">
-                         <CardHeader>
-                            <CardTitle className="text-lg flex items-center justify-center gap-2 text-green-400"><Award /> Créditos Cognitivos</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-5xl font-bold">+{state.finalSessionStats.cognitiveCredits}</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-card/70">
-                         <CardHeader>
-                            <CardTitle className="text-lg flex items-center justify-center gap-2 text-yellow-400"><Star /> Mejor Racha</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-5xl font-bold">{state.finalSessionStats.bestStreak}</p>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <Button size="lg" onClick={finishSessionAndRedirect} disabled={state.isFinishing}>
-                    {state.isFinishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {state.isFinishing ? 'Guardando...' : 'Finalizar Sesión'}
-                </Button>
-                </>
+            <p className="text-muted-foreground mt-2 mb-8">¡Excelente trabajo! Has revisado todas las tarjetas para esta sesión.</p>
+            <Button size="lg" onClick={finishSessionAndRedirect} disabled={state.isFinishing}>
+                {state.isFinishing ? 'Guardando...' : 'Finalizar y Volver al Proyecto'}
+            </Button>
         </div>
     );
   }
@@ -971,36 +766,20 @@ function AprenderPageComponent() {
     if (!state.openAnswerText.trim() || !currentQuestion) return;
     dispatch({ type: 'SET_LOADING', payload: true });
 
-    // Pre-fetch MC options on first failure
-    if (state.openAnswerAttempts === 0) {
-        handleGenerateOptionsForQuestion({
-            question: currentQuestion.question,
-            correctAnswer: currentQuestion.answer,
-        }).then(result => {
-            if (result.options) {
-                dispatch({ type: 'PREPARE_MC_CONVERSION', payload: result.options });
-            }
-        });
-    }
-
     const result = await handleEvaluateOpenAnswer({
         question: currentQuestion.question,
         correctAnswer: currentQuestion.answer,
         userAnswer: state.openAnswerText,
     });
-    dispatch({ type: 'ANSWER_OPEN_QUESTION', payload: { evaluation: result.evaluation, userAnswer: state.openAnswerText } });
-  };
-  
-  const handleOptionSelect = (optionId: string) => {
-    if (!currentQuestion) return; 
-    const isCorrect = currentQuestion.type === 'multiple-choice' && optionId === (currentQuestion as any).correctAnswer;
-    dispatch({ type: 'ANSWER_MC_QUESTION', payload: { isCorrect, selectedOption: optionId } });
+    dispatch({ type: 'EVALUATE_ANSWER', payload: { isCorrect: result.evaluation.isCorrect }});
   };
 
-  const handleDifficultyRating = (rating: 0 | 1 | 2 | 3) => {
+  const handleDifficultyRating = (rating: UserRating) => {
       dispatch({ type: 'RATE_DIFFICULTY', payload: { rating } });
-      const nextCardInfo = state.srs!.getNextCard();
-      dispatch({ type: 'SET_NEXT_QUESTION', payload: { cardId: nextCardInfo?.id || null, needsMcOptions: nextCardInfo?.needsMcOptions || false }});
+      // After rating, automatically move to the next question
+      setTimeout(() => {
+        dispatch({ type: 'SET_NEXT_QUESTION' });
+      }, 500); // Add a small delay to show feedback
   };
 
   const handleShowAnswer = () => {
@@ -1011,27 +790,14 @@ function AprenderPageComponent() {
       dispatch({ type: 'UPDATE_QUESTION_TEXT', payload: newQuestionText });
   };
 
-  const handleConvertToMultipleChoice = async (options: string[], correctAnswerText: string) => {
-    if (!currentQuestion) return;
-    const formattedOptions = options.map((opt, i) => ({ id: String.fromCharCode(65 + i), text: opt }));
-    const correctOption = formattedOptions.find(o => o.text === correctAnswerText);
-    dispatch({ 
-        type: 'CONVERT_TO_MULTIPLE_CHOICE', 
-        payload: {
-            cardId: currentQuestion.id,
-            options: formattedOptions, 
-            correctAnswerId: correctOption?.id || 'A' 
-        } 
-    });
-};
-
+  const isCorrect = state.userRating !== null && state.userRating > 1;
 
   return (
     <div className="container mx-auto py-4 sm:py-8">
       <div className="xl:grid xl:grid-cols-3 xl:gap-8">
         <div className="xl:col-span-2">
           <div className="mb-4">
-            <Link href={state.isGuestSession ? `/mis-proyectos/${projectSlug}?guest=true` : `/mis-proyectos/${projectSlug}`} className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
+            <Link href={state.isGuestSession ? `/mis-proyectos/guest-project` : `/mis-proyectos/${projectSlug}`} className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Salir de la sesión
             </Link>
           </div>
@@ -1043,29 +809,7 @@ function AprenderPageComponent() {
                   <h1 className="text-xl md:text-2xl font-bold">{state.project.title}</h1>
                   <p className="text-sm text-muted-foreground">{state.project.studyPlan?.plan[parseInt(sessionIndexParam || '0')]?.topic || 'Sesión de Repaso'}</p>
                 </div>
-                <div className="flex items-center gap-4 text-sm shrink-0">
-                  <div className="flex items-center gap-2">
-                      <Award className="h-5 w-5 text-green-400" />
-                      <div>
-                        <p className="font-bold text-base md:text-lg">{state.cognitiveCredits}</p>
-                        <p className="text-xs text-muted-foreground">Creditos Cognitivos</p>
-                      </div>
-                    </div>
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-blue-400" />
-                    <div>
-                      <p className="font-bold text-base md:text-lg">+{state.masteryProgress}</p>
-                      <p className="text-xs text-muted-foreground">Puntos de Dominio</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Star className="h-5 w-5 text-yellow-400" />
-                     <div>
-                      <p className="font-bold text-base md:text-lg">{state.bestStreak}</p>
-                      <p className="text-xs text-muted-foreground">Mejor Racha</p>
-                    </div>
-                  </div>
-                </div>
+                {/* Stats can be re-added here later if needed */}
               </div>
 
               <div>
@@ -1076,13 +820,13 @@ function AprenderPageComponent() {
 
           <Card className={cn("mb-3 sm:mb-6 bg-card/70", state.isPulsing && "animate-pulse border-primary/50")}>
             <CardHeader className="flex flex-row justify-between items-center p-4 sm:p-6">
-              <CardTitle className="text-lg md:text-xl">Pregunta {currentQuestion.type === 'open-answer' && !state.isAnswered && state.openAnswerAttempts > 0 ? `(Intento ${state.openAnswerAttempts + 1})` : ''}</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Pregunta</CardTitle>
               {state.isAnswered && (
                  <div className="flex items-center gap-4">
-                    { state.isCorrect ? (
+                    { isCorrect ? (
                         <div className="flex items-center gap-2">
                             <CheckCircle className="h-5 sm:h-6 w-5 sm:w-6 text-green-500" />
-                            <p className="font-bold text-base md:text-lg">¡Correcto!</p>
+                            <p className="font-bold text-base md:text-lg">¡Bien!</p>
                         </div>
                     ) : (
                          <div className="flex items-center gap-2">
@@ -1098,51 +842,41 @@ function AprenderPageComponent() {
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {currentQuestion.question}
                   </ReactMarkdown>
-                  {currentQuestion.type === 'multiple-choice' && currentQuestion.code && (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {currentQuestion.code}
-                      </ReactMarkdown>
-                  )}
               </div>
             </CardContent>
+            {state.isAnswered && (
+                <CardFooter className="px-4 sm:px-6 py-4 bg-muted/30">
+                     <div className="prose prose-invert prose-sm md:prose-base max-w-none">
+                         <p className="font-bold text-sm">Respuesta:</p>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {currentQuestion.answer}
+                        </ReactMarkdown>
+                    </div>
+                </CardFooter>
+            )}
           </Card>
           
-          {currentQuestion.type === 'multiple-choice' && (
-            <MultipleChoiceQuestion 
-              question={currentQuestion}
-              answerState={{ isAnswered: state.isAnswered, selectedOption: state.selectedMcOption }}
-              onOptionSelect={handleOptionSelect}
-            />
-          )}
-
-          {currentQuestion.type === 'open-answer' && (
-            <OpenAnswerQuestion 
-              onAnswerSubmit={handleOpenAnswerSubmit}
-              isAnswered={state.isAnswered}
-              isLoading={state.isLoading}
-              userAnswer={state.isAnswered ? state.openAnswerText : state.openAnswerText}
-              onUserAnswerChange={(text: string) => dispatch({ type: 'UPDATE_OPEN_ANSWER_TEXT', payload: text })}
-              feedback={state.openAnswerFeedback}
-            />
-          )}
-          
-          {state.isAnswered && (
+          {!state.isAnswered ? (
+             <Button onClick={() => dispatch({type: 'SHOW_ANSWER'})} className="w-full">
+                Mostrar Respuesta
+             </Button>
+          ) : (
                <div className="flex justify-end items-center bg-card/70 border rounded-lg p-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(0)}>
-                        <Frown className="mr-2 h-4 w-4" />
-                        Muy Difícil
-                      </Button>
                       <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(1)}>
+                        <Frown className="mr-2 h-4 w-4" />
+                        De Nuevo
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(2)}>
                         <Meh className="mr-2 h-4 w-4" />
                         Difícil
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(2)}>
+                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(3)}>
                         <Smile className="mr-2 h-4 w-4" />
                         Bien
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(3)}>
-                        <Smile className="mr-2 h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => handleDifficultyRating(4)}>
+                        <Star className="mr-2 h-4 w-4" />
                         Fácil
                       </Button>
                   </div>
@@ -1154,20 +888,6 @@ function AprenderPageComponent() {
             {/* Placeholder for potential future side panel */}
         </div>
       </div>
-
-       <div className="xl:hidden-for-now">
-         <KoliAssistancePopover 
-            currentQuestion={currentQuestion} 
-            correctAnswer={currentQuestion.answer || ''}
-            onShowAnswer={handleShowAnswer}
-            onRephrase={handleRephrase}
-            onConvertToMultipleChoice={handleConvertToMultipleChoice}
-            isAnswered={state.isAnswered}
-            onHintRequest={() => dispatch({ type: 'REQUEST_HINT' })}
-            onExplanationRequest={() => dispatch({ type: 'REQUEST_EXPLANATION' })}
-          />
-       </div>
-
     </div>
   );
 }

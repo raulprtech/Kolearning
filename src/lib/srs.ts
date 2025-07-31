@@ -1,114 +1,73 @@
-import type { Flashcard, SessionPerformanceSummary } from "@/types";
+import type { Flashcard } from "@/types";
 
-export type CardRating = 0 | 1 | 2 | 3; // 0: Muy Difícil, 1: Difícil, 2: Bien, 3: Fácil
+// FSRS Constants (weights optimized based on empirical data, can be user-specific in the future)
+const DECAY = -0.5;
+const FACTOR = 19 / Math.abs(Math.pow(0.9, 1 / DECAY) - 1);
+
+// Default FSRS parameters for a new user. These would be updated based on user performance analysis.
+const DEFAULT_WEIGHTS = {
+    initialDifficulty: [0.4, 0.6, 2.4, 5.8],
+    initialStability: [0.4, 0.9, 2.3, 5.8],
+    stabilityAfterSuccess: [2.16, 0, 0, 0], // Only w0 is used for success
+    stabilityAfterFailure: [0.54, 0.1, 0, 0], // w0, w1 are used for failure
+    difficultyDelta: [1.44, 0, 0, 0], // Only w0 is used for difficulty change
+};
+
+export type UserRating = 1 | 2 | 3 | 4; // 1: Again, 2: Hard, 3: Good, 4: Easy
 export type SessionType = 'Calibración Inicial' | 'Incursión' | 'Refuerzo de Dominio' | 'Prueba de Dominio' | 'Consulta con Koli' | 'Brecha Detectada';
 
-export type CardState = {
+/**
+ * Represents the memory state of a single flashcard for a specific user.
+ * This would typically be stored in a database table mapping (userId, cardId) -> CardMemoryState.
+ */
+export type CardMemoryState = {
     id: string;
-    // SM-2 Algorithm parameters
-    interval: number; // in days
-    repetitions: number;
-    easeFactor: number; // q-factor
+    /** Difficulty (D): Represents the inherent complexity of the card for the user. */
+    difficulty: number;
+    /** Stability (S): The number of days the card will be remembered before recall chance drops below 90%. */
+    stability: number;
+    /** The date this card was last reviewed. */
+    lastReviewed: Date | null;
+    /** The date this card is scheduled for the next review. */
+    nextReview: Date | null;
     // Session-specific data
     attempts: number;
-    timesAskedForHelp: number;
-    isCorrect: boolean | null;
-    lastReviewed: Date | null;
-    reviewQueue: 'new' | 'learning' | 'review';
 };
 
 export class SpacedRepetitionSystem {
     private cards: Flashcard[];
-    private cardStates: Map<string, CardState> = new Map();
+    private cardStates: Map<string, CardMemoryState> = new Map();
     private reviewQueue: string[] = [];
     private allCardsMap: Map<string, Flashcard>;
-    private sessionType: SessionType;
-    private planProgress: number; // 0.0 to 1.0
 
-    // Streak tracking
-    private currentStreak: number = 0;
-    private bestStreak: number = 0;
-
-    constructor(cards: Flashcard[], sessionType: SessionType | undefined, planProgress: number) {
+    constructor(cards: Flashcard[], existingStates?: CardMemoryState[]) {
         this.cards = cards;
-        this.sessionType = sessionType || 'Refuerzo de Dominio';
-        this.planProgress = planProgress;
         this.allCardsMap = new Map(cards.map(c => [c.id, c]));
 
         cards.forEach(card => {
-            this.cardStates.set(card.id, {
-                id: card.id,
-                interval: 0,
-                repetitions: 0,
-                easeFactor: 2.5,
-                attempts: 0,
-                timesAskedForHelp: 0,
-                isCorrect: null,
-                lastReviewed: null,
-                reviewQueue: 'new',
-            });
+            const existing = existingStates?.find(s => s.id === card.id);
+            if (existing) {
+                this.cardStates.set(card.id, { ...existing });
+            } else {
+                this.cardStates.set(card.id, {
+                    id: card.id,
+                    difficulty: 0, // Will be initialized on first review
+                    stability: 0,  // Will be initialized on first review
+                    lastReviewed: null,
+                    nextReview: null,
+                    attempts: 0,
+                });
+            }
         });
 
         this.initializeReviewQueue();
     }
 
     private initializeReviewQueue() {
-        let eligibleCards = [...this.cards];
-
-        if (this.sessionType === 'Incursión') {
-            // "Incursión" sessions focus on interactive formats, avoiding open-ended questions.
-            const interactiveFormats = ["Identificación", "Comparación", "Procedimiento", "Ejemplificación"];
-            eligibleCards = this.cards.filter(card => 
-                card.formatos_presentacion.some(fp => interactiveFormats.includes(fp))
-            );
-        }
-        
-        // If for some reason filtering leaves no cards, fall back to all cards to avoid an empty session.
-        if (eligibleCards.length === 0) {
-            eligibleCards = [...this.cards];
-        }
-
-        this.reviewQueue = this.shuffleArray(eligibleCards.map(c => c.id));
+        // For now, we review all cards in a random order.
+        // A more advanced implementation would prioritize cards based on their nextReview date.
+        this.reviewQueue = this.shuffleArray(this.cards.map(c => c.id));
     }
-    
-    public getQuestionTypeForCard(cardId: string): SessionQuestion['type'] {
-        const card = this.allCardsMap.get(cardId);
-        if (!card) return 'open-answer'; // Default fallback
-        
-        // Calibration sessions should only be multiple choice to gauge knowledge without friction.
-        if (this.sessionType.startsWith('Calibración')) {
-            return 'multiple-choice';
-        }
-
-        // Mastery tests should prioritize recall (open answer).
-        if (this.sessionType === 'Prueba de Dominio') {
-            // We can add more complex logic here later, but for now, prioritize open-answer.
-            // If the card format is simple identification, MC is a fallback.
-            if (card.formatos_presentacion.includes('Identificación')) {
-                 return Math.random() > 0.3 ? 'open-answer' : 'multiple-choice';
-            }
-            return 'open-answer';
-        }
-
-        // "Incursión" (Incursion) should prioritize interactive formats.
-        if (this.sessionType === 'Incursión') {
-            if (card.formatos_presentacion.includes("Identificación")) return 'multiple-choice';
-            // Add logic for 'matching' and 'ordering' when those types are implemented
-        }
-
-        // "Refuerzo de Dominio" (Mastery Reinforcement) should gradually introduce harder questions.
-        if (this.sessionType === 'Refuerzo de Dominio') {
-            const randomFactor = Math.random();
-            // Early in the plan, less chance of open-answer.
-            if (this.planProgress < 0.5 && randomFactor > (this.planProgress * 1.5)) { // Make it a bit harder to get open-answer early on
-                 if (card.formatos_presentacion.includes("Identificación")) return 'multiple-choice';
-            }
-        }
-        
-        // Default to open-answer if no other type fits
-        return 'open-answer';
-    }
-
 
     private shuffleArray(array: any[]) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -118,105 +77,83 @@ export class SpacedRepetitionSystem {
         return array;
     }
 
-    public getNextCard(): { id: string, needsMcOptions: boolean } | null {
-        if (this.reviewQueue.length === 0) {
-            return null; // Session finished
-        }
-        const cardId = this.reviewQueue[0];
-        const questionType = this.getQuestionTypeForCard(cardId);
-        return {
-            id: cardId,
-            needsMcOptions: questionType === 'multiple-choice',
-        };
+    /**
+     * Calculates the probability of recalling a card at a given time.
+     * @param state The memory state of the card.
+     * @param now The current date.
+     * @returns The retrievability (R) from 0 to 1.
+     */
+    public calculateRetrievability(state: CardMemoryState, now: Date): number {
+        if (!state.lastReviewed) return 1; // Not reviewed yet
+        const daysSinceLastReview = (now.getTime() - state.lastReviewed.getTime()) / (1000 * 60 * 60 * 24);
+        return Math.pow(1 + daysSinceLastReview / (FACTOR * state.stability), DECAY);
     }
     
+    /**
+     * The core FSRS algorithm update function.
+     * This is executed every time a user rates a card.
+     * @param cardId The ID of the card being reviewed.
+     * @param userRating The user's self-assessed rating (1-4).
+     */
+    public updateCard(cardId: string, userRating: UserRating) {
+        let state = this.cardStates.get(cardId);
+        if (!state) return;
+
+        const ratingIndex = userRating - 1;
+        const now = new Date();
+
+        // If this is the first review, initialize D and S.
+        const isFirstReview = state.stability === 0;
+        if (isFirstReview) {
+            state.difficulty = DEFAULT_WEIGHTS.initialDifficulty[ratingIndex];
+            state.stability = DEFAULT_WEIGHTS.initialStability[ratingIndex];
+        } else {
+            // It's a subsequent review, calculate new D and S.
+            const retrievability = this.calculateRetrievability(state, now);
+
+            // Calculate new Difficulty
+            const difficultyDelta = DEFAULT_WEIGHTS.difficultyDelta[0] * (1 / (1 + 9 * (1 - retrievability)));
+            state.difficulty += difficultyDelta;
+            state.difficulty = Math.max(0, Math.min(state.difficulty, 10)); // Clamp D between 0 and 10
+
+            // Calculate new Stability
+            if (userRating === 1) { // Failure
+                const failureFactor = Math.pow(state.stability, DEFAULT_WEIGHTS.stabilityAfterFailure[1]);
+                const nextStability = DEFAULT_WEIGHTS.stabilityAfterFailure[0] * failureFactor;
+                state.stability = Math.max(0.1, nextStability); // Ensure stability doesn't drop too low
+            } else { // Success (Hard, Good, Easy)
+                const successFactor = Math.pow(Math.E, (1 - retrievability) * DEFAULT_WEIGHTS.stabilityAfterSuccess[0]);
+                const stabilityIncrease = state.stability * successFactor;
+                state.stability += stabilityIncrease;
+            }
+        }
+        
+        state.lastReviewed = now;
+        state.attempts += 1;
+        
+        // Schedule next review date
+        // The goal is to review when retrievability is about to fall to 90%
+        const daysToNextReview = Math.round(state.stability * Math.log(0.9) / Math.log(0.9));
+        const nextReviewDate = new Date(now.getTime());
+        nextReviewDate.setDate(now.getDate() + Math.max(1, daysToNextReview)); // Review at least 1 day later
+        state.nextReview = nextReviewDate;
+
+        // Remove the card from the current session's queue
+        this.reviewQueue = this.reviewQueue.filter(id => id !== cardId);
+    }
+    
+    public getNextCardId(): string | null {
+        return this.reviewQueue[0] || null;
+    }
+
     public getCard(id: string): Flashcard | undefined {
         return this.allCardsMap.get(id);
     }
     
-    public getCardState(id: string): CardState | undefined {
+    public getCardState(id: string): CardMemoryState | undefined {
         return this.cardStates.get(id);
     }
 
-    public recordAttempt(cardId: string) {
-        const state = this.cardStates.get(cardId);
-        if (state) {
-            state.attempts += 1;
-        }
-    }
-    
-    public recordHelp(cardId: string, helpType: 'hint' | 'explanation') {
-        const state = this.cardStates.get(cardId);
-        if (state) {
-            state.timesAskedForHelp += 1;
-        }
-    }
-
-    public updateCard(cardId: string, rating: CardRating, isCorrect: boolean) {
-        const state = this.cardStates.get(cardId);
-        if (!state) return;
-
-        state.isCorrect = isCorrect;
-        state.lastReviewed = new Date();
-        
-        // Streak logic
-        if (isCorrect) {
-            this.currentStreak++;
-            if (this.currentStreak > this.bestStreak) {
-                this.bestStreak = this.currentStreak;
-            }
-        } else {
-            this.currentStreak = 0;
-        }
-
-        if (isCorrect) {
-             // If correct, remove from queue permanently for this session
-            this.reviewQueue.shift();
-        } else {
-            // If incorrect, move to back of learning queue
-            const reviewedCard = this.reviewQueue.shift();
-            if (reviewedCard) {
-                this.reviewQueue.push(reviewedCard);
-            }
-        }
-
-        // SM-2 algorithm implementation
-        if (isCorrect) {
-            if (rating < 2) { // Forgot, but was marked as correct (e.g. via "Show Answer")
-                state.repetitions = 0;
-                state.interval = 1;
-            } else { // Remembered well
-                if (state.repetitions === 0) {
-                    state.interval = 1;
-                } else if (state.repetitions === 1) {
-                    state.interval = 6;
-                } else {
-                    state.interval = Math.round(state.interval * state.easeFactor);
-                }
-                state.repetitions += 1;
-            }
-            state.easeFactor = state.easeFactor + (0.1 - (4 - rating) * (0.08 + (4 - rating) * 0.02));
-            if (state.easeFactor < 1.3) state.easeFactor = 1.3;
-        } else {
-             // If incorrect, reset progress
-             state.repetitions = 0;
-             state.interval = 1;
-        }
-
-        // If card was very difficult, inject parent atoms into the queue
-        if (isCorrect && rating === 0) { // 'Muy Difícil'
-            const card = this.allCardsMap.get(cardId);
-            if (card && card.atomos_padre && card.atomos_padre.length > 0) {
-                const parentIds = card.atomos_padre.filter(pId => this.allCardsMap.has(pId) && !this.reviewQueue.includes(pId));
-                // Add parents to the front of the queue, avoiding duplicates
-                 if (parentIds.length > 0) {
-                    const currentCardIndex = 1; // Insert after the upcoming card
-                    this.reviewQueue.splice(currentCardIndex, 0, ...parentIds.reverse());
-                }
-            }
-        }
-    }
-    
     public getReviewedCount(): number {
         return this.cards.length - this.reviewQueue.length;
     }
@@ -225,56 +162,9 @@ export class SpacedRepetitionSystem {
         return this.cards.length;
     }
 
-    public getStats() {
-        const answeredCards = Array.from(this.cardStates.values()).filter(s => s.isCorrect !== null);
-
-        const masteryProgress = answeredCards.reduce((acc, state) => {
-            return acc + (state.isCorrect ? 10 : 0);
-        }, 0);
-        
-         const cognitiveCredits = answeredCards.reduce((acc, state) => {
-            return acc + (state.isCorrect ? 5 : 0);
-        }, 0);
-
-        return {
-            masteryProgress,
-            cognitiveCredits,
-            bestStreak: this.bestStreak,
-            currentStreak: this.currentStreak,
-        };
-    }
-    
-    public getPerformanceSummary(): SessionPerformanceSummary {
-        let correct = 0;
-        let incorrect = 0;
-        const difficultCards: SessionPerformanceSummary['difficultCards'] = [];
-
-        this.cardStates.forEach(state => {
-            if (state.isCorrect === true) {
-                correct++;
-            } else if (state.isCorrect === false) {
-                incorrect++;
-            }
-            // A card is "difficult" if it was answered incorrectly, or took multiple attempts, or help was needed.
-            if (state.isCorrect === false || state.attempts > 1 || state.timesAskedForHelp > 0) {
-                 const card = this.allCardsMap.get(state.id);
-                 if (card) {
-                    difficultCards.push({
-                        question: card.question,
-                        attempts: state.attempts,
-                        timesAskedForHelp: state.timesAskedForHelp,
-                    });
-                 }
-            }
-        });
-
-        return {
-            totalCards: this.cards.length,
-            correctCards: correct,
-            incorrectCards: incorrect,
-            difficultCards,
-        }
+    public getSessionProgress(): number {
+        const total = this.getTotalCards();
+        if (total === 0) return 0;
+        return (this.getReviewedCount() / total) * 100;
     }
 }
-
-type SessionQuestion = Flashcard & { type: 'open-answer' | 'multiple-choice' | 'matching' | 'ordering' | 'fill-in-the-blank' };

@@ -13,6 +13,7 @@ export interface User {
   rank: string;
   last_session_completed_at?: string;
   weekly_activity: boolean[];
+  fsrs_parameters?: any; // To store user-specific FSRS model weights in the future
 }
 
 export interface StudyPlan {
