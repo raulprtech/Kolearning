@@ -824,7 +824,7 @@ function AprenderPageComponent() {
 
 
         const performanceSummary = state.srs!.getPerformanceSummary();
-        const result = await handleEndSessionAndRefinePlan(state.project!.slug, parseInt(sessionIndexParam!), performanceSummary);
+        const result = await handleEndSessionAndRefinePlan(state.project!.id, parseInt(sessionIndexParam!), performanceSummary);
         
         let url = `/mis-proyectos/${projectSlug}?mastery=${state.finalSessionStats.masteryProgress}&credits=${state.finalSessionStats.cognitiveCredits}&session=${sessionIndexParam}&streak=${state.finalSessionStats.bestStreak}`;
         if (result.planUpdated) {
@@ -1170,3 +1170,5 @@ export default function AprenderPage() {
         </Suspense>
     );
 }
+
+    

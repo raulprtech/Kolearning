@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -18,7 +19,7 @@ import type {
   ProjectDetails,
   RefineProjectDetailsInput,
   GenerateStudyPlanInput,
-  // ...otros tipos
+  SessionPerformanceSummary,
 } from '@/types';
 
 // --- Helper para obtener la sesión del usuario de Supabase ---
@@ -208,6 +209,72 @@ export async function handleCreateProject(
   redirect(`/mis-proyectos/${slug}`);
 }
 
+
+export async function handleEndSessionAndRefinePlan(
+  projectId: string,
+  completedSessionIndex: number,
+  performanceSummary: SessionPerformanceSummary
+) {
+  const user = await getAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+
+  // 1. Obtener el proyecto actual
+  const { data: project, error: projectError } = await supabase
+    .from('Project')
+    .select('studyPlan')
+    .eq('id', projectId)
+    .eq('userId', user.id)
+    .single();
+
+  if (projectError || !project) {
+    console.error('Error fetching project or project not found:', projectError);
+    return { planUpdated: false, reasoning: 'Project not found.' };
+  }
+
+  // 2. Actualizar el contador de sesiones completadas
+  const { error: updateError } = await supabase
+    .from('Project')
+    .update({ completedSessions: completedSessionIndex + 1 })
+    .eq('id', projectId);
+
+  if (updateError) {
+    console.error('Error updating completed sessions:', updateError);
+    // No detenemos el flujo, la refinación del plan puede continuar
+  }
+
+  // 3. Llamar a la IA para refinar el plan
+  try {
+    const currentPlan = project.studyPlan?.plan || [];
+    const refinementResult = await refineStudyPlan({
+      currentPlan,
+      completedSessionIndex,
+      performanceSummary,
+    });
+
+    // 4. Si la IA sugiere cambios, actualizar el plan en la base de datos
+    if (refinementResult.needsChange) {
+      const newStudyPlan = { ...project.studyPlan, plan: refinementResult.updatedPlan };
+      const { error: planUpdateError } = await supabase
+        .from('Project')
+        .update({ studyPlan: newStudyPlan })
+        .eq('id', projectId);
+
+      if (planUpdateError) {
+        console.error('Error updating study plan:', planUpdateError);
+        return { planUpdated: false, reasoning: 'Failed to save updated plan.' };
+      }
+      
+      revalidatePath(`/mis-proyectos/${projectId}`);
+      return { planUpdated: true, reasoning: refinementResult.reasoning };
+    }
+
+    return { planUpdated: false };
+  } catch (aiError) {
+    console.error('Error refining study plan with AI:', aiError);
+    return { planUpdated: false, reasoning: 'AI refinement failed.' };
+  }
+}
+
 /**
  * Obtiene todos los proyectos (públicos, por ejemplo).
  */
@@ -246,3 +313,5 @@ export async function getUserProjects() {
 
     return data;
 }
+
+    
