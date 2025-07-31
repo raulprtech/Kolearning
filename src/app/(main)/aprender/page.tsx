@@ -578,8 +578,10 @@ function reducer(state: State, action: Action): State {
     switch (action.type) {
         case 'START_SESSION': {
             const { project, sessionIndex, isGuest } = action.payload;
-            const sessionType = project.studyPlan?.plan[sessionIndex]?.sessionType || 'Refuerzo de Dominio';
-            const progressPercentage = (sessionIndex + 1) / (project.studyPlan?.plan.length || 1);
+            const sessionType = project.studyPlan?.plan[sessionIndex]?.sessionType;
+            const progressPercentage = project.studyPlan?.plan?.length
+              ? (sessionIndex + 1) / project.studyPlan.plan.length
+              : 0;
             
             const srs = new SpacedRepetitionSystem(project.flashcards || [], sessionType, progressPercentage);
             const nextCard = srs.getNextCard();

@@ -29,9 +29,9 @@ export class SpacedRepetitionSystem {
     private currentStreak: number = 0;
     private bestStreak: number = 0;
 
-    constructor(cards: Flashcard[], sessionType: SessionType, planProgress: number) {
+    constructor(cards: Flashcard[], sessionType: SessionType | undefined, planProgress: number) {
         this.cards = cards;
-        this.sessionType = sessionType;
+        this.sessionType = sessionType || 'Refuerzo de Dominio';
         this.planProgress = planProgress;
         this.allCardsMap = new Map(cards.map(c => [c.id, c]));
 
