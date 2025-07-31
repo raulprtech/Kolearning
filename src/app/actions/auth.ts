@@ -6,13 +6,13 @@ import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function signOut() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerClient();
   await supabase.auth.signOut();
   revalidatePath('/');
 }
 
 export async function signInWithGoogle() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {

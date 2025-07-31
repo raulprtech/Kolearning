@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export const createSupabaseMiddlewareClient = (request: NextRequest) => {
+export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -54,11 +54,27 @@ export const createSupabaseMiddlewareClient = (request: NextRequest) => {
     }
   );
 
-  return { supabase, response };
-};
+  const { data: { session } } = await supabase.auth.getSession();
 
-export async function middleware(request: NextRequest) {
-  const { supabase, response } = createSupabaseMiddlewareClient(request);
-  await supabase.auth.getSession();
+  // Redirect to login if not authenticated and not on a public path
+  const publicPaths = ['/login'];
+  if (!session && !publicPaths.includes(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+
   return response;
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
