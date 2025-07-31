@@ -126,7 +126,7 @@ export function ProjectDetailsView({ project: initialProject, isGuest = false }:
                     </div>
                     <DialogTitle className="text-center text-2xl">¡Felicidades, has completado tu primera sesión!</DialogTitle>
                     <DialogDescription className="text-center">
-                        Para guardar tu progreso, tu plan de estudios y seguir aprendiendo, crea una cuenta.
+                        Para guardar tu progreso, el plan de estudios que Koli ha creado para ti y acceder a todas las funcionalidades, crea una cuenta gratuita.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="sm:justify-center">
@@ -211,7 +211,7 @@ export function ProjectDetailsView({ project: initialProject, isGuest = false }:
                     sessionUrl += `&guest=true`;
                   }
                   
-                  const canStart = isNext && (!isGuest || (isGuest && completedSessions === 0));
+                  const canStart = isNext;
 
 
                   return (
