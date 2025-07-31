@@ -578,22 +578,33 @@ function reducer(state: State, action: Action): State {
     switch (action.type) {
         case 'START_SESSION': {
             const { project, sessionIndex, isGuest } = action.payload;
-            const sessionType = project.studyPlan?.plan[sessionIndex]?.sessionType;
-            const progressPercentage = project.studyPlan?.plan?.length
-              ? (sessionIndex + 1) / project.studyPlan.plan.length
+
+            // Robustness: If studyPlan is missing (e.g., guest flow issue), create a default one.
+            const projectWithPlan = { ...project };
+            if (!projectWithPlan.studyPlan || !projectWithPlan.studyPlan.plan) {
+                projectWithPlan.studyPlan = {
+                    plan: [{ topic: 'Sesión de Prueba', sessionType: 'Refuerzo de Dominio' }],
+                    justification: '',
+                    expectedProgress: ''
+                };
+            }
+
+            const sessionType = projectWithPlan.studyPlan?.plan[sessionIndex]?.sessionType;
+            const progressPercentage = projectWithPlan.studyPlan?.plan?.length
+              ? (sessionIndex + 1) / projectWithPlan.studyPlan.plan.length
               : 0;
             
-            const srs = new SpacedRepetitionSystem(project.flashcards || [], sessionType, progressPercentage);
+            const srs = new SpacedRepetitionSystem(projectWithPlan.flashcards || [], sessionType, progressPercentage);
             const nextCard = srs.getNextCard();
             
-            const sessionQuestions = project.flashcards!.map(fc => {
+            const sessionQuestions = (projectWithPlan.flashcards || []).map(fc => {
                 const type = srs.getQuestionTypeForCard(fc.id);
                 return { ...fc, type };
             }) as SessionQuestion[];
 
             return {
                 ...initialState,
-                project,
+                project: projectWithPlan,
                 srs,
                 sessionQuestions,
                 currentCardId: nextCard?.id || null,
