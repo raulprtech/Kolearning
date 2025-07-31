@@ -17,22 +17,30 @@ export function Header() {
             <BookOpenCheck className="h-6 w-6 text-primary" />
             <span className="font-bold">Kolearning</span>
           </Link>
-          {user && (
-            <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-              <Link
-                href="/proyectos"
-                className="transition-colors hover:text-foreground/80 text-foreground"
-              >
-                Proyectos
-              </Link>
-              <Link
-                href="/tutor"
+          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+            {user && (
+              <>
+                <Link
+                  href="/proyectos"
+                  className="transition-colors hover:text-foreground/80 text-foreground"
+                >
+                  Proyectos
+                </Link>
+                <Link
+                  href="/tutor"
+                  className="transition-colors hover:text-foreground/80 text-foreground/60"
+                >
+                  Tutor
+                </Link>
+              </>
+            )}
+             <Link
+                href="/blog"
                 className="transition-colors hover:text-foreground/80 text-foreground/60"
               >
-                Tutor
+                Blog
               </Link>
-            </nav>
-          )}
+          </nav>
         </div>
         
         <div className="flex flex-1 items-center justify-end space-x-2">
