@@ -265,7 +265,7 @@ export function ProjectDetailsView({ project: initialProject, isGuest = false }:
                   <Table>
                     <TableBody>
                       {knowledgeAtoms.map(atom => (
-                        <TableRow key={atom.id}>
+                        <TableRow key={atom.atomo_id}>
                           <TableCell className="font-medium w-1/3 align-top">{atom.question}</TableCell>
                           <TableCell className="text-muted-foreground w-2/3 align-top">{atom.answer}</TableCell>
                           <TableCell className="w-auto align-top">
@@ -290,7 +290,7 @@ export function ProjectDetailsView({ project: initialProject, isGuest = false }:
           <Table>
               <TableBody>
                   {knowledgeAtomsPreview.map(atom => (
-                      <TableRow key={atom.id}>
+                      <TableRow key={atom.atomo_id}>
                           <TableCell className="font-medium w-1/3">{atom.question}</TableCell>
                           <TableCell className="text-muted-foreground w-2/3">{atom.answer}</TableCell>
                           <TableCell>
