@@ -808,9 +808,14 @@ function AprenderPageComponent() {
   }, [state.isPulsing]);
 
   const finishSessionAndRedirect = async () => {
-    if (state.isGuestSession) {
-        localStorage.removeItem('guestProject');
-        router.push('/login?reason=session_completed');
+    if (state.isGuestSession && state.project) {
+        // Update guest project in localStorage
+        const updatedProject = {
+            ...state.project,
+            completedSessions: (state.project.completedSessions || 0) + 1,
+        };
+        localStorage.setItem('guestProject', JSON.stringify(updatedProject));
+        router.push(`/mis-proyectos/${state.project.slug}?guest=true&sessionCompleted=true`);
         return;
     }
 
@@ -889,16 +894,6 @@ function AprenderPageComponent() {
         <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-120px)] text-center">
             <Trophy className="h-20 w-20 text-yellow-400 mb-4" />
             <h1 className="text-4xl font-bold">¡Sesión Completada!</h1>
-            {state.isGuestSession ? (
-                <>
-                    <p className="text-muted-foreground mt-2 mb-8 max-w-md">¡Felicidades! Has completado tu primera sesión. Crea una cuenta para guardar tu progreso, tu plan de estudios y continuar aprendiendo.</p>
-                    <Button size="lg" asChild>
-                        <Link href="/login?reason=session_completed">
-                            Crear Cuenta y Guardar Progreso
-                        </Link>
-                    </Button>
-                </>
-            ) : (
                 <>
                 <p className="text-muted-foreground mt-2 mb-8">¡Excelente trabajo! Aquí está tu resumen:</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl w-full mb-10">
@@ -933,7 +928,6 @@ function AprenderPageComponent() {
                     {state.isFinishing ? 'Guardando...' : 'Finalizar Sesión'}
                 </Button>
                 </>
-            )}
         </div>
     );
   }
@@ -1021,7 +1015,7 @@ function AprenderPageComponent() {
       <div className="xl:grid xl:grid-cols-3 xl:gap-8">
         <div className="xl:col-span-2">
           <div className="mb-4">
-            <Link href={state.isGuestSession ? "/" : `/mis-proyectos/${projectSlug}`} className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
+            <Link href={state.isGuestSession ? `/mis-proyectos/${projectSlug}?guest=true` : `/mis-proyectos/${projectSlug}`} className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Salir de la sesión
             </Link>
           </div>
@@ -1170,5 +1164,3 @@ export default function AprenderPage() {
         </Suspense>
     );
 }
-
-    

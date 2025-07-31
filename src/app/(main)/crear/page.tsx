@@ -784,7 +784,7 @@ const Step1_Input = ({ flashcards, setFlashcards, setProjectDetails, goToNext }:
             <Card>
                 <CardHeader>
                     <CardTitle>Ingresa tu material de estudio</CardTitle>
-                    <CardDescription>Importa tu material usando IA o agrégalo manualmente.</CardDescription>
+                    <CardDescription>Importa tu material usando IA o agrégalo manually.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-4">
                     <MagicImportModal onProjectGenerated={handleProjectGenerated} onProjectParsed={handleProjectParsed} />
@@ -1217,7 +1217,7 @@ export default function CreateProjectWizardPage() {
 
     setProjectDetails(p => ({ ...p, isCreating: true }));
 
-    // If user is a guest, store project in localStorage and redirect to learn page
+    // If user is a guest, store project in localStorage and redirect to project details page
     if (!user) {
         const guestProject: Project = {
             id: `guest-${Date.now()}`,
@@ -1228,10 +1228,11 @@ export default function CreateProjectWizardPage() {
             bibliography: [],
             ...projectDetails,
             flashcards: flashcards.map(({ localId, ...rest }) => rest),
-            studyPlan: studyPlan
+            studyPlan: studyPlan,
+            completedSessions: 0,
         };
         localStorage.setItem('guestProject', JSON.stringify(guestProject));
-        router.push('/aprender?guest=true&session=0');
+        router.push('/mis-proyectos/guest-project?guest=true');
         return;
     }
 

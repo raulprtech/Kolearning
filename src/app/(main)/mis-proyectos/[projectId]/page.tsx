@@ -15,6 +15,19 @@ interface ProjectDetailsPageProps {
 
 export default async function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
     const projectSlug = params.projectId;
+
+    // Handle guest project case
+    if (projectSlug === 'guest-project') {
+         return (
+            <div className="container mx-auto py-8">
+                <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                    <ProjectDetailsView project={null} isGuest={true} />
+                </Suspense>
+            </div>
+        )
+    }
+    
+    // Handle regular project case
     const allProjects = await getAllProjects();
     const project = allProjects.find(p => p.slug === projectSlug);
 
@@ -25,7 +38,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
     return (
         <div className="container mx-auto py-8">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                <ProjectDetailsView project={project} />
+                <ProjectDetailsView project={project} isGuest={false} />
             </Suspense>
         </div>
     )

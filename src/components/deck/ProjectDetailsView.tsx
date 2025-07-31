@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -29,6 +30,7 @@ import {
   Link as LinkIcon,
   Pencil,
   Info,
+  Trophy,
 } from 'lucide-react';
 import type { Project } from '@/types';
 import {
@@ -37,17 +39,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useUser } from '@/context/UserContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '../ui/skeleton';
 
 
-export function ProjectDetailsView({ project }: { project: Project }) {
+export function ProjectDetailsView({ project: initialProject, isGuest = false }: { project: Project | null, isGuest: boolean }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const { addDominionPoints, addCoins } = useUser();
+  const { user, addDominionPoints, addCoins } = useUser();
+
+  const [project, setProject] = useState<Project | null>(initialProject);
+  const [showSignupModal, setShowSignupModal] = useState(false);
 
   const [dominionPoints, setDominionPoints] = useState(0);
   const [earnedCoins, setEarnedCoins] = useState(0);
@@ -56,6 +65,22 @@ export function ProjectDetailsView({ project }: { project: Project }) {
 
 
   useEffect(() => {
+    if (isGuest && !initialProject) {
+        const guestProjectJson = localStorage.getItem('guestProject');
+        if (guestProjectJson) {
+            const guestProject = JSON.parse(guestProjectJson);
+            setProject(guestProject);
+        } else {
+            // No guest project found, maybe redirect to create page
+            router.push('/crear');
+        }
+    }
+
+    const sessionCompleted = searchParams.get('sessionCompleted');
+    if (isGuest && sessionCompleted === 'true') {
+        setShowSignupModal(true);
+    }
+    
     const masteryParam = searchParams.get('mastery');
     const creditsParam = searchParams.get('credits');
     const streakParam = searchParams.get('streak');
@@ -65,12 +90,12 @@ export function ProjectDetailsView({ project }: { project: Project }) {
     if (masteryParam) {
       const masteryPoints = parseInt(masteryParam, 10);
       setDominionPoints(masteryPoints);
-      addDominionPoints(masteryPoints);
+      if (user) addDominionPoints(masteryPoints);
     }
     if (creditsParam) {
       const creditPoints = parseInt(creditsParam, 10);
       setEarnedCoins(creditPoints);
-      addCoins(creditPoints);
+      if (user) addCoins(creditPoints);
     }
     if (streakParam) {
       const streakPoints = parseInt(streakParam, 10);
@@ -80,7 +105,11 @@ export function ProjectDetailsView({ project }: { project: Project }) {
         setPlanUpdateInfo({ updated: true, reason: reasoningParam ? decodeURIComponent(reasoningParam) : 'Koli ha optimizado tu siguiente sesión.' });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, isGuest, initialProject, user, router]);
+
+  if (!project) {
+     return <Skeleton className="h-96 w-full" />;
+  }
 
   const knowledgeAtoms = project.flashcards || [];
   const knowledgeAtomsPreview = knowledgeAtoms.slice(0, 5);
@@ -89,6 +118,24 @@ export function ProjectDetailsView({ project }: { project: Project }) {
 
   return (
     <div className="bg-card/50 p-6 sm:p-8 rounded-xl shadow-lg border">
+       <Dialog open={showSignupModal} onOpenChange={setShowSignupModal}>
+            <DialogContent>
+                <DialogHeader>
+                    <div className="flex justify-center">
+                        <Trophy className="h-16 w-16 text-yellow-400 mb-4" />
+                    </div>
+                    <DialogTitle className="text-center text-2xl">¡Felicidades, has completado tu primera sesión!</DialogTitle>
+                    <DialogDescription className="text-center">
+                        Para guardar tu progreso, tu plan de estudios y seguir aprendiendo, crea una cuenta.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="sm:justify-center">
+                    <Button type="button" size="lg" asChild>
+                       <Link href="/login">Crear Cuenta y Guardar Progreso</Link>
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       {/* Header */}
       <header className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -159,7 +206,13 @@ export function ProjectDetailsView({ project }: { project: Project }) {
                 {studyPlan.map((session, index) => {
                   const isCompleted = index < completedSessions;
                   const isNext = index === completedSessions;
-                  const sessionUrl = `/aprender?project=${project.slug}&session=${index}`;
+                  let sessionUrl = `/aprender?project=${project.slug}&session=${index}`;
+                  if (isGuest) {
+                    sessionUrl += `&guest=true`;
+                  }
+                  
+                  const canStart = isNext && (!isGuest || (isGuest && completedSessions === 0));
+
 
                   return (
                     <TableRow key={index}>
@@ -171,7 +224,7 @@ export function ProjectDetailsView({ project }: { project: Project }) {
                           <Button variant="outline" size="sm" disabled>
                             Completado
                           </Button>
-                        ) : isNext ? (
+                        ) : canStart ? (
                           <Button asChild variant='default' size="sm">
                             <Link href={sessionUrl}>
                                 Empezar
@@ -202,7 +255,7 @@ export function ProjectDetailsView({ project }: { project: Project }) {
             <h2 className="text-2xl font-bold">Átomos de conocimiento</h2>
               <Dialog>
               <DialogTrigger asChild>
-                <Button variant="outline">Ver todos ({knowledgeAtoms.length})</Button>
+                <Button variant="outline" disabled={isGuest}>Ver todos ({knowledgeAtoms.length})</Button>
               </DialogTrigger>
               <DialogContent className="max-w-3xl">
                 <DialogHeader>
@@ -241,12 +294,12 @@ export function ProjectDetailsView({ project }: { project: Project }) {
                           <TableCell className="font-medium w-1/3">{atom.question}</TableCell>
                           <TableCell className="text-muted-foreground w-2/3">{atom.answer}</TableCell>
                           <TableCell>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" disabled={isGuest}>
                                   <Pencil className="h-4 w-4" />
                               </Button>
                           </TableCell>
                           <TableCell>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={isGuest}>
                                   <Trash2 className="h-4 w-4" />
                               </Button>
                           </TableCell>
