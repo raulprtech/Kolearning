@@ -1,10 +1,7 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase/client';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { User, TutorSession } from '@/types';
 
 // Helper to compare whether two dates fall on the same calendar day.
@@ -16,15 +13,19 @@ function isSameDay(d1: Date, d2: Date): boolean {
   );
 }
 
-// Fetch a user's document from Firestore. Returns null if not found.
+// Fetch a user's document from Supabase. Returns null if not found.
 async function getUserData(uid: string): Promise<User | null> {
+  const supabase = createSupabaseBrowserClient();
   try {
-    const userRef = doc(db, 'users', uid);
-    const snap = await getDoc(userRef);
-    if (snap.exists()) {
-      return snap.data() as User;
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', uid)
+      .single();
+    if (error) {
+      throw error;
     }
-    return null;
+    return data as User;
   } catch (err) {
     console.error('Failed to fetch user data:', err);
     return null;
@@ -51,32 +52,39 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tutorSession, setTutorSession] = useState<TutorSession | null>(null);
+  const supabase = createSupabaseBrowserClient();
 
   // Listen to auth state and load user profile
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      setIsLoading(true);
-      if (firebaseUser) {
-        try {
-          const userData = await getUserData(firebaseUser.uid);
-          setUser(userData);
-        } catch (error) {
-          console.error("Error fetching user data on auth change:", error);
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setIsLoading(true);
+        if (session?.user) {
+          try {
+            const userData = await getUserData(session.user.id);
+            setUser(userData);
+          } catch (error) {
+            console.error("Error fetching user data on auth change:", error);
+            setUser(null);
+          }
+        } else {
           setUser(null);
         }
-      } else {
-        setUser(null);
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    );
 
     // Recover energy every minute if at least 2 hours have passed since last recovery
     const interval = setInterval(() => {
       setUser((currentUser) => {
         if (!currentUser || currentUser.energy >= 10) return currentUser;
         const now = Date.now();
-        const lastRecoveryString = localStorage.getItem('lastEnergyRecoveryTimestamp');
-        const lastRecovery = lastRecoveryString ? parseInt(lastRecoveryString, 10) : now;
+        const lastRecoveryString = localStorage.getItem(
+          'lastEnergyRecoveryTimestamp'
+        );
+        const lastRecovery = lastRecoveryString
+          ? parseInt(lastRecoveryString, 10)
+          : now;
         const hoursPassed = (now - lastRecovery) / (1000 * 60 * 60);
         if (hoursPassed >= 2) {
           const energyToRecover = Math.floor(hoursPassed / 2);
@@ -84,9 +92,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (newEnergy > currentUser.energy) {
             localStorage.setItem('lastEnergyRecoveryTimestamp', now.toString());
             // Persist updated energy
-            updateDoc(doc(db, 'users', currentUser.uid), { energy: newEnergy }).catch((err) =>
-              console.error('Failed to update energy:', err)
-            );
+            supabase
+              .from('users')
+              .update({ energy: newEnergy })
+              .eq('id', currentUser.id)
+              .catch((err) => console.error('Failed to update energy:', err));
             return { ...currentUser, energy: newEnergy };
           }
         }
@@ -95,36 +105,42 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 60000);
 
     return () => {
-      unsubscribeAuth();
+      authListener.subscription.unsubscribe();
       clearInterval(interval);
     };
-  }, []);
+  }, [supabase]);
 
   const decrementEnergy = (cost: number = 1) => {
     if (!user || user.energy < cost) return;
     const newEnergy = user.energy - cost;
     setUser({ ...user, energy: newEnergy });
-    updateDoc(doc(db, 'users', user.uid), { energy: newEnergy }).catch((err) =>
-      console.error('Failed to decrement energy:', err)
-    );
+    supabase
+      .from('users')
+      .update({ energy: newEnergy })
+      .eq('id', user.id)
+      .catch((err) => console.error('Failed to decrement energy:', err));
   };
 
   const addEnergy = (amount: number) => {
     if (!user) return;
     const newEnergy = user.energy + amount;
     setUser({ ...user, energy: newEnergy });
-    updateDoc(doc(db, 'users', user.uid), { energy: newEnergy }).catch((err) =>
-      console.error('Failed to add energy:', err)
-    );
+    supabase
+      .from('users')
+      .update({ energy: newEnergy })
+      .eq('id', user.id)
+      .catch((err) => console.error('Failed to add energy:', err));
   };
 
   const addCoins = (amount: number) => {
     if (!user) return;
     const newCoins = (user.coins || 0) + amount;
     setUser({ ...user, coins: newCoins });
-    updateDoc(doc(db, 'users', user.uid), { coins: newCoins }).catch((err) =>
-      console.error('Failed to add coins:', err)
-    );
+    supabase
+      .from('users')
+      .update({ coins: newCoins })
+      .eq('id', user.id)
+      .catch((err) => console.error('Failed to add coins:', err));
   };
 
   const subtractCoins = (amount: number) => {
@@ -133,26 +149,33 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (currentCoins < amount) return;
     const newCoins = currentCoins - amount;
     setUser({ ...user, coins: newCoins });
-    updateDoc(doc(db, 'users', user.uid), { coins: newCoins }).catch((err) =>
-      console.error('Failed to subtract coins:', err)
-    );
+    supabase
+      .from('users')
+      .update({ coins: newCoins })
+      .eq('id', user.id)
+      .catch((err) => console.error('Failed to subtract coins:', err));
   };
 
   const addDominionPoints = (amount: number) => {
     if (!user) return;
     const newPoints = (user.dominionPoints || 0) + amount;
     setUser({ ...user, dominionPoints: newPoints });
-    updateDoc(doc(db, 'users', user.uid), { dominionPoints: newPoints }).catch((err) =>
-      console.error('Failed to add dominion points:', err)
-    );
+    supabase
+      .from('users')
+      .update({ dominionPoints: newPoints })
+      .eq('id', user.id)
+      .catch((err) => console.error('Failed to add dominion points:', err));
   };
 
   const completeSessionForToday = () => {
     if (!user) return;
     const today = new Date();
-    const lastSessionDate = user.lastSessionCompletedAt ? new Date(user.lastSessionCompletedAt) : null;
+    const lastSessionDate =
+      user.lastSessionCompletedAt ? new Date(user.lastSessionCompletedAt) : null;
     let newStreak = user.currentStreak || 0;
-    let weeklyActivity = user.weeklyActivity ? [...user.weeklyActivity] : Array(7).fill(false);
+    let weeklyActivity = user.weeklyActivity
+      ? [...user.weeklyActivity]
+      : Array(7).fill(false);
     const todayIndex = (today.getDay() + 6) % 7; // Monday = 0
 
     if (lastSessionDate) {
@@ -183,11 +206,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       weeklyActivity,
     };
     setUser(updatedUser);
-    updateDoc(doc(db, 'users', user.uid), {
-      currentStreak: newStreak,
-      lastSessionCompletedAt: updatedUser.lastSessionCompletedAt,
-      weeklyActivity,
-    }).catch((err) => console.error('Failed to complete session:', err));
+    supabase
+      .from('users')
+      .update({
+        currentStreak: newStreak,
+        lastSessionCompletedAt: updatedUser.lastSessionCompletedAt,
+        weeklyActivity,
+      })
+      .eq('id', user.id)
+      .catch((err) => console.error('Failed to complete session:', err));
   };
 
   const value: UserContextType = {
@@ -216,5 +243,5 @@ export function useUserContext(): UserContextType {
 }
 
 export function useUser(): UserContextType {
-     return useUserContext();
+  return useUserContext();
 }

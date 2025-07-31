@@ -1,17 +1,16 @@
-// Updated project handling functions for Kolearning. This file is meant to
-// replace src/app/actions/projects.ts. It adjusts project creation to store
-// the new project under the user's profile, optionally publish it to a
-// separate collection when marked as public, and uses the updated
-// getAuthSession that decodes the idToken stored in cookies.  It also
-// preserves existing AI helper functions for generating decks and plans.
-
 'use server';
 
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import { z } from 'zod';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+// Flujos de IA (sin cambios)
 import { generateDeckFromText } from '@/ai/flows/generate-deck-from-text';
 import { refineProjectDetails } from '@/ai/flows/refine-project-details';
 import { generateStudyPlan } from '@/ai/flows/generate-study-plan';
 import { refineStudyPlan } from '@/ai/flows/refine-study-plan';
-import { z } from 'zod';
+
+// Tipos (sin cambios, asumiendo que existen en @/types)
 import type {
   Project,
   Flashcard as FlashcardType,
@@ -19,48 +18,26 @@ import type {
   ProjectDetails,
   RefineProjectDetailsInput,
   GenerateStudyPlanInput,
-  SessionPerformanceSummary,
+  // ...otros tipos
 } from '@/types';
-import { redirect } from 'next/navigation';
-import { getAuthSession } from '@/app/actions/auth';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
-import { v4 as uuidv4 } from 'uuid';
-import { FieldValue } from 'firebase-admin/firestore';
 
-// Zod schema to validate flashcards before saving
-const CreateProjectInputSchema = z.array(
-  z.object({
-    id: z.string(),
-    deckId: z.string(),
-    question: z.string(),
-    answer: z.string(),
-    atomo_id: z.string(),
-    material_id: z.string(),
-    concepto: z.string(),
-    descripcion: z.string(),
-    atomos_padre: z.array(z.string()),
-    formatos_presentacion: z.array(z.string()),
-    dificultad_inicial: z.string(),
-    image: z.string().optional(),
-  }),
-);
+// --- Helper para obtener la sesión del usuario de Supabase ---
+async function getAuthenticatedUser() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
+  if (error || !user) {
+    redirect('/login');
+  }
+  return user;
+}
+
+// --- Lógica de Creación de Slug (sin cambios) ---
 function createSlug(title: string) {
-  const a =
-    'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;';
-  const b =
-    'aaaaaaaaaacccddeeeeeeeegghiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------';
-  const p = new RegExp(a.split('').join('|'), 'g');
-  return title
-    .toString()
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(p, c => b.charAt(a.indexOf(c)))
-    .replace(/&/g, '-and-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
+    const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;';
+    const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------';
+    const p = new RegExp(a.split('').join('|'), 'g');
+    return title.toString().toLowerCase().replace(/\s+/g, '-').replace(p, c => b.charAt(a.indexOf(c))).replace(/&/g, '-and-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
 }
 
 export async function handleGenerateProjectFromPdf(
@@ -175,138 +152,97 @@ export async function handleGenerateStudyPlan(input: GenerateStudyPlanInput) {
   }
 }
 
-/**
- * Creates a new project in Firestore. It validates the provided flashcards
- * and project details, generates a unique slug, saves the project in the
- * `projects` collection, adds a reference to the user's document, and if
- * marked as public, also stores the project in the `publicProjects` collection.
- * After saving, it redirects the user to the project detail page.
- */
 export async function handleCreateProject(
   projectDetails: ProjectDetails,
-  flashcards: FlashcardType[],
+  flashcards: Omit<FlashcardType, 'id' | 'projectId'>[],
   studyPlan: StudyPlan,
 ) {
-  const session = await getAuthSession();
-  if (!session || !session.uid) {
-    throw new Error('Unauthorized');
-  }
+  const user = await getAuthenticatedUser();
+  const supabase = await createSupabaseServerClient();
+
   if (!projectDetails.title || flashcards.length === 0) {
-    throw new Error('Project must have a title and at least one flashcard.');
+    throw new Error('El proyecto debe tener un título y al menos una flashcard.');
   }
-  const newProjectId = uuidv4();
+
   const titleSlug = createSlug(projectDetails.title);
-  const slug = `${titleSlug}-${newProjectId.slice(0, 8)}`;
-  const processedFlashcards = flashcards.map(fc => ({
-    ...fc,
-    id: fc.id || fc.atomo_id || uuidv4(),
-    deckId: newProjectId,
+  const uniqueSuffix = Math.random().toString(36).substring(2, 10);
+  const slug = `${titleSlug}-${uniqueSuffix}`;
+
+  // 1. Insertar el proyecto principal
+  const { data: newProject, error: projectError } = await supabase
+    .from('Project') // Asegúrate que el nombre de la tabla sea correcto ('Project' o 'projects')
+    .insert({
+      title: projectDetails.title,
+      description: projectDetails.description,
+      slug: slug,
+      userId: user.id,
+      // ... otros campos del proyecto
+    })
+    .select()
+    .single(); // .single() devuelve un solo objeto en lugar de un array
+
+  if (projectError || !newProject) {
+    console.error('Error creating project in Supabase:', projectError);
+    throw new Error('No se pudo guardar el proyecto en la base de datos.');
+  }
+
+  // 2. Preparar y insertar las flashcards asociadas
+  const flashcardsToInsert = flashcards.map(fc => ({
+    question: fc.question,
+    answer: fc.answer,
+    projectId: newProject.id, // Asociar con el ID del proyecto recién creado
   }));
-  const validation = CreateProjectInputSchema.safeParse(processedFlashcards);
-  if (!validation.success) {
-    console.error('Invalid flashcard data:', validation.error.flatten());
-    throw new Error('Invalid flashcard data provided.');
+
+  const { error: flashcardsError } = await supabase
+    .from('Flashcard') // Asegúrate que el nombre de la tabla sea correcto
+    .insert(flashcardsToInsert);
+
+  if (flashcardsError) {
+    console.error('Error creating flashcards in Supabase:', flashcardsError);
+    // Opcional: podrías eliminar el proyecto si las flashcards fallan para mantener la consistencia
+    await supabase.from('Project').delete().match({ id: newProject.id });
+    throw new Error('No se pudieron guardar las flashcards.');
   }
-  const newProject: Project = {
-    id: newProjectId,
-    slug: slug,
-    title: projectDetails.title,
-    description: projectDetails.description,
-    category: projectDetails.category || 'General',
-    author: session.uid,
-    size: validation.data.length,
-    bibliography: [],
-    flashcards: validation.data,
-    studyPlan: studyPlan,
-    isPublic: projectDetails.isPublic,
-    completedSessions: 0,
-  };
-  try {
-    await adminDb.collection('projects').doc(newProjectId).set(newProject);
-    // Update user's profile with this project ID and metadata
-    await adminDb
-      .collection('users')
-      .doc(session.uid)
-      .update({
-        projects: FieldValue.arrayUnion({
-          id: newProjectId,
-          slug,
-          title: projectDetails.title,
-          isPublic: projectDetails.isPublic,
-          dominionPoints: 0,
-        }),
-      });
-    // If project is public, store it in a separate collection
-    if (projectDetails.isPublic) {
-      await adminDb.collection('publicProjects').doc(newProjectId).set(newProject);
-    }
-  } catch (error) {
-    console.error('Error creating project in Firestore:', error);
-    throw new Error('Could not save project to the database.');
-  }
+  
+  revalidatePath('/dashboard');
   redirect(`/mis-proyectos/${slug}`);
 }
 
-export async function handleEndSessionAndRefinePlan(
-  projectSlug: string,
-  completedSessionIndex: number,
-  performanceSummary: SessionPerformanceSummary,
-) {
-  const session = await getAuthSession();
-  if (!session || !session.uid) {
-    return { error: 'Unauthorized' };
-  }
-  const projectQuery = await adminDb
-    .collection('projects')
-    .where('slug', '==', projectSlug)
-    .limit(1)
-    .get();
-  if (projectQuery.empty) {
-    return { error: 'Project not found.' };
-  }
-  const projectDoc = projectQuery.docs[0];
-  const project = projectDoc.data() as Project;
-  const projectRef = projectDoc.ref;
-  // Update completed sessions count if needed
-  const currentCompleted = project.completedSessions || 0;
-  if (completedSessionIndex + 1 > currentCompleted) {
-    await projectRef.update({ completedSessions: completedSessionIndex + 1 });
-  }
-  if (!project.studyPlan) {
-    return { success: true, planUpdated: false, reasoning: 'No study plan to refine.' };
-  }
-  const currentPlan = project.studyPlan.plan;
-  try {
-    const result = await refineStudyPlan({
-      currentPlan,
-      completedSessionIndex,
-      performanceSummary,
-    });
-    let planUpdated = false;
-    if (result.needsChange && result.updatedPlan) {
-      await projectRef.update({ 'studyPlan.plan': result.updatedPlan });
-      planUpdated = true;
-    }
-    return {
-      success: true,
-      planUpdated,
-      reasoning: result.reasoning,
-    };
-  } catch (error) {
-    console.error('Error refining study plan:', error);
-    return { error: 'Sorry, I was unable to refine the study plan.' };
-  }
-}
-
+/**
+ * Obtiene todos los proyectos (públicos, por ejemplo).
+ */
 export async function getAllProjects(): Promise<Project[]> {
-  try {
-    const projectsSnapshot = await adminDb.collection('projects').get();
-    if (projectsSnapshot.empty) {
-      return [];
-    }
-    return projectsSnapshot.docs.map(doc => doc.data() as Project);
-  } catch (error) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('Project')
+    .select('*');
+    // .eq('isPublic', true); // Ejemplo de filtro para proyectos públicos
+
+  if (error) {
     console.error('Error fetching all projects:', error);
     return [];
   }
+
+  return data as unknown as Project[];
+}
+
+/**
+ * Obtiene los proyectos del usuario autenticado.
+ */
+export async function getUserProjects() {
+    const user = await getAuthenticatedUser();
+    const supabase = await createSupabaseServerClient();
+
+    const { data, error } = await supabase
+        .from('Project')
+        .select('*')
+        .eq('userId', user.id)
+        .order('createdAt', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching user projects:', error);
+        return [];
+    }
+
+    return data;
 }

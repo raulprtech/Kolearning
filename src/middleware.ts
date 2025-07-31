@@ -1,51 +1,64 @@
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-
-const protectedRoutes = ['/', '/crear', '/aprender', '/proyectos', '/mis-proyectos', '/perfil', '/tienda', '/tutor', '/ajustes', '/preguntas-frecuentes'];
-const authRoutes = ['/login'];
-
-export async function middleware(request: NextRequest) {
-  const sessionCookie = request.cookies.get('__session');
-  const { pathname } = request.nextUrl;
-
-  const isProtectedRoute = protectedRoutes.some(route => {
-    // Handle dynamic routes like /mis-proyectos/[projectId]
-    if (route.includes('[')) {
-      const baseRoute = route.split('/[')[0];
-      return pathname.startsWith(baseRoute);
-    }
-    return pathname === route;
+export const createSupabaseMiddlewareClient = (request: NextRequest) => {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
   });
 
-  if (isProtectedRoute && !sessionCookie) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
-  }
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+        },
+      },
+    }
+  );
 
-  if (authRoutes.includes(pathname) && sessionCookie) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/';
-    return NextResponse.redirect(url);
-  }
+  return { supabase, response };
+};
 
-  return NextResponse.next();
-}
-
-export const config = {
-  // Matcher is now more specific to only run middleware where needed.
-  matcher: [
-    '/',
-    '/crear',
-    '/aprender',
-    '/proyectos/:path*',
-    '/mis-proyectos/:path*',
-    '/perfil',
-    '/tienda',
-    '/tutor',
-    '/ajustes',
-    '/preguntas-frecuentes',
-    '/login'
-  ],
+export async function middleware(request: NextRequest) {
+  const { supabase, response } = createSupabaseMiddlewareClient(request);
+  await supabase.auth.getSession();
+  return response;
 }

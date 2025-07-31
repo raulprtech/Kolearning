@@ -1,4 +1,10 @@
-'server-only';
-// This file is intentionally left almost empty.
-// The getAuthSession function has been moved to src/app/actions/auth.ts
-// to avoid being bundled with client components, which was causing build errors.
+import { createSupabaseServerClient } from './supabase/client';
+
+export const getUser = async () => {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return null;
+  }
+  return data.user;
+};

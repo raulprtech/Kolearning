@@ -22,15 +22,15 @@ import Link from 'next/link';
 export function UserNav({ user }: { user: User }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  
+
   const handleSignOut = async () => {
     await performSignOut();
     router.push('/login');
   };
-  
+
   const getInitials = (email: string) => {
     return email.substring(0, 2).toUpperCase();
-  }
+  };
 
   return (
     <DropdownMenu>
@@ -52,46 +52,59 @@ export function UserNav({ user }: { user: User }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-           <Link href="/perfil" passHref>
-             <DropdownMenuItem>
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  <span>Perfil</span>
-              </DropdownMenuItem>
-           </Link>
-             <Link href="/ajustes" passHref>
-               <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Ajustes</span>
-              </DropdownMenuItem>
-             </Link>
-             <Link href="/preguntas-frecuentes" passHref>
-               <DropdownMenuItem>
-                  <HelpCircle className="mr-2 h-4 w-4" />
-                  <span>Preguntas Frecuentes</span>
-              </DropdownMenuItem>
-             </Link>
+          <Link href="/perfil" passHref>
+            <DropdownMenuItem>
+              <UserIcon className="mr-2 h-4 w-4" />
+              <span>Perfil</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/ajustes" passHref>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Ajustes</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/preguntas-frecuentes" passHref>
+            <DropdownMenuItem>
+              <HelpCircle className="mr-2 h-4 w-4" />
+              <span>Preguntas Frecuentes</span>
+            </DropdownMenuItem>
+          </Link>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-             <div className="flex items-center justify-between w-full">
-                <Label htmlFor="dark-mode" className="flex items-center gap-2 cursor-pointer">
-                  {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                  <span>Modo Oscuro</span>
-                </Label>
-                <Switch
-                  id="dark-mode"
-                  checked={theme === 'dark'}
-                  onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                />
-              </div>
+            <div className="flex items-center justify-between w-full">
+              <Label
+                htmlFor="dark-mode"
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                {theme === 'dark' ? (
+                  <Moon className="h-4 w-4" />
+                ) : (
+                  <Sun className="h-4 w-4" />
+                )}
+                <span>Modo Oscuro</span>
+              </Label>
+              <Switch
+                id="dark-mode"
+                checked={theme === 'dark'}
+                onCheckedChange={(checked) =>
+                  setTheme(checked ? 'dark' : 'light')
+                }
+              />
+            </div>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-500 focus:text-red-500">
-           <LogOut className="mr-2 h-4 w-4" />
-          <span>Cerrar sesión</span>
-        </DropdownMenuItem>
+        <form action={performSignOut}>
+          <button type="submit" className="w-full">
+            <DropdownMenuItem className="text-red-500 focus:text-red-500">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Cerrar sesión</span>
+            </DropdownMenuItem>
+          </button>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );
