@@ -6,6 +6,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  images: {
+    domains: ['placehold.co'],
+  },
   serverExternalPackages: ['firebase-admin'],
 };
 
