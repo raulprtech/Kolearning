@@ -40,11 +40,18 @@ export function PublicHomePage() {
           <p className="max-w-3xl mx-auto text-lg md:text-xl text-foreground/80 mb-8">
             Kolearning transforma tus apuntes en un plan de estudio interactivo y gamificado. Aprende más rápido y retén el conocimiento por más tiempo con nuestro sistema inteligente.
           </p>
-          <Button asChild size="lg">
-            <Link href="/login">
-              Empieza a Aprender Gratis <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button asChild size="lg">
+              <Link href="/login">
+                Empieza a Aprender Gratis <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/crear">
+                Prueba una Sesión
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
