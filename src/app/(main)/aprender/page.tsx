@@ -792,7 +792,8 @@ function AprenderPageComponent() {
         if (guestProjectJson) {
             projectToLoad = JSON.parse(guestProjectJson);
         } else {
-            router.push('/crear'); // No guest project found, send back to create
+            // If no guest project, redirect to creation page
+            router.push('/crear');
             return;
         }
       } else {
@@ -800,13 +801,15 @@ function AprenderPageComponent() {
             router.push('/');
             return;
         };
+        // For logged-in users, fetch from the database
         const allProjects = await getAllProjects();
         projectToLoad = allProjects.find(p => p.slug === projSlug);
       }
       
       if (projectToLoad) {
         dispatch({ type: 'START_SESSION', payload: { project: projectToLoad, sessionIndex: sessionIndex, isGuest }});
-      } else {
+      } else if (!isGuest) {
+        // Only redirect if it was a real project that wasn't found
         router.push('/'); // Or a 404 page
       }
     }
