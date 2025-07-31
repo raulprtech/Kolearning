@@ -1,6 +1,10 @@
 
+'use client';
+
 import { Suspense } from 'react';
+import { useUser } from '@/context/UserContext';
 import { LoggedInDashboard } from '@/components/dashboard/LoggedInDashboard';
+import { PublicHomePage } from '@/components/dashboard/PublicHomePage';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const dynamic = 'force-dynamic';
@@ -28,10 +32,25 @@ function DashboardSkeleton() {
     )
 }
 
-export default async function DashboardPage() {
+function DashboardPageContent() {
+  const { user, isLoading } = useUser();
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (user) {
+    return <LoggedInDashboard />;
+  }
+  
+  return <PublicHomePage />;
+}
+
+
+export default function DashboardPage() {
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <LoggedInDashboard />
+      <DashboardPageContent />
     </Suspense>
   );
 }

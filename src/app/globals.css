@@ -6,6 +6,7 @@
 
 body {
   font-family: Arial, Helvetica, sans-serif;
+  background-image: radial-gradient(circle at 20% 80%, hsla(263, 96%, 70%, 0.1), transparent 30%), radial-gradient(circle at 80% 30%, hsla(217, 33%, 18%, 0.15), transparent 40%);
 }
 
 @layer base {
