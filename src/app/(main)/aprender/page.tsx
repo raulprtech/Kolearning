@@ -158,8 +158,8 @@ const KoliAssistancePopover = ({ currentQuestion, correctAnswer, onShowAnswer, o
     const [quickQuestionText, setQuickQuestionText] = useState('');
 
     const handleActionWithEnergyCheck = (action: (...args: any[]) => void, cost: number, ...args: any[]) => {
-        if (!hasEnoughEnergy(cost)) return;
-        decrementEnergy(cost);
+        if (user && !hasEnoughEnergy(cost)) return; // Only block if user exists and has no energy
+        if (user) decrementEnergy(cost); // Only decrement if user exists
         action(...args);
     }
 
@@ -272,6 +272,10 @@ setShowQuickQuestionInput(false);
     };
 
     const handleDeepen = () => {
+        if (!user) {
+            router.push('/login?reason=tutor_access');
+            return;
+        }
         setTutorSession({ exchangesLeft: 10, isActive: true });
         const contextMessage = `Hola Koli, estoy en una sesión de estudio. La pregunta era: "${currentQuestion.question}". ${isAnswered ? `La respuesta correcta es "${correctAnswer}".` : ''} ¿Podemos profundizar en este tema?`;
         const encodedContext = encodeURIComponent(contextMessage);
@@ -296,13 +300,16 @@ setShowQuickQuestionInput(false);
         }
     };
 
-    const CostIndicator = ({ cost }: { cost: number }) => (
+    const CostIndicator = ({ cost, isGuest }: { cost: number, isGuest?: boolean }) => (
       <span className="ml-auto text-xs text-primary/80 font-mono flex items-center gap-1">
-          - {cost} <Zap className="h-3 w-3" />
+          { isGuest ? "Gratis" : `- ${cost}` } 
+          { !isGuest && <Zap className="h-3 w-3" /> }
       </span>
     );
     
     const renderContent = () => {
+        const isGuest = !user;
+
         if (isLoading && activeView === 'main') {
              return (
                  <div className="flex items-center gap-2 text-muted-foreground h-36 justify-center">
@@ -413,9 +420,9 @@ setShowQuickQuestionInput(false);
                                 <span className="text-xs text-primary/80 font-mono">Gratis ({quickQuestionCount}/2)</span>
                             </Button>
                           }
-                          <Button variant="outline" size="sm" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} className="justify-between w-full" disabled={isLoading || !hasEnoughEnergy(TUTOR_AI_COST)}>
+                          <Button variant="outline" size="sm" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} className="justify-between w-full" disabled={isLoading || (user && !hasEnoughEnergy(TUTOR_AI_COST))}>
                               <span>Tutor AI</span>
-                              <CostIndicator cost={TUTOR_AI_COST} />
+                              <CostIndicator cost={TUTOR_AI_COST} isGuest={isGuest} />
                           </Button>
                         </div>
                       )}
@@ -430,34 +437,34 @@ setShowQuickQuestionInput(false);
                 <div className="space-y-2">
                     <h4 className="font-medium leading-none">Pedir ayuda a Koli</h4>
                     <p className="text-sm text-muted-foreground">
-                        Usa estas herramientas para ayudarte a aprender.
+                        {isGuest ? 'Prueba estas herramientas gratis.' : 'Usa estas herramientas para ayudarte a aprender.'}
                     </p>
                 </div>
                 <div className="grid gap-2">
                   {!isAnswered ? (
                     <>
-                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleHintClick, HINT_COST)} disabled={!hasEnoughEnergy(HINT_COST)}>
-                        <Lightbulb className="mr-2 h-4 w-4" /> Pista <CostIndicator cost={HINT_COST} />
+                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleHintClick, HINT_COST)} disabled={user && !hasEnoughEnergy(HINT_COST)}>
+                        <Lightbulb className="mr-2 h-4 w-4" /> Pista <CostIndicator cost={HINT_COST} isGuest={isGuest} />
                       </Button>
                        {(currentQuestion.type === 'open-answer') && (
-                        <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleConvertToMultipleChoiceClick, CONVERT_COST)} disabled={!hasEnoughEnergy(CONVERT_COST)}>
-                          <MenuSquare className="mr-2 h-4 w-4" /> Convertir a Opción Múltiple <CostIndicator cost={CONVERT_COST} />
+                        <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleConvertToMultipleChoiceClick, CONVERT_COST)} disabled={user && !hasEnoughEnergy(CONVERT_COST)}>
+                          <MenuSquare className="mr-2 h-4 w-4" /> Convertir a Opción Múltiple <CostIndicator cost={CONVERT_COST} isGuest={isGuest} />
                         </Button>
                       )}
-                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleRephraseClick, REPHRASE_COST)} disabled={!hasEnoughEnergy(REPHRASE_COST)}>
-                        <RefreshCw className="mr-2 h-4 w-4" /> Reformular <CostIndicator cost={REPHRASE_COST} />
+                      <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleRephraseClick, REPHRASE_COST)} disabled={user && !hasEnoughEnergy(REPHRASE_COST)}>
+                        <RefreshCw className="mr-2 h-4 w-4" /> Reformular <CostIndicator cost={REPHRASE_COST} isGuest={isGuest} />
                       </Button>
-                       <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick, SHOW_ANSWER_COST)} disabled={!hasEnoughEnergy(SHOW_ANSWER_COST)}>
-                        <Eye className="mr-2 h-4 w-4" /> Ver Respuesta <CostIndicator cost={SHOW_ANSWER_COST} />
+                       <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleShowAnswerAndExplainClick, SHOW_ANSWER_COST)} disabled={user && !hasEnoughEnergy(SHOW_ANSWER_COST)}>
+                        <Eye className="mr-2 h-4 w-4" /> Ver Respuesta <CostIndicator cost={SHOW_ANSWER_COST} isGuest={isGuest} />
                       </Button>
                     </>
                   ) : (
-                    <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleExplainClick, EXPLAIN_COST)} disabled={!hasEnoughEnergy(EXPLAIN_COST)}>
-                      <Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta <CostIndicator cost={EXPLAIN_COST} />
+                    <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleExplainClick, EXPLAIN_COST)} disabled={user && !hasEnoughEnergy(EXPLAIN_COST)}>
+                      <Lightbulb className="mr-2 h-4 w-4" /> Explicar la Respuesta <CostIndicator cost={EXPLAIN_COST} isGuest={isGuest} />
                     </Button>
                   )}
-                   <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} disabled={!hasEnoughEnergy(TUTOR_AI_COST)}>
-                    <Bot className="mr-2 h-4 w-4" /> Tutor AI <CostIndicator cost={TUTOR_AI_COST} />
+                   <Button variant="outline" className="justify-start" onClick={() => handleActionWithEnergyCheck(handleDeepen, TUTOR_AI_COST)} disabled={user && !hasEnoughEnergy(TUTOR_AI_COST)}>
+                    <Bot className="mr-2 h-4 w-4" /> Tutor AI <CostIndicator cost={TUTOR_AI_COST} isGuest={isGuest} />
                    </Button>
                 </div>
             </div>
@@ -521,10 +528,11 @@ type State = {
     finalSessionStats: { masteryProgress: number; cognitiveCredits: number; bestStreak: number; } | null;
     mcOptionsForFailedQuestion: any[] | null;
     selectedMcOption: string | null;
+    isGuestSession: boolean;
 };
 
 type Action =
-    | { type: 'START_SESSION'; payload: { project: Project; sessionIndex: number } }
+    | { type: 'START_SESSION'; payload: { project: Project; sessionIndex: number; isGuest: boolean; } }
     | { type: 'ANSWER_OPEN_QUESTION'; payload: { evaluation: any; userAnswer: string } }
     | { type: 'ANSWER_MC_QUESTION'; payload: { isCorrect: boolean; selectedOption: string } }
     | { type: 'RATE_DIFFICULTY'; payload: { rating: 0 | 1 | 2 | 3 } }
@@ -563,12 +571,13 @@ const initialState: State = {
     finalSessionStats: null,
     mcOptionsForFailedQuestion: null,
     selectedMcOption: null,
+    isGuestSession: false,
 };
 
 function reducer(state: State, action: Action): State {
     switch (action.type) {
         case 'START_SESSION': {
-            const { project, sessionIndex } = action.payload;
+            const { project, sessionIndex, isGuest } = action.payload;
             const sessionType = project.studyPlan?.plan[sessionIndex]?.sessionType || 'Refuerzo de Dominio';
             const progressPercentage = (sessionIndex + 1) / (project.studyPlan?.plan.length || 1);
             
@@ -587,6 +596,7 @@ function reducer(state: State, action: Action): State {
                 sessionQuestions,
                 currentCardId: nextCard?.id || null,
                 isLoading: false,
+                isGuestSession: isGuest,
             };
         }
         case 'SET_LOADING':
@@ -749,6 +759,7 @@ function AprenderPageComponent() {
   const searchParams = useSearchParams();
   const projectSlug = searchParams.get('project');
   const sessionIndexParam = searchParams.get('session');
+  const isGuestSession = searchParams.get('guest') === 'true';
   
   const [state, dispatch] = useReducer(reducer, initialState);
   const { user, addCoins, addDominionPoints, completeSessionForToday } = useUser();
@@ -757,22 +768,37 @@ function AprenderPageComponent() {
   useEffect(() => {
     async function loadProject() {
       const projSlug = searchParams.get('project');
-      const sessIdx = searchParams.get('session');
+      const sessIdxParam = searchParams.get('session');
+      const sessionIndex = sessIdxParam ? parseInt(sessIdxParam, 10) : 0;
+      const isGuest = searchParams.get('guest') === 'true';
+
+      let projectToLoad: Project | undefined | null = null;
       
-      if (!projSlug || sessIdx === null) {
-          router.push('/');
-          return;
-      };
-      const allProjects = await getAllProjects();
-      const foundProject = allProjects.find(p => p.slug === projSlug);
-      if (foundProject) {
-        dispatch({ type: 'START_SESSION', payload: { project: foundProject, sessionIndex: parseInt(sessIdx) }});
+      if (isGuest) {
+        const guestProjectJson = localStorage.getItem('guestProject');
+        if (guestProjectJson) {
+            projectToLoad = JSON.parse(guestProjectJson);
+        } else {
+            router.push('/crear'); // No guest project found, send back to create
+            return;
+        }
+      } else {
+        if (!projSlug) {
+            router.push('/');
+            return;
+        };
+        const allProjects = await getAllProjects();
+        projectToLoad = allProjects.find(p => p.slug === projSlug);
+      }
+      
+      if (projectToLoad) {
+        dispatch({ type: 'START_SESSION', payload: { project: projectToLoad, sessionIndex: sessionIndex, isGuest }});
       } else {
         router.push('/'); // Or a 404 page
       }
     }
     loadProject();
-  }, [projectSlug, sessionIndexParam, router, searchParams]);
+  }, [projectSlug, sessionIndexParam, isGuestSession, router, searchParams]);
   
   useEffect(() => {
     if (state.isPulsing) {
@@ -782,6 +808,12 @@ function AprenderPageComponent() {
   }, [state.isPulsing]);
 
   const finishSessionAndRedirect = async () => {
+    if (state.isGuestSession) {
+        localStorage.removeItem('guestProject');
+        router.push('/login?reason=session_completed');
+        return;
+    }
+
     if (state.project && state.srs && state.finalSessionStats) {
         dispatch({ type: 'SET_FINISHING', payload: true });
 
@@ -857,39 +889,51 @@ function AprenderPageComponent() {
         <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-120px)] text-center">
             <Trophy className="h-20 w-20 text-yellow-400 mb-4" />
             <h1 className="text-4xl font-bold">¡Sesión Completada!</h1>
-            <p className="text-muted-foreground mt-2 mb-8">¡Excelente trabajo! Aquí está tu resumen:</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl w-full mb-10">
-                <Card className="bg-card/70">
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center justify-center gap-2 text-blue-400"><TrendingUp /> Puntos de Dominio</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-5xl font-bold">+{state.finalSessionStats.masteryProgress}</p>
-                    </CardContent>
-                </Card>
-                <Card className="bg-card/70">
-                     <CardHeader>
-                        <CardTitle className="text-lg flex items-center justify-center gap-2 text-green-400"><Award /> Créditos Cognitivos</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-5xl font-bold">+{state.finalSessionStats.cognitiveCredits}</p>
-                    </CardContent>
-                </Card>
-                <Card className="bg-card/70">
-                     <CardHeader>
-                        <CardTitle className="text-lg flex items-center justify-center gap-2 text-yellow-400"><Star /> Mejor Racha</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-5xl font-bold">{state.finalSessionStats.bestStreak}</p>
-                    </CardContent>
-                </Card>
-            </div>
+            {state.isGuestSession ? (
+                <>
+                    <p className="text-muted-foreground mt-2 mb-8 max-w-md">¡Felicidades! Has completado tu primera sesión. Crea una cuenta para guardar tu progreso, tu plan de estudios y continuar aprendiendo.</p>
+                    <Button size="lg" asChild>
+                        <Link href="/login?reason=session_completed">
+                            Crear Cuenta y Guardar Progreso
+                        </Link>
+                    </Button>
+                </>
+            ) : (
+                <>
+                <p className="text-muted-foreground mt-2 mb-8">¡Excelente trabajo! Aquí está tu resumen:</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl w-full mb-10">
+                    <Card className="bg-card/70">
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center justify-center gap-2 text-blue-400"><TrendingUp /> Puntos de Dominio</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-5xl font-bold">+{state.finalSessionStats.masteryProgress}</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-card/70">
+                         <CardHeader>
+                            <CardTitle className="text-lg flex items-center justify-center gap-2 text-green-400"><Award /> Créditos Cognitivos</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-5xl font-bold">+{state.finalSessionStats.cognitiveCredits}</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-card/70">
+                         <CardHeader>
+                            <CardTitle className="text-lg flex items-center justify-center gap-2 text-yellow-400"><Star /> Mejor Racha</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-5xl font-bold">{state.finalSessionStats.bestStreak}</p>
+                        </CardContent>
+                    </Card>
+                </div>
 
-            <Button size="lg" onClick={finishSessionAndRedirect} disabled={state.isFinishing}>
-                {state.isFinishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {state.isFinishing ? 'Guardando...' : 'Finalizar Sesión'}
-            </Button>
+                <Button size="lg" onClick={finishSessionAndRedirect} disabled={state.isFinishing}>
+                    {state.isFinishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {state.isFinishing ? 'Guardando...' : 'Finalizar Sesión'}
+                </Button>
+                </>
+            )}
         </div>
     );
   }
@@ -977,7 +1021,7 @@ function AprenderPageComponent() {
       <div className="xl:grid xl:grid-cols-3 xl:gap-8">
         <div className="xl:col-span-2">
           <div className="mb-4">
-            <Link href={`/mis-proyectos/${projectSlug}`} className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
+            <Link href={state.isGuestSession ? "/" : `/mis-proyectos/${projectSlug}`} className="text-sm text-primary hover:underline hidden sm:flex items-center mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Salir de la sesión
             </Link>
           </div>

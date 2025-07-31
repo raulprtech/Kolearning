@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   // Define public paths that don't require authentication
-  const publicPaths = ['/', '/login', '/crear'];
+  const publicPaths = ['/', '/login', '/crear', '/aprender'];
   const isPublicPath = publicPaths.includes(request.nextUrl.pathname);
 
   // If the user is not authenticated and is not accessing a public path, redirect to login

@@ -63,7 +63,8 @@ import { AnkiExportGuide } from '@/components/deck/AnkiExportGuide';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Flashcard as FlashcardType, StudyPlan, ProjectDetails } from '@/types';
+import type { Flashcard as FlashcardType, StudyPlan, ProjectDetails, Project } from '@/types';
+import { useUser } from '@/context/UserContext';
 
 type Flashcard = FlashcardType & { localId: number | string };
 
@@ -1180,6 +1181,7 @@ export default function CreateProjectWizardPage() {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useUser();
 
   const progress = (step / 3) * 100;
 
@@ -1215,10 +1217,26 @@ export default function CreateProjectWizardPage() {
 
     setProjectDetails(p => ({ ...p, isCreating: true }));
 
-    // Strip localId before sending to server
-    const finalFlashcards = flashcards.map(({ localId, ...rest }) => rest);
+    // If user is a guest, store project in localStorage and redirect to learn page
+    if (!user) {
+        const guestProject: Project = {
+            id: `guest-${Date.now()}`,
+            slug: 'guest-project',
+            author: 'Guest',
+            isPublic: false,
+            size: flashcards.length,
+            bibliography: [],
+            ...projectDetails,
+            flashcards: flashcards.map(({ localId, ...rest }) => rest),
+            studyPlan: studyPlan
+        };
+        localStorage.setItem('guestProject', JSON.stringify(guestProject));
+        router.push('/aprender?guest=true&session=0');
+        return;
+    }
 
-    // Don't catch the error here, let Next.js handle the redirect error if it occurs
+    // If user is logged in, save to DB
+    const finalFlashcards = flashcards.map(({ localId, ...rest }) => rest);
     await handleCreateProject(
         projectDetails,
         finalFlashcards,
