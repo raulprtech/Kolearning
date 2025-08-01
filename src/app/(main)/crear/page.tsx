@@ -1232,7 +1232,7 @@ export default function CreateProjectWizardPage() {
             completedSessions: 0,
         };
         localStorage.setItem('guestProject', JSON.stringify(guestProject));
-        router.push('/mis-proyectos/guest-project?guest=true');
+        router.push('/mis-proyectos/guest-project');
         return;
     }
 

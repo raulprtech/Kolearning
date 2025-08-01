@@ -566,8 +566,14 @@ function reducer(state: State, action: Action): State {
     switch (action.type) {
         case 'START_SESSION': {
             const { project, isGuest } = action.payload;
+             if (!project.flashcards || project.flashcards.length === 0) {
+                return { ...initialState, isLoading: false };
+            }
 
-            const srs = new SpacedRepetitionSystem(project.flashcards || [], project.studyPlan?.plan[0]?.sessionType || 'Refuerzo de Dominio');
+            const srs = new SpacedRepetitionSystem(
+                project.flashcards, 
+                project.studyPlan?.plan?.[0]?.sessionType || 'Refuerzo de Dominio'
+            );
             const nextCardId = srs.getNextCardId();
 
             return {
@@ -670,7 +676,7 @@ function AprenderPageComponent() {
         if (guestProjectJson) {
             projectToLoad = JSON.parse(guestProjectJson);
         } else {
-            router.push('/crear');
+            router.push('/crear'); // Redirect if no guest project is found
             return;
         }
       } else {
@@ -678,6 +684,8 @@ function AprenderPageComponent() {
             router.push('/');
             return;
         };
+        // This part would fetch from a DB for a logged-in user
+        // For now, let's assume it might not be implemented fully
         const allProjects = await getAllProjects();
         projectToLoad = allProjects.find(p => p.slug === projSlug);
       }
@@ -718,7 +726,7 @@ function AprenderPageComponent() {
 
   const currentQuestion = useMemo(() => state.project?.flashcards?.find(q => q.id === state.currentCardId), [state.project, state.currentCardId]);
   
-  if (state.isLoading || !state.project) {
+  if (state.isLoading) {
       return (
         <div className="container mx-auto py-8">
             <div className="space-y-4">
@@ -729,6 +737,16 @@ function AprenderPageComponent() {
             </div>
         </div>
       );
+  }
+  
+  if (!state.project || !state.srs || !state.currentCardId) {
+     return (
+        <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
+            <Loader2 className="h-16 w-16 text-primary animate-spin" />
+            <h2 className="text-2xl font-bold mt-6">Cargando siguiente pregunta...</h2>
+            <p className="text-muted-foreground mt-2">Si esto persiste, puede que no haya tarjetas en este proyecto.</p>
+        </div>
+    );
   }
 
   if (state.isSessionFinished) {
@@ -754,15 +772,6 @@ function AprenderPageComponent() {
     );
   }
 
-  if (!currentQuestion) {
-     return (
-        <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
-            <Loader2 className="h-16 w-16 text-primary animate-spin" />
-            <h2 className="text-2xl font-bold mt-6">Cargando siguiente pregunta...</h2>
-        </div>
-    );
-  }
-  
   const handleOpenAnswerSubmit = async () => {
     if (!state.openAnswerText.trim() || !currentQuestion) return;
     dispatch({ type: 'SET_LOADING', payload: true });
