@@ -91,21 +91,29 @@ export class SpacedRepetitionSystem {
         return Math.pow(1 + daysSinceLastReview / (FACTOR * state.stability), DECAY);
     }
     
+    public getRetrievabilityChange(cardId: string, userRating: UserRating): number {
+        let state = this.cardStates.get(cardId);
+        if (!state) return 0;
+        
+        const now = new Date();
+        const oldRetrievability = this.calculateRetrievability(state, now);
+        // After an answer, the new retrievability is considered 1 (or near 1).
+        const newRetrievability = 1;
+        return newRetrievability - oldRetrievability;
+    }
+
     /**
      * The core FSRS algorithm update function.
      * @param cardId The ID of the card being reviewed.
      * @param userRating The user's self-assessed rating (1-4).
-     * @returns The change in retrievability for this review.
      */
-    public updateCard(cardId: string, userRating: UserRating): number {
+    public updateCard(cardId: string, userRating: UserRating): void {
         let state = this.cardStates.get(cardId);
-        if (!state) return 0;
+        if (!state) return;
 
         const ratingIndex = userRating - 1;
         const now = new Date();
         
-        const oldRetrievability = this.calculateRetrievability(state, now);
-
         // If this is the first review, initialize D and S.
         const isFirstReview = state.stability === 0;
         if (isFirstReview) {
@@ -144,11 +152,6 @@ export class SpacedRepetitionSystem {
 
         // Remove the card from the current session's queue
         this.reviewQueue = this.reviewQueue.filter(id => id !== cardId);
-
-        // After updating, the new retrievability is 1 (or close to it)
-        const newRetrievability = 1; 
-
-        return newRetrievability - oldRetrievability;
     }
     
     public getNextCardId(): string | null {

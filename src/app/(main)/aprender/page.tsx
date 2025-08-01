@@ -526,6 +526,7 @@ type State = {
     isSessionFinished: boolean;
     finalSessionStats: { masteryProgress: number; cognitiveCredits: number; bestStreak: number; } | null;
     isGuestSession: boolean;
+    hasLoaded: boolean;
 };
 
 type Action =
@@ -560,6 +561,7 @@ const initialState: State = {
     isSessionFinished: false,
     finalSessionStats: null,
     isGuestSession: false,
+    hasLoaded: false,
 };
 
 function reducer(state: State, action: Action): State {
@@ -567,7 +569,7 @@ function reducer(state: State, action: Action): State {
         case 'START_SESSION': {
             const { project, isGuest } = action.payload;
              if (!project.flashcards || project.flashcards.length === 0) {
-                return { ...initialState, isLoading: false };
+                return { ...initialState, isLoading: false, hasLoaded: true };
             }
 
             const srs = new SpacedRepetitionSystem(
@@ -583,6 +585,7 @@ function reducer(state: State, action: Action): State {
                 currentCardId: nextCardId,
                 isLoading: false,
                 isGuestSession: isGuest,
+                hasLoaded: true,
             };
         }
         case 'SET_LOADING':
@@ -624,6 +627,9 @@ function reducer(state: State, action: Action): State {
 
         case 'RATE_DIFFICULTY': {
             const { rating, retrievabilityChange } = action.payload;
+            if (!state.srs || !state.currentCardId) return state;
+            
+            state.srs.updateCard(state.currentCardId, rating);
             const masteryPointsGained = Math.round(retrievabilityChange * 100);
 
             return { 
@@ -667,11 +673,11 @@ function AprenderPageComponent() {
   useEffect(() => {
     async function loadProject() {
       const projSlug = searchParams.get('project');
-      const isGuest = projSlug === 'guest-project';
+      const isGuestSession = projSlug === 'guest-project';
 
       let projectToLoad: Project | undefined | null = null;
       
-      if (isGuest) {
+      if (isGuestSession) {
         const guestProjectJson = localStorage.getItem('guestProject');
         if (guestProjectJson) {
             projectToLoad = JSON.parse(guestProjectJson);
@@ -684,15 +690,13 @@ function AprenderPageComponent() {
             router.push('/');
             return;
         };
-        // This part would fetch from a DB for a logged-in user
-        // For now, let's assume it might not be implemented fully
         const allProjects = await getAllProjects();
         projectToLoad = allProjects.find(p => p.slug === projSlug);
       }
       
       if (projectToLoad) {
-        dispatch({ type: 'START_SESSION', payload: { project: projectToLoad, isGuest }});
-      } else if (!isGuest) {
+        dispatch({ type: 'START_SESSION', payload: { project: projectToLoad, isGuest: isGuestSession }});
+      } else if (!isGuestSession) {
         router.push('/');
       }
     }
@@ -726,7 +730,7 @@ function AprenderPageComponent() {
 
   const currentQuestion = useMemo(() => state.project?.flashcards?.find(q => q.id === state.currentCardId), [state.project, state.currentCardId]);
   
-  if (state.isLoading) {
+  if (!state.hasLoaded) {
       return (
         <div className="container mx-auto py-8">
             <div className="space-y-4">
@@ -786,7 +790,7 @@ function AprenderPageComponent() {
 
   const handleDifficultyRating = (rating: UserRating) => {
       if (!state.srs || !state.currentCardId) return;
-      const retrievabilityChange = state.srs.updateCard(state.currentCardId, rating);
+      const retrievabilityChange = state.srs.getRetrievabilityChange(state.currentCardId, rating);
       dispatch({ type: 'RATE_DIFFICULTY', payload: { rating, retrievabilityChange } });
 
       // After rating, automatically move to the next question

@@ -1227,7 +1227,13 @@ export default function CreateProjectWizardPage() {
             size: flashcards.length,
             bibliography: [],
             ...projectDetails,
-            flashcards: flashcards.map(({ localId, ...rest }) => rest),
+            flashcards: flashcards.map(({ localId, question, answer, ...rest }) => ({
+                ...rest,
+                question,
+                answer,
+                concepto: question, // Map question to concepto
+                descripcion: answer, // Map answer to descripcion
+            })),
             studyPlan: studyPlan,
             completedSessions: 0,
         };
