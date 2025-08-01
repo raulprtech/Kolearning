@@ -37,6 +37,7 @@ Your plan MUST be based on the principles of **spaced repetition, active recall,
 You must operate with the understanding that each session you define will be powered by a Spaced Repetition System (SRS) that optimizes the mix of questions and activities within that session to maximize learning efficiency. Your role is to define the high-level pedagogical sequence and focus for each session.
 
 **User's Context:**
+- **Current Date:** {{currentDate}}
 - **Objective:** "{{objective}}"
 - **Project Title:** "{{projectTitle}}"
 - **Time Limit:** "{{timeLimit}}"
@@ -62,7 +63,7 @@ You must operate with the understanding that each session you define will be pow
 1.  **Analyze the flashcards and determine a single, relevant category** for the project (e.g., "Programación", "Biología", "Historia").
 
 2.  **Design a multi-session study plan.**
-    -   Analyze the flashcards, their difficulties, and their dependencies ('atomos_padre') to create a logical sequence.
+    -   Analyze the flashcards, their difficulties, their dependencies ('atomos_padre'), and the exact number of days available between the current date and the time limit to create a logical sequence.
     -   If the user provided a cognitive profile or learning challenge, use that information to tailor the session types and justification. For example, if their challenge is "Entender conceptos muy teóricos o abstractos," strategically include a "Consulta con Koli" session for complex topics.
     -   The plan can have **multiple sessions per day** if needed to meet the user's time limit.
     -   The total number of sessions should be between 5 and 15, depending on the complexity and volume of the material.
@@ -75,7 +76,9 @@ You must operate with the understanding that each session you define will be pow
         -   **Consulta con Koli**: Use sparingly for particularly complex or abstract topics that would benefit from a deeper, conversational dive, especially if the user's profile indicates this need.
 
 3.  **Write a brief, encouraging justification.**
-    -   Explain the pedagogical reasoning behind your plan's structure, connecting it to the user's stated objective and time limit. If calibration data was provided, mention how it influenced the plan.
+    -   Explain the pedagogical reasoning behind your plan's structure.
+    -   **Specifically detail why you chose the total number of sessions and the expected frequency** (e.g., "He diseñado 10 sesiones para cubrir todo el material a un ritmo de dos por día...").
+    -   Connect it to the user's stated objective and time limit. If calibration data was provided, mention how it influenced the plan.
 
 4.  **Provide an 'expectedProgress' explanation.**
     -   Briefly describe what the user is expected to have learned or accomplished after completing each major section or day of the plan. This sets clear expectations for their learning journey.
@@ -94,7 +97,11 @@ const generateStudyPlanFlow = ai.defineFlow(
     outputSchema: GenerateStudyPlanOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    const promptInput = {
+      ...input,
+      currentDate: new Date().toLocaleDateString('es-ES'),
+    }
+    const { output } = await prompt(promptInput);
     return output!;
   }
 );
