@@ -739,7 +739,7 @@ function AprenderPageComponent() {
       );
   }
   
-  if (!state.project || !state.srs || !state.currentCardId) {
+  if (!state.project || !state.srs || !currentQuestion) {
      return (
         <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
             <Loader2 className="h-16 w-16 text-primary animate-spin" />
