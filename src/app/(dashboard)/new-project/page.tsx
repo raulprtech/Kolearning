@@ -29,7 +29,8 @@ import {
   Trash2,
   BookOpen,
   TrendingUp,
-  ChevronLeft
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
@@ -433,6 +434,7 @@ export default function NewProjectPage() {
             actions: (
                 <>
                     <Button variant="outline" onClick={handleReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
+                    <Button onClick={handleGeneratePlan}>Siguiente Paso<ChevronRight className="ml-2"/></Button>
                 </>
             )
         };
