@@ -23,19 +23,19 @@ import { Progress } from "@/components/ui/progress";
 import { ProjectProvider, useProjects } from "@/contexts/ProjectContext";
 import { Header } from "@/components/layout/header";
 
+const projectIcons: { [key: string]: React.ElementType } = {
+    Book,
+    Landmark,
+    FlaskConical,
+    Code,
+    Music,
+    Palette,
+};
+
 const SidebarContent = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { projects } = useProjects();
   
-  const projectIcons = {
-    Book: Book,
-    Landmark: Landmark,
-    FlaskConical: FlaskConical,
-    Code: Code,
-    Music: Music,
-    Palette: Palette,
-  };
-
   return (
     <aside
       className={`flex flex-col bg-card/30 transition-all duration-300 ${
@@ -71,10 +71,9 @@ const SidebarContent = () => {
         </h3>
         <div className="flex flex-col gap-4">
           {projects.map((project) => {
-            const Icon = projectIcons[project.icon as keyof typeof projectIcons];
-            const projectSlug = project.title.toLowerCase().replace(/\s+/g, '-');
+            const Icon = projectIcons[project.icon];
             return (
-              <Link href={`/projects/${projectSlug}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
+              <Link href={`/projects/${project.id}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
                 <div className="flex items-center gap-3">
                   {Icon && <Icon className="h-5 w-5 text-primary shrink-0" />}
                   {isSidebarOpen && (

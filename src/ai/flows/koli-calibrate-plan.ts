@@ -25,14 +25,16 @@ const CalibratePlanInputSchema = z.object({
     .describe(
       'A summary of the learning material for context.'
     ),
+    projectTitle: z.string().describe('The title of the project.')
 });
 
 export type CalibratePlanInput = z.infer<typeof CalibratePlanInputSchema>;
 
 const CalibratePlanOutputSchema = z.object({
+  categories: z.array(z.string()).describe('An array of one to three relevant categories for the project.'),
   revisedLearningPlan: z
     .string()
-    .describe('The revised learning plan based on the questionnaire responses.'),
+    .describe('The revised learning plan based on the questionnaire responses, formatted in Markdown.'),
 });
 
 export type CalibratePlanOutput = z.infer<typeof CalibratePlanOutputSchema>;
@@ -48,18 +50,46 @@ const calibratePlanPrompt = ai.definePrompt({
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans.
 Your response must be in Spanish.
 
-A learner has answered a pedagogical profile questionnaire. Based on their responses, and the provided summary of their learning material, revise their learning plan to better suit their needs and preferences.
+A learner has provided their learning material. Based on the material, create a comprehensive and strategic learning plan. The plan must follow the Kolearning methodology, structured into four types of sessions. Also, assign one to three relevant categories for this project.
 
+Project Title: {{{projectTitle}}}
 Questionnaire Responses: {{{questionnaireResponses}}}
 Learning Material Summary: {{{learningMaterialSummary}}}
 
-Provide a detailed and actionable revised learning plan.
-Format the revised learning plan with numbered steps.
-Consider the user's learning style, preferences, and goals when creating the plan.
-Be specific and avoid generic advice.
-Be concise. Keep the revised plan to a reasonable length.
+**Kolearning Methodology:**
 
-Revised Learning Plan:`,
+1.  **Sesión de Calibración:**
+    *   **Intención:** Diagnóstico. Establecer una línea base del conocimiento.
+    *   **Evaluación:** Opción Múltiple.
+    *   **Justificación:** Identificar fortalezas y debilidades.
+
+2.  **Sesión de Incursión:**
+    *   **Intención:** Adquisición. Presentar nuevos "Átomos de Conocimiento".
+    *   **Evaluación:** Pregunta Abierta (Flashcard).
+    *   **Justificación:** Maximizar el esfuerzo cognitivo para la recuperación activa.
+
+3.  **Sesión de Refuerzo de Dominio:**
+    *   **Intención:** Retención a Largo Plazo. Combatir la curva del olvido.
+    *   **Evaluación:** Formatos Mixtos (Opción Múltiple, Ordenamiento, etc.).
+    *   **Justificación:** Repetición espaciada para garantizar la retención.
+
+4.  **Sesión de Prueba de Dominio:**
+    *   **Intención:** Certificación. Evaluar el dominio profundo.
+    *   **Evaluación:** Pregunta Abierta y Casos Prácticos.
+    *   **Justificación:** Medir el resultado final del aprendizaje.
+
+**Your Tasks:**
+
+1.  **Assign Categories:** Based on the project title and material summary, provide 1 to 3 relevant categories (e.g., "Tecnología", "Ciencia", "Humanidades", "Arte").
+2.  **Create the Learning Plan:**
+    *   Generate a detailed, actionable learning plan using Markdown for formatting.
+    *   Create a title for the plan like "Plan de Conquista para: {{{projectTitle}}}".
+    *   Structure the plan with the four session types as the main sections (use Markdown headings).
+    *   For each session type, briefly explain its purpose and suggest a concrete first step or focus area for the learner. For example, for "Sesión de Calibración," you might suggest "Comenzaremos con 15 preguntas de opción múltiple para evaluar tu conocimiento sobre los conceptos fundamentales."
+    *   Keep the language encouraging, strategic, and concise.
+
+Provide the response in JSON format containing 'categories' and 'revisedLearningPlan'.
+`,
 });
 
 const calibratePlanFlow = ai.defineFlow(

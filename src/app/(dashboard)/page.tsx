@@ -15,13 +15,13 @@ import { useProjects } from "@/contexts/ProjectContext";
 import { Book, Landmark, FlaskConical, Code, Music, Palette } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
-const projectIcons = {
-  Book: Book,
-  Landmark: Landmark,
-  FlaskConical: FlaskConical,
-  Code: Code,
-  Music: Music,
-  Palette: Palette,
+const projectIcons: { [key: string]: React.ElementType } = {
+  Book,
+  Landmark,
+  FlaskConical,
+  Code,
+  Music,
+  Palette,
 };
 
 export default function DashboardPage() {
@@ -54,10 +54,9 @@ export default function DashboardPage() {
             <h2 className="text-xl font-semibold mb-4">Mis Proyectos</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {projects.map(project => {
-                    const Icon = projectIcons[project.icon as keyof typeof projectIcons]
-                    const projectSlug = project.title.toLowerCase().replace(/\s+/g, '-');
+                    const Icon = projectIcons[project.icon]
                     return (
-                        <Link href={`/projects/${projectSlug}`} key={project.id}>
+                        <Link href={`/projects/${project.id}`} key={project.id}>
                             <Card className="bg-card/50 hover:border-primary transition-colors h-full flex flex-col">
                                 <CardHeader className="flex-row items-center gap-4">
                                     {Icon && <Icon className="w-8 h-8 text-primary" />}

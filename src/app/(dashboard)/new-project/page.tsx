@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
@@ -33,6 +34,8 @@ import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { useProjects } from "@/contexts/ProjectContext";
+import { useToast } from "@/hooks/use-toast";
 
 const initialSteps = [
     {
@@ -164,12 +167,12 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
     );
 }
 
-const AtomizationProgress = ({ atomsResult, fileName }: { atomsResult: GenerateAtomsOutput | null, fileName: string }) => {
+const AtomizationProgress = ({ atomsResult, fileName, isLoading }: { atomsResult: GenerateAtomsOutput | null, fileName: string, isLoading: boolean }) => {
     const steps = [
         { name: "Análisis de contenido", status: "completed" },
         { name: "Extracción de entidades", status: "completed" },
         { name: "Generación de átomos", status: atomsResult ? "completed" : "pending" },
-        { name: "Validación de calidad", status: "pending" },
+        { name: "Validación de calidad", status: atomsResult ? "completed" : "pending" },
     ];
 
     const completedSteps = steps.filter(s => s.status === 'completed').length;
@@ -218,6 +221,11 @@ const AtomizationProgress = ({ atomsResult, fileName }: { atomsResult: GenerateA
                             <p className="text-muted-foreground mt-2">Hemos generado <span className="font-bold">{atomsResult.atoms.length}</span> átomos de conocimiento.</p>
                         </div>
                     )}
+                     {isLoading && !atomsResult && (
+                         <div className="mt-8 text-center">
+                             <p className="text-muted-foreground mt-2">Generando plan de aprendizaje...</p>
+                         </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
@@ -239,8 +247,8 @@ const AtomReview = ({ atoms, onNextStep }: { atoms: GenerateAtomsOutput['atoms']
                 <p className="text-muted-foreground">Añade, edita o elimina tarjetas para perfeccionar tu mazo de estudio.</p>
             </div>
             <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full">
-                    <div className="p-1 pr-4 space-y-4 max-w-4xl mx-auto">
+                <ScrollArea className="h-full pr-4">
+                    <div className="space-y-4 max-w-4xl mx-auto">
                     {editableAtoms.map((atom, index) => (
                         <Card key={index} className="flex flex-col md:flex-row items-start gap-4 p-4 bg-card/50">
                             <span className="text-sm font-bold text-muted-foreground mt-1 hidden md:inline-block">{index + 1}.</span>
@@ -274,8 +282,8 @@ const AtomReview = ({ atoms, onNextStep }: { atoms: GenerateAtomsOutput['atoms']
 const LearningPlan = ({ plan, onFinish }: { plan: CalibratePlanOutput, onFinish: () => void }) => {
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-            <Card className="w-full max-w-3xl bg-card/50">
-                <CardHeader>
+            <Card className="w-full max-w-3xl bg-card/50 overflow-hidden">
+                 <CardHeader>
                     <div className="flex justify-center mb-4">
                         <div className="p-3 bg-primary/20 rounded-full">
                            <BookOpen className="h-8 w-8 text-primary" />
@@ -286,12 +294,9 @@ const LearningPlan = ({ plan, onFinish }: { plan: CalibratePlanOutput, onFinish:
                         Koli ha diseñado esta ruta estratégica para ayudarte a dominar el tema.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div 
-                        className="prose prose-invert prose-sm max-w-none" 
-                        dangerouslySetInnerHTML={{ __html: plan.revisedLearningPlan.replace(/\n/g, '<br />') }} 
-                    />
-                    <div className="mt-8 text-center">
+                <CardContent className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-headline prose-headings:text-primary">
+                    <div dangerouslySetInnerHTML={{ __html: plan.revisedLearningPlan.replace(/\n/g, '<br />') }} />
+                    <div className="mt-8 text-center not-prose">
                          <Button size="lg" onClick={onFinish}>Crear Proyecto</Button>
                     </div>
                 </CardContent>
@@ -302,32 +307,39 @@ const LearningPlan = ({ plan, onFinish }: { plan: CalibratePlanOutput, onFinish:
 
 
 export default function NewProjectPage() {
+  const router = useRouter();
+  const { addProject } = useProjects();
+  const { toast } = useToast();
+
+  const [projectTitle, setProjectTitle] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isProjectStarted, setIsProjectStarted] = useState(false);
   const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
-  const [processingFile, setProcessingFile] = useState<string>("");
+  const [processingFile, setProcessingFile] = useState<{name: string, content: string} | null>(null);
   const [showAtomReview, setShowAtomReview] = useState(false);
   const [showLearningPlan, setShowLearningPlan] = useState(false);
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
-
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      setSelectedFiles(prevFiles => [...prevFiles, ...Array.from(event.target.files!)]);
+      const file = event.target.files[0];
+      if (file) {
+        setSelectedFiles(prevFiles => [...prevFiles, file]);
+        fileToDataUri(file).then(dataUri => {
+            setProcessingFile({name: file.name, content: dataUri });
+        })
+      }
     }
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
   };
 
   const removeFile = (fileName: string) => {
     setSelectedFiles(prevFiles => prevFiles.filter(file => file.name !== fileName));
+    setProcessingFile(null);
   };
   
   const getFileIcon = (fileType: string) => {
@@ -335,54 +347,48 @@ export default function NewProjectPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!input.trim() && selectedFiles.length === 0) return;
+    if (!input.trim() || !processingFile) {
+        toast({
+            title: "Faltan datos",
+            description: "Por favor, describe tu objetivo y sube un archivo.",
+            variant: "destructive"
+        })
+        return;
+    }
     
-    const currentInput = input;
-    const currentFiles = selectedFiles;
-
+    setProjectTitle(input);
+    
     if (!isProjectStarted) {
         setIsProjectStarted(true);
     }
     
-    const userMessage: Message = { role: 'user', content: currentInput };
+    const userMessage: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setInput('');
-    setSelectedFiles([]);
     
-    if (currentFiles.length > 0) {
-        try {
-            const file = currentFiles[0];
-            setProcessingFile(file.name);
-            const dataUri = await fileToDataUri(file);
+    try {
+        const response = await generateAtoms({ 
+            studyMaterial: processingFile.content,
+            userObjective: input
+        });
+        
+        setAtomsResult(response);
+        
+        const koliResponse: Message = { 
+            role: 'koli', 
+            content: `${response.initialResponse} He terminado de procesar tu documento y he generado ${response.atoms.length} átomos de conocimiento.`,
+            actions: (
+                <>
+                    <Button variant="outline" onClick={handleReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
+                </>
+            )
+        };
+        setMessages(prev => [...prev, koliResponse]);
 
-            const response = await generateAtoms({ 
-                studyMaterial: dataUri,
-                userObjective: currentInput
-            });
-            
-            setAtomsResult(response);
-            
-            const koliGreeting: Message = { role: 'koli', content: response.initialResponse };
-            
-            const koliResponse: Message = { 
-                role: 'koli', 
-                content: `He terminado de procesar tu documento y he generado ${response.atoms.length} átomos de conocimiento. Puedes revisarlos ahora o finalizar para crear tu proyecto.`,
-                actions: (
-                    <>
-                        <Button variant="outline" onClick={handleReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
-                    </>
-                )
-            };
-            setMessages(prev => [...prev, koliGreeting, koliResponse]);
-
-        } catch (error) {
-            console.error("Error processing file:", error);
-            const koliResponse: Message = { role: 'koli', content: 'Lo siento, ha ocurrido un error al procesar tu documento.' };
-            setMessages(prev => [...prev, koliResponse]);
-        }
-    } else {
-        const koliResponse: Message = { role: 'koli', content: "Por favor, sube un documento para que pueda ayudarte a crear un proyecto. O si tienes alguna duda, ¡pregunta!" };
+    } catch (error) {
+        console.error("Error processing file:", error);
+        const koliResponse: Message = { role: 'koli', content: 'Lo siento, ha ocurrido un error al procesar tu documento.' };
         setMessages(prev => [...prev, koliResponse]);
     }
 
@@ -393,11 +399,12 @@ export default function NewProjectPage() {
     if (!atomsResult) return;
 
     setIsLoading(true);
-    setShowAtomReview(false); // Ocultar la revisión de átomos para mostrar el progreso
+    setShowAtomReview(false);
 
     try {
         const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
         const plan = await calibratePlanFromQuestionnaire({
+            projectTitle: projectTitle,
             questionnaireResponses: "El usuario quiere prepararse para un examen.", // Placeholder
             learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
         });
@@ -426,7 +433,26 @@ export default function NewProjectPage() {
   }
 
   const handleFinalizeProject = () => {
-      console.log('Finalize project');
+      if (!atomsResult || !learningPlan || !processingFile) {
+          toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
+          return;
+      }
+      const newProject = {
+          id: new Date().toISOString(),
+          title: projectTitle,
+          mastery: 0,
+          categories: learningPlan.categories,
+          icon: "Book", // Default icon
+          atoms: atomsResult.atoms,
+          sessions: learningPlan.revisedLearningPlan,
+          sources: [{name: processingFile.name, type: "Documento"}]
+      };
+      addProject(newProject);
+      toast({
+          title: "¡Proyecto Creado!",
+          description: `${projectTitle} ha sido añadido a tu dashboard.`
+      })
+      router.push("/");
   }
 
   const handleReviewAtoms = () => {
@@ -491,8 +517,14 @@ export default function NewProjectPage() {
                 </div>
               )}
               <div className="relative">
+                 <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                 />
                 <Input
-                  placeholder="Describe qué quieres aprender y adjunta tus archivos..."
+                  placeholder="Dale un título a tu proyecto y describe tu objetivo..."
                   className="w-full h-12 rounded-full pl-12 pr-14 bg-card border-border"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -500,38 +532,12 @@ export default function NewProjectPage() {
                   disabled={isLoading}
                 />
                 <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <input
-                        type="file"
-                        multiple
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        disabled={isLoading}
-                    />
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={isLoading}>
-                          <Plus className="h-5 w-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent side="top">
-                        <DropdownMenuItem onClick={handleUploadClick}>
-                          <Paperclip className="mr-2 h-4 w-4" />
-                          <span>Subir archivos</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <LinkIcon className="mr-2 h-4 w-4" />
-                          <span>Importar desde enlace</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Youtube className="mr-2 h-4 w-4" />
-                          <span>Importar desde Youtube</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
+                        <Paperclip className="h-5 w-5" />
+                    </Button>
                 </div>
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <Button variant="ghost" size="icon" onClick={handleSendMessage} disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}>
+                  <Button variant="ghost" size="icon" onClick={handleSendMessage} disabled={isLoading || !input.trim() || selectedFiles.length === 0}>
                       {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                   </Button>
                 </div>
@@ -545,6 +551,7 @@ export default function NewProjectPage() {
   return (
     <div className="flex flex-1 h-[calc(100vh-theme(space.16))] overflow-hidden">
         <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_450px]">
+            <div className="flex flex-col flex-1 h-full overflow-y-auto">
             {showLearningPlan && learningPlan ? (
                 <LearningPlan plan={learningPlan} onFinish={handleFinalizeProject} />
             ) : showAtomReview && atomsResult ? (
@@ -555,9 +562,11 @@ export default function NewProjectPage() {
             ) : (
                 <AtomizationProgress 
                     atomsResult={atomsResult} 
-                    fileName={processingFile}
+                    fileName={processingFile?.name ?? ""}
+                    isLoading={isLoading}
                 />
             )}
+            </div>
             <ChatPanel
                 messages={messages}
                 input={input}
@@ -574,5 +583,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-    
