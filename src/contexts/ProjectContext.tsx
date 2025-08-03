@@ -26,7 +26,7 @@ type Project = {
 
 type ProjectContextType = {
   projects: Project[];
-  addProject: (project: Omit<Project, 'mastery' | 'icon'> & Partial<Pick<Project, 'mastery' | 'icon'>>) => void;
+  addProject: (project: Project) => void;
   updateProjectIcon: (projectId: string, icon: string) => void;
 };
 
@@ -87,13 +87,7 @@ const initialProjects: Project[] = [
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
 
-  const addProject = (projectData: Omit<Project, 'mastery' | 'icon'> & Partial<Pick<Project, 'mastery' | 'icon'>>) => {
-    const newProject: Project = {
-      id: new Date().toISOString(),
-      mastery: 0,
-      icon: "Book",
-      ...projectData
-    }
+  const addProject = (newProject: Project) => {
     if (!projects.find(p => p.id === newProject.id)) {
       setProjects(prevProjects => [...prevProjects, newProject]);
     }

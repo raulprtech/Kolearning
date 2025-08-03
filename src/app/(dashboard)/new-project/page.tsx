@@ -28,14 +28,19 @@ import {
   Share2,
   Trash2,
   BookOpen,
+  TrendingUp,
+  ChevronLeft
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 const initialSteps = [
     {
@@ -232,7 +237,7 @@ const AtomizationProgress = ({ atomsResult, fileName, isLoading }: { atomsResult
     );
 };
 
-const AtomReview = ({ atoms, onNextStep }: { atoms: GenerateAtomsOutput['atoms'], onNextStep: () => void }) => {
+const AtomReview = ({ atoms, onNextStep, onBack }: { atoms: GenerateAtomsOutput['atoms'], onNextStep: () => void, onBack: () => void }) => {
     
     const [editableAtoms, setEditableAtoms] = useState(atoms);
 
@@ -270,7 +275,11 @@ const AtomReview = ({ atoms, onNextStep }: { atoms: GenerateAtomsOutput['atoms']
                     </div>
                 </ScrollArea>
             </div>
-             <div className="pt-6 text-center">
+             <div className="pt-6 flex justify-center items-center gap-4">
+                <Button variant="outline" size="lg" onClick={onBack}>
+                    <ChevronLeft className="mr-2"/>
+                    Volver
+                </Button>
                 <Button size="lg" onClick={onNextStep}>
                     Siguiente Paso
                 </Button>
@@ -279,28 +288,72 @@ const AtomReview = ({ atoms, onNextStep }: { atoms: GenerateAtomsOutput['atoms']
     )
 }
 
-const LearningPlan = ({ plan, onFinish }: { plan: CalibratePlanOutput, onFinish: () => void }) => {
+const LearningPlan = ({ plan, onFinish, onBack }: { plan: CalibratePlanOutput, onFinish: () => void, onBack: () => void }) => {
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-            <Card className="w-full max-w-3xl bg-card/50 overflow-hidden">
-                 <CardHeader>
-                    <div className="flex justify-center mb-4">
-                        <div className="p-3 bg-primary/20 rounded-full">
-                           <BookOpen className="h-8 w-8 text-primary" />
+            <div className="w-full max-w-4xl">
+                 <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold font-headline">Crear un nuevo proyecto</h1>
+                    <p className="text-muted-foreground">Paso 3 de 3</p>
+                    <Progress value={100} className="w-1/2 mx-auto mt-2 h-2" />
+                </div>
+                <Card className="w-full bg-card/50 overflow-hidden">
+                    <CardHeader>
+                        <CardTitle className="text-2xl font-headline">¡Conoce tu Plan de Estudios!</CardTitle>
+                        <CardDescription>
+                            Este es el camino que Koli ha diseñado para que alcances tu objetivo.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <h3 className="font-semibold mb-2">Ruta de aprendizaje</h3>
+                        <ScrollArea className="h-48 w-full rounded-md border border-border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-12">Sesión</TableHead>
+                                        <TableHead>¿Qué aprenderás en esta sesión?</TableHead>
+                                        <TableHead>Tipo de Sesión</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {plan.learningPath.map((item) => (
+                                        <TableRow key={item.session}>
+                                            <TableCell className="font-medium">{item.session}</TableCell>
+                                            <TableCell>{item.topic}</TableCell>
+                                            <TableCell>{item.sessionType}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                            <ScrollBar orientation="vertical" />
+                        </ScrollArea>
+
+                        <div className="mt-6">
+                             <h3 className="font-semibold mb-2 flex items-center gap-2">
+                                <BrainCircuit className="h-5 w-5 text-primary"/>
+                                Justificación de Koli
+                            </h3>
+                            <p className="text-sm text-muted-foreground">{plan.koliJustification}</p>
                         </div>
-                    </div>
-                    <CardTitle className="text-center text-2xl font-headline">Tu Plan de Aprendizaje</CardTitle>
-                    <CardDescription className="text-center">
-                        Koli ha diseñado esta ruta estratégica para ayudarte a dominar el tema.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-headline prose-headings:text-primary">
-                    <div dangerouslySetInnerHTML={{ __html: plan.revisedLearningPlan.replace(/\n/g, '<br />') }} />
-                    <div className="mt-8 text-center not-prose">
-                         <Button size="lg" onClick={onFinish}>Crear Proyecto</Button>
-                    </div>
-                </CardContent>
-            </Card>
+
+                         <div className="mt-6">
+                             <h3 className="font-semibold mb-2 flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5 text-primary"/>
+                                Progreso Esperado
+                            </h3>
+                            <p className="text-sm text-muted-foreground">{plan.expectedProgress}</p>
+                        </div>
+                        
+                        <div className="mt-8 flex justify-between items-center">
+                            <Button variant="outline" onClick={onBack}>
+                                <ChevronLeft className="mr-2"/>
+                                Volver
+                            </Button>
+                            <Button size="lg" onClick={onFinish}>Crear Proyecto y Empezar</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 };
@@ -319,8 +372,7 @@ export default function NewProjectPage() {
   const [isProjectStarted, setIsProjectStarted] = useState(false);
   const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
   const [processingFile, setProcessingFile] = useState<{name: string, content: string} | null>(null);
-  const [showAtomReview, setShowAtomReview] = useState(false);
-  const [showLearningPlan, setShowLearningPlan] = useState(false);
+  const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -399,7 +451,7 @@ export default function NewProjectPage() {
     if (!atomsResult) return;
 
     setIsLoading(true);
-    setShowAtomReview(false);
+    setCurrentStep('atomizing'); // Show loading state on atomization view
 
     try {
         const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
@@ -410,16 +462,11 @@ export default function NewProjectPage() {
         });
 
         setLearningPlan(plan);
-        setShowLearningPlan(true);
+        setCurrentStep('plan');
 
         const koliMessage: Message = {
             role: 'koli',
             content: "¡Excelente! He diseñado un plan de aprendizaje estratégico para ti. Échale un vistazo. Si estás de acuerdo, podemos crear el proyecto.",
-            actions: (
-                <>
-                    <Button onClick={handleFinalizeProject}>Crear Proyecto</Button>
-                </>
-            )
         };
         setMessages(prev => [...prev, koliMessage]);
 
@@ -444,7 +491,7 @@ export default function NewProjectPage() {
           categories: learningPlan.categories,
           icon: "Book", // Default icon
           atoms: atomsResult.atoms,
-          sessions: learningPlan.revisedLearningPlan,
+          sessions: learningPlan.fullLearningPlanMarkdown,
           sources: [{name: processingFile.name, type: "Documento"}]
       };
       addProject(newProject);
@@ -456,7 +503,7 @@ export default function NewProjectPage() {
   }
 
   const handleReviewAtoms = () => {
-    setShowAtomReview(true);
+    setCurrentStep('review');
     const koliMessage: Message = {
         role: 'koli',
         content: "Claro, aquí están los átomos que he generado para ti. Puedes editarlos directamente. Cuando estés listo, haz clic en 'Siguiente Paso' para continuar.",
@@ -566,24 +613,47 @@ export default function NewProjectPage() {
       );
   }
 
+  const renderContent = () => {
+    switch (currentStep) {
+        case 'atomizing':
+            return <AtomizationProgress 
+                        atomsResult={atomsResult} 
+                        fileName={processingFile?.name ?? ""}
+                        isLoading={isLoading}
+                    />;
+        case 'review':
+             if (atomsResult) {
+                return <AtomReview 
+                            atoms={atomsResult.atoms} 
+                            onNextStep={handleGeneratePlan}
+                            onBack={() => setCurrentStep('atomizing')}
+                        />
+            }
+            return null;
+        case 'plan':
+            if (learningPlan) {
+                return <LearningPlan 
+                            plan={learningPlan} 
+                            onFinish={handleFinalizeProject} 
+                            onBack={() => setCurrentStep('review')}
+                        />
+            }
+            return null;
+        default:
+             return <AtomizationProgress 
+                        atomsResult={atomsResult} 
+                        fileName={processingFile?.name ?? ""}
+                        isLoading={isLoading}
+                    />;
+    }
+  }
+
+
   return (
     <div className="flex flex-1 h-[calc(100vh-theme(space.16))] overflow-hidden">
         <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_450px]">
             <div className="flex flex-col flex-1 h-full overflow-y-auto">
-            {showLearningPlan && learningPlan ? (
-                <LearningPlan plan={learningPlan} onFinish={handleFinalizeProject} />
-            ) : showAtomReview && atomsResult ? (
-                 <AtomReview 
-                    atoms={atomsResult.atoms} 
-                    onNextStep={handleGeneratePlan}
-                />
-            ) : (
-                <AtomizationProgress 
-                    atomsResult={atomsResult} 
-                    fileName={processingFile?.name ?? ""}
-                    isLoading={isLoading}
-                />
-            )}
+                {renderContent()}
             </div>
             <ChatPanel
                 messages={messages}
@@ -601,5 +671,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-    

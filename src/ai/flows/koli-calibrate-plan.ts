@@ -32,10 +32,16 @@ export type CalibratePlanInput = z.infer<typeof CalibratePlanInputSchema>;
 
 const CalibratePlanOutputSchema = z.object({
   categories: z.array(z.string()).describe('An array of one to three relevant categories for the project.'),
-  revisedLearningPlan: z
-    .string()
-    .describe('The revised learning plan based on the questionnaire responses, formatted in Markdown.'),
+  learningPath: z.array(z.object({
+      session: z.number().describe('The session number.'),
+      topic: z.string().describe('What the user will learn in this session.'),
+      sessionType: z.string().describe('The type of the session (e.g., Calibración, Incursión).')
+  })).describe('The structured learning path with sessions.'),
+  koliJustification: z.string().describe('The justification from Koli about the plan.'),
+  expectedProgress: z.string().describe('The expected progress for the user.'),
+  fullLearningPlanMarkdown: z.string().describe('The original full learning plan in Markdown format for storage.'),
 });
+
 
 export type CalibratePlanOutput = z.infer<typeof CalibratePlanOutputSchema>;
 
@@ -81,14 +87,13 @@ Learning Material Summary: {{{learningMaterialSummary}}}
 **Your Tasks:**
 
 1.  **Assign Categories:** Based on the project title and material summary, provide 1 to 3 relevant categories (e.g., "Tecnología", "Ciencia", "Humanidades", "Arte").
-2.  **Create the Learning Plan:**
-    *   Generate a detailed, actionable learning plan using Markdown for formatting.
-    *   Create a title for the plan like "Plan de Conquista para: {{{projectTitle}}}".
-    *   Structure the plan with the four session types as the main sections (use Markdown headings).
-    *   For each session type, briefly explain its purpose and suggest a concrete first step or focus area for the learner. For example, for "Sesión de Calibración," you might suggest "Comenzaremos con 15 preguntas de opción múltiple para evaluar tu conocimiento sobre los conceptos fundamentales."
-    *   Keep the language encouraging, strategic, and concise.
+2.  **Create the Learning Plan Components:**
+    *   **learningPath:** Generate a structured array of learning sessions. Each session should have a number, a clear topic, and its corresponding session type from the methodology. Start with a "Calibración Inicial" session. Create at least 3-5 diverse sessions.
+    *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy behind the plan.
+    *   **expectedProgress:** Write an encouraging paragraph outlining the expected learning progression for the user.
+    *   **fullLearningPlanMarkdown:** Generate a complete, actionable learning plan using Markdown for formatting. Create a title for the plan like "Plan de Conquista para: {{{projectTitle}}}". Structure the plan with the four session types as the main sections (use Markdown headings). For each session type, briefly explain its purpose and suggest a concrete first step or focus area for the learner.
 
-Provide the response in JSON format containing 'categories' and 'revisedLearningPlan'.
+Provide the response in a structured JSON format containing 'categories', 'learningPath', 'koliJustification', 'expectedProgress', and 'fullLearningPlanMarkdown'.
 `,
 });
 
