@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/icons/logo";
+import { Progress } from "@/components/ui/progress";
 
 export default function DashboardLayout({
   children,
@@ -79,13 +80,19 @@ export default function DashboardLayout({
            <h3 className={`mt-6 mb-2 text-sm font-semibold text-muted-foreground ${isSidebarOpen ? 'px-2' : 'text-center'}`}>
               {isSidebarOpen ? 'Proyectos' : 'Mis'}
             </h3>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
             {projects.map((project) => (
-              <Link href={`/dashboard/projects/${project.id}`} key={project.id}>
-                <div className={`flex items-center gap-3 p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'justify-center'}`}>
-                   <BookOpen className="h-5 w-5 text-primary" />
+              <Link href={`/dashboard/projects/${project.id}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
+                <div className="flex items-center gap-3">
+                   <BookOpen className="h-5 w-5 text-primary shrink-0" />
                   {isSidebarOpen && (
-                    <span className="text-sm font-medium">{project.title}</span>
+                    <div className="flex flex-col w-full">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium">{project.title}</span>
+                        <span className="text-xs text-muted-foreground">{project.mastery}%</span>
+                      </div>
+                      <Progress value={project.mastery} className="h-1.5" />
+                    </div>
                   )}
                 </div>
               </Link>
