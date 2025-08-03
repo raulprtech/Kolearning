@@ -1,29 +1,14 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   Plus,
   FileText,
-  Globe,
-  ImageIcon,
-  HelpCircle,
-  Layers,
-  Sheet,
-  Wand2,
-  Notebook,
-  Check,
+  X
 } from "lucide-react";
 
 const steps = [
@@ -42,6 +27,30 @@ const steps = [
 ]
 
 export default function NewProjectPage() {
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setSelectedFiles(prevFiles => [...prevFiles, ...Array.from(event.target.files!)]);
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const removeFile = (fileName: string) => {
+    setSelectedFiles(prevFiles => prevFiles.filter(file => file.name !== fileName));
+  };
+
+  const getFileIcon = (fileType: string) => {
+    // For now, only a generic file icon is returned.
+    // This could be expanded to return different icons based on the file type.
+    return <FileText className="h-6 w-6 text-primary" />;
+  };
+
+
   return (
     <div className="flex flex-col flex-1">
       <main className="flex-1 flex flex-col items-center p-4">
@@ -77,13 +86,36 @@ export default function NewProjectPage() {
         </div>
 
         <div className="w-full max-w-2xl mt-auto p-4">
+          {selectedFiles.length > 0 && (
+            <div className="mb-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {selectedFiles.map(file => (
+                <div key={file.name} className="bg-card/80 rounded-lg p-3 flex flex-col gap-2 relative">
+                    <div className="flex items-center gap-2">
+                        {getFileIcon(file.type)}
+                        <span className="text-xs text-foreground truncate">{file.name}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{file.type.split('/')[1] || 'Archivo'}</p>
+                    <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => removeFile(file.name)}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="relative">
             <Input
               placeholder="Pregúntale a Koli..."
-              className="w-full h-12 rounded-full pl-6 pr-12 bg-card border-border"
+              className="w-full h-12 rounded-full pl-12 pr-12 bg-card border-border"
             />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <Button variant="ghost" size="icon">
+            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <input
+                    type="file"
+                    multiple
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                />
+                <Button variant="ghost" size="icon" onClick={handleUploadClick}>
                     <Plus className="h-5 w-5" />
                 </Button>
             </div>
