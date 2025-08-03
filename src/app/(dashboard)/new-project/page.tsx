@@ -6,10 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus,
   FileText,
   X,
-  Send
+  Send,
+  Paperclip,
+  Link as LinkIcon,
+  Youtube
 } from "lucide-react";
 
 const steps = [
@@ -116,9 +125,27 @@ export default function NewProjectPage() {
                     onChange={handleFileChange}
                     className="hidden"
                 />
-                <Button variant="ghost" size="icon" onClick={handleUploadClick}>
-                    <Plus className="h-5 w-5" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Plus className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="top">
+                    <DropdownMenuItem onClick={handleUploadClick}>
+                      <Paperclip className="mr-2 h-4 w-4" />
+                      <span>Subir archivos</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <LinkIcon className="mr-2 h-4 w-4" />
+                      <span>Importar desde enlace</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Youtube className="mr-2 h-4 w-4" />
+                      <span>Importar desde Youtube</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
             </div>
             <div className="absolute right-2 top-1/2 -translate-y-1/2">
               <Button variant="ghost" size="icon">
