@@ -4,18 +4,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
-import { Logo } from "@/components/icons/logo";
 import { Plus, Mic } from "lucide-react";
 
 export default function DashboardPage() {
   return (
     <div className="flex flex-col flex-1">
-      <header className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold font-headline text-foreground">
-            Kolearning
-          </h1>
-        </div>
+      <header className="flex items-center justify-end p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Button>Acceder</Button>
         </div>
