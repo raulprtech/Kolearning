@@ -419,6 +419,7 @@ export default function NewProjectPage() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setInput('');
+    setSelectedFiles([]);
     
     try {
         const response = await generateAtoms({ 
@@ -426,6 +427,7 @@ export default function NewProjectPage() {
             userObjective: input
         });
         
+        setProcessingFile(null);
         setAtomsResult(response);
         
         const koliResponse: Message = { 
