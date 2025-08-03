@@ -16,7 +16,7 @@ export default function LandingPage() {
           <Link href="#" className="text-sm font-medium hover:text-primary transition-colors">
             Blog
           </Link>
-          <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
+          <Link href="/" className="text-sm font-medium hover:text-primary transition-colors">
             Iniciar Sesión
           </Link>
           <Link href="/new-project" passHref>

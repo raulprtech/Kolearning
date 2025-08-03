@@ -59,7 +59,7 @@ const SidebarContent = () => {
       </div>
 
       <nav className="flex flex-col gap-2 flex-1">
-         <Link href="/dashboard" passHref>
+         <Link href="/" passHref>
           <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
             <LayoutDashboard className="h-4 w-4" />
             {isSidebarOpen && <span className="ml-2">Dashboard</span>}
