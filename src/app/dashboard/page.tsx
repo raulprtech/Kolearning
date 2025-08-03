@@ -49,10 +49,12 @@ export default function DashboardPage() {
         </Link>
         <div className="flex items-center gap-2">
           <Button variant="ghost">Arsenal Comunitario</Button>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Nuevo Proyecto
-          </Button>
+          <Link href="/#upload">
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Nuevo Proyecto
+            </Button>
+          </Link>
         </div>
       </header>
       <main className="flex-1 p-4 md:p-8">
@@ -84,7 +86,7 @@ export default function DashboardPage() {
             </CardContent>
             <CardFooter>
               <Link href="/study/1" passHref>
-                <Button>Iniciar Sesión</Button>
+                <Button>Iniciar Sesión de Estudio</Button>
               </Link>
             </CardFooter>
           </Card>
@@ -130,15 +132,17 @@ export default function DashboardPage() {
                 </CardFooter>
               </Card>
             ))}
-            <Card className="flex flex-col items-center justify-center border-2 border-dashed bg-transparent hover:border-primary transition-all text-muted-foreground hover:text-primary">
-              <Button
-                variant="ghost"
-                className="h-full w-full flex-col gap-2 py-10"
-              >
-                <PlusCircle className="h-8 w-8" />
-                <span>Crear Nuevo Proyecto</span>
-              </Button>
-            </Card>
+            <Link href="/#upload" className="w-full h-full">
+                <Card className="flex flex-col items-center justify-center border-2 border-dashed bg-transparent hover:border-primary transition-all text-muted-foreground hover:text-primary h-full">
+                  <Button
+                    variant="ghost"
+                    className="h-full w-full flex-col gap-2 py-10"
+                  >
+                    <PlusCircle className="h-8 w-8" />
+                    <span>Crear Nuevo Proyecto</span>
+                  </Button>
+                </Card>
+            </Link>
           </div>
         </div>
       </main>
