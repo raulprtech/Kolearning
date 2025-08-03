@@ -1,100 +1,93 @@
 
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Plus,
-  FileText,
-  Globe,
-  ImageIcon,
-  HelpCircle,
-  Layers,
-  Sheet,
-  Wand2,
-  Notebook,
-} from "lucide-react";
+import { useProjects } from "@/contexts/ProjectContext";
+import { Book, Landmark, FlaskConical, Code, Music, Palette } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
-const importOptions = [
-  { icon: Notebook, label: "Apuntes" },
-  { icon: FileText, label: "PDF" },
-  { icon: Globe, label: "Página Web" },
-  { icon: ImageIcon, label: "Imagen" },
-  { icon: HelpCircle, label: "Quizlet" },
-  { icon: Layers, label: "Anki" },
-  { icon: Sheet, label: "Hojas de Cálculo" },
-  { icon: Wand2, label: "Cizmo" },
-];
-
+const projectIcons = {
+  Book: Book,
+  Landmark: Landmark,
+  FlaskConical: FlaskConical,
+  Code: Code,
+  Music: Music,
+  Palette: Palette,
+};
 
 export default function DashboardPage() {
+    const { projects } = useProjects();
+
   return (
-    <div className="flex flex-col flex-1">
-      <header className="flex items-center justify-end p-4 border-b border-border">
+    <div className="flex flex-col flex-1 p-6">
+       <header className="flex items-center justify-between mb-6">
+        <div className="flex flex-col">
+            <h1 className="text-3xl font-bold font-headline text-foreground">
+                Dashboard Estratégico
+            </h1>
+            <p className="text-muted-foreground">
+                Tu centro de mando para el dominio del conocimiento.
+            </p>
+        </div>
         <div className="flex items-center gap-2">
           <Button>Acceder</Button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center p-4">
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center text-center max-w-md">
-            <KoliAvatar className="h-24 w-24 mb-6" />
-            <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-              Hola, soy Koli
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
-            </p>
-          </div>
-        </div>
-
-        <div className="w-full max-w-2xl mt-auto p-4">
-          <div className="relative">
-            <Input
-              placeholder="Pregúntale a Koli..."
-              className="w-full h-12 rounded-full pl-6 pr-12 bg-card border-border"
-            />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-               <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[525px] bg-card/95 backdrop-blur-sm">
-                  <DialogHeader>
-                    <DialogTitle className="font-headline text-2xl">Importación Mágica</DialogTitle>
-                    <DialogDescription>
-                      Selecciona desde dónde quieres importar
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4">
-                    {importOptions.map((option, index) => (
-                      <Button
-                        key={index}
-                        variant={index === 0 ? "default" : "outline"}
-                        className="flex flex-col h-24 gap-2 items-center justify-center"
-                      >
-                        <option.icon className="h-6 w-6" />
-                        <span>{option.label}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </DialogContent>
-              </Dialog>
+      <main className="flex-1 flex flex-col">
+        <Card className="bg-card/50 mb-6">
+            <CardHeader className="flex flex-row items-center gap-4">
+                <KoliAvatar className="h-16 w-16"/>
+                <div>
+                    <CardTitle className="font-headline">Reporte Diario de Koli</CardTitle>
+                    <CardDescription>
+                        Koli sugiere tu próxima sesión de estudio para maximizar tu retención.
+                    </CardDescription>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <p className="mb-4">
+                    Basado en tu progreso en <strong>Física Cuántica</strong>, te recomiendo una sesión de <Link href="/study/1" className="text-primary hover:underline font-bold">Refuerzo</Link> para consolidar los conceptos clave.
+                </p>
+                <Link href="/study/1">
+                    <Button>Comenzar Sesión de Refuerzo</Button>
+                </Link>
+            </CardContent>
+        </Card>
+        
+        <div>
+            <h2 className="text-xl font-semibold mb-4">Mis Proyectos</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.map(project => {
+                    const Icon = projectIcons[project.icon as keyof typeof projectIcons]
+                    return (
+                        <Link href={`/dashboard/projects/${project.id}`} key={project.id}>
+                            <Card className="bg-card/50 hover:border-primary transition-colors h-full flex flex-col">
+                                <CardHeader className="flex-row items-center gap-4">
+                                    {Icon && <Icon className="w-8 h-8 text-primary" />}
+                                    <CardTitle>{project.title}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex-1">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-sm text-muted-foreground">Dominio</span>
+                                        <span className="text-sm font-bold">{project.mastery}%</span>
+                                    </div>
+                                    <Progress value={project.mastery} className="h-2" />
+                                </CardContent>
+                            </Card>
+                        </Link>
+                    )
+                })}
             </div>
-          </div>
         </div>
       </main>
     </div>

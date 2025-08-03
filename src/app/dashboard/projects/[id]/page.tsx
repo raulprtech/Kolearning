@@ -49,11 +49,11 @@ const projectIcons = {
 function ProjectDetails() {
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
   const params = useParams();
-  const id = params.id as string;
+  const slug = params.id as string;
   const { projects, updateProjectIcon } = useProjects();
 
 
-  const project = projects.find(p => p.id === id) || {
+  const project = projects.find(p => p.title.toLowerCase().replace(/\s+/g, '-') === slug) || {
     id: "not-found",
     title: "Proyecto no encontrado",
     notes: "notes",

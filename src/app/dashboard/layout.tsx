@@ -15,7 +15,8 @@ import {
   Code,
   Music,
   Palette,
-  Archive
+  Archive,
+  LayoutDashboard
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/icons/logo";
@@ -58,14 +59,20 @@ const SidebarContent = () => {
       </div>
 
       <nav className="flex flex-col gap-2 flex-1">
-        <Link href="/dashboard" passHref>
+         <Link href="/dashboard" passHref>
+          <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
+            <LayoutDashboard className="h-4 w-4" />
+            {isSidebarOpen && <span className="ml-2">Dashboard</span>}
+          </Button>
+        </Link>
+        <Link href="/dashboard/new-project" passHref>
           <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
             <Plus className="h-4 w-4" />
             {isSidebarOpen && <span className="ml-2">Nuevo Proyecto</span>}
           </Button>
         </Link>
         <Link href="/dashboard/explore" passHref>
-          <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
+          <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
             <Compass className="h-4 w-4" />
             {isSidebarOpen && <span className="ml-2">Explorar Proyectos</span>}
           </Button>
@@ -77,8 +84,9 @@ const SidebarContent = () => {
         <div className="flex flex-col gap-4">
           {projects.map((project) => {
             const Icon = projectIcons[project.icon as keyof typeof projectIcons];
+            const projectSlug = project.title.toLowerCase().replace(/\s+/g, '-');
             return (
-              <Link href={`/dashboard/projects/${project.id}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
+              <Link href={`/dashboard/projects/${projectSlug}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
                 <div className="flex items-center gap-3">
                   {Icon && <Icon className="h-5 w-5 text-primary shrink-0" />}
                   {isSidebarOpen && (
