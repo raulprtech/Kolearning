@@ -24,99 +24,99 @@ export default function StudySessionPage({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 md:p-8">
-      <div className="w-full max-w-3xl">
-        <header className="flex items-center justify-between mb-8">
-          <Link href="/dashboard" passHref>
-            <Button variant="outline" size="icon">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          </Link>
+    <div className="flex flex-col flex-1">
+       <header className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold">Física Cuántica</h2>
+          </div>
           <div className="flex items-center gap-2">
             <Flame className="text-yellow-400" />
             <span className="font-bold text-lg text-foreground">⚡ 9/10</span>
           </div>
         </header>
 
-        <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-4 right-4">
-            <Badge variant="secondary">Pregunta Abierta</Badge>
-          </div>
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl text-center">
-              {question.text}
-            </CardTitle>
-            <CardDescription className="text-center">
-              Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              rows={8}
-              placeholder="Tu respuesta..."
-              className="bg-background text-lg"
-            />
+        <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
+            <div className="w-full max-w-3xl">
+                <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-4 right-4">
+                    <Badge variant="secondary">Pregunta Abierta</Badge>
+                </div>
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl text-center">
+                    {question.text}
+                    </CardTitle>
+                    <CardDescription className="text-center">
+                    Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Textarea
+                    rows={8}
+                    placeholder="Tu respuesta..."
+                    className="bg-background text-lg"
+                    />
 
-            <div className="mt-6 flex justify-center">
-              <Button size="lg" className="w-full max-w-xs">
-                Revelar Respuesta
-              </Button>
-            </div>
+                    <div className="mt-6 flex justify-center">
+                    <Button size="lg" className="w-full max-w-xs">
+                        Revelar Respuesta
+                    </Button>
+                    </div>
 
-            <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
-              <h3 className="font-headline text-muted-foreground mb-4">
-                Soporte Táctico
-              </h3>
-              <div className="flex items-center justify-center gap-4">
-                <Button variant="outline" size="icon" aria-label="Pista">
-                  <Lightbulb />
-                </Button>
-                <Button variant="outline" size="icon" aria-label="Explicar Respuesta">
-                  <BrainCircuit />
-                </Button>
-                <Button variant="outline" size="icon" aria-label="Reformular">
-                  <Repeat />
-                </Button>
-                <Button variant="accent" size="icon" aria-label="Consultar a Koli">
-                  <KoliAvatar className="h-6 w-6" />
-                </Button>
-              </div>
-            </div>
-            
-            {/* This part would be shown after clicking "Reveal Answer" */}
-            <div className="mt-8 pt-6 border-t">
-              <div className="bg-muted/50 p-4 rounded-lg mb-6">
-                <h4 className="font-bold font-headline mb-2 text-primary">
-                  Respuesta Correcta
-                </h4>
-                <p>{question.answer}</p>
-              </div>
+                    <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
+                    <h3 className="font-headline text-muted-foreground mb-4">
+                        Soporte Táctico
+                    </h3>
+                    <div className="flex items-center justify-center gap-4">
+                        <Button variant="outline" size="icon" aria-label="Pista">
+                        <Lightbulb />
+                        </Button>
+                        <Button variant="outline" size="icon" aria-label="Explicar Respuesta">
+                        <BrainCircuit />
+                        </Button>
+                        <Button variant="outline" size="icon" aria-label="Reformular">
+                        <Repeat />
+                        </Button>
+                        <Button variant="accent" size="icon" aria-label="Consultar a Koli">
+                        <KoliAvatar className="h-6 w-6" />
+                        </Button>
+                    </div>
+                    </div>
+                    
+                    {/* This part would be shown after clicking "Reveal Answer" */}
+                    <div className="mt-8 pt-6 border-t">
+                    <div className="bg-muted/50 p-4 rounded-lg mb-6">
+                        <h4 className="font-bold font-headline mb-2 text-primary">
+                        Respuesta Correcta
+                        </h4>
+                        <p>{question.answer}</p>
+                    </div>
 
-              <h3 className="font-headline text-muted-foreground mb-4 text-center">
-                Califica tu rendimiento de recuerdo:
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                 <Button variant="destructive" className="h-auto py-3 flex-col">
-                    <span className="text-lg font-bold">Muy Difícil</span>
-                    <span className="text-xs opacity-80">Repetir Pronto</span>
-                </Button>
-                <Button variant="outline" className="h-auto py-3 flex-col hover:border-primary">
-                    <span className="text-lg font-bold">Difícil</span>
-                    <span className="text-xs opacity-80">Revisar en un día</span>
-                </Button>
-                <Button variant="secondary" className="h-auto py-3 flex-col">
-                    <span className="text-lg font-bold">Bien</span>
-                    <span className="text-xs opacity-80">Revisar en unos días</span>
-                </Button>
-                <Button variant="default" className="h-auto py-3 flex-col">
-                    <span className="text-lg font-bold">Fácil</span>
-                    <span className="text-xs opacity-80">Revisar en una semana</span>
-                </Button>
-              </div>
+                    <h3 className="font-headline text-muted-foreground mb-4 text-center">
+                        Califica tu rendimiento de recuerdo:
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <Button variant="destructive" className="h-auto py-3 flex-col">
+                            <span className="text-lg font-bold">Muy Difícil</span>
+                            <span className="text-xs opacity-80">Repetir Pronto</span>
+                        </Button>
+                        <Button variant="outline" className="h-auto py-3 flex-col hover:border-primary">
+                            <span className="text-lg font-bold">Difícil</span>
+                            <span className="text-xs opacity-80">Revisar en un día</span>
+                        </Button>
+                        <Button variant="secondary" className="h-auto py-3 flex-col">
+                            <span className="text-lg font-bold">Bien</span>
+                            <span className="text-xs opacity-80">Revisar en unos días</span>
+                        </Button>
+                        <Button variant="default" className="h-auto py-3 flex-col">
+                            <span className="text-lg font-bold">Fácil</span>
+                            <span className="text-xs opacity-80">Revisar en una semana</span>
+                        </Button>
+                    </div>
+                    </div>
+                </CardContent>
+                </Card>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+        </main>
     </div>
   );
 }
