@@ -91,6 +91,8 @@ export default function ProjectDetailsPage({
                 <DropdownMenuItem>Agregar Conocimiento</DropdownMenuItem>
                 <DropdownMenuItem>Recalibrar</DropdownMenuItem>
                 <DropdownMenuItem>Archivar</DropdownMenuItem>
+                <DropdownMenuItem>Cambiar privacidad</DropdownMenuItem>
+                <DropdownMenuItem>Cambiar categoría</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
       </header>
