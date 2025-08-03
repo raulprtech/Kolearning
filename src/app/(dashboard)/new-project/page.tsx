@@ -441,7 +441,9 @@ export default function NewProjectPage() {
                 </>
             )
         };
+        // This is a state update, so it is async
         setMessages(prev => [...prev, koliResponse]);
+        // We must wait for the next render to disable isLoading
         
     } catch (error) {
         console.error("Error processing file:", error);
@@ -689,3 +691,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
