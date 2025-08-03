@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
-import { Plus, Mic } from "lucide-react";
+import { Plus } from "lucide-react";
 
 export default function DashboardPage() {
   return (
@@ -32,14 +32,11 @@ export default function DashboardPage() {
           <div className="relative">
             <Input
               placeholder="Pregúntale a Koli..."
-              className="w-full h-12 rounded-full pl-6 pr-20 bg-card border-border"
+              className="w-full h-12 rounded-full pl-6 pr-12 bg-card border-border"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Plus className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Mic className="h-5 w-5" />
               </Button>
             </div>
           </div>
