@@ -119,15 +119,17 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="flex flex-col items-center text-center max-w-md">
-            <KoliAvatar className="h-24 w-24 mb-6" />
-            <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-              Hola, soy Koli
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
-            </p>
+        <main className="flex-1 flex flex-col items-center p-4">
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="flex flex-col items-center text-center max-w-md">
+              <KoliAvatar className="h-24 w-24 mb-6" />
+              <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
+                Hola, soy Koli
+              </h1>
+              <p className="mt-4 text-lg text-muted-foreground">
+                Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
+              </p>
+            </div>
           </div>
 
           <div className="w-full max-w-2xl mt-auto p-4">
