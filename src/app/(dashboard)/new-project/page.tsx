@@ -373,6 +373,7 @@ export default function NewProjectPage() {
   const [isProjectStarted, setIsProjectStarted] = useState(false);
   const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
   const [processingFile, setProcessingFile] = useState<{name: string, content: string} | null>(null);
+  const [projectSourceFile, setProjectSourceFile] = useState<{name: string, content: string} | null>(null);
   const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
 
@@ -410,6 +411,7 @@ export default function NewProjectPage() {
     }
     
     setProjectTitle(input);
+    setProjectSourceFile(processingFile);
     
     if (!isProjectStarted) {
         setIsProjectStarted(true);
@@ -484,7 +486,7 @@ export default function NewProjectPage() {
   }
 
     const handleFinalizeProject = () => {
-      if (!atomsResult || !learningPlan || !processingFile || !projectTitle) {
+      if (!atomsResult || !learningPlan || !projectSourceFile || !projectTitle) {
           toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
           return;
       }
@@ -508,7 +510,7 @@ export default function NewProjectPage() {
           icon: "Book", // Default icon
           atoms: atomsResult.atoms,
           sessions: learningPlan.fullLearningPlanMarkdown,
-          sources: [{name: processingFile.name, type: "Documento"}]
+          sources: [{name: projectSourceFile.name, type: "Documento"}]
       };
       addProject(newProject);
       toast({
@@ -634,7 +636,7 @@ export default function NewProjectPage() {
         case 'atomizing':
             return <AtomizationProgress 
                         atomsResult={atomsResult} 
-                        fileName={processingFile?.name ?? ""}
+                        fileName={projectSourceFile?.name ?? processingFile?.name ?? ""}
                         isLoading={isLoading}
                     />;
         case 'review':
@@ -658,7 +660,7 @@ export default function NewProjectPage() {
         default:
              return <AtomizationProgress 
                         atomsResult={atomsResult} 
-                        fileName={processingFile?.name ?? ""}
+                        fileName={projectSourceFile?.name ?? processingFile?.name ?? ""}
                         isLoading={isLoading}
                     />;
     }
@@ -687,3 +689,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
