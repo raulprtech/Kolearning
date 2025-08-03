@@ -237,7 +237,7 @@ const AtomReview = ({ atoms, onFinish }: { atoms: GenerateAtomsOutput['atoms'], 
                     <h1 className="text-3xl font-bold font-headline">Revisa tus Tarjetas</h1>
                     <p className="text-muted-foreground">Añade, edita o elimina tarjetas para perfeccionar tu mazo de estudio.</p>
                 </div>
-                <Card className="flex-1 flex flex-col bg-card/50">
+                <Card className="flex-1 flex flex-col bg-card/50 overflow-hidden">
                     <CardContent className="p-0 flex-1">
                         <ScrollArea className="h-full">
                             <div className="p-4 md:p-6 space-y-4">
@@ -326,10 +326,10 @@ export default function NewProjectPage() {
                 userObjective: currentInput
             });
             
+            setAtomsResult(response);
+            
             const koliGreeting: Message = { role: 'koli', content: response.initialResponse };
             setMessages(prev => [...prev, koliGreeting]);
-            
-            setAtomsResult(response);
 
             const koliResponse: Message = { 
                 role: 'koli', 
@@ -508,3 +508,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
