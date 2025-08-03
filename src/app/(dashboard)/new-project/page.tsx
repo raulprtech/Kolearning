@@ -23,6 +23,7 @@ import {
   Sheet,
   Wand2,
   Notebook,
+  Check,
 } from "lucide-react";
 
 const importOptions = [
@@ -36,6 +37,20 @@ const importOptions = [
   { icon: Wand2, label: "Cizmo" },
 ];
 
+const steps = [
+    {
+        title: "Importa tu material",
+        description: "Usa el icono '+' para subir tus apuntes, PDFs, o enlaces. Describe qué quieres aprender y por qué."
+    },
+    {
+        title: "Interactúa con Koli",
+        description: "Responde a las preguntas de Koli mientras procesa y atomiza tu contenido para entenderlo a fondo."
+    },
+    {
+        title: "Verifica y ajusta",
+        description: "Asegúrate de que todo el material se haya asimilado correctamente. Puedes añadir más si es necesario."
+    }
+]
 
 export default function NewProjectPage() {
   return (
@@ -51,6 +66,25 @@ export default function NewProjectPage() {
               Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
             </p>
           </div>
+           <div className="mt-12 max-w-4xl w-full text-left">
+                <h2 className="text-xl font-headline text-center mb-6">Crea tu primer proyecto de estudio personalizado</h2>
+                <div className="grid md:grid-cols-3 gap-8">
+                    {steps.map((step, index) => (
+                        <div key={index} className="flex gap-4">
+                            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
+                                {index + 1}
+                            </div>
+                            <div>
+                                <h3 className="font-semibold mb-1">{step.title}</h3>
+                                <p className="text-sm text-muted-foreground">{step.description}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <p className="text-center text-sm text-muted-foreground mt-8">
+                    ¡Y listo! Con estos pasos, Koli generará tu proyecto de estudio personalizado y podrás empezar a aprender.
+                </p>
+            </div>
         </div>
 
         <div className="w-full max-w-2xl mt-auto p-4">
