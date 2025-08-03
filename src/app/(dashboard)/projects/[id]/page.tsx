@@ -32,7 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -119,9 +119,33 @@ function ProjectDetails() {
                 <p className="text-sm text-muted-foreground">notes</p>
             </div>
           </div>
-           <Button variant="outline" size="icon">
-                <Plus className="h-4 w-4" />
+          <div className="flex items-center gap-2">
+            <Button>
+              <Play className="mr-2 h-4 w-4" />
+              Estudiar
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  <span>Editar Proyecto</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  <span>Compartir</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Eliminar Proyecto</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
       </div>
 
       <Dialog open={isIconSelectorOpen} onOpenChange={setIsIconSelectorOpen}>
