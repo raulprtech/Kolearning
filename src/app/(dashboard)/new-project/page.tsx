@@ -231,15 +231,15 @@ const AtomReview = ({ atoms, onFinish, onAddMore }: { atoms: GenerateAtomsOutput
     };
 
     return (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-            <div className="w-full max-w-4xl">
+        <div className="flex-1 flex flex-col p-8 bg-background overflow-hidden">
+            <div className="flex-1 flex flex-col w-full max-w-4xl mx-auto">
                  <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold font-headline">Revisa tus Tarjetas</h1>
                     <p className="text-muted-foreground">Añade, edita o elimina tarjetas para perfeccionar tu mazo de estudio.</p>
                 </div>
-                <Card className="bg-card/50">
-                    <CardContent className="p-0">
-                        <ScrollArea className="h-[500px]">
+                <Card className="flex-1 flex flex-col bg-card/50">
+                    <CardContent className="p-0 flex-1">
+                        <ScrollArea className="h-full">
                             <div className="p-6 space-y-4">
                             {editableAtoms.map((atom, index) => (
                                 <div key={index} className="flex items-start gap-4 p-4 border border-border rounded-lg">
@@ -263,15 +263,6 @@ const AtomReview = ({ atoms, onFinish, onAddMore }: { atoms: GenerateAtomsOutput
                         </ScrollArea>
                     </CardContent>
                 </Card>
-                <div className="mt-6 flex justify-between items-center">
-                    <Button variant="outline" onClick={onAddMore}>
-                        <Plus className="mr-2 h-4 w-4"/>
-                        Añadir más conocimiento
-                    </Button>
-                    <Button onClick={onFinish}>
-                        Finalizar y Crear Proyecto
-                    </Button>
-                </div>
             </div>
         </div>
     )
@@ -339,7 +330,7 @@ export default function NewProjectPage() {
                 actions: (
                     <>
                         <Button variant="outline" onClick={handleReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
-                        <Button onClick={() => console.log('Finalize project from chat')}>Finalizar</Button>
+                        <Button onClick={() => handleFinalizeProject()}>Finalizar y Crear Proyecto</Button>
                     </>
                 )
             };
@@ -358,15 +349,30 @@ export default function NewProjectPage() {
     setIsLoading(false);
   }
 
+  const handleFinalizeProject = () => {
+      console.log('Finalize project');
+  }
+
   const handleReviewAtoms = () => {
     setShowAtomReview(true);
+    const koliMessage: Message = {
+        role: 'koli',
+        content: "Claro, aquí están los átomos que he generado para ti. Puedes editarlos directamente. Cuando estés listo, dime cómo quieres continuar.",
+        actions: (
+            <>
+                <Button onClick={handleFinalizeProject}>Finalizar y Crear Proyecto</Button>
+                <Button variant="outline" onClick={handleBackToAtomization}>Añadir más conocimiento</Button>
+            </>
+        )
+    };
+    setMessages(prev => [...prev, koliMessage]);
   };
   
   const handleBackToAtomization = () => {
     setShowAtomReview(false);
     const koliMessage: Message = {
         role: 'koli',
-        content: "¡Claro! Puedes subir más archivos o describir otro tema que quieras aprender."
+        content: "¡Perfecto! Vuelve a subir más archivos o describe otro tema que quieras aprender."
     };
     setMessages(prev => [...prev, koliMessage]);
   }
@@ -476,12 +482,12 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div className="flex flex-1 h-screen overflow-hidden">
-        <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_400px]">
+    <div className="flex flex-1 h-[calc(100vh-theme(space.16))] overflow-hidden">
+        <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_450px]">
             {showAtomReview && atomsResult ? (
                  <AtomReview 
                     atoms={atomsResult.atoms} 
-                    onFinish={() => console.log('Finalize project')}
+                    onFinish={handleFinalizeProject}
                     onAddMore={handleBackToAtomization}
                 />
             ) : (
@@ -507,3 +513,4 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
