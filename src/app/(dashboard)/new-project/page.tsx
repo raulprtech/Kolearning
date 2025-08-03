@@ -429,7 +429,6 @@ export default function NewProjectPage() {
             userObjective: input
         });
         
-        setProcessingFile(null);
         setAtomsResult(response);
         
         const koliResponse: Message = { 
@@ -443,14 +442,15 @@ export default function NewProjectPage() {
             )
         };
         setMessages(prev => [...prev, koliResponse]);
-
+        
     } catch (error) {
         console.error("Error processing file:", error);
         const koliResponse: Message = { role: 'koli', content: 'Lo siento, ha ocurrido un error al procesar tu documento.' };
         setMessages(prev => [...prev, koliResponse]);
+    } finally {
+        setIsLoading(false);
+        setProcessingFile(null);
     }
-
-    setIsLoading(false);
   }
 
   const handleGeneratePlan = async () => {
@@ -636,7 +636,7 @@ export default function NewProjectPage() {
         case 'atomizing':
             return <AtomizationProgress 
                         atomsResult={atomsResult} 
-                        fileName={projectSourceFile?.name ?? processingFile?.name ?? ""}
+                        fileName={projectSourceFile?.name ?? ""}
                         isLoading={isLoading}
                     />;
         case 'review':
@@ -660,7 +660,7 @@ export default function NewProjectPage() {
         default:
              return <AtomizationProgress 
                         atomsResult={atomsResult} 
-                        fileName={projectSourceFile?.name ?? processingFile?.name ?? ""}
+                        fileName={projectSourceFile?.name ?? ""}
                         isLoading={isLoading}
                     />;
     }
