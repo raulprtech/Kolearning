@@ -254,7 +254,7 @@ const AtomReview = ({ atoms, onFinish }: { atoms: GenerateAtomsOutput['atoms'], 
                                             <Textarea defaultValue={atom.answer} className="mt-1 bg-background/50"/>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(index)} className="self-start md:self-center">
+                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(index)} className="self-start md:self-center h-8 w-8">
                                         <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
                                     </Button>
                                 </div>
