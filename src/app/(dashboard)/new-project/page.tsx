@@ -8,7 +8,8 @@ import { KoliAvatar } from "@/components/icons/koli-avatar";
 import {
   Plus,
   FileText,
-  X
+  X,
+  Send
 } from "lucide-react";
 
 const steps = [
@@ -105,7 +106,7 @@ export default function NewProjectPage() {
           <div className="relative">
             <Input
               placeholder="Pregúntale a Koli..."
-              className="w-full h-12 rounded-full pl-12 pr-12 bg-card border-border"
+              className="w-full h-12 rounded-full pl-12 pr-14 bg-card border-border"
             />
             <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 <input
@@ -118,6 +119,11 @@ export default function NewProjectPage() {
                 <Button variant="ghost" size="icon" onClick={handleUploadClick}>
                     <Plus className="h-5 w-5" />
                 </Button>
+            </div>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              <Button variant="ghost" size="icon">
+                  <Send className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </div>
