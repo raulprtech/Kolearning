@@ -231,38 +231,34 @@ const AtomReview = ({ atoms, onFinish }: { atoms: GenerateAtomsOutput['atoms'], 
     };
 
     return (
-        <div className="flex-1 flex flex-col p-4 md:p-8 bg-background overflow-hidden">
-            <div className="flex-1 flex flex-col w-full max-w-4xl mx-auto">
-                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold font-headline">Revisa tus Tarjetas</h1>
-                    <p className="text-muted-foreground">Añade, edita o elimina tarjetas para perfeccionar tu mazo de estudio.</p>
-                </div>
-                <Card className="flex-1 flex flex-col bg-card/50 overflow-hidden">
-                    <CardContent className="p-0 flex-1">
-                        <ScrollArea className="h-full">
-                            <div className="p-4 md:p-6 space-y-4">
-                            {editableAtoms.map((atom, index) => (
-                                <div key={index} className="flex flex-col md:flex-row items-start gap-4 p-4 border border-border rounded-lg">
-                                    <span className="text-sm font-bold text-muted-foreground mt-1 hidden md:inline-block">{index + 1}.</span>
-                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                                        <div>
-                                            <label className="text-xs text-muted-foreground">TÉRMINO</label>
-                                            <Textarea defaultValue={atom.question} className="mt-1 bg-background/50" />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-muted-foreground">DEFINICIÓN</label>
-                                            <Textarea defaultValue={atom.answer} className="mt-1 bg-background/50"/>
-                                        </div>
-                                    </div>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(index)} className="self-start md:self-center h-8 w-8">
-                                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
-                                    </Button>
+        <div className="flex flex-col h-full overflow-hidden p-4 md:p-8 bg-background">
+             <div className="text-center mb-8">
+                <h1 className="text-3xl font-bold font-headline">Revisa tus Tarjetas</h1>
+                <p className="text-muted-foreground">Añade, edita o elimina tarjetas para perfeccionar tu mazo de estudio.</p>
+            </div>
+            <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                    <div className="p-1 pr-4 space-y-4 max-w-4xl mx-auto">
+                    {editableAtoms.map((atom, index) => (
+                        <div key={index} className="flex flex-col md:flex-row items-start gap-4 p-4 border border-border rounded-lg bg-card/50">
+                            <span className="text-sm font-bold text-muted-foreground mt-1 hidden md:inline-block">{index + 1}.</span>
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                <div>
+                                    <label className="text-xs text-muted-foreground">TÉRMINO</label>
+                                    <Textarea defaultValue={atom.question} className="mt-1 bg-background/50" />
                                 </div>
-                            ))}
+                                <div>
+                                    <label className="text-xs text-muted-foreground">DEFINICIÓN</label>
+                                    <Textarea defaultValue={atom.answer} className="mt-1 bg-background/50"/>
+                                </div>
                             </div>
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(index)} className="self-start md:self-center h-8 w-8">
+                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
+                            </Button>
+                        </div>
+                    ))}
+                    </div>
+                </ScrollArea>
             </div>
         </div>
     )
@@ -508,5 +504,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-    
