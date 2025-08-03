@@ -532,9 +532,27 @@ export default function NewProjectPage() {
                   disabled={isLoading}
                 />
                 <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
-                        <Paperclip className="h-5 w-5" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Plus className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                          <Paperclip className="mr-2 h-4 w-4" />
+                          Subir archivos
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <LinkIcon className="mr-2 h-4 w-4" />
+                          Importar desde enlace
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Youtube className="mr-2 h-4 w-4" />
+                          Importar desde Youtube
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                   <Button variant="ghost" size="icon" onClick={handleSendMessage} disabled={isLoading || !input.trim() || selectedFiles.length === 0}>
@@ -583,3 +601,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
