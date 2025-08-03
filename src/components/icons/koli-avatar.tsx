@@ -8,34 +8,35 @@ export function KoliAvatar(props: React.SVGProps<SVGSVGElement>) {
       {...props}
     >
       <defs>
-        <radialGradient id="koli-gradient" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
-          <stop offset="0%" style={{ stopColor: "hsl(var(--primary-foreground))", stopOpacity: 0.8 }} />
-          <stop offset="20%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 1 }} />
-          <stop offset="80%" style={{ stopColor: "hsl(var(--accent))", stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 1 }} />
+        <radialGradient id="koli-gradient" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" style={{ stopColor: "hsl(0 0% 100%)", stopOpacity: 1 }} />
+          <stop offset="50%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.9 }} />
+          <stop offset="100%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.3 }} />
         </radialGradient>
         <filter id="koli-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
-          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9" result="goo" />
-          <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+            <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+            <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
         </filter>
       </defs>
       <circle
         cx="50"
         cy="50"
-        r="45"
+        r="40"
         fill="url(#koli-gradient)"
         filter="url(#koli-glow)"
       >
         <animate 
             attributeName="r" 
-            values="45;46;45" 
-            dur="2s" 
+            values="40;42;40" 
+            dur="3s" 
             repeatCount="indefinite" />
         <animate 
             attributeName="opacity" 
-            values="1;0.9;1" 
-            dur="2s" 
+            values="1;0.8;1" 
+            dur="3s" 
             repeatCount="indefinite" />
       </circle>
     </svg>
