@@ -42,7 +42,7 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex h-screen bg-background text-foreground">
       <aside
         className={`flex flex-col bg-card/30 transition-all duration-300 ${
           isSidebarOpen ? "w-72" : "w-20"
@@ -100,7 +100,7 @@ export default function DashboardLayout({
           </Button>
         </div>
       </aside>
-      <div className="flex-1 flex flex-col">{children}</div>
+      <div className="flex-1 flex flex-col overflow-auto">{children}</div>
     </div>
   );
 }
