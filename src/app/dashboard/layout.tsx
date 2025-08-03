@@ -48,12 +48,12 @@ export default function DashboardLayout({
         } p-4 border-r border-border`}
       >
         <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} mb-8`}>
-          <Link href="/" className={`flex items-center gap-3 ${!isSidebarOpen && 'hidden'}`}>
+          <div className={`flex items-center gap-3 ${!isSidebarOpen && 'hidden'}`}>
             <Logo className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold font-headline text-foreground">
               Kolearning
             </h1>
-          </Link>
+          </div>
           <Button
             variant="ghost"
             size="icon"
