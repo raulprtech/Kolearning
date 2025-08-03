@@ -19,11 +19,11 @@ export default function LandingPage() {
           <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
             Iniciar Sesión
           </Link>
-          <Link href="/dashboard" passHref>
+          <Link href="/new-project" passHref>
             <Button>Comenzar a aprender</Button>
           </Link>
         </nav>
-        <Link href="/dashboard" passHref className="md:hidden">
+        <Link href="/new-project" passHref className="md:hidden">
           <Button variant="ghost">Empezar</Button>
         </Link>
       </header>
@@ -38,7 +38,7 @@ export default function LandingPage() {
             tiempo con nuestro sistema inteligente.
           </p>
           <div className="mt-10">
-            <Link href="/dashboard" passHref>
+            <Link href="/new-project" passHref>
               <Button size="lg" className="text-lg px-10 py-6">
                 Comenzar a aprender
               </Button>
