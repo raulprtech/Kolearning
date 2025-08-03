@@ -29,20 +29,6 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col flex-1 p-6">
-       <header className="flex items-center justify-between mb-6">
-        <div className="flex flex-col">
-            <h1 className="text-3xl font-bold font-headline text-foreground">
-                Dashboard Estratégico
-            </h1>
-            <p className="text-muted-foreground">
-                Tu centro de mando para el dominio del conocimiento.
-            </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button>Acceder</Button>
-        </div>
-      </header>
-
       <main className="flex-1 flex flex-col">
         <Card className="bg-card/50 mb-6">
             <CardHeader className="flex flex-row items-center gap-4">

@@ -40,12 +40,6 @@ const importOptions = [
 export default function NewProjectPage() {
   return (
     <div className="flex flex-col flex-1">
-      <header className="flex items-center justify-end p-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Button>Acceder</Button>
-        </div>
-      </header>
-
       <main className="flex-1 flex flex-col items-center p-4">
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="flex flex-col items-center text-center max-w-md">

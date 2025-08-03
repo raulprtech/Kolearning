@@ -112,7 +112,7 @@ function ProjectDetails() {
 
   return (
     <div className="flex-1 flex flex-col p-6 bg-background">
-      <header className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             {Icon && <Icon className="w-8 h-8 text-primary" />}
             <div>
@@ -158,7 +158,7 @@ function ProjectDetails() {
               </div>
             </DialogContent>
           </Dialog>
-      </header>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card className="bg-card/50">

@@ -19,9 +19,9 @@ import {
   LayoutDashboard
 } from "lucide-react";
 import Link from "next/link";
-import { Logo } from "@/components/icons/logo";
 import { Progress } from "@/components/ui/progress";
 import { ProjectProvider, useProjects } from "@/contexts/ProjectContext";
+import { Header } from "@/components/layout/header";
 
 const SidebarContent = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -42,13 +42,7 @@ const SidebarContent = () => {
         isSidebarOpen ? "w-72" : "w-20"
       } p-4 border-r border-border`}
     >
-      <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} mb-8`}>
-        <Link href="/" className={`flex items-center gap-3 ${!isSidebarOpen && 'hidden'}`}>
-          <Logo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold font-headline">
-            Kolearning
-          </h1>
-        </Link>
+      <div className={`flex items-center ${isSidebarOpen ? 'justify-end' : 'justify-center'} mb-8`}>
         <Button
           variant="ghost"
           size="icon"
@@ -128,7 +122,10 @@ export default function DashboardLayout({
     <ProjectProvider>
       <div className="flex h-screen bg-background text-foreground">
         <SidebarContent />
-        <div className="flex-1 flex flex-col overflow-auto">{children}</div>
+        <div className="flex-1 flex flex-col overflow-auto">
+            <Header />
+            {children}
+        </div>
       </div>
     </ProjectProvider>
   );

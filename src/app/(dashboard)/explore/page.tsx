@@ -61,14 +61,6 @@ export default function ExplorePage() {
 
   return (
     <div className="flex-1 flex flex-col p-6 bg-background">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold font-headline text-foreground">
-          Explorar Proyectos
-        </h1>
-        <p className="text-muted-foreground">
-          Agrega nuevos temas de estudio a tu dashboard.
-        </p>
-      </header>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {availableProjects.map((project) => {
           const Icon = projectIcons[project.icon];
