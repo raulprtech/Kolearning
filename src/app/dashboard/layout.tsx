@@ -65,10 +65,12 @@ export default function DashboardLayout({
         </div>
 
         <nav className="flex flex-col gap-2 flex-1">
-          <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
-            <Plus className="h-4 w-4" />
-            {isSidebarOpen && <span className="ml-2">Nuevo Proyecto</span>}
-          </Button>
+          <Link href="/dashboard" passHref>
+            <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
+                <Plus className="h-4 w-4" />
+                {isSidebarOpen && <span className="ml-2">Nuevo Proyecto</span>}
+            </Button>
+          </Link>
           <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
             <Compass className="h-4 w-4" />
             {isSidebarOpen && <span className="ml-2">Explorar Proyectos</span>}
@@ -79,7 +81,7 @@ export default function DashboardLayout({
             </h3>
           <div className="flex flex-col gap-2">
             {projects.map((project) => (
-              <Link href={`/study/${project.id}`} key={project.id}>
+              <Link href={`/dashboard/projects/${project.id}`} key={project.id}>
                 <div className={`flex items-center gap-3 p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'justify-center'}`}>
                    <BookOpen className="h-5 w-5 text-primary" />
                   {isSidebarOpen && (
