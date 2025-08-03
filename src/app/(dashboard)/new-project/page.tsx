@@ -50,6 +50,7 @@ const initialSteps = [
 type Message = {
     role: 'user' | 'koli';
     content: string;
+    actions?: React.ReactNode;
 };
 
 const fileToDataUri = (file: File): Promise<string> => {
@@ -62,15 +63,26 @@ const fileToDataUri = (file: File): Promise<string> => {
 };
 
 const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, setSelectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon }: any) => {
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [messages]);
+    
     return (
         <div className="flex flex-col h-full bg-card/30 border-l border-border">
-            <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+            <div ref={scrollRef} className="flex-1 p-6 space-y-6 overflow-y-auto">
                 {messages.map((msg: Message, index: number) => (
-                    <div key={index} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                        {msg.role === 'koli' && <KoliAvatar className="h-10 w-10 flex-shrink-0" />}
-                        <div className={`p-4 rounded-xl max-w-lg ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-card/80'}`}>
-                           <p>{msg.content}</p>
-                        </div>
+                    <div key={index} className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                       <div className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                         {msg.role === 'koli' && <KoliAvatar className="h-10 w-10 flex-shrink-0" />}
+                         <div className={`p-4 rounded-xl max-w-lg ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-card/80'}`}>
+                            <p>{msg.content}</p>
+                         </div>
+                       </div>
+                       {msg.actions && <div className="ml-14 mt-2 flex gap-2">{msg.actions}</div>}
                     </div>
                 ))}
                  {isLoading && (
@@ -150,7 +162,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
     );
 }
 
-const AtomizationProgress = ({ atomsResult, fileName, onReviewAtoms }: { atomsResult: GenerateAtomsOutput | null, fileName: string, onReviewAtoms: () => void }) => {
+const AtomizationProgress = ({ atomsResult, fileName }: { atomsResult: GenerateAtomsOutput | null, fileName: string }) => {
     const steps = [
         { name: "Análisis de contenido", status: "completed" },
         { name: "Extracción de entidades", status: "completed" },
@@ -202,10 +214,6 @@ const AtomizationProgress = ({ atomsResult, fileName, onReviewAtoms }: { atomsRe
                         <div className="mt-8 text-center">
                             <h3 className="text-lg font-semibold text-primary">¡Proceso completado!</h3>
                             <p className="text-muted-foreground mt-2">Hemos generado <span className="font-bold">{atomsResult.atoms.length}</span> átomos de conocimiento.</p>
-                             <div className="mt-6 flex justify-center gap-2">
-                                <Button variant="outline" onClick={onReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
-                                <Button>Finalizar y Crear Proyecto</Button>
-                            </div>
                         </div>
                     )}
                 </CardContent>
@@ -325,7 +333,16 @@ export default function NewProjectPage() {
             const response = await generateAtoms({ studyMaterial: dataUri });
             setAtomsResult(response);
 
-            const koliResponse: Message = { role: 'koli', content: `He terminado de procesar tu documento y he generado ${response.atoms.length} átomos de conocimiento. Puedes revisarlos en el panel central. ¿Continuamos para crear tu proyecto?` };
+            const koliResponse: Message = { 
+                role: 'koli', 
+                content: `He terminado de procesar tu documento y he generado ${response.atoms.length} átomos de conocimiento. Puedes revisarlos ahora o finalizar para crear tu proyecto.`,
+                actions: (
+                    <>
+                        <Button variant="outline" onClick={handleReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
+                        <Button onClick={() => console.log('Finalize project from chat')}>Finalizar</Button>
+                    </>
+                )
+            };
             setMessages(prev => [...prev, koliResponse]);
 
         } catch (error) {
@@ -347,6 +364,11 @@ export default function NewProjectPage() {
   
   const handleBackToAtomization = () => {
     setShowAtomReview(false);
+    const koliMessage: Message = {
+        role: 'koli',
+        content: "¡Claro! Puedes subir más archivos o describir otro tema que quieras aprender."
+    };
+    setMessages(prev => [...prev, koliMessage]);
   }
 
   if (!isProjectStarted) {
@@ -466,7 +488,6 @@ export default function NewProjectPage() {
                 <AtomizationProgress 
                     atomsResult={atomsResult} 
                     fileName={processingFile}
-                    onReviewAtoms={handleReviewAtoms}
                 />
             )}
             <ChatPanel
@@ -486,5 +507,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-    
