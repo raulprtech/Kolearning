@@ -6,6 +6,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -14,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Plus, Eye, Pencil, Trash2, CheckCircle, Lock } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, CheckCircle, Lock, MoreVertical } from "lucide-react";
 
 export default function ProjectDetailsPage({
   params,
@@ -75,9 +81,18 @@ export default function ProjectDetailsPage({
                 <p className="text-muted-foreground">{project.notes}</p>
             </div>
           </div>
-        <Button variant="outline" size="icon">
-          <Plus className="h-4 w-4" />
-        </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuItem>Agregar Conocimiento</DropdownMenuItem>
+                <DropdownMenuItem>Recalibrar</DropdownMenuItem>
+                <DropdownMenuItem>Archivar</DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
