@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -22,36 +23,51 @@ const projectIcons = {
   FlaskConical: FlaskConical,
 };
 
+const initialProjects = [
+  {
+    id: "1",
+    title: "Física Cuántica",
+    mastery: 85,
+    tag: "STEM",
+    icon: "Book" as keyof typeof projectIcons,
+  },
+  {
+    id: "2",
+    title: "Historia de Roma",
+    mastery: 62,
+    tag: "Humanidades",
+    icon: "Landmark" as keyof typeof projectIcons,
+  },
+  {
+    id: "3",
+    title: "Química Orgánica",
+    mastery: 45,
+    tag: "STEM",
+    icon: "FlaskConical" as keyof typeof projectIcons,
+  },
+];
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [projects, setProjects] = useState(initialProjects);
 
-  const projects = [
-    {
-      id: "1",
-      title: "Física Cuántica",
-      mastery: 85,
-      tag: "STEM",
-      icon: "Book" as keyof typeof projectIcons,
-    },
-    {
-      id: "2",
-      title: "Historia de Roma",
-      mastery: 62,
-      tag: "Humanidades",
-      icon: "Landmark" as keyof typeof projectIcons,
-    },
-    {
-      id: "3",
-      title: "Química Orgánica",
-      mastery: 45,
-      tag: "STEM",
-      icon: "FlaskConical" as keyof typeof projectIcons,
-    },
-  ];
+  const addProject = (project: any) => {
+    if (!projects.find(p => p.id === project.id)) {
+      setProjects(prevProjects => [...prevProjects, project]);
+    }
+  };
+
+  const childrenWithProps = React.Children.map(children, child => {
+    if (React.isValidElement(child)) {
+      // @ts-ignore
+      return React.cloneElement(child, { addProject });
+    }
+    return child;
+  });
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -63,9 +79,6 @@ export default function DashboardLayout({
         <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} mb-8`}>
           <div className={`flex items-center gap-3 ${!isSidebarOpen && 'hidden'}`}>
             <Logo className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold font-headline text-foreground">
-              Kolearning
-            </h1>
           </div>
           <Button
             variant="ghost"
@@ -83,10 +96,12 @@ export default function DashboardLayout({
                 {isSidebarOpen && <span className="ml-2">Nuevo Proyecto</span>}
             </Button>
           </Link>
-          <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
-            <Compass className="h-4 w-4" />
-            {isSidebarOpen && <span className="ml-2">Explorar Proyectos</span>}
-          </Button>
+          <Link href="/dashboard/explore" passHref>
+            <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
+              <Compass className="h-4 w-4" />
+              {isSidebarOpen && <span className="ml-2">Explorar Proyectos</span>}
+            </Button>
+          </Link>
 
            <h3 className={`mt-6 mb-2 text-sm font-semibold text-muted-foreground ${isSidebarOpen ? 'px-2' : 'text-center'}`}>
               {isSidebarOpen ? 'Proyectos' : 'Mis'}
@@ -121,7 +136,7 @@ export default function DashboardLayout({
           </Button>
         </div>
       </aside>
-      <div className="flex-1 flex flex-col overflow-auto">{children}</div>
+      <div className="flex-1 flex flex-col overflow-auto">{childrenWithProps}</div>
     </div>
   );
 }
