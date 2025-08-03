@@ -15,7 +15,6 @@ export default function DashboardPage() {
           <h2 className="text-xl font-bold">Koli</h2>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost">Arsenal Comunitario</Button>
           <Button>Acceder</Button>
         </div>
       </header>
