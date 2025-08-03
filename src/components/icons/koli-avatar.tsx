@@ -26,7 +26,18 @@ export function KoliAvatar(props: React.SVGProps<SVGSVGElement>) {
         r="45"
         fill="url(#koli-gradient)"
         filter="url(#koli-glow)"
-      />
+      >
+        <animate 
+            attributeName="r" 
+            values="45;46;45" 
+            dur="2s" 
+            repeatCount="indefinite" />
+        <animate 
+            attributeName="opacity" 
+            values="1;0.9;1" 
+            dur="2s" 
+            repeatCount="indefinite" />
+      </circle>
     </svg>
   )
 }
