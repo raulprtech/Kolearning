@@ -14,7 +14,8 @@ import {
   FlaskConical,
   Code,
   Music,
-  Palette
+  Palette,
+  Archive
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/icons/logo";
@@ -96,7 +97,11 @@ const SidebarContent = () => {
         </div>
       </nav>
 
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-2">
+        <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
+            <Archive className="h-4 w-4" />
+            {isSidebarOpen && <span className="ml-2">Archivo</span>}
+        </Button>
         <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
           <Settings className="h-4 w-4" />
           {isSidebarOpen && <span className="ml-2">Configuración</span>}

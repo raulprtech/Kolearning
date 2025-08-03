@@ -16,7 +16,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -34,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Eye, Pencil, Trash2, CheckCircle, Lock, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette } from "lucide-react";
-import { useProjects, ProjectProvider } from "@/contexts/ProjectContext";
+import { useProjects } from "@/contexts/ProjectContext";
 
 
 const projectIcons = {
