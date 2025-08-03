@@ -26,8 +26,10 @@ import {
   BrainCircuit,
   Share2,
   Trash2,
+  BookOpen,
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
+import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -222,7 +224,7 @@ const AtomizationProgress = ({ atomsResult, fileName }: { atomsResult: GenerateA
     );
 };
 
-const AtomReview = ({ atoms, onFinish }: { atoms: GenerateAtomsOutput['atoms'], onFinish: () => void }) => {
+const AtomReview = ({ atoms, onNextStep }: { atoms: GenerateAtomsOutput['atoms'], onNextStep: () => void }) => {
     
     const [editableAtoms, setEditableAtoms] = useState(atoms);
 
@@ -240,7 +242,7 @@ const AtomReview = ({ atoms, onFinish }: { atoms: GenerateAtomsOutput['atoms'], 
                 <ScrollArea className="h-full">
                     <div className="p-1 pr-4 space-y-4 max-w-4xl mx-auto">
                     {editableAtoms.map((atom, index) => (
-                        <div key={index} className="flex flex-col md:flex-row items-start gap-4 p-4 border border-border rounded-lg bg-card/50">
+                        <Card key={index} className="flex flex-col md:flex-row items-start gap-4 p-4 bg-card/50">
                             <span className="text-sm font-bold text-muted-foreground mt-1 hidden md:inline-block">{index + 1}.</span>
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                                 <div>
@@ -255,14 +257,49 @@ const AtomReview = ({ atoms, onFinish }: { atoms: GenerateAtomsOutput['atoms'], 
                             <Button variant="ghost" size="icon" onClick={() => handleDelete(index)} className="self-start md:self-center h-8 w-8">
                                 <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
                             </Button>
-                        </div>
+                        </Card>
                     ))}
                     </div>
                 </ScrollArea>
             </div>
+             <div className="pt-6 text-center">
+                <Button size="lg" onClick={onNextStep}>
+                    Siguiente Paso
+                </Button>
+            </div>
         </div>
     )
 }
+
+const LearningPlan = ({ plan, onFinish }: { plan: CalibratePlanOutput, onFinish: () => void }) => {
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
+            <Card className="w-full max-w-3xl bg-card/50">
+                <CardHeader>
+                    <div className="flex justify-center mb-4">
+                        <div className="p-3 bg-primary/20 rounded-full">
+                           <BookOpen className="h-8 w-8 text-primary" />
+                        </div>
+                    </div>
+                    <CardTitle className="text-center text-2xl font-headline">Tu Plan de Aprendizaje</CardTitle>
+                    <CardDescription className="text-center">
+                        Koli ha diseñado esta ruta estratégica para ayudarte a dominar el tema.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div 
+                        className="prose prose-invert prose-sm max-w-none" 
+                        dangerouslySetInnerHTML={{ __html: plan.revisedLearningPlan.replace(/\n/g, '<br />') }} 
+                    />
+                    <div className="mt-8 text-center">
+                         <Button size="lg" onClick={onFinish}>Crear Proyecto</Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
 
 export default function NewProjectPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -273,6 +310,8 @@ export default function NewProjectPage() {
   const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
   const [processingFile, setProcessingFile] = useState<string>("");
   const [showAtomReview, setShowAtomReview] = useState(false);
+  const [showLearningPlan, setShowLearningPlan] = useState(false);
+  const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -325,19 +364,17 @@ export default function NewProjectPage() {
             setAtomsResult(response);
             
             const koliGreeting: Message = { role: 'koli', content: response.initialResponse };
-            setMessages(prev => [...prev, koliGreeting]);
-
+            
             const koliResponse: Message = { 
                 role: 'koli', 
                 content: `He terminado de procesar tu documento y he generado ${response.atoms.length} átomos de conocimiento. Puedes revisarlos ahora o finalizar para crear tu proyecto.`,
                 actions: (
                     <>
                         <Button variant="outline" onClick={handleReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
-                        <Button onClick={() => handleFinalizeProject()}>Finalizar y Crear Proyecto</Button>
                     </>
                 )
             };
-            setMessages(prev => [...prev, koliResponse]);
+            setMessages(prev => [...prev, koliGreeting, koliResponse]);
 
         } catch (error) {
             console.error("Error processing file:", error);
@@ -352,6 +389,42 @@ export default function NewProjectPage() {
     setIsLoading(false);
   }
 
+  const handleGeneratePlan = async () => {
+    if (!atomsResult) return;
+
+    setIsLoading(true);
+    setShowAtomReview(false); // Ocultar la revisión de átomos para mostrar el progreso
+
+    try {
+        const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
+        const plan = await calibratePlanFromQuestionnaire({
+            questionnaireResponses: "El usuario quiere prepararse para un examen.", // Placeholder
+            learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
+        });
+
+        setLearningPlan(plan);
+        setShowLearningPlan(true);
+
+        const koliMessage: Message = {
+            role: 'koli',
+            content: "¡Excelente! He diseñado un plan de aprendizaje estratégico para ti. Échale un vistazo. Si estás de acuerdo, podemos crear el proyecto.",
+            actions: (
+                <>
+                    <Button onClick={handleFinalizeProject}>Crear Proyecto</Button>
+                </>
+            )
+        };
+        setMessages(prev => [...prev, koliMessage]);
+
+    } catch(error) {
+        console.error("Error generating learning plan:", error);
+        const koliResponse: Message = { role: 'koli', content: 'Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.' };
+        setMessages(prev => [...prev, koliResponse]);
+    } finally {
+        setIsLoading(false);
+    }
+  }
+
   const handleFinalizeProject = () => {
       console.log('Finalize project');
   }
@@ -360,12 +433,7 @@ export default function NewProjectPage() {
     setShowAtomReview(true);
     const koliMessage: Message = {
         role: 'koli',
-        content: "Claro, aquí están los átomos que he generado para ti. Puedes editarlos directamente. Cuando estés listo, puedes finalizar para crear el proyecto.",
-        actions: (
-            <>
-                <Button onClick={handleFinalizeProject}>Finalizar y Crear Proyecto</Button>
-            </>
-        )
+        content: "Claro, aquí están los átomos que he generado para ti. Puedes editarlos directamente. Cuando estés listo, haz clic en 'Siguiente Paso' para continuar.",
     };
     setMessages(prev => [...prev, koliMessage]);
   };
@@ -477,10 +545,12 @@ export default function NewProjectPage() {
   return (
     <div className="flex flex-1 h-[calc(100vh-theme(space.16))] overflow-hidden">
         <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_450px]">
-            {showAtomReview && atomsResult ? (
+            {showLearningPlan && learningPlan ? (
+                <LearningPlan plan={learningPlan} onFinish={handleFinalizeProject} />
+            ) : showAtomReview && atomsResult ? (
                  <AtomReview 
                     atoms={atomsResult.atoms} 
-                    onFinish={handleFinalizeProject}
+                    onNextStep={handleGeneratePlan}
                 />
             ) : (
                 <AtomizationProgress 
@@ -504,3 +574,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
