@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,8 +11,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Book, Landmark, FlaskConical, Code, Music, Palette } from "lucide-react";
+import { Plus, Book, Landmark, FlaskConical, Code, Music, Palette, Search, Filter } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 
 const projectIcons = {
@@ -23,13 +31,15 @@ const projectIcons = {
   Palette: Palette,
 };
 
-const availableProjects = [
+const allProjects = [
   {
     id: "4",
     title: "Programación en Python",
     description: "Aprende los fundamentos de Python, uno de los lenguajes más populares.",
     icon: "Code" as keyof typeof projectIcons,
     mastery: 0,
+    category: "Tecnología",
+    author: "Koli Academy"
   },
   {
     id: "5",
@@ -37,6 +47,8 @@ const availableProjects = [
     description: "Desde escalas hasta acordes, domina la teoría detrás de la música.",
     icon: "Music" as keyof typeof projectIcons,
     mastery: 0,
+    category: "Arte",
+    author: "Comunidad"
   },
   {
     id: "6",
@@ -44,12 +56,38 @@ const availableProjects = [
     description: "Un viaje a través de los movimientos artísticos más importantes.",
     icon: "Palette" as keyof typeof projectIcons,
     mastery: 0,
+    category: "Humanidades",
+    author: "Koli Academy"
+  },
+  {
+    id: "7",
+    title: "Introducción a React",
+    description: "Construye interfaces de usuario modernas y reactivas.",
+    icon: "Code" as keyof typeof projectIcons,
+    mastery: 0,
+    category: "Tecnología",
+    author: "Comunidad"
+  },
+  {
+    id: "8",
+    title: "Filosofía Griega",
+    description: "Explora las ideas de Platón, Aristóteles y Sócrates.",
+    icon: "Landmark" as keyof typeof projectIcons,
+    mastery: 0,
+    category: "Humanidades",
+    author: "Koli Academy"
   },
 ];
+
+const categories = ["Todos", ...new Set(allProjects.map(p => p.category))];
+const authors = ["Todos", ...new Set(allProjects.map(p => p.author))];
 
 export default function ExplorePage() {
   const { toast } = useToast();
   const { addProject } = useProjects();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("Todos");
+  const [authorFilter, setAuthorFilter] = useState("Todos");
 
   const handleAddProject = (project: any) => {
     addProject(project);
@@ -59,10 +97,60 @@ export default function ExplorePage() {
     });
   };
 
+  const filteredProjects = allProjects.filter(project => {
+    return (
+      project.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (categoryFilter === "Todos" || project.category === categoryFilter) &&
+      (authorFilter === "Todos" || project.author === authorFilter)
+    );
+  });
+
   return (
     <div className="flex-1 flex flex-col p-6 bg-background">
+      <div className="mb-8">
+        <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input 
+                placeholder="Busca por título o tema..."
+                className="pl-10 h-12 text-lg"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
+        <div className="flex items-center gap-4">
+            <Filter className="h-5 w-5 text-muted-foreground"/>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                        Categoría: <span className="font-bold ml-2">{categoryFilter}</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    {categories.map(cat => (
+                        <DropdownMenuItem key={cat} onClick={() => setCategoryFilter(cat)}>
+                            {cat}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                        Autor: <span className="font-bold ml-2">{authorFilter}</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    {authors.map(auth => (
+                         <DropdownMenuItem key={auth} onClick={() => setAuthorFilter(auth)}>
+                            {auth}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {availableProjects.map((project) => {
+        {filteredProjects.length > 0 ? filteredProjects.map((project) => {
           const Icon = projectIcons[project.icon];
           return (
             <Card key={project.id} className="bg-card/50 flex flex-col">
@@ -70,6 +158,7 @@ export default function ExplorePage() {
                 {Icon && <Icon className="w-10 h-10 text-primary" />}
                 <div>
                   <CardTitle>{project.title}</CardTitle>
+                   <p className="text-sm text-muted-foreground">{project.author}</p>
                 </div>
               </CardHeader>
               <CardContent className="flex-1">
@@ -82,7 +171,12 @@ export default function ExplorePage() {
               </CardFooter>
             </Card>
           );
-        })}
+        }) : (
+            <div className="col-span-full text-center py-12">
+                <h3 className="text-xl font-semibold">No se encontraron proyectos</h3>
+                <p className="text-muted-foreground mt-2">Intenta ajustar tu búsqueda o filtros.</p>
+            </div>
+        )}
       </div>
     </div>
   );
