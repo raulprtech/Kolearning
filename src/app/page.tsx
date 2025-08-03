@@ -15,9 +15,9 @@ export default function KoliCanvasPage() {
           <h1 className="text-2xl font-bold font-headline text-foreground">Kolearning</h1>
         </Link>
         <div className="flex items-center gap-4">
-          <Button variant="ghost">Log In</Button>
+          <Button variant="ghost">Iniciar Sesión</Button>
           <Link href="/dashboard">
-            <Button>Dashboard</Button>
+            <Button>Panel de Control</Button>
           </Link>
         </div>
       </header>
@@ -25,20 +25,20 @@ export default function KoliCanvasPage() {
         {/* Left Panel: Workspace */}
         <Card className="flex flex-col items-center justify-center p-8 bg-card/30 border-2 border-dashed border-border/50 rounded-xl shadow-inner">
           <div className="text-center w-full">
-            <h2 className="text-3xl font-bold font-headline text-foreground mb-4">Workspace</h2>
+            <h2 className="text-3xl font-bold font-headline text-foreground mb-4">Espacio de Trabajo</h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Upload your study materials. We accept PDFs, text files, and will atomize them into a personalized learning plan.
+              Sube tus materiales de estudio. Aceptamos PDFs, archivos de texto, y los atomizaremos en un plan de aprendizaje personalizado.
             </p>
             <div className="w-full max-w-sm mx-auto">
               <label htmlFor="file-upload" className="cursor-pointer group">
                 <div className="flex flex-col items-center justify-center p-6 border-2 border-muted-foreground/30 rounded-lg group-hover:bg-accent/10 group-hover:border-primary transition-colors">
                   <Upload className="h-12 w-12 text-muted-foreground group-hover:text-primary transition-colors mb-4" />
-                  <span className="font-semibold text-primary">Click to upload</span>
-                  <span className="text-sm text-muted-foreground">or drag and drop</span>
+                  <span className="font-semibold text-primary">Haz clic para subir</span>
+                  <span className="text-sm text-muted-foreground">o arrastra y suelta</span>
                 </div>
               </label>
               <Input id="file-upload" type="file" className="hidden" />
-              <p className="text-xs text-muted-foreground mt-2">Maximum file size: 50MB</p>
+              <p className="text-xs text-muted-foreground mt-2">Tamaño máximo de archivo: 50MB</p>
             </div>
           </div>
         </Card>
@@ -51,10 +51,10 @@ export default function KoliCanvasPage() {
               <div className="bg-muted p-4 rounded-lg rounded-tl-none max-w-md shadow-sm">
                 <p className="font-bold text-primary mb-1 font-headline">Koli</p>
                 <p className="text-foreground">
-                  Welcome, Learner. I am Koli, your AI strategic tutor.
+                  Bienvenido, Aprendiz. Soy Koli, tu tutor estratégico de IA.
                 </p>
                 <p className="mt-2 text-foreground">
-                  Provide your study material, and we will begin your path to mastery.
+                  Proporciona tu material de estudio y comenzaremos tu camino hacia el dominio.
                 </p>
               </div>
             </div>
@@ -62,14 +62,14 @@ export default function KoliCanvasPage() {
               <KoliAvatar className="w-10 h-10 shrink-0"/>
               <div className="bg-muted p-4 rounded-lg rounded-tl-none max-w-md shadow-sm">
                 <p className="text-foreground">
-                  While I forge your knowledge atoms, please create an account to save your progress. The process is swift.
+                  Mientras forjo tus átomos de conocimiento, por favor crea una cuenta para guardar tu progreso. El proceso es rápido.
                 </p>
               </div>
             </div>
           </div>
           <div className="p-4 border-t bg-background/50">
             <div className="relative">
-              <Input placeholder="Begin the strategic calibration..." className="pr-12 bg-input" disabled />
+              <Input placeholder="Comenzar la calibración estratégica..." className="pr-12 bg-input" disabled />
               <Button size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" disabled>
                 <ArrowRight className="h-4 w-4" />
               </Button>

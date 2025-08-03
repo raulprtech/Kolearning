@@ -17,23 +17,23 @@ export default function DashboardPage() {
   const projects = [
     {
       id: "1",
-      title: "Quantum Physics",
+      title: "Física Cuántica",
       mastery: 85,
-      nextSession: "Review Weak Concepts",
+      nextSession: "Revisar Conceptos Débiles",
       tag: "STEM",
     },
     {
       id: "2",
-      title: "History of Rome",
+      title: "Historia de Roma",
       mastery: 62,
-      nextSession: "New Atoms: The Punic Wars",
-      tag: "Humanities",
+      nextSession: "Nuevos Átomos: Las Guerras Púnicas",
+      tag: "Humanidades",
     },
     {
       id: "3",
-      title: "Organic Chemistry",
+      title: "Química Orgánica",
       mastery: 45,
-      nextSession: "Breach Detected: Alkenes",
+      nextSession: "Brecha Detectada: Alquenos",
       tag: "STEM",
     },
   ];
@@ -48,10 +48,10 @@ export default function DashboardPage() {
           </h1>
         </Link>
         <div className="flex items-center gap-2">
-          <Button variant="ghost">Community Arsenal</Button>
+          <Button variant="ghost">Arsenal Comunitario</Button>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
-            New Project
+            Nuevo Proyecto
           </Button>
         </div>
       </header>
@@ -59,10 +59,10 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
             <h2 className="text-3xl font-bold font-headline text-foreground">
-              Strategic Dashboard
+              Panel Estratégico
             </h2>
             <p className="text-muted-foreground">
-              Your command center for knowledge mastery.
+              Tu centro de mando para el dominio del conocimiento.
             </p>
           </div>
 
@@ -70,21 +70,21 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3 font-headline text-xl">
                 <BrainCircuit className="text-primary h-6 w-6" />
-                Koli's Daily Report
+                Reporte Diario de Koli
               </CardTitle>
-              <CardDescription>Your mission for today, Learner.</CardDescription>
+              <CardDescription>Tu misión de hoy, Aprendiz.</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-lg">
-                Focus on{" "}
-                <strong className="text-primary">Quantum Physics</strong>. A
-                'Breach Detected' session is recommended to solidify your
-                understanding of wave-particle duality.
+                Concéntrate en{" "}
+                <strong className="text-primary">Física Cuántica</strong>. Se
+                recomienda una sesión de 'Brecha Detectada' para solidificar tu
+                comprensión de la dualidad onda-partícula.
               </p>
             </CardContent>
             <CardFooter>
               <Link href="/study/1" passHref>
-                <Button>Begin Session</Button>
+                <Button>Iniciar Sesión</Button>
               </Link>
             </CardFooter>
           </Card>
@@ -102,7 +102,7 @@ export default function DashboardPage() {
                         {project.title}
                       </CardTitle>
                       <CardDescription>
-                        Next: {project.nextSession}
+                        Siguiente: {project.nextSession}
                       </CardDescription>
                     </div>
                      <Badge variant="secondary">{project.tag}</Badge>
@@ -110,7 +110,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1">
                   <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Mastery</span>
+                    <span className="text-muted-foreground">Dominio</span>
                     <span className="font-bold text-primary">
                       {project.mastery}%
                     </span>
@@ -121,7 +121,7 @@ export default function DashboardPage() {
                   <Link href={`/study/${project.id}`} passHref className="w-full">
                     <Button variant="outline" className="w-full">
                       <BookOpen className="mr-2 h-4 w-4" />
-                      Study
+                      Estudiar
                     </Button>
                   </Link>
                    <Button variant="ghost" size="icon" className="shrink-0">
@@ -136,7 +136,7 @@ export default function DashboardPage() {
                 className="h-full w-full flex-col gap-2 py-10"
               >
                 <PlusCircle className="h-8 w-8" />
-                <span>Create New Project</span>
+                <span>Crear Nuevo Proyecto</span>
               </Button>
             </Card>
           </div>

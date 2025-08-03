@@ -18,9 +18,9 @@ export default function StudySessionPage({
   params: { id: string };
 }) {
   const question = {
-    text: "Explain the principle of superposition in quantum mechanics.",
+    text: "Explica el principio de superposición en mecánica cuántica.",
     answer:
-      "The principle of superposition states that any two (or more) quantum states can be added together ('superposed') and the result will be another valid quantum state. Conversely, every quantum state can be represented as a sum of two or more other distinct states.",
+      "El principio de superposición establece que dos (o más) estados cuánticos pueden ser sumados ('superpuestos') y el resultado será otro estado cuántico válido. A la inversa, cada estado cuántico puede ser representado como una suma de dos o más estados distintos.",
   };
 
   return (
@@ -40,44 +40,44 @@ export default function StudySessionPage({
 
         <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
           <div className="absolute top-4 right-4">
-            <Badge variant="secondary">Open Question</Badge>
+            <Badge variant="secondary">Pregunta Abierta</Badge>
           </div>
           <CardHeader>
             <CardTitle className="font-headline text-2xl text-center">
               {question.text}
             </CardTitle>
             <CardDescription className="text-center">
-              Formulate your response below. Active recall is key to mastery.
+              Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Textarea
               rows={8}
-              placeholder="Your answer..."
+              placeholder="Tu respuesta..."
               className="bg-background text-lg"
             />
 
             <div className="mt-6 flex justify-center">
               <Button size="lg" className="w-full max-w-xs">
-                Reveal Answer
+                Revelar Respuesta
               </Button>
             </div>
 
             <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
               <h3 className="font-headline text-muted-foreground mb-4">
-                Tactical Support
+                Soporte Táctico
               </h3>
               <div className="flex items-center justify-center gap-4">
-                <Button variant="outline" size="icon" aria-label="Hint">
+                <Button variant="outline" size="icon" aria-label="Pista">
                   <Lightbulb />
                 </Button>
-                <Button variant="outline" size="icon" aria-label="Explain Answer">
+                <Button variant="outline" size="icon" aria-label="Explicar Respuesta">
                   <BrainCircuit />
                 </Button>
-                <Button variant="outline" size="icon" aria-label="Reformulate">
+                <Button variant="outline" size="icon" aria-label="Reformular">
                   <Repeat />
                 </Button>
-                <Button variant="accent" size="icon" aria-label="Consult Koli">
+                <Button variant="accent" size="icon" aria-label="Consultar a Koli">
                   <KoliAvatar className="h-6 w-6" />
                 </Button>
               </div>
@@ -87,30 +87,30 @@ export default function StudySessionPage({
             <div className="mt-8 pt-6 border-t">
               <div className="bg-muted/50 p-4 rounded-lg mb-6">
                 <h4 className="font-bold font-headline mb-2 text-primary">
-                  Correct Answer
+                  Respuesta Correcta
                 </h4>
                 <p>{question.answer}</p>
               </div>
 
               <h3 className="font-headline text-muted-foreground mb-4 text-center">
-                Rate your recall performance:
+                Califica tu rendimiento de recuerdo:
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                  <Button variant="destructive" className="h-auto py-3 flex-col">
-                    <span className="text-lg font-bold">Very Hard</span>
-                    <span className="text-xs opacity-80">Again Soon</span>
+                    <span className="text-lg font-bold">Muy Difícil</span>
+                    <span className="text-xs opacity-80">Repetir Pronto</span>
                 </Button>
                 <Button variant="outline" className="h-auto py-3 flex-col hover:border-primary">
-                    <span className="text-lg font-bold">Hard</span>
-                    <span className="text-xs opacity-80">Review in a day</span>
+                    <span className="text-lg font-bold">Difícil</span>
+                    <span className="text-xs opacity-80">Revisar en un día</span>
                 </Button>
                 <Button variant="secondary" className="h-auto py-3 flex-col">
-                    <span className="text-lg font-bold">Good</span>
-                    <span className="text-xs opacity-80">Review in a few days</span>
+                    <span className="text-lg font-bold">Bien</span>
+                    <span className="text-xs opacity-80">Revisar en unos días</span>
                 </Button>
                 <Button variant="default" className="h-auto py-3 flex-col">
-                    <span className="text-lg font-bold">Easy</span>
-                    <span className="text-xs opacity-80">Review in a week</span>
+                    <span className="text-lg font-bold">Fácil</span>
+                    <span className="text-xs opacity-80">Revisar en una semana</span>
                 </Button>
               </div>
             </div>
