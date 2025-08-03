@@ -4,15 +4,18 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
+import { Logo } from "@/components/icons/logo";
 import { Plus, Mic } from "lucide-react";
 
 export default function DashboardPage() {
   return (
     <div className="flex flex-col flex-1">
       <header className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-4">
-          <KoliAvatar className="h-8 w-8" />
-          <h2 className="text-xl font-bold">Koli</h2>
+        <div className="flex items-center gap-3">
+          <Logo className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold font-headline text-foreground">
+            Kolearning
+          </h1>
         </div>
         <div className="flex items-center gap-2">
           <Button>Acceder</Button>
