@@ -26,17 +26,6 @@ import {
   Check,
 } from "lucide-react";
 
-const importOptions = [
-  { icon: Notebook, label: "Apuntes" },
-  { icon: FileText, label: "PDF" },
-  { icon: Globe, label: "Página Web" },
-  { icon: ImageIcon, label: "Imagen" },
-  { icon: HelpCircle, label: "Quizlet" },
-  { icon: Layers, label: "Anki" },
-  { icon: Sheet, label: "Hojas de Cálculo" },
-  { icon: Wand2, label: "Cizmo" },
-];
-
 const steps = [
     {
         title: "Importa tu material",
@@ -94,6 +83,9 @@ export default function NewProjectPage() {
               className="w-full h-12 rounded-full pl-6 pr-12 bg-card border-border"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <Button variant="ghost" size="icon">
+                    <Plus className="h-5 w-5" />
+                </Button>
             </div>
           </div>
         </div>
