@@ -12,6 +12,9 @@ import {
   Book,
   Landmark,
   FlaskConical,
+  Code,
+  Music,
+  Palette
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/icons/logo";
@@ -26,6 +29,9 @@ const SidebarContent = () => {
     Book: Book,
     Landmark: Landmark,
     FlaskConical: FlaskConical,
+    Code: Code,
+    Music: Music,
+    Palette: Palette,
   };
 
   return (
