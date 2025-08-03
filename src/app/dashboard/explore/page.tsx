@@ -11,7 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Book, Landmark, FlaskConical, Code, Mic, Music, Palette } from "lucide-react";
+import { Plus, Book, Landmark, FlaskConical, Code, Music, Palette } from "lucide-react";
+import { useProjects } from "@/contexts/ProjectContext";
 
 const projectIcons = {
   Book: Book,
@@ -46,8 +47,9 @@ const availableProjects = [
   },
 ];
 
-export default function ExplorePage({ addProject }: { addProject: (project: any) => void }) {
+export default function ExplorePage() {
   const { toast } = useToast();
+  const { addProject } = useProjects();
 
   const handleAddProject = (project: any) => {
     addProject(project);

@@ -33,60 +33,46 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, CheckCircle, Lock, MoreVertical, Book, Landmark, FlaskConical } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, CheckCircle, Lock, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette } from "lucide-react";
+import { useProjects, ProjectProvider } from "@/contexts/ProjectContext";
+
 
 const projectIcons = {
   Book: Book,
   Landmark: Landmark,
   FlaskConical: FlaskConical,
   Globe: Globe,
+  Code: Code,
+  Music: Music,
+  Palette: Palette,
 };
 
-export default function ProjectDetailsPage() {
+function ProjectDetails() {
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
   const params = useParams();
   const id = params.id as string;
+  const { projects, updateProjectIcon } = useProjects();
 
-   const projects = [
-    {
-      id: "1",
-      title: "Análisis de Cáncer Renal Multimodal con Fusión Tardía: Mejorando la Relevancia Clínica y la Resistencia al Sobreajuste",
-      notes: "notes",
-      bestStreak: 1,
-      xpGained: 0,
-      mastery: 0,
-      icon: "Book" as keyof typeof projectIcons,
-    },
-    {
-      id: "2",
-      title: "Historia de Roma",
-      notes: "notes",
-      bestStreak: 5,
-      xpGained: 120,
-      mastery: 62,
-      icon: "Landmark" as keyof typeof projectIcons,
-    },
-     {
-      id: "3",
-      title: "Química Orgánica",
-      notes: "notes",
-      bestStreak: 2,
-      xpGained: 50,
-      mastery: 45,
-      icon: "FlaskConical" as keyof typeof projectIcons,
-    },
-  ];
 
   const project = projects.find(p => p.id === id) || {
+    id: "not-found",
     title: "Proyecto no encontrado",
     notes: "notes",
     bestStreak: 0,
     xpGained: 0,
     mastery: 0,
-    icon: "Globe" as keyof typeof projectIcons,
+    icon: "Globe",
+    tag: "default",
   };
   
-  const Icon = projectIcons[project.icon];
+  const Icon = projectIcons[project.icon as keyof typeof projectIcons];
+
+  const handleIconChange = (iconKey: string) => {
+    if(project.id !== "not-found") {
+        updateProjectIcon(project.id, iconKey);
+    }
+    setIsIconSelectorOpen(false);
+  };
 
 
   const sessions = [
@@ -164,11 +150,7 @@ export default function ProjectDetailsPage() {
                     key={key}
                     variant="outline"
                     className="flex flex-col h-24 gap-2 items-center justify-center"
-                    onClick={() => {
-                      // Here you would typically update the project's icon in your state management
-                      console.log(`Icon selected: ${key}`);
-                      setIsIconSelectorOpen(false);
-                    }}
+                    onClick={() => handleIconChange(key)}
                   >
                     <IconComponent className="h-8 w-8 text-primary" />
                     <span className="text-xs">{key}</span>
@@ -318,4 +300,10 @@ export default function ProjectDetailsPage() {
       </div>
     </div>
   );
+}
+
+export default function ProjectDetailsPage() {
+    return (
+        <ProjectDetails />
+    )
 }
