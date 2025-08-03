@@ -25,9 +25,12 @@ import {
   Settings,
   BrainCircuit,
   Share2,
+  Trash2,
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 
 const initialSteps = [
     {
@@ -147,7 +150,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
     );
 }
 
-const AtomizationProgress = ({ atomsResult, fileName }: { atomsResult: GenerateAtomsOutput | null, fileName: string }) => {
+const AtomizationProgress = ({ atomsResult, fileName, onReviewAtoms }: { atomsResult: GenerateAtomsOutput | null, fileName: string, onReviewAtoms: () => void }) => {
     const steps = [
         { name: "Análisis de contenido", status: "completed" },
         { name: "Extracción de entidades", status: "completed" },
@@ -200,7 +203,7 @@ const AtomizationProgress = ({ atomsResult, fileName }: { atomsResult: GenerateA
                             <h3 className="text-lg font-semibold text-primary">¡Proceso completado!</h3>
                             <p className="text-muted-foreground mt-2">Hemos generado <span className="font-bold">{atomsResult.atoms.length}</span> átomos de conocimiento.</p>
                              <div className="mt-6 flex justify-center gap-2">
-                                <Button variant="outline"><Eye className="mr-2"/>Ver Átomos</Button>
+                                <Button variant="outline" onClick={onReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
                                 <Button>Finalizar y Crear Proyecto</Button>
                             </div>
                         </div>
@@ -211,6 +214,60 @@ const AtomizationProgress = ({ atomsResult, fileName }: { atomsResult: GenerateA
     );
 };
 
+const AtomReview = ({ atoms, onFinish, onAddMore }: { atoms: GenerateAtomsOutput['atoms'], onFinish: () => void, onAddMore: () => void }) => {
+    
+    const [editableAtoms, setEditableAtoms] = useState(atoms);
+
+    const handleDelete = (index: number) => {
+        setEditableAtoms(currentAtoms => currentAtoms.filter((_, i) => i !== index));
+    };
+
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
+            <div className="w-full max-w-4xl">
+                 <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold font-headline">Revisa tus Tarjetas</h1>
+                    <p className="text-muted-foreground">Añade, edita o elimina tarjetas para perfeccionar tu mazo de estudio.</p>
+                </div>
+                <Card className="bg-card/50">
+                    <CardContent className="p-0">
+                        <ScrollArea className="h-[500px]">
+                            <div className="p-6 space-y-4">
+                            {editableAtoms.map((atom, index) => (
+                                <div key={index} className="flex items-start gap-4 p-4 border border-border rounded-lg">
+                                    <span className="text-sm font-bold text-muted-foreground mt-1">{index + 1}.</span>
+                                    <div className="flex-1 grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs text-muted-foreground">TÉRMINO</label>
+                                            <Textarea defaultValue={atom.question} className="mt-1 bg-background/50" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-muted-foreground">DEFINICIÓN</label>
+                                            <Textarea defaultValue={atom.answer} className="mt-1 bg-background/50"/>
+                                        </div>
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(index)}>
+                                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
+                                    </Button>
+                                </div>
+                            ))}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+                <div className="mt-6 flex justify-between items-center">
+                    <Button variant="outline" onClick={onAddMore}>
+                        <Plus className="mr-2 h-4 w-4"/>
+                        Añadir más conocimiento
+                    </Button>
+                    <Button onClick={onFinish}>
+                        Finalizar y Crear Proyecto
+                    </Button>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 export default function NewProjectPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -220,6 +277,8 @@ export default function NewProjectPage() {
   const [isProjectStarted, setIsProjectStarted] = useState(false);
   const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
   const [processingFile, setProcessingFile] = useState<string>("");
+  const [showAtomReview, setShowAtomReview] = useState(false);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -280,6 +339,14 @@ export default function NewProjectPage() {
     }
 
     setIsLoading(false);
+  }
+
+  const handleReviewAtoms = () => {
+    setShowAtomReview(true);
+  };
+  
+  const handleBackToAtomization = () => {
+    setShowAtomReview(false);
   }
 
   if (!isProjectStarted) {
@@ -389,7 +456,19 @@ export default function NewProjectPage() {
   return (
     <div className="flex flex-1 h-screen overflow-hidden">
         <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_400px]">
-            <AtomizationProgress atomsResult={atomsResult} fileName={processingFile} />
+            {showAtomReview && atomsResult ? (
+                 <AtomReview 
+                    atoms={atomsResult.atoms} 
+                    onFinish={() => console.log('Finalize project')}
+                    onAddMore={handleBackToAtomization}
+                />
+            ) : (
+                <AtomizationProgress 
+                    atomsResult={atomsResult} 
+                    fileName={processingFile}
+                    onReviewAtoms={handleReviewAtoms}
+                />
+            )}
             <ChatPanel
                 messages={messages}
                 input={input}
@@ -407,3 +486,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
