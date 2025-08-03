@@ -65,13 +65,13 @@ const SidebarContent = () => {
             {isSidebarOpen && <span className="ml-2">Dashboard</span>}
           </Button>
         </Link>
-        <Link href="/dashboard/new-project" passHref>
+        <Link href="/new-project" passHref>
           <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
             <Plus className="h-4 w-4" />
             {isSidebarOpen && <span className="ml-2">Nuevo Proyecto</span>}
           </Button>
         </Link>
-        <Link href="/dashboard/explore" passHref>
+        <Link href="/explore" passHref>
           <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
             <Compass className="h-4 w-4" />
             {isSidebarOpen && <span className="ml-2">Explorar Proyectos</span>}
@@ -86,7 +86,7 @@ const SidebarContent = () => {
             const Icon = projectIcons[project.icon as keyof typeof projectIcons];
             const projectSlug = project.title.toLowerCase().replace(/\s+/g, '-');
             return (
-              <Link href={`/dashboard/projects/${projectSlug}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
+              <Link href={`/projects/${projectSlug}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
                 <div className="flex items-center gap-3">
                   {Icon && <Icon className="h-5 w-5 text-primary shrink-0" />}
                   {isSidebarOpen && (

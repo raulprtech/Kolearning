@@ -69,8 +69,9 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {projects.map(project => {
                     const Icon = projectIcons[project.icon as keyof typeof projectIcons]
+                    const projectSlug = project.title.toLowerCase().replace(/\s+/g, '-');
                     return (
-                        <Link href={`/dashboard/projects/${project.id}`} key={project.id}>
+                        <Link href={`/projects/${projectSlug}`} key={project.id}>
                             <Card className="bg-card/50 hover:border-primary transition-colors h-full flex flex-col">
                                 <CardHeader className="flex-row items-center gap-4">
                                     {Icon && <Icon className="w-8 h-8 text-primary" />}
