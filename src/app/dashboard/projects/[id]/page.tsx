@@ -47,6 +47,7 @@ export default function ProjectDetailsPage({
   params: { id: string };
 }) {
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
+  const { id } = params;
 
    const projects = [
     {
@@ -78,7 +79,7 @@ export default function ProjectDetailsPage({
     },
   ];
 
-  const project = projects.find(p => p.id === params.id) || {
+  const project = projects.find(p => p.id === id) || {
     title: "Proyecto no encontrado",
     notes: "notes",
     bestStreak: 0,
