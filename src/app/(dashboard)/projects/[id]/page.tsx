@@ -32,7 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,6 +47,12 @@ const projectIcons: { [key: string]: React.ElementType } = {
   Music,
   Palette,
 };
+
+const mockSessions = [
+    { day: "Día 1", type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Completed" },
+    { day: "Día 2", type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Continue" },
+    { day: "Día 3", type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
+]
 
 function ProjectDetails() {
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
@@ -67,168 +73,199 @@ function ProjectDetails() {
     )
   }
   
-  const Icon = projectIcons[project.icon] || Book;
+  const Icon = projectIcons[project.icon] || Globe;
 
   const handleIconChange = (iconKey: string) => {
     updateProjectIcon(project.id, iconKey);
     setIsIconSelectorOpen(false);
   };
+  
+  const getSessionStatus = (status: string) => {
+      switch(status) {
+          case 'Completed':
+              return <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4"/>Completado</div>
+          case 'Continue':
+              return <Button size="sm">Continuar</Button>
+          case 'Locked':
+              return <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4"/> Desbloquease en 1 día</div>
+          default:
+              return null;
+      }
+  }
+
+  const getSessionBadge = (type: string) => {
+      switch(type) {
+          case 'Calibración':
+              return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">{type}</Badge>
+          case 'Refuerzo':
+              return <Badge variant="secondary">{type}</Badge>
+          case 'Dominio':
+              return <Badge variant="destructive">{type}</Badge>
+          default:
+              return <Badge variant="outline">{type}</Badge>;
+      }
+  }
 
   return (
     <ScrollArea className="h-full">
     <div className="flex-1 flex flex-col p-6 bg-background">
       <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsIconSelectorOpen(true)} className="p-2 rounded-full hover:bg-muted transition-colors">
-                <Icon className="w-10 h-10 text-primary" />
+          <div className="flex items-start gap-4">
+            <button onClick={() => setIsIconSelectorOpen(true)} className="p-2 rounded-lg hover:bg-muted transition-colors">
+                <Icon className="w-8 h-8 text-primary" />
             </button>
             <div>
-                <h1 className="text-3xl font-bold font-headline text-foreground">{project.title}</h1>
-                <div className="flex gap-2 mt-1">
-                    {project.categories?.map(cat => <Badge key={cat} variant="secondary">{cat}</Badge>)}
-                </div>
+                <h1 className="text-2xl font-bold font-headline text-foreground max-w-2xl">{project.title}</h1>
+                <p className="text-sm text-muted-foreground">notes</p>
             </div>
           </div>
-          <Dialog open={isIconSelectorOpen} onOpenChange={setIsIconSelectorOpen}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-5 w-5" />
-                  </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                  <DropdownMenuItem>Agregar Conocimiento</DropdownMenuItem>
-                  <DropdownMenuItem>Recalibrar</DropdownMenuItem>
-                  <DropdownMenuItem>Archivar</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsIconSelectorOpen(true)}>Cambiar icono</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Elige un icono para tu proyecto</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-4 gap-4 py-4">
-                {Object.entries(projectIcons).map(([key, IconComponent]) => (
-                  <Button
-                    key={key}
-                    variant="outline"
-                    className="flex flex-col h-24 gap-2 items-center justify-center"
-                    onClick={() => handleIconChange(key)}
-                  >
-                    <IconComponent className="h-8 w-8 text-primary" />
-                    <span className="text-xs">{key}</span>
-                  </Button>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
+           <Button variant="outline" size="icon">
+                <Plus className="h-4 w-4" />
+            </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        <Card className="bg-card/50">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Dominio del Tema</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-2">{project.mastery}%</div>
-            <Progress value={project.mastery} className="h-2"/>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/50">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Átomos de Conocimiento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{project.atoms?.length || 0}</div>
-          </CardContent>
-        </Card>
-         <Card className="bg-card/50">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Próxima Sesión</CardTitle>
-          </CardHeader>
-          <CardContent>
-             <p className="font-bold text-lg text-primary">Sesión de Calibración</p>
-             <p className="text-sm text-muted-foreground">Recomendada para hoy</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <Dialog open={isIconSelectorOpen} onOpenChange={setIsIconSelectorOpen}>
+        <DialogContent>
+            <DialogHeader>
+            <DialogTitle>Elige un icono para tu proyecto</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-4 gap-4 py-4">
+            {Object.entries(projectIcons).map(([key, IconComponent]) => (
+                <Button
+                key={key}
+                variant="outline"
+                className="flex flex-col h-24 gap-2 items-center justify-center"
+                onClick={() => handleIconChange(key)}
+                >
+                <IconComponent className="h-8 w-8 text-primary" />
+                <span className="text-xs">{key}</span>
+                </Button>
+            ))}
+            </div>
+        </DialogContent>
+      </Dialog>
+      
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="bg-card/50">
-                <CardHeader>
-                    <CardTitle>Plan de Conquista</CardTitle>
-                    <CardDescription>Tu ruta estratégica para dominar {project.title}.</CardDescription>
-                </CardHeader>
-                <CardContent className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-headline prose-headings:text-primary">
-                    <div dangerouslySetInnerHTML={{ __html: project.sessions?.replace(/\n/g, '<br />') || ''}} />
-                    <Button className="mt-4 not-prose"><Play className="mr-2"/>Comenzar Próxima Sesión</Button>
+                <CardContent className="pt-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">Mejor Racha</p>
+                    <p className="text-4xl font-bold">1</p>
+                </CardContent>
+            </Card>
+             <Card className="bg-card/50">
+                <CardContent className="pt-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">XP ganados</p>
+                    <p className="text-4xl font-bold">0</p>
+                </CardContent>
+            </Card>
+             <Card className="bg-card/50">
+                <CardContent className="pt-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">Dominio del tema</p>
+                    <p className="text-4xl font-bold">{project.mastery}%</p>
                 </CardContent>
             </Card>
         </div>
-        <div>
+
+        <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Sesiones</h2>
+                <Button variant="outline">Ver hoja completa</Button>
+            </div>
             <Card className="bg-card/50">
-                <CardHeader>
-                    <CardTitle>Fuentes de Conocimiento</CardTitle>
-                </CardHeader>
-                <CardContent>
-                     <Table>
-                        <TableBody>
-                        {project.sources?.map((source, index) => (
-                            <TableRow key={index}>
-                                <TableCell>
-                                    <p className="font-medium">{source.name}</p>
-                                    <p className="text-sm text-muted-foreground">{source.type}</p>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                     <Button variant="ghost" size="icon">
-                                        <Eye className="h-4 w-4" />
-                                    </Button>
-                                     <Button variant="ghost" size="icon">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Sesión</TableHead>
+                            <TableHead>Tipo de Sesión</TableHead>
+                            <TableHead>Preguntas</TableHead>
+                            <TableHead>Duración</TableHead>
+                            <TableHead>Estado</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {mockSessions.map(session => (
+                             <TableRow key={session.day}>
+                                <TableCell>{session.day}</TableCell>
+                                <TableCell>{getSessionBadge(session.type)}</TableCell>
+                                <TableCell>{session.questions}</TableCell>
+                                <TableCell>{session.duration}</TableCell>
+                                <TableCell>{getSessionStatus(session.status)}</TableCell>
                             </TableRow>
                         ))}
-                        </TableBody>
-                     </Table>
-                </CardContent>
+                    </TableBody>
+                </Table>
             </Card>
         </div>
-      </div>
-      
-      <div className="mt-6">
-        <Card className="bg-card/50">
-            <CardHeader>
-                <CardTitle>Átomos de Conocimiento ({project.atoms?.length || 0})</CardTitle>
-                <CardDescription>La base fundamental de tu proyecto de estudio.</CardDescription>
-            </CardHeader>
-            <CardContent>
+        
+        <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Átomos de conocimiento</h2>
+                <Button variant="outline">Ver todas ({project.atoms?.length || 0})</Button>
+            </div>
+            <Card className="bg-card/50">
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[40%]">Pregunta</TableHead>
-                        <TableHead className="w-[50%]">Respuesta</TableHead>
+                        <TableHead>Término</TableHead>
+                        <TableHead>Definición</TableHead>
                         <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {project.atoms?.map((atom, index) => (
+                    {project.atoms?.slice(0, 4).map((atom, index) => (
                         <TableRow key={index}>
-                        <TableCell className="font-medium align-top">{atom.question}</TableCell>
-                        <TableCell className="text-muted-foreground align-top">{atom.answer}</TableCell>
+                        <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
+                        <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
                         <TableCell className="text-right align-top">
-                            <Button variant="ghost" size="icon">
-                                <Pencil className="h-4 w-4" />
+                             <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4 mr-2"/>
+                                Ver
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Editar
+                            </Button>
+                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Eliminar
                             </Button>
                         </TableCell>
                         </TableRow>
                     ))}
                     </TableBody>
                 </Table>
-            </CardContent>
-        </Card>
-      </div>
+            </Card>
+        </div>
+
+        <div>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Fuentes</h2>
+            </div>
+            <Card className="bg-card/50">
+                <Table>
+                    <TableBody>
+                    {project.sources?.map((source, index) => (
+                        <TableRow key={index}>
+                            <TableCell>
+                                <p className="font-medium">{source.name}</p>
+                                <p className="text-sm text-muted-foreground">{source.type}</p>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                    <Button variant="ghost" size="sm">
+                                    <Eye className="h-4 w-4 mr-2"/>
+                                    Ver
+                                </Button>
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Eliminar
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+            </Card>
+        </div>
 
     </div>
     </ScrollArea>
