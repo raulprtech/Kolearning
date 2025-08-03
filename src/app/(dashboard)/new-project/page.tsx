@@ -302,26 +302,33 @@ export default function NewProjectPage() {
   const handleSendMessage = async () => {
     if (!input.trim() && selectedFiles.length === 0) return;
     
+    const currentInput = input;
+    const currentFiles = selectedFiles;
+
     if (!isProjectStarted) {
         setIsProjectStarted(true);
     }
     
-    const userMessage: Message = { role: 'user', content: input };
+    const userMessage: Message = { role: 'user', content: currentInput };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setInput('');
+    setSelectedFiles([]);
     
-    if (selectedFiles.length > 0) {
+    if (currentFiles.length > 0) {
         try {
-            const file = selectedFiles[0];
+            const file = currentFiles[0];
             setProcessingFile(file.name);
             const dataUri = await fileToDataUri(file);
 
-            const koliGreeting: Message = { role: 'koli', content: `¡Genial! Estoy analizando "${file.name}". Mientras tanto, ¿podrías contarme un poco sobre tus objetivos con este tema? ¿Qué te gustaría lograr?` };
+            const response = await generateAtoms({ 
+                studyMaterial: dataUri,
+                userObjective: currentInput
+            });
+            
+            const koliGreeting: Message = { role: 'koli', content: response.initialResponse };
             setMessages(prev => [...prev, koliGreeting]);
-            setSelectedFiles([]);
-
-            const response = await generateAtoms({ studyMaterial: dataUri });
+            
             setAtomsResult(response);
 
             const koliResponse: Message = { 
@@ -513,4 +520,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-

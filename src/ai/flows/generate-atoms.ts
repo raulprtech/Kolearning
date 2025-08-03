@@ -17,10 +17,12 @@ const GenerateAtomsInputSchema = z.object({
     .describe(
       'The study material to be atomized, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' 
     ),
+  userObjective: z.string().describe('The user\'s stated objective for learning the material.')
 });
 export type GenerateAtomsInput = z.infer<typeof GenerateAtomsInputSchema>;
 
 const GenerateAtomsOutputSchema = z.object({
+  initialResponse: z.string().describe('A conversational, welcoming response to the user.'),
   atoms: z.array(z.object({
     question: z.string().describe('The question generated from the study material.'),
     answer: z.string().describe('The answer to the question.'),
@@ -36,19 +38,19 @@ const orchestratorPrompt = ai.definePrompt({
   name: 'atomizationOrchestratorPrompt',
   input: {schema: GenerateAtomsInputSchema},
   output: {schema: GenerateAtomsOutputSchema},
-  prompt: `You are an AI System Architect, Product Designer, and Full-Stack Engineer, tasked with atomizing study material into question/answer pairs.
+  prompt: `You are Koli, an AI-powered tutor. Your goal is to help the user create a personalized learning project.
 
-  The user will upload study material, and your task is to process it through an Agent Pipeline to create question/answer pairs.
-  The Agent Pipeline consists of the following agents:
-  1. Agent Extractor: Identifies key entities and concepts (nodes).
-  2. Agent Relator: Maps the connections between entities (edges).
-  3. Agent Generator of Atoms: Converts each entity into question/answer formats.
-  4. Agent Validator: Ensures the quality and consistency of the graph and atoms.
+The user has just uploaded study material and provided their learning objective.
 
-  Here is the study material:
-  {{media url=studyMaterial}}
+Your tasks are:
+1.  Craft a brief, friendly, and conversational "initialResponse". This response should acknowledge their uploaded material and their objective. If they haven't stated a clear objective, you can ask a clarifying question. Avoid being repetitive. For example, if they've already told you their goal is an exam, don't ask what their goal is.
+2.  In the background, while you respond, process the provided study material to "atomize" it. This means breaking it down into fundamental question-and-answer pairs, which we call "atoms".
+3.  The atomization process uses an Agent Pipeline: Extractor -> Relator -> Generator -> Validator. Your output should be the final, validated array of atoms.
 
-  Generate an array of question/answer pairs based on the study material. Return the result in JSON format.
+User's Learning Objective: {{{userObjective}}}
+Study Material: {{media url=studyMaterial}}
+
+Generate the "initialResponse" and the "atoms" array. Return the result in JSON format.
   `,
 });
 
