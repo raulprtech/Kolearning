@@ -4,15 +4,23 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
-  BookOpen,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
-  Compass
+  Compass,
+  Book,
+  Landmark,
+  FlaskConical
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/icons/logo";
 import { Progress } from "@/components/ui/progress";
+
+const projectIcons = {
+  Book: Book,
+  Landmark: Landmark,
+  FlaskConical: FlaskConical,
+};
 
 export default function DashboardLayout({
   children,
@@ -27,18 +35,21 @@ export default function DashboardLayout({
       title: "Física Cuántica",
       mastery: 85,
       tag: "STEM",
+      icon: "Book" as keyof typeof projectIcons,
     },
     {
       id: "2",
       title: "Historia de Roma",
       mastery: 62,
       tag: "Humanidades",
+      icon: "Landmark" as keyof typeof projectIcons,
     },
     {
       id: "3",
       title: "Química Orgánica",
       mastery: 45,
       tag: "STEM",
+      icon: "FlaskConical" as keyof typeof projectIcons,
     },
   ];
 
@@ -81,10 +92,12 @@ export default function DashboardLayout({
               {isSidebarOpen ? 'Proyectos' : 'Mis'}
             </h3>
           <div className="flex flex-col gap-4">
-            {projects.map((project) => (
+            {projects.map((project) => {
+              const Icon = projectIcons[project.icon];
+              return (
               <Link href={`/dashboard/projects/${project.id}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
                 <div className="flex items-center gap-3">
-                   <BookOpen className="h-5 w-5 text-primary shrink-0" />
+                   {Icon && <Icon className="h-5 w-5 text-primary shrink-0" />}
                   {isSidebarOpen && (
                     <div className="flex flex-col w-full">
                       <div className="flex justify-between items-center mb-1">
@@ -96,7 +109,8 @@ export default function DashboardLayout({
                   )}
                 </div>
               </Link>
-            ))}
+              )
+            })}
           </div>
         </nav>
 

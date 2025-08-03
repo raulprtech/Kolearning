@@ -20,20 +20,61 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, CheckCircle, Lock, MoreVertical } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, CheckCircle, Lock, MoreVertical, Book, Landmark, FlaskConical } from "lucide-react";
+
+const projectIcons = {
+  Book: Book,
+  Landmark: Landmark,
+  FlaskConical: FlaskConical,
+  Globe: Globe,
+};
 
 export default function ProjectDetailsPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const project = {
-    title: "Análisis de Cáncer Renal Multimodal con Fusión Tardía: Mejorando la Relevancia Clínica y la Resistencia al Sobreajuste",
+   const projects = [
+    {
+      id: "1",
+      title: "Análisis de Cáncer Renal Multimodal con Fusión Tardía: Mejorando la Relevancia Clínica y la Resistencia al Sobreajuste",
+      notes: "notes",
+      bestStreak: 1,
+      xpGained: 0,
+      mastery: 0,
+      icon: "Book" as keyof typeof projectIcons,
+    },
+    {
+      id: "2",
+      title: "Historia de Roma",
+      notes: "notes",
+      bestStreak: 5,
+      xpGained: 120,
+      mastery: 62,
+      icon: "Landmark" as keyof typeof projectIcons,
+    },
+     {
+      id: "3",
+      title: "Química Orgánica",
+      notes: "notes",
+      bestStreak: 2,
+      xpGained: 50,
+      mastery: 45,
+      icon: "FlaskConical" as keyof typeof projectIcons,
+    },
+  ];
+
+  const project = projects.find(p => p.id === params.id) || {
+    title: "Proyecto no encontrado",
     notes: "notes",
-    bestStreak: 1,
+    bestStreak: 0,
     xpGained: 0,
     mastery: 0,
+    icon: "Globe" as keyof typeof projectIcons,
   };
+  
+  const Icon = projectIcons[project.icon];
+
 
   const sessions = [
     {
@@ -75,7 +116,7 @@ export default function ProjectDetailsPage({
     <div className="flex-1 flex flex-col p-6 bg-background">
       <header className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Globe className="w-8 h-8 text-primary" />
+            {Icon && <Icon className="w-8 h-8 text-primary" />}
             <div>
                 <h1 className="text-2xl font-bold text-foreground">{project.title}</h1>
                 <p className="text-muted-foreground">{project.notes}</p>
