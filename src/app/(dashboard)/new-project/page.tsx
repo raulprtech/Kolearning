@@ -62,7 +62,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, setSelectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -222,7 +222,7 @@ const AtomizationProgress = ({ atomsResult, fileName }: { atomsResult: GenerateA
     );
 };
 
-const AtomReview = ({ atoms, onFinish, onAddMore }: { atoms: GenerateAtomsOutput['atoms'], onFinish: () => void, onAddMore: () => void }) => {
+const AtomReview = ({ atoms, onFinish }: { atoms: GenerateAtomsOutput['atoms'], onFinish: () => void }) => {
     
     const [editableAtoms, setEditableAtoms] = useState(atoms);
 
@@ -231,7 +231,7 @@ const AtomReview = ({ atoms, onFinish, onAddMore }: { atoms: GenerateAtomsOutput
     };
 
     return (
-        <div className="flex-1 flex flex-col p-8 bg-background overflow-hidden">
+        <div className="flex-1 flex flex-col p-4 md:p-8 bg-background overflow-hidden">
             <div className="flex-1 flex flex-col w-full max-w-4xl mx-auto">
                  <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold font-headline">Revisa tus Tarjetas</h1>
@@ -240,11 +240,11 @@ const AtomReview = ({ atoms, onFinish, onAddMore }: { atoms: GenerateAtomsOutput
                 <Card className="flex-1 flex flex-col bg-card/50">
                     <CardContent className="p-0 flex-1">
                         <ScrollArea className="h-full">
-                            <div className="p-6 space-y-4">
+                            <div className="p-4 md:p-6 space-y-4">
                             {editableAtoms.map((atom, index) => (
-                                <div key={index} className="flex items-start gap-4 p-4 border border-border rounded-lg">
-                                    <span className="text-sm font-bold text-muted-foreground mt-1">{index + 1}.</span>
-                                    <div className="flex-1 grid grid-cols-2 gap-4">
+                                <div key={index} className="flex flex-col md:flex-row items-start gap-4 p-4 border border-border rounded-lg">
+                                    <span className="text-sm font-bold text-muted-foreground mt-1 hidden md:inline-block">{index + 1}.</span>
+                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                                         <div>
                                             <label className="text-xs text-muted-foreground">TÉRMINO</label>
                                             <Textarea defaultValue={atom.question} className="mt-1 bg-background/50" />
@@ -254,7 +254,7 @@ const AtomReview = ({ atoms, onFinish, onAddMore }: { atoms: GenerateAtomsOutput
                                             <Textarea defaultValue={atom.answer} className="mt-1 bg-background/50"/>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(index)}>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(index)} className="self-start md:self-center">
                                         <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
                                     </Button>
                                 </div>
@@ -364,26 +364,16 @@ export default function NewProjectPage() {
     setShowAtomReview(true);
     const koliMessage: Message = {
         role: 'koli',
-        content: "Claro, aquí están los átomos que he generado para ti. Puedes editarlos directamente. Cuando estés listo, dime cómo quieres continuar.",
+        content: "Claro, aquí están los átomos que he generado para ti. Puedes editarlos directamente. Cuando estés listo, puedes finalizar para crear el proyecto.",
         actions: (
             <>
                 <Button onClick={handleFinalizeProject}>Finalizar y Crear Proyecto</Button>
-                <Button variant="outline" onClick={handleBackToAtomization}>Añadir más conocimiento</Button>
             </>
         )
     };
     setMessages(prev => [...prev, koliMessage]);
   };
   
-  const handleBackToAtomization = () => {
-    setShowAtomReview(false);
-    const koliMessage: Message = {
-        role: 'koli',
-        content: "¡Perfecto! Vuelve a subir más archivos o describe otro tema que quieras aprender."
-    };
-    setMessages(prev => [...prev, koliMessage]);
-  }
-
   if (!isProjectStarted) {
     return (
         <div className="flex flex-col flex-1">
@@ -495,7 +485,6 @@ export default function NewProjectPage() {
                  <AtomReview 
                     atoms={atomsResult.atoms} 
                     onFinish={handleFinalizeProject}
-                    onAddMore={handleBackToAtomization}
                 />
             ) : (
                 <AtomizationProgress 
@@ -510,7 +499,6 @@ export default function NewProjectPage() {
                 handleSendMessage={handleSendMessage}
                 isLoading={isLoading}
                 selectedFiles={selectedFiles}
-                setSelectedFiles={setSelectedFiles}
                 removeFile={removeFile}
                 handleUploadClick={handleFileChange}
                 fileInputRef={fileInputRef}
