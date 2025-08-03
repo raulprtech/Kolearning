@@ -1,3 +1,7 @@
+
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -5,6 +9,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +46,8 @@ export default function ProjectDetailsPage({
 }: {
   params: { id: string };
 }) {
+  const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
+
    const projects = [
     {
       id: "1",
@@ -122,20 +136,48 @@ export default function ProjectDetailsPage({
                 <p className="text-muted-foreground">{project.notes}</p>
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-                <DropdownMenuItem>Agregar Conocimiento</DropdownMenuItem>
-                <DropdownMenuItem>Recalibrar</DropdownMenuItem>
-                <DropdownMenuItem>Archivar</DropdownMenuItem>
-                <DropdownMenuItem>Cambiar privacidad</DropdownMenuItem>
-                <DropdownMenuItem>Cambiar categoría</DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+          <Dialog open={isIconSelectorOpen} onOpenChange={setIsIconSelectorOpen}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                  </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                  <DropdownMenuItem>Agregar Conocimiento</DropdownMenuItem>
+                  <DropdownMenuItem>Recalibrar</DropdownMenuItem>
+                  <DropdownMenuItem>Archivar</DropdownMenuItem>
+                  <DropdownMenuItem>Cambiar privacidad</DropdownMenuItem>
+                  <DropdownMenuItem>Cambiar categoría</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsIconSelectorOpen(true)}>Cambiar icono</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Elige un icono para tu proyecto</DialogTitle>
+                <DialogDescription>
+                  Selecciona un icono que represente tu proyecto.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-4 gap-4 py-4">
+                {Object.entries(projectIcons).map(([key, IconComponent]) => (
+                  <Button
+                    key={key}
+                    variant="outline"
+                    className="flex flex-col h-24 gap-2 items-center justify-center"
+                    onClick={() => {
+                      // Here you would typically update the project's icon in your state management
+                      console.log(`Icon selected: ${key}`);
+                      setIsIconSelectorOpen(false);
+                    }}
+                  >
+                    <IconComponent className="h-8 w-8 text-primary" />
+                    <span className="text-xs">{key}</span>
+                  </Button>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
