@@ -499,7 +499,7 @@ export default function NewProjectPage() {
           title: "¡Proyecto Creado!",
           description: `${projectTitle} ha sido añadido a tu dashboard.`
       })
-      router.push("/");
+      router.push(`/projects/${newProject.id}`);
   }
 
   const handleReviewAtoms = () => {
