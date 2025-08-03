@@ -59,7 +59,7 @@ const initialSteps = [
 
 type Message = {
     role: 'user' | 'koli';
-    content: string;
+    content: React.ReactNode;
     actions?: React.ReactNode;
 };
 
@@ -246,8 +246,8 @@ const AtomReview = ({ atoms, onNextStep, onBack }: { atoms: GenerateAtomsOutput[
     };
 
     return (
-        <div className="flex flex-col h-full overflow-hidden p-4 md:p-8 bg-background">
-             <div className="text-center mb-8">
+        <div className="flex flex-col h-full p-4 md:p-8 bg-background overflow-hidden">
+             <div className="text-center mb-8 shrink-0">
                 <h1 className="text-3xl font-bold font-headline">Revisa tus Tarjetas</h1>
                 <p className="text-muted-foreground">Añade, edita o elimina tarjetas para perfeccionar tu mazo de estudio.</p>
             </div>
@@ -275,7 +275,7 @@ const AtomReview = ({ atoms, onNextStep, onBack }: { atoms: GenerateAtomsOutput[
                     </div>
                 </ScrollArea>
             </div>
-             <div className="pt-6 flex justify-center items-center gap-4">
+             <div className="pt-6 flex justify-center items-center gap-4 shrink-0">
                 <Button variant="outline" size="lg" onClick={onBack}>
                     <ChevronLeft className="mr-2"/>
                     Volver
@@ -429,7 +429,7 @@ export default function NewProjectPage() {
         
         const koliResponse: Message = { 
             role: 'koli', 
-            content: `${response.initialResponse} He terminado de procesar tu documento y he generado ${response.atoms.length} átomos de conocimiento.`,
+            content: `${response.initialResponse}`,
             actions: (
                 <>
                     <Button variant="outline" onClick={handleReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
@@ -479,13 +479,25 @@ export default function NewProjectPage() {
     }
   }
 
-  const handleFinalizeProject = () => {
-      if (!atomsResult || !learningPlan || !processingFile) {
+    const handleFinalizeProject = () => {
+      if (!atomsResult || !learningPlan || !processingFile || !projectTitle) {
           toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
           return;
       }
+
+      // Create a URL-friendly slug from the title
+      const slug = projectTitle
+        .toLowerCase()
+        .replace(/\s+/g, '-') // Replace spaces with -
+        .replace(/[^\w-]+/g, '') // Remove all non-word chars
+        .replace(/--+/g, '-') // Replace multiple - with single -
+        .replace(/^-+/, '') // Trim - from start of text
+        .replace(/-+$/, ''); // Trim - from end of text
+      
+      const newProjectId = `${slug}-${Date.now()}`; // Add timestamp for uniqueness
+
       const newProject = {
-          id: new Date().toISOString(),
+          id: newProjectId,
           title: projectTitle,
           mastery: 0,
           categories: learningPlan.categories,
