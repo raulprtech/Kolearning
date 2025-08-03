@@ -8,6 +8,7 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  Compass
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/icons/logo";
@@ -63,10 +64,14 @@ export default function DashboardLayout({
           </Button>
         </div>
 
-        <nav className="flex flex-col gap-4 flex-1">
+        <nav className="flex flex-col gap-2 flex-1">
           <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
             <Plus className="h-4 w-4" />
             {isSidebarOpen && <span className="ml-2">Nuevo Proyecto</span>}
+          </Button>
+          <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
+            <Compass className="h-4 w-4" />
+            {isSidebarOpen && <span className="ml-2">Explorar Proyectos</span>}
           </Button>
 
            <h3 className={`mt-6 mb-2 text-sm font-semibold text-muted-foreground ${isSidebarOpen ? 'px-2' : 'text-center'}`}>
