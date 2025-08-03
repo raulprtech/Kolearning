@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState, use } from "react";
+import { useState } from "react";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,13 +42,10 @@ const projectIcons = {
   Globe: Globe,
 };
 
-export default function ProjectDetailsPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function ProjectDetailsPage() {
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
-  const { id } = params;
+  const params = useParams();
+  const id = params.id as string;
 
    const projects = [
     {
