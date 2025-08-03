@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Provides an explanation of the correct answer to a question.
@@ -32,6 +33,7 @@ const prompt = ai.definePrompt({
   input: {schema: ExplainCorrectAnswerInputSchema},
   output: {schema: ExplainCorrectAnswerOutputSchema},
   prompt: `You are Koli, an expert AI tutor. A learner has asked for an explanation of the correct answer to a question. Your job is to provide a clear and concise explanation of why the correct answer is correct, and where the learner's answer went wrong.
+All your responses must be in Spanish.
 
 Question: {{{question}}}
 Correct Answer: {{{correctAnswer}}}

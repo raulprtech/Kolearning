@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -39,6 +40,7 @@ const orchestratorPrompt = ai.definePrompt({
   input: {schema: GenerateAtomsInputSchema},
   output: {schema: GenerateAtomsOutputSchema},
   prompt: `You are Koli, an AI-powered tutor. Your goal is to help the user create a personalized learning project.
+All your responses must be in Spanish.
 
 The user has just uploaded study material and provided their learning objective.
 

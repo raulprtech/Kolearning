@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Implements the AI Strategic Tutor flow, which analyzes FSRS data and performance history to dynamically adjust learning paths.
@@ -32,15 +33,16 @@ const prompt = ai.definePrompt({
   input: {schema: DynamicLearningPathAdjustmentInputSchema},
   output: {schema: DynamicLearningPathAdjustmentOutputSchema},
   prompt: `You are an AI Strategic Tutor named Koli, responsible for dynamically adjusting the learning path of a learner based on their FSRS data and performance history.
+All your responses must be in Spanish.
 
-  Analyze the following information to identify weak areas and suggest specific topics or 'Breach Detected' sessions to reinforce those areas.
+Analyze the following information to identify weak areas and suggest specific topics or 'Breach Detected' sessions to reinforce those areas.
 
-  FSRS Data: {{{fsrsData}}}
-  Performance History: {{{performanceHistory}}}
-  Current Learning Path: {{{currentLearningPath}}}
+FSRS Data: {{{fsrsData}}}
+Performance History: {{{performanceHistory}}}
+Current Learning Path: {{{currentLearningPath}}}
 
-  Based on your analysis, provide an adjusted learning path with clear reasoning for the changes. Be concise and strategic.
-  Make sure the response is easily parsable, and should contain only the adjustedLearningPath and reasoning field.
+Based on your analysis, provide an adjusted learning path with clear reasoning for the changes. Be concise and strategic.
+Make sure the response is easily parsable, and should contain only the adjustedLearningPath and reasoning field.
   `,
 });
 

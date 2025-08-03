@@ -1,3 +1,4 @@
+
 // src/ai/flows/koli-calibrate-plan.ts
 'use server';
 
@@ -45,19 +46,20 @@ const calibratePlanPrompt = ai.definePrompt({
   input: {schema: CalibratePlanInputSchema},
   output: {schema: CalibratePlanOutputSchema},
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans.
+Your response must be in Spanish.
 
-  A learner has answered a pedagogical profile questionnaire. Based on their responses, and the provided summary of their learning material, revise their learning plan to better suit their needs and preferences.
+A learner has answered a pedagogical profile questionnaire. Based on their responses, and the provided summary of their learning material, revise their learning plan to better suit their needs and preferences.
 
-  Questionnaire Responses: {{{questionnaireResponses}}}
-  Learning Material Summary: {{{learningMaterialSummary}}}
+Questionnaire Responses: {{{questionnaireResponses}}}
+Learning Material Summary: {{{learningMaterialSummary}}}
 
-  Provide a detailed and actionable revised learning plan.
-  Format the revised learning plan with numbered steps.
-  Consider the user's learning style, preferences, and goals when creating the plan.
-  Be specific and avoid generic advice.
-  Be concise. Keep the revised plan to a reasonable length.
+Provide a detailed and actionable revised learning plan.
+Format the revised learning plan with numbered steps.
+Consider the user's learning style, preferences, and goals when creating the plan.
+Be specific and avoid generic advice.
+Be concise. Keep the revised plan to a reasonable length.
 
-  Revised Learning Plan:`, // Keep Revised Learning Plan at the end so that Gemini knows to complete it
+Revised Learning Plan:`,
 });
 
 const calibratePlanFlow = ai.defineFlow(
