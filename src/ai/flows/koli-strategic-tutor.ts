@@ -43,11 +43,11 @@ The user has just finished a study session. Analyze their performance and their 
 
 **Your Tasks:**
 
-1.  **Provide Feedback:** Write a short, encouraging, and insightful ` + "`feedback`" + ` message (1-2 sentences). Comment on their effort or a specific area of improvement.
+1.  **Provide Feedback:** Write a short, encouraging, and insightful 'feedback' message (1-2 sentences). Comment on their effort or a specific area of improvement.
 2.  **Adjust the Plan (If Necessary):**
-    *   Analyze the user's performance (` + "`performanceHistory`" + `, ` + "`fsrsData`" + `) and their ` + "`currentLearningPlan`" + `.
-    *   If you identify a weakness or an area that needs more focus, create one or two new ` + "`newSessions`" + ` of type "Refuerzo" or "Dominio" to address it. These sessions should target the weak topics.
-    *   If the user is doing well and no adjustments are needed, return an empty array for ` + "`newSessions`" + `.
+    *   Analyze the user's performance ('performanceHistory', 'fsrsData') and their 'currentLearningPlan'.
+    *   If you identify a weakness or an area that needs more focus, create one or two new 'newSessions' of type "Refuerzo" or "Dominio" to address it. These sessions should target the weak topics.
+    *   If the user is doing well and no adjustments are needed, return an empty array for 'newSessions'.
     *   **IMPORTANT:** Only ADD new sessions. DO NOT modify or remove existing sessions from the plan.
 
 **User Data:**
