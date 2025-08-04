@@ -535,6 +535,7 @@ export default function NewProjectPage() {
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
   const [isProjectSetupOpen, setIsProjectSetupOpen] = useState(false);
+  const [atomizationError, setAtomizationError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -550,6 +551,12 @@ export default function NewProjectPage() {
         fileToDataUri(file).then(dataUri => {
             setProcessingFile({name: file.name, content: dataUri });
         })
+        if (atomizationError) {
+            setAtomizationError(null);
+            setIsProjectStarted(false); 
+            setMessages([]); 
+            setAtomsResult(null);
+        }
       }
     }
   };
@@ -705,11 +712,10 @@ export default function NewProjectPage() {
             
         } catch (error) {
             console.error("Error processing file:", error);
-            const errorMessage = (error instanceof Error) ? error.message : 'Lo siento, ha ocurrido un error al procesar tu documento.';
-            addMessage({ role: 'koli', content: `Error: ${errorMessage}. Por favor, intenta con otro archivo.` });
-            setSelectedFiles([]);
+            const errorMessage = "Lo siento, ha ocurrido un error al procesar tu documento. Esto puede deberse a un formato incompatible o a un problema con el contenido. Por favor, intenta con otro archivo.";
+            addMessage({ role: 'koli', content: errorMessage });
+            setAtomizationError(errorMessage);
             setProcessingFile(null);
-            setIsProjectStarted(false); // Reset on failure
         } finally {
             setIsLoading(false);
         }
@@ -889,6 +895,24 @@ export default function NewProjectPage() {
   }
 
   const renderContent = () => {
+    if (atomizationError) {
+        return (
+             <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
+                <Card className="w-full max-w-3xl bg-card/50">
+                    <CardHeader>
+                        <CardTitle className="text-center text-2xl font-headline text-destructive">Error de Atomización</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <p className="text-muted-foreground mb-6">{atomizationError}</p>
+                        <Button onClick={() => fileInputRef.current?.click()}>
+                            <Paperclip className="mr-2"/>
+                            Subir un archivo diferente
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
     switch (currentStep) {
         case 'atomizing':
             return <AtomizationProgress 
