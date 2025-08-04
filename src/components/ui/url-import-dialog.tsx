@@ -12,17 +12,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, Link as LinkIcon, Youtube } from "lucide-react";
+import { Loader2, Link as LinkIcon } from "lucide-react";
 
 interface UrlImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (url: string) => void;
   isLoading: boolean;
-  importType: 'url' | 'youtube' | null;
 }
 
-export function UrlImportDialog({ isOpen, onClose, onImport, isLoading, importType }: UrlImportDialogProps) {
+export function UrlImportDialog({ isOpen, onClose, onImport, isLoading }: UrlImportDialogProps) {
   const [url, setUrl] = useState("");
 
   useEffect(() => {
@@ -37,14 +36,10 @@ export function UrlImportDialog({ isOpen, onClose, onImport, isLoading, importTy
     }
   };
 
-  const title = importType === 'youtube' ? "Importar desde YouTube" : "Importar desde URL";
-  const description = importType === 'youtube' 
-    ? "Pega la URL del video de YouTube del que quieres extraer la transcripción."
-    : "Pega la URL del sitio web del que quieres extraer el material de estudio. Koli leerá el contenido por ti.";
-  const placeholder = importType === 'youtube' 
-    ? "https://www.youtube.com/watch?v=..."
-    : "https://ejemplo.com/articulo";
-  const Icon = importType === 'youtube' ? Youtube : LinkIcon;
+  const title = "Importar desde URL";
+  const description = "Pega la URL del sitio web del que quieres extraer el material de estudio. Koli leerá el contenido por ti.";
+  const placeholder = "https://ejemplo.com/articulo";
+  const Icon = LinkIcon;
 
 
   return (
@@ -77,3 +72,5 @@ export function UrlImportDialog({ isOpen, onClose, onImport, isLoading, importTy
     </Dialog>
   );
 }
+
+    
