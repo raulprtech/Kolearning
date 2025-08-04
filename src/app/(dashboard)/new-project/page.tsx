@@ -40,6 +40,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { ProjectSetupDialog } from "@/components/ui/project-setup-dialog";
 import { extractContentFromUrl } from "@/lib/actions";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 const initialSteps = [
@@ -80,12 +84,28 @@ const fileToDataUri = (file: File): Promise<string> => {
 
 const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, isProjectStarted, handleSuggestionClick }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const [date, setDate] = useState<Date | undefined>(undefined);
 
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
+
+    const handleDateSelect = (selectedDate: Date | undefined) => {
+        setDate(selectedDate);
+        if (selectedDate) {
+            const formattedDate = format(selectedDate, "PPP", { locale: es });
+            handleSendMessage(`Mi fecha límite es el ${formattedDate}`);
+        }
+    }
+
+    const objectiveOptions = [
+        "Prepararme para un examen",
+        "Entender los conceptos clave",
+        "Aplicar este conocimiento en un proyecto",
+        "Aprender algo nuevo por curiosidad",
+    ];
     
     return (
         <div className="flex flex-col h-full bg-card/30 border-l border-border overflow-hidden">
@@ -191,21 +211,46 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                         </Popover>
                     </div>
                     <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <Button variant="ghost" size="icon" onClick={handleSendMessage} disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleSendMessage()} disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}>
                         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     </Button>
                     </div>
                 </div>
                  {isProjectStarted && (
                     <div className="mt-4 flex items-center justify-center gap-2">
-                        <Button variant="outline" size="sm" className="rounded-full" onClick={() => handleSuggestionClick('Agregar Deadline')}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            Agregar Deadline
-                        </Button>
-                        <Button variant="outline" size="sm" className="rounded-full" onClick={() => handleSuggestionClick('Agregar objetivo')}>
-                            <Target className="mr-2 h-4 w-4" />
-                            Agregar objetivo
-                        </Button>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="rounded-full">
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    Agregar Deadline
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 mb-2" align="center">
+                                <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={handleDateSelect}
+                                    initialFocus
+                                    locale={es}
+                                />
+                            </PopoverContent>
+                        </Popover>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="rounded-full">
+                                    <Target className="mr-2 h-4 w-4" />
+                                    Agregar objetivo
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center" className="mb-2">
+                                {objectiveOptions.map((option, index) => (
+                                    <DropdownMenuItem key={index} onClick={() => handleSendMessage(option)}>
+                                        {option}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 )}
             </div>
@@ -879,3 +924,4 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
