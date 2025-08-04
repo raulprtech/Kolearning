@@ -1,6 +1,8 @@
 
 'use server';
 
+import { YouTubeTranscript } from 'youtube-transcript';
+
 export async function extractContentFromUrl(url: string): Promise<string | null> {
     try {
         // We are using a proxy to bypass CORS issues.
@@ -21,6 +23,20 @@ export async function extractContentFromUrl(url: string): Promise<string | null>
         return textOnly;
     } catch (error) {
         console.error('Error fetching or parsing URL content:', error);
+        return null;
+    }
+}
+
+
+export async function extractTranscriptFromYoutubeUrl(url: string): Promise<string | null> {
+    try {
+        const transcript = await YouTubeTranscript.fetchTranscript(url);
+        if (!transcript) {
+            return null;
+        }
+        return transcript.map(item => item.text).join(' ');
+    } catch (error) {
+        console.error('Error fetching or parsing YouTube transcript:', error);
         return null;
     }
 }

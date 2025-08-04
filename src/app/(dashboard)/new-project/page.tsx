@@ -42,7 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
-import { extractContentFromUrl } from "@/lib/actions";
+import { extractContentFromUrl, extractTranscriptFromYoutubeUrl } from "@/lib/actions";
 
 
 const initialSteps = [
@@ -75,7 +75,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, onImportFromYoutube }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -162,7 +162,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                                 <LinkIcon className="mr-2 h-4 w-4" />
                                 <span>Importar desde enlace</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={onImportFromYoutube}>
                             <Youtube className="mr-2 h-4 w-4" />
                             <span>Importar desde Youtube</span>
                             </DropdownMenuItem>
@@ -384,7 +384,7 @@ export default function NewProjectPage() {
   const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
-
+  const [importType, setImportType] = useState<'url' | 'youtube' | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -408,7 +408,7 @@ export default function NewProjectPage() {
         const content = await extractContentFromUrl(url);
         if (content) {
             const dataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(content)))}`;
-            const urlFileName = url.split('/').pop() || 'imported-from-url';
+            const urlFileName = url.split('/').pop()?.split('?')[0] || 'imported-from-url';
             const file = new File([content], urlFileName, { type: "text/plain" });
             
             setSelectedFiles([file]);
@@ -425,6 +425,32 @@ export default function NewProjectPage() {
         setIsLoading(false);
     }
   };
+
+  const handleImportFromYoutube = async (url: string) => {
+    setIsUrlImportOpen(false);
+    setIsLoading(true);
+    toast({ title: "Importando desde YouTube...", description: "Koli está extrayendo la transcripción." });
+    try {
+        const transcript = await extractTranscriptFromYoutubeUrl(url);
+        if (transcript) {
+            const dataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(transcript)))}`;
+            const videoId = new URL(url).searchParams.get('v') || 'youtube-video';
+            const file = new File([transcript], `${videoId}.txt`, { type: "text/plain" });
+            
+            setSelectedFiles([file]);
+            setProcessingFile({name: file.name, content: dataUri });
+
+            toast({ title: "¡Transcripción importada!", description: `Se ha extraído la transcripción del video.` });
+        } else {
+            toast({ title: "Error", description: "No se pudo obtener la transcripción del video. Asegúrate de que el video tenga transcripciones disponibles.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error importing from YouTube:", error);
+        toast({ title: "Error", description: "Ocurrió un error al importar desde YouTube.", variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+    }
+  }
 
 
   const removeFile = (fileName: string) => {
@@ -568,8 +594,9 @@ export default function NewProjectPage() {
           <UrlImportDialog 
                 isOpen={isUrlImportOpen}
                 onClose={() => setIsUrlImportOpen(false)}
-                onImport={handleImportFromUrl}
+                onImport={importType === 'youtube' ? handleImportFromYoutube : handleImportFromUrl}
                 isLoading={isLoading}
+                importType={importType}
             />
           <main className="flex-1 flex flex-col items-center p-4">
             <div className="flex-1 flex flex-col items-center justify-center">
@@ -647,11 +674,11 @@ export default function NewProjectPage() {
                           <Paperclip className="mr-2 h-4 w-4" />
                           Subir archivos
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setIsUrlImportOpen(true)}>
+                        <DropdownMenuItem onClick={() => { setImportType('url'); setIsUrlImportOpen(true); }}>
                           <LinkIcon className="mr-2 h-4 w-4" />
                           Importar desde enlace
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setImportType('youtube'); setIsUrlImportOpen(true); }}>
                           <Youtube className="mr-2 h-4 w-4" />
                           Importar desde Youtube
                         </DropdownMenuItem>
@@ -711,8 +738,9 @@ export default function NewProjectPage() {
         <UrlImportDialog 
                 isOpen={isUrlImportOpen}
                 onClose={() => setIsUrlImportOpen(false)}
-                onImport={handleImportFromUrl}
+                onImport={importType === 'youtube' ? handleImportFromYoutube : handleImportFromUrl}
                 isLoading={isLoading}
+                importType={importType}
             />
         <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_450px]">
             <div className="flex flex-col flex-1 h-full overflow-y-auto">
@@ -731,7 +759,8 @@ export default function NewProjectPage() {
                 getFileIcon={getFileIcon}
                 onReviewAtoms={handleReviewAtoms}
                 onGeneratePlan={handleGeneratePlan}
-                onImportFromUrl={() => setIsUrlImportOpen(true)}
+                onImportFromUrl={() => { setImportType('url'); setIsUrlImportOpen(true); }}
+                onImportFromYoutube={() => { setImportType('youtube'); setIsUrlImportOpen(true); }}
             />
         </main>
     </div>
