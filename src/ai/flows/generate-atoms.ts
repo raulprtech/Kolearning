@@ -58,6 +58,8 @@ Generate the "initialResponse" and the "atoms" array. Return the result in JSON 
   `,
 });
 
+const SUPPORTED_MIME_TYPES_REGEX = /^(image\/(jpeg|png|webp))|(audio\/(mpeg|mp3|wav|ogg))|(video\/(mp4|mpeg|quicktime))|(text\/(plain|html|css|csv|markdown))/;
+
 const generateAtomsFlow = ai.defineFlow(
   {
     name: 'generateAtomsFlow',
@@ -65,7 +67,19 @@ const generateAtomsFlow = ai.defineFlow(
     outputSchema: GenerateAtomsOutputSchema,
   },
   async input => {
-    const {output} = await orchestratorPrompt(input);
+    let studyMaterial = input.studyMaterial;
+    const mimeTypeMatch = studyMaterial.match(/^data:([a-zA-Z0-9\/+.-]+);base64,/);
+    const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : '';
+
+    if (!SUPPORTED_MIME_TYPES_REGEX.test(mimeType)) {
+      console.log(`Unsupported MIME type "${mimeType}". Converting to "text/plain".`);
+      studyMaterial = studyMaterial.replace(/^data:[a-zA-Z0-9\/+.-]+/, 'data:text/plain');
+    }
+
+    const {output} = await orchestratorPrompt({
+        ...input,
+        studyMaterial: studyMaterial,
+    });
     return output!;
   }
 );
