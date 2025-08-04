@@ -23,6 +23,13 @@ export default function StudySessionPage({
       "El principio de superposición establece que dos (o más) estados cuánticos pueden ser sumados ('superpuestos') y el resultado será otro estado cuántico válido. A la inversa, cada estado cuántico puede ser representado como una suma de dos o más estados distintos.",
   };
 
+  const ratings = [
+      { label: "Muy Difícil", variant: "destructive", description: "Repetir Pronto", fsrs: 1 },
+      { label: "Difícil", variant: "outline", description: "Revisar en un día", fsrs: 2 },
+      { label: "Bien", variant: "secondary", description: "Revisar en unos días", fsrs: 3 },
+      { label: "Fácil", variant: "default", description: "Revisar en una semana", fsrs: 4 },
+  ] as const;
+
   return (
     <div className="flex flex-col flex-1">
        <header className="flex items-center justify-between p-4 border-b border-border">
@@ -76,7 +83,7 @@ export default function StudySessionPage({
                         <Button variant="outline" size="icon" aria-label="Reformular">
                         <Repeat />
                         </Button>
-                        <Button variant="accent" size="icon" aria-label="Consultar a Koli">
+                        <Button variant="ghost" size="icon" aria-label="Consultar a Koli">
                         <KoliAvatar className="h-6 w-6" />
                         </Button>
                     </div>
@@ -95,22 +102,14 @@ export default function StudySessionPage({
                         Califica tu rendimiento de recuerdo:
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button variant="destructive" className="h-auto py-3 flex-col">
-                            <span className="text-lg font-bold">Muy Difícil</span>
-                            <span className="text-xs opacity-80">Repetir Pronto</span>
-                        </Button>
-                        <Button variant="outline" className="h-auto py-3 flex-col hover:border-primary">
-                            <span className="text-lg font-bold">Difícil</span>
-                            <span className="text-xs opacity-80">Revisar en un día</span>
-                        </Button>
-                        <Button variant="secondary" className="h-auto py-3 flex-col">
-                            <span className="text-lg font-bold">Bien</span>
-                            <span className="text-xs opacity-80">Revisar en unos días</span>
-                        </Button>
-                        <Button variant="default" className="h-auto py-3 flex-col">
-                            <span className="text-lg font-bold">Fácil</span>
-                            <span className="text-xs opacity-80">Revisar en una semana</span>
-                        </Button>
+                        {ratings.map(rating => (
+                           <Link key={rating.label} href={`/study/${params.id}/summary?fsrs=${rating.fsrs}`} passHref>
+                                <Button variant={rating.variant} className="h-auto py-3 flex-col w-full">
+                                    <span className="text-lg font-bold">{rating.label}</span>
+                                    <span className="text-xs opacity-80">{rating.description}</span>
+                                </Button>
+                            </Link>
+                        ))}
                     </div>
                     </div>
                 </CardContent>

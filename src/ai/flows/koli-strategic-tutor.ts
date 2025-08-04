@@ -14,13 +14,17 @@ import {z} from 'genkit';
 const DynamicLearningPathAdjustmentInputSchema = z.object({
   fsrsData: z.string().describe('The FSRS data including D, S, and R values for each atom.'),
   performanceHistory: z.string().describe('The performance history of the learner.'),
-  currentLearningPath: z.string().describe('The current learning path of the learner.'),
+  currentLearningPlan: z.string().describe('The current learning plan of the learner as a JSON string.'),
 });
 export type DynamicLearningPathAdjustmentInput = z.infer<typeof DynamicLearningPathAdjustmentInputSchema>;
 
 const DynamicLearningPathAdjustmentOutputSchema = z.object({
-  adjustedLearningPath: z.string().describe('The adjusted learning path with suggestions for topics or Breach Detected sessions.'),
-  reasoning: z.string().describe('The reasoning behind the adjusted learning path.'),
+  feedback: z.string().describe('A brief, encouraging feedback message for the user based on their performance.'),
+  newSessions: z.array(z.object({
+      type: z.string().describe('The type of the session (e.g., Refuerzo, Dominio).'),
+      questions: z.string().describe('A brief description of the questions format (e.g., Opción múltiple, Preguntas abiertas).'),
+      duration: z.string().describe('The estimated duration of the session (e.g., 20 min).')
+  })).describe('An array of new sessions to be added to the learning plan. Can be empty if no adjustments are needed.'),
 });
 export type DynamicLearningPathAdjustmentOutput = z.infer<typeof DynamicLearningPathAdjustmentOutputSchema>;
 
@@ -32,17 +36,27 @@ const prompt = ai.definePrompt({
   name: 'dynamicLearningPathAdjustmentPrompt',
   input: {schema: DynamicLearningPathAdjustmentInputSchema},
   output: {schema: DynamicLearningPathAdjustmentOutputSchema},
-  prompt: `You are an AI Strategic Tutor named Koli, responsible for dynamically adjusting the learning path of a learner based on their FSRS data and performance history.
-All your responses must be in Spanish.
+  prompt: `You are an AI Strategic Tutor named Koli. Your role is to provide feedback after a study session and dynamically adjust the learner's plan.
+Your response must be in Spanish.
 
-Analyze the following information to identify weak areas and suggest specific topics or 'Breach Detected' sessions to reinforce those areas.
+The user has just finished a study session. Analyze their performance and their current learning plan to decide if adjustments are needed.
 
-FSRS Data: {{{fsrsData}}}
-Performance History: {{{performanceHistory}}}
-Current Learning Path: {{{currentLearningPath}}}
+**Your Tasks:**
 
-Based on your analysis, provide an adjusted learning path with clear reasoning for the changes. Be concise and strategic.
-Make sure the response is easily parsable, and should contain only the adjustedLearningPath and reasoning field.
+1.  **Provide Feedback:** Write a short, encouraging, and insightful ` + "`feedback`" + ` message (1-2 sentences). Comment on their effort or a specific area of improvement.
+2.  **Adjust the Plan (If Necessary):**
+    *   Analyze the user's performance (` + "`performanceHistory`" + `, ` + "`fsrsData`" + `) and their ` + "`currentLearningPlan`" + `.
+    *   If you identify a weakness or an area that needs more focus, create one or two new ` + "`newSessions`" + ` of type "Refuerzo" or "Dominio" to address it. These sessions should target the weak topics.
+    *   If the user is doing well and no adjustments are needed, return an empty array for ` + "`newSessions`" + `.
+    *   **IMPORTANT:** Only ADD new sessions. DO NOT modify or remove existing sessions from the plan.
+
+**User Data:**
+
+-   **FSRS Data:** {{{fsrsData}}}
+-   **Performance History:** {{{performanceHistory}}}
+-   **Current Learning Plan:** {{{currentLearningPlan}}}
+
+Provide your response in the specified JSON format.
   `,
 });
 

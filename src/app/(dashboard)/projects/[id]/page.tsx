@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,6 +11,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Dialog,
   DialogContent,
@@ -32,7 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2 } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,15 +51,11 @@ const projectIcons: { [key: string]: React.ElementType } = {
   Palette,
 };
 
-const mockSessions = [
-    { day: "Día 1", type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Completed" },
-    { day: "Día 2", type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Continue" },
-    { day: "Día 3", type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
-]
 
 function ProjectDetails() {
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const slug = params.id as string;
   const { projects, updateProjectIcon, updateProjectDetails } = useProjects();
@@ -68,6 +65,19 @@ function ProjectDetails() {
   const [isEditing, setIsEditing] = useState(false);
   const [editableTitle, setEditableTitle] = useState(project?.title || "");
   const [editableDescription, setEditableDescription] = useState(project?.description || "");
+  const [showUpdateAlert, setShowUpdateAlert] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('planUpdated') === 'true') {
+        setShowUpdateAlert(true);
+        const timer = setTimeout(() => {
+            setShowUpdateAlert(false);
+            // Clean up URL
+            router.replace(`/projects/${slug}`, { scroll: false });
+        }, 5000);
+        return () => clearTimeout(timer);
+    }
+  }, [searchParams, router, slug]);
 
   if (!project) {
     return (
@@ -98,7 +108,7 @@ function ProjectDetails() {
           case 'Continue':
               return <Button size="sm">Continuar</Button>
           case 'Locked':
-              return <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4"/> Desbloquease en 1 día</div>
+              return <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4"/> Bloqueada</div>
           default:
               return null;
       }
@@ -112,6 +122,8 @@ function ProjectDetails() {
               return <Badge variant="secondary">{type}</Badge>
           case 'Dominio':
               return <Badge variant="destructive">{type}</Badge>
+          case 'Incursión':
+              return <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">{type}</Badge>
           default:
               return <Badge variant="outline">{type}</Badge>;
       }
@@ -120,6 +132,16 @@ function ProjectDetails() {
   return (
     <ScrollArea className="h-full">
     <div className="flex-1 flex flex-col p-6 bg-background">
+      {showUpdateAlert && (
+        <Alert className="mb-6 bg-primary/10 border-primary/20">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertTitle>¡Plan de estudio actualizado!</AlertTitle>
+            <AlertDescription>
+                Koli ha añadido nuevas sesiones a tu plan basándose en tu última sesión.
+            </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-start justify-between mb-6">
           <div className="flex items-start gap-4 flex-1">
             <button onClick={() => setIsIconSelectorOpen(true)} className="p-2 rounded-lg hover:bg-muted transition-colors mt-1">
@@ -245,7 +267,7 @@ function ProjectDetails() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {mockSessions.map(session => (
+                        {project.sessions.map(session => (
                              <TableRow key={session.day}>
                                 <TableCell>{session.day}</TableCell>
                                 <TableCell>{getSessionBadge(session.type)}</TableCell>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 type Atom = {
   question: string;
@@ -13,6 +13,14 @@ type Source = {
     type: string;
 }
 
+type Session = {
+  day: string;
+  type: string;
+  questions: string;
+  duration: string;
+  status: 'Completed' | 'Continue' | 'Locked';
+}
+
 type Project = {
   id: string;
   title: string;
@@ -21,7 +29,7 @@ type Project = {
   icon: string;
   categories: string[];
   atoms: Atom[];
-  sessions?: string;
+  sessions: Session[];
   sources: Source[];
 };
 
@@ -30,6 +38,7 @@ type ProjectContextType = {
   addProject: (project: Project) => void;
   updateProjectIcon: (projectId: string, icon: string) => void;
   updateProjectDetails: (projectId: string, title: string, description: string) => void;
+  addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'day'>[]) => void;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -46,12 +55,11 @@ const initialProjects: Project[] = [
         { question: "¿Qué es la dualidad onda-partícula?", answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas." },
         { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
     ],
-    sessions: `
-        <h3>Sesión de Calibración</h3>
-        <p>Evalúa tu conocimiento base con 20 preguntas de opción múltiple.</p>
-        <h3>Sesión de Refuerzo de Dominio</h3>
-        <p>Combate el olvido con repasos espaciados de los átomos ya aprendidos.</p>
-    `,
+    sessions: [
+        { day: "Día 1", type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Completed" },
+        { day: "Día 2", type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Continue" },
+        { day: "Día 3", type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
+    ],
     sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento"} ]
   },
   {
@@ -65,10 +73,9 @@ const initialProjects: Project[] = [
         { question: "¿Quién fue el primer emperador de Roma?", answer: "César Augusto (nacido como Cayo Octavio)." },
         { question: "¿Qué fueron las Guerras Púnicas?", answer: "Una serie de tres guerras libradas entre Roma y Cartago desde el 264 a.C. hasta el 146 a.C." }
     ],
-    sessions: `
-        <h3>Sesión de Incursión</h3>
-        <p>Comienza a aprender sobre los principales emperadores y las grandes batallas a través de flashcards.</p>
-    `,
+    sessions: [
+        { day: "Día 1", type: "Incursión", questions: "Flashcards", duration: "25 min", status: "Continue" },
+    ],
     sources: [ {name: "The_History_of_Rome.pdf", type: "Documento"} ]
   },
   {
@@ -81,10 +88,9 @@ const initialProjects: Project[] = [
     atoms: [
         { question: "¿Qué es un alcano?", answer: "Un hidrocarburo acíclico saturado, lo que significa que consiste en átomos de hidrógeno y carbono dispuestos en una estructura de árbol en la que todos los enlaces carbono-carbono son simples." },
     ],
-    sessions: `
-        <h3>Sesión de Calibración</h3>
-        <p>Vamos a identificar tu conocimiento sobre los grupos funcionales básicos.</p>
-    `,
+    sessions: [
+        { day: "Día 1", type: "Calibración", questions: "Opción múltiple", duration: "15 min", status: "Continue" },
+    ],
     sources: [ {name: "Organic_Chemistry.pdf", type: "Documento"} ]
   },
 ];
@@ -92,9 +98,19 @@ const initialProjects: Project[] = [
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
 
-  const addProject = (newProject: Project) => {
+  const addProject = (newProject: Omit<Project, 'sessions'> & { sessions: string }) => {
     if (!projects.find(p => p.id === newProject.id)) {
-      setProjects(prevProjects => [...prevProjects, newProject]);
+        const generatedSessions: Session[] = [
+            { day: 'Día 1', type: 'Calibración', questions: 'Flashcards', duration: '20 min', status: 'Continue' },
+            { day: 'Día 2', type: 'Incursión', questions: 'Opción múltiple', duration: '30 min', status: 'Locked' },
+            { day: 'Día 3', type: 'Refuerzo', questions: 'Preguntas abiertas', duration: '25 min', status: 'Locked' },
+        ];
+
+      const projectWithSessions: Project = {
+        ...newProject,
+        sessions: generatedSessions
+      };
+      setProjects(prevProjects => [...prevProjects, projectWithSessions]);
     }
   };
 
@@ -114,8 +130,26 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   }
 
+  const addSessionsToProject = (projectId: string, newSessions: Omit<Session, 'status' | 'day'>[]) => {
+      setProjects(prevProjects => {
+          return prevProjects.map(p => {
+              if (p.id === projectId) {
+                  const existingSessions = p.sessions;
+                  const nextDay = existingSessions.length + 1;
+                  const formattedNewSessions: Session[] = newSessions.map((s, i) => ({
+                      ...s,
+                      day: `Día ${nextDay + i}`,
+                      status: 'Locked',
+                  }));
+                  return { ...p, sessions: [...existingSessions, ...formattedNewSessions] };
+              }
+              return p;
+          });
+      });
+  }
+
   return (
-    <ProjectContext.Provider value={{ projects, addProject, updateProjectIcon, updateProjectDetails }}>
+    <ProjectContext.Provider value={{ projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject }}>
       {children}
     </ProjectContext.Provider>
   );
