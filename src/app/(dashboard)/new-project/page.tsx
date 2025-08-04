@@ -230,6 +230,7 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                         className="hidden"
                         disabled={isLoading}
                         accept=".pdf,.doc,.docx,.txt,.md"
+                        multiple={true}
                     />
                     <Popover open={isSourceMenuOpen} onOpenChange={setIsSourceMenuOpen}>
                         <PopoverTrigger asChild>
@@ -530,7 +531,7 @@ export default function NewProjectPage() {
   const [isProjectStarted, setIsProjectStarted] = useState(false);
   const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
   const [processingFile, setProcessingFile] = useState<{name: string, content: string} | null>(null);
-  const [projectSourceFile, setProjectSourceFile] = useState<{name: string, content: string} | null>(null);
+  const [projectSourceFiles, setProjectSourceFiles] = useState<{name: string, content: string}[]>([]);
   const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
@@ -545,27 +546,20 @@ export default function NewProjectPage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      const file = event.target.files[0];
-      if (file) {
+      const newFiles = Array.from(event.target.files);
+      if (newFiles.length > 0) {
         setSelectedFiles(prevFiles => {
-            // Replace previous file if atomization failed or project hasn't started
-            if (atomizationError || !isProjectStarted) {
-                return [file];
-            }
-            // Otherwise, add to the list
-            return [...prevFiles, file];
+          if (atomizationError) {
+            return newFiles;
+          }
+          return [...prevFiles, ...newFiles];
         });
-
-        fileToDataUri(file).then(dataUri => {
-            setProcessingFile({name: file.name, content: dataUri });
-        })
         
         if (atomizationError) {
-            setAtomizationError(null);
-            // Reset state to allow a new attempt
-            setIsProjectStarted(false); 
-            setMessages([]); 
-            setAtomsResult(null);
+          setAtomizationError(null);
+          setIsProjectStarted(false); 
+          setMessages([]); 
+          setAtomsResult(null);
         }
       }
     }
@@ -578,12 +572,10 @@ export default function NewProjectPage() {
     try {
         const content = await extractContentFromUrl(url);
         if (content) {
-            const dataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(content)))}`;
             const urlFileName = url.split('/').pop()?.split('?')[0] || 'imported-from-url';
             const file = new File([content], urlFileName, { type: "text/plain" });
             
-            setSelectedFiles([file]);
-            setProcessingFile({name: file.name, content: dataUri });
+            setSelectedFiles(prevFiles => [...prevFiles, file]);
 
             toast({ title: "¡Contenido importado!", description: `Se ha extraído el contenido de la URL.` });
         } else {
@@ -599,9 +591,6 @@ export default function NewProjectPage() {
 
   const removeFile = (fileName: string) => {
     setSelectedFiles(prevFiles => prevFiles.filter(file => file.name !== fileName));
-    if (processingFile && processingFile.name === fileName) {
-        setProcessingFile(null);
-    }
   };
   
   const getFileIcon = (fileType: string) => {
@@ -611,7 +600,7 @@ export default function NewProjectPage() {
   const processDataCollection = useCallback((userInput: string | null = null, initialData: Partial<ProjectData> = {}) => {
     let newCollectedData = { ...collectedData, ...initialData };
 
-    if (userInput && dataCollectionStep !== 'start') {
+    if (userInput && dataCollectionStep !== 'start' && dataCollectionStep !== 'done') {
         if (dataCollectionStep === 'name') newCollectedData.userName = userInput;
         else if (dataCollectionStep === 'objective') newCollectedData.userObjective = userInput;
         else if (dataCollectionStep === 'deadline') newCollectedData.deadline = userInput;
@@ -623,21 +612,39 @@ export default function NewProjectPage() {
     let koliResponse = '';
     let nextStep = dataCollectionStep;
 
-    if (!newCollectedData.userName) {
-        koliResponse = '¡Hola! Soy Koli. Para empezar, ¿cómo te llamas?';
-        nextStep = 'name';
-    } else if (!newCollectedData.userObjective) {
-        koliResponse = `¡Genial, ${newCollectedData.userName}! ¿Cuál es tu principal objetivo de aprendizaje con este material?`;
-        nextStep = 'objective';
-    } else if (!newCollectedData.deadline) {
-        koliResponse = `Entendido. ¿Tienes alguna fecha límite para esto? Si no, puedes decir 'No'.`;
-        nextStep = 'deadline';
-    } else if (!newCollectedData.masteryLevel) {
-        koliResponse = `Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema? (Principiante, Intermedio, Avanzado)`;
-        nextStep = 'masteryLevel';
+    if (dataCollectionStep === 'start') {
+        if (!newCollectedData.userName) {
+            koliResponse = '¡Hola! Soy Koli. Para empezar, ¿cómo te llamas?';
+            nextStep = 'name';
+        } else if (!newCollectedData.userObjective) {
+            koliResponse = `¡Genial, ${newCollectedData.userName}! ¿Cuál es tu principal objetivo de aprendizaje con este material?`;
+            nextStep = 'objective';
+        } else if (!newCollectedData.deadline) {
+            koliResponse = `Entendido. ¿Tienes alguna fecha límite para esto? Si no, puedes decir 'No'.`;
+            nextStep = 'deadline';
+        } else if (!newCollectedData.masteryLevel) {
+            koliResponse = `Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema? (Principiante, Intermedio, Avanzado)`;
+            nextStep = 'masteryLevel';
+        } else {
+            nextStep = 'done';
+        }
     } else {
-        koliResponse = '¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...';
-        nextStep = 'done';
+        if (!newCollectedData.userName) {
+            koliResponse = '¡Hola! Soy Koli. Para empezar, ¿cómo te llamas?';
+            nextStep = 'name';
+        } else if (!newCollectedData.userObjective) {
+            koliResponse = `¡Genial, ${newCollectedData.userName}! ¿Cuál es tu principal objetivo de aprendizaje con este material?`;
+            nextStep = 'objective';
+        } else if (!newCollectedData.deadline) {
+            koliResponse = `Entendido. ¿Tienes alguna fecha límite para esto? Si no, puedes decir 'No'.`;
+            nextStep = 'deadline';
+        } else if (!newCollectedData.masteryLevel) {
+            koliResponse = `Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema? (Principiante, Intermedio, Avanzado)`;
+            nextStep = 'masteryLevel';
+        } else {
+            koliResponse = '¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...';
+            nextStep = 'done';
+        }
     }
 
     setDataCollectionStep(nextStep);
@@ -650,6 +657,62 @@ export default function NewProjectPage() {
         setProjectData(newCollectedData as ProjectData);
     }
   }, [dataCollectionStep, collectedData, addMessage]);
+
+
+  const processFiles = async (filesToProcess: File[], userObjective: string) => {
+    setIsLoading(true);
+    setCurrentStep('atomizing');
+
+    // For the UI, we just show the name of the first file being processed
+    setProcessingFile({ name: filesToProcess[0].name, content: '' });
+
+    try {
+        const dataUris = await Promise.all(filesToProcess.map(fileToDataUri));
+        const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: dataUris[i] }));
+        setProjectSourceFiles(prev => [...prev, ...newSourceFiles]);
+
+        // We process one file at a time to show progress, but we could do them in parallel
+        let combinedResponse: GenerateAtomsOutput = { initialResponse: '', atoms: atomsResult?.atoms || [] };
+
+        for (const sourceFile of newSourceFiles) {
+            const response = await generateAtoms({
+                studyMaterial: sourceFile.content,
+                userObjective: userObjective
+            });
+            combinedResponse.atoms.push(...response.atoms);
+            // Use the last initialResponse, or craft a new one
+            combinedResponse.initialResponse = response.initialResponse; 
+        }
+
+        setAtomsResult(combinedResponse);
+        
+        if (!isProjectStarted) {
+             const initialData: Partial<ProjectData> = {};
+            if (userObjective) initialData.userObjective = userObjective;
+            if (attachedData.objective) initialData.userObjective = attachedData.objective;
+            if (attachedData.deadline) initialData.deadline = attachedData.deadline.text;
+            if (attachedData.masteryLevel) initialData.masteryLevel = attachedData.masteryLevel;
+            processDataCollection(null, initialData);
+            setIsProjectStarted(true);
+        } else {
+            addMessage({
+                role: 'koli',
+                content: `¡He procesado el nuevo material! Se añadieron ${combinedResponse.atoms.length - (atomsResult?.atoms.length || 0)} nuevos átomos. ¿Quieres revisarlos o continuamos?`,
+                actionId: 'atomActions'
+            });
+        }
+        
+    } catch (error) {
+        console.error("Error processing file:", error);
+        const errorMessage = "Lo siento, ha ocurrido un error al procesar tu documento. Esto puede deberse a un formato incompatible o a un problema con el contenido. Por favor, intenta con otro archivo.";
+        addMessage({ role: 'koli', content: errorMessage });
+        setAtomizationError(errorMessage);
+        setProcessingFile(null); // Clear processing file on error
+    } finally {
+        setIsLoading(false);
+        setProcessingFile(null); // Clear processing file after completion
+    }
+  };
 
 
   const handleSendMessage = async () => {
@@ -668,69 +731,33 @@ export default function NewProjectPage() {
 
     if (!fullUserInput && selectedFiles.length === 0) return;
     
-    if (!isProjectStarted) {
-        if (!processingFile) {
-            toast({
-                title: "Falta un archivo",
-                description: "Por favor, sube un archivo para empezar.",
-                variant: "destructive"
-            });
-            return;
+    const userMessage: Message = { role: 'user', content: fullUserInput || `Procesar archivo(s): ${selectedFiles.map(f => f.name).join(', ')}` };
+    addMessage(userMessage);
+    setInput('');
+    setAttachedData({});
+    
+    const filesToProcess = [...selectedFiles];
+    setSelectedFiles([]); // Clear the queue immediately
+
+    if (filesToProcess.length > 0) {
+        if (!isProjectStarted) {
+            if (!fullUserInput) {
+                toast({
+                    title: "Falta un objetivo",
+                    description: "Por favor, describe tu objetivo de aprendizaje.",
+                    variant: "destructive"
+                });
+                // Put files back in queue if objective is missing
+                setSelectedFiles(filesToProcess);
+                // Remove the user message we added optimistically
+                setMessages(prev => prev.slice(0, -1));
+                return;
+            }
         }
+        await processFiles(filesToProcess, fullUserInput || collectedData.userObjective || "Aprender el contenido del documento.");
 
-        if(!fullUserInput){
-             toast({
-                title: "Falta un objetivo",
-                description: "Por favor, describe tu objetivo de aprendizaje.",
-                variant: "destructive"
-            });
-            return;
-        }
-        
-        setIsProjectStarted(true);
-        setIsLoading(true);
-        
-        const userMessage: Message = { role: 'user', content: fullUserInput };
-        addMessage(userMessage);
-        
-        setInput('');
-        setSelectedFiles([]);
-        setAttachedData({});
-
-        const currentProcessingFile = processingFile;
-        setProjectSourceFile(currentProcessingFile);
-        
-        const initialData: Partial<ProjectData> = {};
-        if (userInput) initialData.userObjective = userInput;
-        if (attachedData.objective) initialData.userObjective = attachedData.objective;
-        if (attachedData.deadline) initialData.deadline = attachedData.deadline.text;
-        if (attachedData.masteryLevel) initialData.masteryLevel = attachedData.masteryLevel;
-        
-        processDataCollection(null, initialData);
-
-        try {
-            const response = await generateAtoms({ 
-                studyMaterial: currentProcessingFile.content,
-                userObjective: fullUserInput
-            });
-            setAtomsResult(response);
-            
-        } catch (error) {
-            console.error("Error processing file:", error);
-            const errorMessage = "Lo siento, ha ocurrido un error al procesar tu documento. Esto puede deberse a un formato incompatible o a un problema con el contenido. Por favor, intenta con otro archivo.";
-            addMessage({ role: 'koli', content: errorMessage });
-            setAtomizationError(errorMessage);
-            setProcessingFile(null);
-        } finally {
-            setIsLoading(false);
-        }
-
-    } else {
-        // Continue data collection conversation
-        const userMessage: Message = { role: 'user', content: userInput };
-        addMessage(userMessage);
-        setInput('');
-        setAttachedData({});
+    } else if (isProjectStarted) {
+        // Continue data collection conversation if no files are attached
         processDataCollection(userInput);
     }
   }
@@ -785,7 +812,7 @@ export default function NewProjectPage() {
   };
 
     const handleFinalizeProject = ({title, description}: {title: string, description: string}) => {
-      if (!atomsResult || !learningPlan || !projectSourceFile) {
+      if (!atomsResult || !learningPlan || projectSourceFiles.length === 0) {
           toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
           setIsProjectSetupOpen(false);
           return;
@@ -810,7 +837,7 @@ export default function NewProjectPage() {
           icon: "Book", 
           atoms: atomsResult.atoms,
           sessions: learningPlan.fullLearningPlanMarkdown,
-          sources: [{name: projectSourceFile.name, type: "Documento"}]
+          sources: projectSourceFiles.map(f => ({ name: f.name, type: "Documento" }))
       };
       addProject(newProject);
       toast({
@@ -910,11 +937,22 @@ export default function NewProjectPage() {
             </div>
         )
     }
+    // Show atomization progress if it's currently happening
+    if (isLoading && processingFile) {
+        return <AtomizationProgress 
+                    atomsResult={null} 
+                    fileName={processingFile.name}
+                    isLoading={true}
+                />;
+    }
+
     switch (currentStep) {
         case 'atomizing':
+             // After atomization, show the chat, which will have the buttons to proceed.
+             // We can maybe show a summary here later.
             return <AtomizationProgress 
                         atomsResult={atomsResult} 
-                        fileName={projectSourceFile?.name ?? ""}
+                        fileName={projectSourceFiles[projectSourceFiles.length - 1]?.name ?? ""}
                         isLoading={isLoading && !atomsResult}
                     />;
         case 'review':
@@ -938,7 +976,7 @@ export default function NewProjectPage() {
         default:
              return <AtomizationProgress 
                         atomsResult={atomsResult} 
-                        fileName={projectSourceFile?.name ?? ""}
+                        fileName={projectSourceFiles[projectSourceFiles.length - 1]?.name ?? ""}
                         isLoading={isLoading && !atomsResult}
                     />;
     }
