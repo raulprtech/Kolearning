@@ -18,6 +18,7 @@ const CalibratePlanInputSchema = z.object({
   userName: z.string().optional().describe("The learner's name."),
   userObjective: z.string().describe("The user's learning objective."),
   deadline: z.string().optional().describe('The deadline the user has for their objective.'),
+  masteryLevel: z.string().optional().describe('The self-reported mastery level of the user on the subject.'),
   learningMaterialSummary: z
     .string()
     .describe(
@@ -61,6 +62,7 @@ A learner has provided their learning material, their objective, and some person
 - Name: {{{userName}}}
 - Learning Objective: {{{userObjective}}}
 - Deadline: {{{deadline}}}
+- Stated Mastery Level: {{{masteryLevel}}}
 
 **Learning Material Summary:** 
 {{{learningMaterialSummary}}}

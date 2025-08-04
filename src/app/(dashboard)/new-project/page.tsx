@@ -26,7 +26,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  Target
+  Target,
+  BarChart3
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
@@ -71,7 +72,18 @@ type ProjectData = {
     userName: string;
     userObjective: string;
     deadline: string;
+    masteryLevel: string;
 }
+
+type AttachedData = {
+    objective?: string;
+    deadline?: {
+        date: Date;
+        text: string;
+    };
+    masteryLevel?: string;
+}
+
 
 const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -82,9 +94,8 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, isProjectStarted, handleSuggestionClick }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, isProjectStarted, attachedData, setAttachedData }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
-    const [date, setDate] = useState<Date | undefined>(undefined);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -92,20 +103,6 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
         }
     }, [messages]);
 
-    const handleDateSelect = (selectedDate: Date | undefined) => {
-        setDate(selectedDate);
-        if (selectedDate) {
-            const formattedDate = format(selectedDate, "PPP", { locale: es });
-            handleSendMessage(`Mi fecha límite es el ${formattedDate}`);
-        }
-    }
-
-    const objectiveOptions = [
-        "Prepararme para un examen",
-        "Entender los conceptos clave",
-        "Aplicar este conocimiento en un proyecto",
-        "Aprender algo nuevo por curiosidad",
-    ];
     
     return (
         <div className="flex flex-col h-full bg-card/30 border-l border-border overflow-hidden">
@@ -136,127 +133,193 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                 )}
             </div>
             <div className="p-4 border-t border-border">
-                 {selectedFiles.length > 0 && (
-                    <div className="mb-4 grid grid-cols-2 gap-2">
-                    {selectedFiles.map((file: File) => (
-                        <div key={file.name} className="bg-card/80 rounded-lg p-2 flex flex-col gap-1 relative text-xs">
-                            <div className="flex items-center gap-2">
-                                {getFileIcon(file.type)}
-                                <span className="text-foreground truncate">{file.name}</span>
-                            </div>
-                            <p className="text-muted-foreground ml-7">{file.type.split('/')[1] || 'Archivo'}</p>
-                            <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6" onClick={() => removeFile(file.name)}>
-                                <X className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    ))}
-                    </div>
-                )}
-                <div className="relative">
-                    <Input
-                        placeholder="Pregúntale a Koli..."
-                        className="w-full h-12 rounded-full pl-12 pr-14 bg-background border-border"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                        disabled={isLoading}
-                    />
-                    <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleUploadClick}
-                            className="hidden"
-                            disabled={isLoading}
-                            accept=".pdf,.doc,.docx,.txt,.md"
-                        />
-                         <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" disabled={isLoading}>
-                                    <Plus className="h-5 w-5" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 mb-2">
-                                <div className="grid gap-4">
-                                <div className="space-y-2">
-                                    <h4 className="font-medium leading-none">Añadir Fuente</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                    Selecciona el origen de tu material de estudio.
-                                    </p>
-                                </div>
-                                <div className="grid gap-2">
-                                    <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
-                                    >
-                                        <Paperclip className="h-5 w-5 text-primary" />
-                                        <div>
-                                            <p className="font-semibold">Subir archivos</p>
-                                            <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={onImportFromUrl}
-                                        className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
-                                    >
-                                        <LinkIcon className="h-5 w-5 text-primary" />
-                                        <div>
-                                            <p className="font-semibold">Importar desde enlace</p>
-                                            <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
-                                        </div>
-                                    </button>
-                                </div>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <Button variant="ghost" size="icon" onClick={() => handleSendMessage()} disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}>
-                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                    </Button>
-                    </div>
-                </div>
-                 {isProjectStarted && (
-                    <div className="mt-4 flex items-center justify-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="rounded-full">
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    Agregar Deadline
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 mb-2" align="center">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    onSelect={handleDateSelect}
-                                    initialFocus
-                                    locale={es}
-                                />
-                            </PopoverContent>
-                        </Popover>
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="rounded-full">
-                                    <Target className="mr-2 h-4 w-4" />
-                                    Agregar objetivo
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="center" className="mb-2">
-                                {objectiveOptions.map((option, index) => (
-                                    <DropdownMenuItem key={index} onClick={() => handleSendMessage(option)}>
-                                        {option}
-                                    </DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                )}
+                <InputBar 
+                    input={input}
+                    setInput={setInput}
+                    handleSendMessage={handleSendMessage}
+                    isLoading={isLoading}
+                    selectedFiles={selectedFiles}
+                    removeFile={removeFile}
+                    handleFileChange={handleFileChange}
+                    fileInputRef={fileInputRef}
+                    getFileIcon={getFileIcon}
+                    onImportFromUrl={() => onImportFromUrl(true)}
+                    attachedData={attachedData}
+                    setAttachedData={setAttachedData}
+                />
             </div>
         </div>
     );
 }
+
+const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, attachedData, setAttachedData }: any) => {
+
+    const handleDateSelect = (selectedDate: Date | undefined) => {
+        if (selectedDate) {
+            const formattedDate = format(selectedDate, "PPP", { locale: es });
+            setAttachedData((prev: AttachedData) => ({...prev, deadline: { date: selectedDate, text: `Mi fecha límite es el ${formattedDate}`}}))
+        }
+    }
+
+    const handleObjectiveSelect = (objective: string) => {
+        setAttachedData((prev: AttachedData) => ({...prev, objective: `Mi objetivo es ${objective}`}));
+    }
+
+    const handleMasterySelect = (level: string) => {
+        setAttachedData((prev: AttachedData) => ({...prev, masteryLevel: `Mi nivel de dominio es ${level}`}));
+    }
+
+    const removeAttachedData = (key: keyof AttachedData) => {
+        setAttachedData((prev: AttachedData) => {
+            const newDaTa = {...prev};
+            delete newDaTa[key];
+            return newDaTa;
+        })
+    }
+    
+    const objectiveOptions = [
+        "Prepararme para un examen",
+        "Entender los conceptos clave",
+        "Aplicar este conocimiento en un proyecto",
+        "Aprender algo nuevo por curiosidad",
+    ];
+
+    const masteryOptions = [ "Principiante", "Intermedio", "Avanzado"];
+
+    const getAttachedDataPill = (key: keyof AttachedData, icon: React.ReactNode, text: string) => (
+         <div className="bg-primary/20 text-primary-foreground text-xs rounded-full px-3 py-1 flex items-center gap-2">
+            {icon}
+            <span className="truncate max-w-[200px]">{text}</span>
+            <button onClick={() => removeAttachedData(key)}><X className="h-3 w-3"/></button>
+        </div>
+    )
+
+    return (
+         <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2">
+                 {selectedFiles.map((file: File) => (
+                    <div key={file.name} className="bg-primary/20 text-primary-foreground text-xs rounded-full px-3 py-1 flex items-center gap-2">
+                        {getFileIcon(file.type)}
+                        <span className="truncate max-w-[200px]">{file.name}</span>
+                        <button onClick={() => removeFile(file.name)}><X className="h-3 w-3"/></button>
+                    </div>
+                ))}
+                {attachedData.objective && getAttachedDataPill('objective', <Target className="h-3 w-3" />, attachedData.objective)}
+                {attachedData.deadline && getAttachedDataPill('deadline', <CalendarIcon className="h-3 w-3" />, attachedData.deadline.text)}
+                {attachedData.masteryLevel && getAttachedDataPill('masteryLevel', <BarChart3 className="h-3 w-3" />, attachedData.masteryLevel)}
+            </div>
+            <div className="relative">
+                <Input
+                    placeholder="Describe tu objetivo de aprendizaje y sube un archivo para empezar..."
+                    className="w-full h-12 rounded-full pl-12 pr-14 bg-background border-border"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                    disabled={isLoading}
+                />
+                <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        disabled={isLoading}
+                        accept=".pdf,.doc,.docx,.txt,.md"
+                    />
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" disabled={isLoading}>
+                                <Plus className="h-5 w-5" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 mb-2">
+                            <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <h4 className="font-medium leading-none">Añadir Fuente y Contexto</h4>
+                                <p className="text-sm text-muted-foreground">
+                                    Completa tu solicitud con más detalles.
+                                </p>
+                            </div>
+                             <div className="grid gap-2">
+                                <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                    <Paperclip className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Subir archivos</p>
+                                        <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
+                                    </div>
+                                </button>
+                                <button onClick={onImportFromUrl} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                    <LinkIcon className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Importar desde enlace</p>
+                                        <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
+                                    </div>
+                                </button>
+                                 <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button className="flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full">
+                                            <Target className="h-5 w-5 text-primary" />
+                                            <div>
+                                                <p className="font-semibold">Agregar objetivo</p>
+                                                <p className="text-sm text-muted-foreground">¿Qué quieres lograr?</p>
+                                            </div>
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-72">
+                                        {objectiveOptions.map((option, index) => (
+                                            <DropdownMenuItem key={index} onClick={() => handleObjectiveSelect(option)}>
+                                                {option}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full">
+                                            <CalendarIcon className="h-5 w-5 text-primary" />
+                                            <div>
+                                                <p className="font-semibold">Agregar Deadline</p>
+                                                <p className="text-sm text-muted-foreground">¿Para cuándo lo necesitas?</p>
+                                            </div>
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 mb-2" align="start">
+                                        <Calendar mode="single" onSelect={handleDateSelect} initialFocus locale={es} />
+                                    </PopoverContent>
+                                </Popover>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button className="flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full">
+                                            <BarChart3 className="h-5 w-5 text-primary" />
+                                            <div>
+                                                <p className="font-semibold">Definir mi nivel</p>
+                                                <p className="text-sm text-muted-foreground">¿Cuánto sabes del tema?</p>
+                                            </div>
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-72">
+                                        {masteryOptions.map((option, index) => (
+                                            <DropdownMenuItem key={index} onClick={() => handleMasterySelect(option)}>
+                                                {option}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <Button variant="ghost" size="icon" onClick={() => handleSendMessage()} disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}>
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                </Button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 
 const AtomizationProgress = ({ atomsResult, fileName, isLoading }: { atomsResult: GenerateAtomsOutput | null, fileName: string, isLoading: boolean }) => {
     const steps = [
@@ -450,11 +513,12 @@ export default function NewProjectPage() {
   const { addProject } = useProjects();
   const { toast } = useToast();
 
-  const [projectData, setProjectData] = useState<ProjectData>({ userName: '', userObjective: '', deadline: '' });
+  const [projectData, setProjectData] = useState<ProjectData>({ userName: '', userObjective: '', deadline: '', masteryLevel: '' });
   const [collectedData, setCollectedData] = useState<Partial<ProjectData>>({});
   const [dataCollectionStep, setDataCollectionStep] = useState<'start' | 'name' | 'objective' | 'deadline' | 'done'>('start');
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [attachedData, setAttachedData] = useState<AttachedData>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -519,7 +583,7 @@ export default function NewProjectPage() {
   };
   
   const getFileIcon = (fileType: string) => {
-    return <FileText className="h-6 w-6 text-primary" />;
+    return <FileText className="h-3 w-3" />;
   };
   
   const processDataCollection = useCallback((userInput: string) => {
@@ -530,7 +594,7 @@ export default function NewProjectPage() {
     if (dataCollectionStep === 'start') {
         koliResponse = '¡Hola! Soy Koli. Para empezar, ¿cómo te llamas?';
         nextStep = 'name';
-        newCollectedData.userObjective = userInput;
+        if(!newCollectedData.userObjective) newCollectedData.userObjective = userInput;
     } else if (dataCollectionStep === 'name') {
         newCollectedData.userName = userInput;
         if (!newCollectedData.userObjective) {
@@ -564,15 +628,36 @@ export default function NewProjectPage() {
   }, [dataCollectionStep, collectedData, addMessage]);
 
 
-  const handleSendMessage = async (predefinedMessage?: string) => {
-    const userInput = predefinedMessage || input.trim();
-    if (!userInput && selectedFiles.length === 0) return;
+  const handleSendMessage = async () => {
+    const userInput = input.trim();
+    let fullUserInput = userInput;
 
+    const attachedContent = [
+        attachedData.objective,
+        attachedData.deadline?.text,
+        attachedData.masteryLevel
+    ].filter(Boolean).join('. ');
+
+    if (attachedContent) {
+        fullUserInput = `${fullUserInput} (${attachedContent})`;
+    }
+
+    if (!fullUserInput && selectedFiles.length === 0) return;
+    
     if (!isProjectStarted) {
-        if (!userInput || !processingFile) {
+        if (!processingFile) {
             toast({
-                title: "Faltan datos",
-                description: "Por favor, describe tu objetivo y sube un archivo para empezar.",
+                title: "Falta un archivo",
+                description: "Por favor, sube un archivo para empezar.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        if(!fullUserInput){
+             toast({
+                title: "Falta un objetivo",
+                description: "Por favor, describe tu objetivo de aprendizaje.",
                 variant: "destructive"
             });
             return;
@@ -581,18 +666,26 @@ export default function NewProjectPage() {
         setIsProjectStarted(true);
         setIsLoading(true);
         setInput('');
+        setAttachedData({});
 
-        const userMessage: Message = { role: 'user', content: userInput };
+        const userMessage: Message = { role: 'user', content: fullUserInput };
         addMessage(userMessage);
         
         const currentProcessingFile = processingFile;
         setProjectSourceFile(currentProcessingFile);
-        processDataCollection(userInput);
+        
+        let initialData = { ...collectedData };
+        if (attachedData.objective) initialData.userObjective = attachedData.objective;
+        if (attachedData.deadline) initialData.deadline = attachedData.deadline.text;
+        if (attachedData.masteryLevel) initialData.masteryLevel = attachedData.masteryLevel;
+        setCollectedData(initialData);
+
+        processDataCollection(fullUserInput);
 
         try {
             const response = await generateAtoms({ 
                 studyMaterial: currentProcessingFile.content,
-                userObjective: userInput
+                userObjective: fullUserInput
             });
             setAtomsResult(response);
             
@@ -609,22 +702,13 @@ export default function NewProjectPage() {
 
     } else {
         // Continue data collection conversation
-        const userMessage: Message = { role: 'user', content: userInput };
+        const userMessage: Message = { role: 'user', content: fullUserInput };
         addMessage(userMessage);
         setInput('');
-        processDataCollection(userInput);
+        setAttachedData({});
+        processDataCollection(fullUserInput);
     }
   }
-
-  const handleSuggestionClick = (suggestion: 'Agregar Deadline' | 'Agregar objetivo') => {
-    let koliResponse = '';
-    if (suggestion === 'Agregar Deadline') {
-        koliResponse = 'Claro, ¿cuál es tu fecha límite?';
-    } else if (suggestion === 'Agregar objetivo') {
-        koliResponse = 'Por supuesto, ¿cuál es tu principal objetivo de aprendizaje?';
-    }
-    addMessage({ role: 'koli', content: koliResponse });
-  };
 
   useEffect(() => {
     if (dataCollectionStep === 'done' && atomsResult) {
@@ -645,10 +729,15 @@ export default function NewProjectPage() {
 
     try {
         const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
-        const plan = await calibratePlanFromQuestionnaire({
-            ...projectData,
+        const finalProjectData = {
+            userName: collectedData.userName || '',
+            userObjective: collectedData.userObjective || '',
+            deadline: collectedData.deadline || 'No especificada',
+            masteryLevel: collectedData.masteryLevel || 'No especificado',
             learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
-        });
+        }
+
+        const plan = await calibratePlanFromQuestionnaire(finalProjectData);
 
         setLearningPlan(plan);
         setCurrentStep('plan');
@@ -758,85 +847,20 @@ export default function NewProjectPage() {
             </div>
     
             <div className="w-full max-w-2xl mt-auto p-4">
-              {selectedFiles.length > 0 && (
-                <div className="mb-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {selectedFiles.map(file => (
-                    <div key={file.name} className="bg-card/80 rounded-lg p-3 flex flex-col gap-2 relative">
-                        <div className="flex items-center gap-2">
-                            {getFileIcon(file.type)}
-                            <span className="text-xs text-foreground truncate">{file.name}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{file.type.split('/')[1] || 'Archivo'}</p>
-                        <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => removeFile(file.name)}>
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="relative">
-                 <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.txt,.md"
-                 />
-                <Input
-                  placeholder="Describe tu objetivo de aprendizaje y sube un archivo para empezar..."
-                  className="w-full h-12 rounded-full pl-12 pr-14 bg-card border-border"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (() => handleSendMessage())}
-                  disabled={isLoading}
+               <InputBar 
+                    input={input}
+                    setInput={setInput}
+                    handleSendMessage={handleSendMessage}
+                    isLoading={isLoading}
+                    selectedFiles={selectedFiles}
+                    removeFile={removeFile}
+                    handleFileChange={handleFileChange}
+                    fileInputRef={fileInputRef}
+                    getFileIcon={getFileIcon}
+                    onImportFromUrl={() => setIsUrlImportOpen(true)}
+                    attachedData={attachedData}
+                    setAttachedData={setAttachedData}
                 />
-                <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <Plus className="h-5 w-5" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 mb-2">
-                            <div className="grid gap-4">
-                            <div className="space-y-2">
-                                <h4 className="font-medium leading-none">Añadir Fuente</h4>
-                                <p className="text-sm text-muted-foreground">
-                                Selecciona el origen de tu material de estudio.
-                                </p>
-                            </div>
-                            <div className="grid gap-2">
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
-                                >
-                                    <Paperclip className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold">Subir archivos</p>
-                                        <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
-                                    </div>
-                                </button>
-                                <button
-                                    onClick={() => setIsUrlImportOpen(true)}
-                                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
-                                >
-                                    <LinkIcon className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold">Importar desde enlace</p>
-                                        <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
-                                    </div>
-                                </button>
-                            </div>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <Button variant="ghost" size="icon" onClick={() => handleSendMessage()} disabled={isLoading || !input.trim() || selectedFiles.length === 0}>
-                      {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                  </Button>
-                </div>
-              </div>
             </div>
           </main>
         </div>
@@ -911,17 +935,17 @@ export default function NewProjectPage() {
                 isLoading={isLoading}
                 selectedFiles={selectedFiles}
                 removeFile={removeFile}
-                handleUploadClick={handleFileChange}
+                handleFileChange={handleFileChange}
                 fileInputRef={fileInputRef}
                 getFileIcon={getFileIcon}
                 onReviewAtoms={handleReviewAtoms}
                 onGeneratePlan={handleGeneratePlan}
                 onImportFromUrl={() => setIsUrlImportOpen(true)}
                 isProjectStarted={isProjectStarted}
-                handleSuggestionClick={handleSuggestionClick}
+                attachedData={attachedData}
+                setAttachedData={setAttachedData}
             />
         </main>
     </div>
   )
 }
-
