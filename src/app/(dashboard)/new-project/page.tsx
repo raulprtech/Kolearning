@@ -41,6 +41,8 @@ import { useProjects } from "@/contexts/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { UrlImportDialog } from "@/components/ui/url-import-dialog";
+import { extractContentFromUrl } from "@/lib/actions";
 
 
 const initialSteps = [
@@ -73,7 +75,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -156,9 +158,9 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                             <Paperclip className="mr-2 h-4 w-4" />
                             <span>Subir archivos</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                            <LinkIcon className="mr-2 h-4 w-4" />
-                            <span>Importar desde enlace</span>
+                            <DropdownMenuItem onClick={onImportFromUrl}>
+                                <LinkIcon className="mr-2 h-4 w-4" />
+                                <span>Importar desde enlace</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                             <Youtube className="mr-2 h-4 w-4" />
@@ -381,6 +383,8 @@ export default function NewProjectPage() {
   const [projectSourceFile, setProjectSourceFile] = useState<{name: string, content: string} | null>(null);
   const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
+  const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -395,6 +399,33 @@ export default function NewProjectPage() {
       }
     }
   };
+  
+  const handleImportFromUrl = async (url: string) => {
+    setIsUrlImportOpen(false);
+    setIsLoading(true);
+    toast({ title: "Importando desde URL...", description: "Koli está extrayendo el contenido." });
+    try {
+        const content = await extractContentFromUrl(url);
+        if (content) {
+            const dataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(content)))}`;
+            const urlFileName = url.split('/').pop() || 'imported-from-url';
+            const file = new File([content], urlFileName, { type: "text/plain" });
+            
+            setSelectedFiles([file]);
+            setProcessingFile({name: file.name, content: dataUri });
+
+            toast({ title: "¡Contenido importado!", description: `Se ha extraído el contenido de la URL.` });
+        } else {
+            toast({ title: "Error", description: "No se pudo extraer contenido de la URL.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error importing from URL:", error);
+        toast({ title: "Error", description: "Ocurrió un error al importar desde la URL.", variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
 
   const removeFile = (fileName: string) => {
     setSelectedFiles(prevFiles => prevFiles.filter(file => file.name !== fileName));
@@ -534,6 +565,12 @@ export default function NewProjectPage() {
   if (!isProjectStarted) {
     return (
         <div className="flex flex-col flex-1">
+          <UrlImportDialog 
+                isOpen={isUrlImportOpen}
+                onClose={() => setIsUrlImportOpen(false)}
+                onImport={handleImportFromUrl}
+                isLoading={isLoading}
+            />
           <main className="flex-1 flex flex-col items-center p-4">
             <div className="flex-1 flex flex-col items-center justify-center">
                 <div className="flex flex-col items-center text-center max-w-md">
@@ -610,7 +647,7 @@ export default function NewProjectPage() {
                           <Paperclip className="mr-2 h-4 w-4" />
                           Subir archivos
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setIsUrlImportOpen(true)}>
                           <LinkIcon className="mr-2 h-4 w-4" />
                           Importar desde enlace
                         </DropdownMenuItem>
@@ -671,6 +708,12 @@ export default function NewProjectPage() {
 
   return (
     <div className="flex flex-1 h-[calc(100vh-theme(space.16))] overflow-hidden">
+        <UrlImportDialog 
+                isOpen={isUrlImportOpen}
+                onClose={() => setIsUrlImportOpen(false)}
+                onImport={handleImportFromUrl}
+                isLoading={isLoading}
+            />
         <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_450px]">
             <div className="flex flex-col flex-1 h-full overflow-y-auto">
                 {renderContent()}
@@ -688,10 +731,9 @@ export default function NewProjectPage() {
                 getFileIcon={getFileIcon}
                 onReviewAtoms={handleReviewAtoms}
                 onGeneratePlan={handleGeneratePlan}
+                onImportFromUrl={() => setIsUrlImportOpen(true)}
             />
         </main>
     </div>
   )
 }
-
-    
