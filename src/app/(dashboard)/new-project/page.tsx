@@ -86,7 +86,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
     }, [messages]);
     
     return (
-        <div className="flex flex-col h-full bg-card/30 border-l border-border">
+        <div className="flex flex-col h-full bg-card/30 border-l border-border overflow-hidden">
             <div ref={scrollRef} className="flex-1 p-6 space-y-6 overflow-y-auto">
                 {messages.map((msg: Message, index: number) => (
                     <div key={index} className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -853,3 +853,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
