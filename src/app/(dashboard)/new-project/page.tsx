@@ -146,6 +146,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                             onChange={handleUploadClick}
                             className="hidden"
                             disabled={isLoading}
+                            accept=".pdf,.doc,.docx,.txt,.md"
                         />
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -628,6 +629,7 @@ export default function NewProjectPage() {
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
+                    accept=".pdf,.doc,.docx,.txt,.md"
                  />
                 <Input
                   placeholder="Describe tu objetivo de aprendizaje..."
