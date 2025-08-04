@@ -15,7 +15,9 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const CalibratePlanInputSchema = z.object({
+  userName: z.string().optional().describe("The learner's name."),
   userObjective: z.string().describe("The user's learning objective."),
+  deadline: z.string().optional().describe('The deadline the user has for their objective.'),
   learningMaterialSummary: z
     .string()
     .describe(
@@ -53,10 +55,15 @@ const calibratePlanPrompt = ai.definePrompt({
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans.
 Your response must be in Spanish.
 
-A learner has provided their learning material and their objective. Based on the material, create a comprehensive and strategic learning plan.
+A learner has provided their learning material, their objective, and some personal details. Based on all this information, create a comprehensive and strategic learning plan.
 
-User's Learning Objective: {{{userObjective}}}
-Learning Material Summary: {{{learningMaterialSummary}}}
+**Learner's Profile:**
+- Name: {{{userName}}}
+- Learning Objective: {{{userObjective}}}
+- Deadline: {{{deadline}}}
+
+**Learning Material Summary:** 
+{{{learningMaterialSummary}}}
 
 **Kolearning Methodology:**
 

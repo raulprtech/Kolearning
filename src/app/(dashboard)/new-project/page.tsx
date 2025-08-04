@@ -1,17 +1,12 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Plus,
   FileText,
@@ -66,6 +61,12 @@ type Message = {
     actionId?: 'atomActions';
 };
 
+type ProjectData = {
+    userName: string;
+    userObjective: string;
+    deadline: string;
+}
+
 const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -103,7 +104,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                        )}
                     </div>
                 ))}
-                 {isLoading && (
+                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
                     <div className="flex gap-4">
                         <KoliAvatar className="h-10 w-10 flex-shrink-0" />
                         <div className="p-4 rounded-xl max-w-lg bg-card/80 flex items-center">
@@ -147,23 +148,45 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                             disabled={isLoading}
                             accept=".pdf,.doc,.docx,.txt,.md"
                         />
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={isLoading}>
-                            <Plus className="h-5 w-5" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="top">
-                            <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                            <Paperclip className="mr-2 h-4 w-4" />
-                            <span>Subir archivos</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={onImportFromUrl}>
-                                <LinkIcon className="mr-2 h-4 w-4" />
-                                <span>Importar desde enlace</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" disabled={isLoading}>
+                                    <Plus className="h-5 w-5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 mb-2">
+                                <div className="grid gap-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium leading-none">Añadir Fuente</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                    Selecciona el origen de tu material de estudio.
+                                    </p>
+                                </div>
+                                <div className="grid gap-2">
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
+                                    >
+                                        <Paperclip className="h-5 w-5 text-primary" />
+                                        <div>
+                                            <p className="font-semibold">Subir archivos</p>
+                                            <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={onImportFromUrl}
+                                        className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
+                                    >
+                                        <LinkIcon className="h-5 w-5 text-primary" />
+                                        <div>
+                                            <p className="font-semibold">Importar desde enlace</p>
+                                            <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
+                                        </div>
+                                    </button>
+                                </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                     <div className="absolute right-2 top-1/2 -translate-y-1/2">
                     <Button variant="ghost" size="icon" onClick={handleSendMessage} disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}>
@@ -368,7 +391,10 @@ export default function NewProjectPage() {
   const { addProject } = useProjects();
   const { toast } = useToast();
 
-  const [userObjective, setUserObjective] = useState("");
+  const [projectData, setProjectData] = useState<ProjectData>({ userName: '', userObjective: '', deadline: '' });
+  const [collectedData, setCollectedData] = useState<Partial<ProjectData>>({});
+  const [dataCollectionStep, setDataCollectionStep] = useState<'start' | 'name' | 'objective' | 'deadline' | 'done'>('start');
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -383,12 +409,15 @@ export default function NewProjectPage() {
   const [isProjectSetupOpen, setIsProjectSetupOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const addMessage = useCallback((message: Message) => {
+    setMessages(prev => [...prev, message]);
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const file = event.target.files[0];
       if (file) {
-        // Replace previous file with the new one
         setSelectedFiles([file]);
         fileToDataUri(file).then(dataUri => {
             setProcessingFile({name: file.name, content: dataUri });
@@ -408,7 +437,6 @@ export default function NewProjectPage() {
             const urlFileName = url.split('/').pop()?.split('?')[0] || 'imported-from-url';
             const file = new File([content], urlFileName, { type: "text/plain" });
             
-            // Replace previous file with the new one
             setSelectedFiles([file]);
             setProcessingFile({name: file.name, content: dataUri });
 
@@ -434,63 +462,111 @@ export default function NewProjectPage() {
   const getFileIcon = (fileType: string) => {
     return <FileText className="h-6 w-6 text-primary" />;
   };
+  
+  const processDataCollection = useCallback((userInput: string) => {
+    let nextStep = dataCollectionStep;
+    let newCollectedData = { ...collectedData };
+    let koliResponse = '';
+
+    if (dataCollectionStep === 'start') {
+        koliResponse = '¡Hola! Soy Koli. Para empezar, ¿cómo te llamas?';
+        nextStep = 'name';
+        newCollectedData.userObjective = userInput;
+    } else if (dataCollectionStep === 'name') {
+        newCollectedData.userName = userInput;
+        if (!newCollectedData.userObjective) {
+            koliResponse = `¡Genial, ${userInput}! ¿Cuál es tu principal objetivo de aprendizaje con este material?`;
+            nextStep = 'objective';
+        } else {
+             koliResponse = `Un placer, ${userInput}. ¿Tienes alguna fecha límite para alcanzar tu objetivo? Si no, puedes decir 'No'.`;
+             nextStep = 'deadline';
+        }
+    } else if (dataCollectionStep === 'objective') {
+        newCollectedData.userObjective = userInput;
+        koliResponse = `Entendido. ¿Tienes alguna fecha límite para esto? Si no, puedes decir 'No'.`;
+        nextStep = 'deadline';
+    } else if (dataCollectionStep === 'deadline') {
+        newCollectedData.deadline = userInput;
+        koliResponse = '¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...';
+        nextStep = 'done';
+    }
+    
+    setCollectedData(newCollectedData);
+    setDataCollectionStep(nextStep);
+
+    if (koliResponse) {
+        addMessage({ role: 'koli', content: koliResponse });
+    }
+
+    if (nextStep === 'done') {
+        setProjectData(newCollectedData as ProjectData);
+    }
+
+  }, [dataCollectionStep, collectedData, addMessage]);
+
 
   const handleSendMessage = async () => {
-    if (!input.trim() || !processingFile) {
-        toast({
-            title: "Faltan datos",
-            description: "Por favor, describe tu objetivo y sube un archivo.",
-            variant: "destructive"
-        })
-        return;
-    }
-    
-    const currentProcessingFile = processingFile;
-    setUserObjective(input);
-    setProjectSourceFile(currentProcessingFile);
-    
+    const userInput = input.trim();
+    if (!userInput && selectedFiles.length === 0) return;
+
     if (!isProjectStarted) {
+        if (!userInput || !processingFile) {
+            toast({
+                title: "Faltan datos",
+                description: "Por favor, describe tu objetivo y sube un archivo para empezar.",
+                variant: "destructive"
+            });
+            return;
+        }
+        
         setIsProjectStarted(true);
-    }
-    
-    const userMessage: Message = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
-    setInput('');
-    
-    try {
-        const response = await generateAtoms({ 
-            studyMaterial: currentProcessingFile.content,
-            userObjective: input
-        });
+        setIsLoading(true);
+        setInput('');
+
+        const userMessage: Message = { role: 'user', content: userInput };
+        addMessage(userMessage);
         
-        setAtomsResult(response);
-        
-        const koliResponse: Message = { 
-            role: 'koli', 
-            content: response.initialResponse,
-            actionId: 'atomActions'
-        };
-        setMessages(prev => [...prev, koliResponse]);
-        // Don't clear files on success, keep them for context
-        // setSelectedFiles([]);
-        // setProcessingFile(null);
-        
-    } catch (error) {
-        console.error("Error processing file:", error);
-        const errorMessage = (error instanceof Error) ? error.message : 'Lo siento, ha ocurrido un error al procesar tu documento.';
-        const koliResponse: Message = { 
-            role: 'koli', 
-            content: `Error: ${errorMessage}. Por favor, intenta con otro archivo.`
-        };
-        setMessages(prev => [...prev, koliResponse]);
-        // Clear files on failure
-        setSelectedFiles([]);
-        setProcessingFile(null);
-    } finally {
-        setIsLoading(false);
+        const currentProcessingFile = processingFile;
+        setProjectSourceFile(currentProcessingFile);
+        processDataCollection(userInput);
+
+        try {
+            const response = await generateAtoms({ 
+                studyMaterial: currentProcessingFile.content,
+                userObjective: userInput
+            });
+            setAtomsResult(response);
+            
+        } catch (error) {
+            console.error("Error processing file:", error);
+            const errorMessage = (error instanceof Error) ? error.message : 'Lo siento, ha ocurrido un error al procesar tu documento.';
+            addMessage({ role: 'koli', content: `Error: ${errorMessage}. Por favor, intenta con otro archivo.` });
+            setSelectedFiles([]);
+            setProcessingFile(null);
+            setIsProjectStarted(false); // Reset on failure
+        } finally {
+            setIsLoading(false);
+        }
+
+    } else {
+        // Continue data collection conversation
+        const userMessage: Message = { role: 'user', content: userInput };
+        addMessage(userMessage);
+        setInput('');
+        processDataCollection(userInput);
     }
   }
+
+  useEffect(() => {
+    if (dataCollectionStep === 'done' && atomsResult) {
+      addMessage({ 
+          role: 'koli', 
+          content: `${atomsResult.initialResponse} He generado ${atomsResult.atoms.length} 'átomos' para ti. ¿Quieres revisarlos o generamos tu plan de estudios?`,
+          actionId: 'atomActions'
+      });
+    }
+  }, [dataCollectionStep, atomsResult, addMessage]);
+
 
   const handleGeneratePlan = async () => {
     if (!atomsResult) return;
@@ -501,23 +577,21 @@ export default function NewProjectPage() {
     try {
         const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
         const plan = await calibratePlanFromQuestionnaire({
-            userObjective: userObjective,
+            ...projectData,
             learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
         });
 
         setLearningPlan(plan);
         setCurrentStep('plan');
 
-        const koliMessage: Message = {
+        addMessage({
             role: 'koli',
             content: "¡Excelente! He diseñado un plan de aprendizaje estratégico para ti. Échale un vistazo. Si estás de acuerdo, podemos crear el proyecto.",
-        };
-        setMessages(prev => [...prev, koliMessage]);
+        });
 
     } catch(error) {
         console.error("Error generating learning plan:", error);
-        const koliResponse: Message = { role: 'koli', content: 'Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.' };
-        setMessages(prev => [...prev, koliResponse]);
+        addMessage({ role: 'koli', content: 'Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.' });
     } finally {
         setIsLoading(false);
     }
@@ -567,11 +641,10 @@ export default function NewProjectPage() {
 
   const handleReviewAtoms = () => {
     setCurrentStep('review');
-    const koliMessage: Message = {
+    addMessage({
         role: 'koli',
         content: "Claro, aquí están los átomos que he generado para ti. Puedes editarlos directamente. Cuando estés listo, haz clic en 'Siguiente Paso' para continuar.",
-    };
-    setMessages(prev => [...prev, koliMessage]);
+    });
   };
   
   if (!isProjectStarted) {
@@ -641,7 +714,7 @@ export default function NewProjectPage() {
                     accept=".pdf,.doc,.docx,.txt,.md"
                  />
                 <Input
-                  placeholder="Describe tu objetivo de aprendizaje..."
+                  placeholder="Describe tu objetivo de aprendizaje y sube un archivo para empezar..."
                   className="w-full h-12 rounded-full pl-12 pr-14 bg-card border-border"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -649,23 +722,45 @@ export default function NewProjectPage() {
                   disabled={isLoading}
                 />
                 <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Plus className="h-5 w-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                          <Paperclip className="mr-2 h-4 w-4" />
-                          Subir archivos
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setIsUrlImportOpen(true)}>
-                          <LinkIcon className="mr-2 h-4 w-4" />
-                          Importar desde enlace
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <Plus className="h-5 w-5" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 mb-2">
+                            <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <h4 className="font-medium leading-none">Añadir Fuente</h4>
+                                <p className="text-sm text-muted-foreground">
+                                Selecciona el origen de tu material de estudio.
+                                </p>
+                            </div>
+                            <div className="grid gap-2">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
+                                >
+                                    <Paperclip className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Subir archivos</p>
+                                        <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => setIsUrlImportOpen(true)}
+                                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted"
+                                >
+                                    <LinkIcon className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Importar desde enlace</p>
+                                        <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
+                                    </div>
+                                </button>
+                            </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                   <Button variant="ghost" size="icon" onClick={handleSendMessage} disabled={isLoading || !input.trim() || selectedFiles.length === 0}>
@@ -685,7 +780,7 @@ export default function NewProjectPage() {
             return <AtomizationProgress 
                         atomsResult={atomsResult} 
                         fileName={projectSourceFile?.name ?? ""}
-                        isLoading={isLoading}
+                        isLoading={isLoading && !atomsResult}
                     />;
         case 'review':
              if (atomsResult) {
@@ -709,7 +804,7 @@ export default function NewProjectPage() {
              return <AtomizationProgress 
                         atomsResult={atomsResult} 
                         fileName={projectSourceFile?.name ?? ""}
-                        isLoading={isLoading}
+                        isLoading={isLoading && !atomsResult}
                     />;
     }
   }
