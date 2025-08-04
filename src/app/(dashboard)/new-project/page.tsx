@@ -547,12 +547,22 @@ export default function NewProjectPage() {
     if (event.target.files) {
       const file = event.target.files[0];
       if (file) {
-        setSelectedFiles([file]);
+        setSelectedFiles(prevFiles => {
+            // Replace previous file if atomization failed or project hasn't started
+            if (atomizationError || !isProjectStarted) {
+                return [file];
+            }
+            // Otherwise, add to the list
+            return [...prevFiles, file];
+        });
+
         fileToDataUri(file).then(dataUri => {
             setProcessingFile({name: file.name, content: dataUri });
         })
+        
         if (atomizationError) {
             setAtomizationError(null);
+            // Reset state to allow a new attempt
             setIsProjectStarted(false); 
             setMessages([]); 
             setAtomsResult(null);
@@ -598,15 +608,18 @@ export default function NewProjectPage() {
     return <FileText className="h-3 w-3" />;
   };
   
-  const processDataCollection = useCallback((userInput: string | null = null) => {
-    let newCollectedData = { ...collectedData };
-    if (userInput) {
+  const processDataCollection = useCallback((userInput: string | null = null, initialData: Partial<ProjectData> = {}) => {
+    let newCollectedData = { ...collectedData, ...initialData };
+
+    if (userInput && dataCollectionStep !== 'start') {
         if (dataCollectionStep === 'name') newCollectedData.userName = userInput;
-        if (dataCollectionStep === 'objective') newCollectedData.userObjective = userInput;
-        if (dataCollectionStep === 'deadline') newCollectedData.deadline = userInput;
-        if (dataCollectionStep === 'masteryLevel') newCollectedData.masteryLevel = userInput;
+        else if (dataCollectionStep === 'objective') newCollectedData.userObjective = userInput;
+        else if (dataCollectionStep === 'deadline') newCollectedData.deadline = userInput;
+        else if (dataCollectionStep === 'masteryLevel') newCollectedData.masteryLevel = userInput;
     }
-    
+
+    setCollectedData(newCollectedData);
+
     let koliResponse = '';
     let nextStep = dataCollectionStep;
 
@@ -626,23 +639,16 @@ export default function NewProjectPage() {
         koliResponse = '¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...';
         nextStep = 'done';
     }
+
+    setDataCollectionStep(nextStep);
     
-    if (dataCollectionStep === 'start' || (userInput && nextStep !== dataCollectionStep)) {
-      setCollectedData(newCollectedData);
-      setDataCollectionStep(nextStep);
-      if (koliResponse) {
-          addMessage({ role: 'koli', content: koliResponse });
-      }
-    } else if (nextStep === 'done') {
-        setCollectedData(newCollectedData);
-        setDataCollectionStep(nextStep);
+    if (koliResponse && (dataCollectionStep !== nextStep || dataCollectionStep === 'start')) {
+        addMessage({ role: 'koli', content: koliResponse });
     }
-
-
+    
     if (nextStep === 'done') {
         setProjectData(newCollectedData as ProjectData);
     }
-
   }, [dataCollectionStep, collectedData, addMessage]);
 
 
@@ -657,7 +663,7 @@ export default function NewProjectPage() {
     ].filter(Boolean).join('. ');
 
     if (attachedContent) {
-        fullUserInput = `${fullUserInput} (${attachedContent})`;
+        fullUserInput = `${userInput} (${attachedContent})`.trim();
     }
 
     if (!fullUserInput && selectedFiles.length === 0) return;
@@ -683,25 +689,24 @@ export default function NewProjectPage() {
         
         setIsProjectStarted(true);
         setIsLoading(true);
-        setInput('');
-        setAttachedData({});
-        setSelectedFiles([]);
-
+        
         const userMessage: Message = { role: 'user', content: fullUserInput };
         addMessage(userMessage);
         
+        setInput('');
+        setSelectedFiles([]);
+        setAttachedData({});
+
         const currentProcessingFile = processingFile;
         setProjectSourceFile(currentProcessingFile);
         
-        let initialData: Partial<ProjectData> = {};
+        const initialData: Partial<ProjectData> = {};
+        if (userInput) initialData.userObjective = userInput;
         if (attachedData.objective) initialData.userObjective = attachedData.objective;
         if (attachedData.deadline) initialData.deadline = attachedData.deadline.text;
         if (attachedData.masteryLevel) initialData.masteryLevel = attachedData.masteryLevel;
-        if (userInput) initialData.userObjective = userInput;
         
-        setCollectedData(initialData);
-
-        processDataCollection();
+        processDataCollection(null, initialData);
 
         try {
             const response = await generateAtoms({ 
@@ -722,11 +727,11 @@ export default function NewProjectPage() {
 
     } else {
         // Continue data collection conversation
-        const userMessage: Message = { role: 'user', content: fullUserInput };
+        const userMessage: Message = { role: 'user', content: userInput };
         addMessage(userMessage);
         setInput('');
         setAttachedData({});
-        processDataCollection(fullUserInput);
+        processDataCollection(userInput);
     }
   }
 
@@ -739,14 +744,6 @@ export default function NewProjectPage() {
       });
     }
   }, [dataCollectionStep, atomsResult, addMessage]);
-
-  // Kicks off the conversation if project is started but no name is collected yet.
-  useEffect(() => {
-    if (isProjectStarted && dataCollectionStep === 'start') {
-        processDataCollection();
-    }
-  }, [isProjectStarted, dataCollectionStep, processDataCollection]);
-
 
   const handleGeneratePlan = async () => {
     if (!atomsResult) return;
@@ -834,7 +831,7 @@ export default function NewProjectPage() {
   
   if (!isProjectStarted) {
     return (
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col flex-1 h-full overflow-hidden">
           <UrlImportDialog 
                 isOpen={isUrlImportOpen}
                 onClose={() => setIsUrlImportOpen(false)}
@@ -994,5 +991,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-    
