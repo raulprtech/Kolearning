@@ -1,7 +1,7 @@
 
 'use server';
 
-import { YouTubeTranscript } from 'youtube-transcript';
+import { YoutubeTranscript } from 'youtube-transcript';
 
 export async function extractContentFromUrl(url: string): Promise<string | null> {
     try {
@@ -30,7 +30,7 @@ export async function extractContentFromUrl(url: string): Promise<string | null>
 
 export async function extractTranscriptFromYoutubeUrl(url: string): Promise<string | null> {
     try {
-        const transcript = await YouTubeTranscript.fetchTranscript(url);
+        const transcript = await YoutubeTranscript.fetchTranscript(url);
         if (!transcript) {
             return null;
         }
