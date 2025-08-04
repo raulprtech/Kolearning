@@ -154,20 +154,24 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
 }
 
 const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, attachedData, setAttachedData }: any) => {
+    const [isSourceMenuOpen, setIsSourceMenuOpen] = useState(false);
 
     const handleDateSelect = (selectedDate: Date | undefined) => {
         if (selectedDate) {
             const formattedDate = format(selectedDate, "PPP", { locale: es });
             setAttachedData((prev: AttachedData) => ({...prev, deadline: { date: selectedDate, text: `Mi fecha límite es el ${formattedDate}`}}))
+            setIsSourceMenuOpen(false);
         }
     }
 
     const handleObjectiveSelect = (objective: string) => {
         setAttachedData((prev: AttachedData) => ({...prev, objective: `Mi objetivo es ${objective}`}));
+        setIsSourceMenuOpen(false);
     }
 
     const handleMasterySelect = (level: string) => {
         setAttachedData((prev: AttachedData) => ({...prev, masteryLevel: `Mi nivel de dominio es ${level}`}));
+        setIsSourceMenuOpen(false);
     }
 
     const removeAttachedData = (key: keyof AttachedData) => {
@@ -227,7 +231,7 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                         disabled={isLoading}
                         accept=".pdf,.doc,.docx,.txt,.md"
                     />
-                    <Popover>
+                    <Popover open={isSourceMenuOpen} onOpenChange={setIsSourceMenuOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" disabled={isLoading}>
                                 <Plus className="h-5 w-5" />
