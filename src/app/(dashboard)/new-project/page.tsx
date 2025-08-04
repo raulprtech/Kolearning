@@ -141,7 +141,6 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                     <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                         <input
                             type="file"
-                            multiple
                             ref={fileInputRef}
                             onChange={handleUploadClick}
                             className="hidden"
@@ -389,7 +388,8 @@ export default function NewProjectPage() {
     if (event.target.files) {
       const file = event.target.files[0];
       if (file) {
-        setSelectedFiles(prevFiles => [...prevFiles, file]);
+        // Replace previous file with the new one
+        setSelectedFiles([file]);
         fileToDataUri(file).then(dataUri => {
             setProcessingFile({name: file.name, content: dataUri });
         })
@@ -408,6 +408,7 @@ export default function NewProjectPage() {
             const urlFileName = url.split('/').pop()?.split('?')[0] || 'imported-from-url';
             const file = new File([content], urlFileName, { type: "text/plain" });
             
+            // Replace previous file with the new one
             setSelectedFiles([file]);
             setProcessingFile({name: file.name, content: dataUri });
 
@@ -456,8 +457,6 @@ export default function NewProjectPage() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setInput('');
-    setSelectedFiles([]);
-    setProcessingFile(null);
     
     try {
         const response = await generateAtoms({ 
@@ -473,11 +472,21 @@ export default function NewProjectPage() {
             actionId: 'atomActions'
         };
         setMessages(prev => [...prev, koliResponse]);
+        // Don't clear files on success, keep them for context
+        // setSelectedFiles([]);
+        // setProcessingFile(null);
         
     } catch (error) {
         console.error("Error processing file:", error);
-        const koliResponse: Message = { role: 'koli', content: 'Lo siento, ha ocurrido un error al procesar tu documento.' };
+        const errorMessage = (error instanceof Error) ? error.message : 'Lo siento, ha ocurrido un error al procesar tu documento.';
+        const koliResponse: Message = { 
+            role: 'koli', 
+            content: `Error: ${errorMessage}. Por favor, intenta con otro archivo.`
+        };
         setMessages(prev => [...prev, koliResponse]);
+        // Clear files on failure
+        setSelectedFiles([]);
+        setProcessingFile(null);
     } finally {
         setIsLoading(false);
     }
