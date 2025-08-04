@@ -45,6 +45,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 
 const initialSteps = [
@@ -257,7 +258,7 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                                 </button>
                                  <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <button className="flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full">
+                                        <button disabled={!!attachedData.objective} className={cn("flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full", attachedData.objective && "opacity-50 cursor-not-allowed")}>
                                             <Target className="h-5 w-5 text-primary" />
                                             <div>
                                                 <p className="font-semibold">Agregar objetivo</p>
@@ -275,7 +276,7 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                                 </DropdownMenu>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <button className="flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full">
+                                        <button disabled={!!attachedData.deadline} className={cn("flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full", attachedData.deadline && "opacity-50 cursor-not-allowed")}>
                                             <CalendarIcon className="h-5 w-5 text-primary" />
                                             <div>
                                                 <p className="font-semibold">Agregar Deadline</p>
@@ -289,7 +290,7 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                                 </Popover>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <button className="flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full">
+                                        <button disabled={!!attachedData.masteryLevel} className={cn("flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full", attachedData.masteryLevel && "opacity-50 cursor-not-allowed")}>
                                             <BarChart3 className="h-5 w-5 text-primary" />
                                             <div>
                                                 <p className="font-semibold">Definir mi nivel</p>
@@ -950,3 +951,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
