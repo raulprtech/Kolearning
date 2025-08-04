@@ -520,7 +520,7 @@ export default function NewProjectPage() {
 
   const [projectData, setProjectData] = useState<ProjectData>({ userName: '', userObjective: '', deadline: '', masteryLevel: '' });
   const [collectedData, setCollectedData] = useState<Partial<ProjectData>>({});
-  const [dataCollectionStep, setDataCollectionStep] = useState<'start' | 'name' | 'objective' | 'deadline' | 'done'>('start');
+  const [dataCollectionStep, setDataCollectionStep] = useState<'start' | 'name' | 'objective' | 'deadline' | 'masteryLevel' | 'done'>('start');
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [attachedData, setAttachedData] = useState<AttachedData>({});
@@ -591,40 +591,46 @@ export default function NewProjectPage() {
     return <FileText className="h-3 w-3" />;
   };
   
-  const processDataCollection = useCallback((userInput: string) => {
-    let nextStep = dataCollectionStep;
+  const processDataCollection = useCallback((userInput: string | null = null) => {
     let newCollectedData = { ...collectedData };
+    if (userInput) {
+        if (dataCollectionStep === 'name') newCollectedData.userName = userInput;
+        if (dataCollectionStep === 'objective') newCollectedData.userObjective = userInput;
+        if (dataCollectionStep === 'deadline') newCollectedData.deadline = userInput;
+        if (dataCollectionStep === 'masteryLevel') newCollectedData.masteryLevel = userInput;
+    }
+    
     let koliResponse = '';
+    let nextStep = dataCollectionStep;
 
-    if (dataCollectionStep === 'start') {
+    if (!newCollectedData.userName) {
         koliResponse = '¡Hola! Soy Koli. Para empezar, ¿cómo te llamas?';
         nextStep = 'name';
-        if(!newCollectedData.userObjective) newCollectedData.userObjective = userInput;
-    } else if (dataCollectionStep === 'name') {
-        newCollectedData.userName = userInput;
-        if (!newCollectedData.userObjective) {
-            koliResponse = `¡Genial, ${userInput}! ¿Cuál es tu principal objetivo de aprendizaje con este material?`;
-            nextStep = 'objective';
-        } else {
-             koliResponse = `Un placer, ${userInput}. ¿Tienes alguna fecha límite para alcanzar tu objetivo? Si no, puedes decir 'No'.`;
-             nextStep = 'deadline';
-        }
-    } else if (dataCollectionStep === 'objective') {
-        newCollectedData.userObjective = userInput;
+    } else if (!newCollectedData.userObjective) {
+        koliResponse = `¡Genial, ${newCollectedData.userName}! ¿Cuál es tu principal objetivo de aprendizaje con este material?`;
+        nextStep = 'objective';
+    } else if (!newCollectedData.deadline) {
         koliResponse = `Entendido. ¿Tienes alguna fecha límite para esto? Si no, puedes decir 'No'.`;
         nextStep = 'deadline';
-    } else if (dataCollectionStep === 'deadline') {
-        newCollectedData.deadline = userInput;
+    } else if (!newCollectedData.masteryLevel) {
+        koliResponse = `Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema? (Principiante, Intermedio, Avanzado)`;
+        nextStep = 'masteryLevel';
+    } else {
         koliResponse = '¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...';
         nextStep = 'done';
     }
     
-    setCollectedData(newCollectedData);
-    setDataCollectionStep(nextStep);
-
-    if (koliResponse) {
-        addMessage({ role: 'koli', content: koliResponse });
+    if (dataCollectionStep === 'start' || (userInput && nextStep !== dataCollectionStep)) {
+      setCollectedData(newCollectedData);
+      setDataCollectionStep(nextStep);
+      if (koliResponse) {
+          addMessage({ role: 'koli', content: koliResponse });
+      }
+    } else if (nextStep === 'done') {
+        setCollectedData(newCollectedData);
+        setDataCollectionStep(nextStep);
     }
+
 
     if (nextStep === 'done') {
         setProjectData(newCollectedData as ProjectData);
@@ -680,13 +686,15 @@ export default function NewProjectPage() {
         const currentProcessingFile = processingFile;
         setProjectSourceFile(currentProcessingFile);
         
-        let initialData = { ...collectedData };
+        let initialData: Partial<ProjectData> = {};
         if (attachedData.objective) initialData.userObjective = attachedData.objective;
         if (attachedData.deadline) initialData.deadline = attachedData.deadline.text;
         if (attachedData.masteryLevel) initialData.masteryLevel = attachedData.masteryLevel;
+        if (userInput) initialData.userObjective = userInput;
+        
         setCollectedData(initialData);
 
-        processDataCollection(fullUserInput);
+        processDataCollection();
 
         try {
             const response = await generateAtoms({ 
@@ -725,6 +733,13 @@ export default function NewProjectPage() {
       });
     }
   }, [dataCollectionStep, atomsResult, addMessage]);
+
+  // Kicks off the conversation if project is started but no name is collected yet.
+  useEffect(() => {
+    if (isProjectStarted && dataCollectionStep === 'start') {
+        processDataCollection();
+    }
+  }, [isProjectStarted, dataCollectionStep, processDataCollection]);
 
 
   const handleGeneratePlan = async () => {
