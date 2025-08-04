@@ -60,8 +60,8 @@ const initialSteps = [
 
 type Message = {
     role: 'user' | 'koli';
-    content: React.ReactNode;
-    actions?: React.ReactNode;
+    content: string;
+    actionId?: 'atomActions';
 };
 
 const fileToDataUri = (file: File): Promise<string> => {
@@ -73,7 +73,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -93,7 +93,12 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                             <p>{msg.content}</p>
                          </div>
                        </div>
-                       {msg.actions && <div className="ml-14 mt-2 flex gap-2">{msg.actions}</div>}
+                       {msg.actionId === 'atomActions' && (
+                           <div className="ml-14 mt-2 flex gap-2">
+                               <Button variant="outline" onClick={onReviewAtoms} disabled={isLoading}><Eye className="mr-2"/>Ver Átomos</Button>
+                               <Button onClick={onGeneratePlan} disabled={isLoading}>Siguiente Paso<ChevronRight className="ml-2"/></Button>
+                           </div>
+                       )}
                     </div>
                 ))}
                  {isLoading && (
@@ -393,7 +398,9 @@ export default function NewProjectPage() {
 
   const removeFile = (fileName: string) => {
     setSelectedFiles(prevFiles => prevFiles.filter(file => file.name !== fileName));
-    setProcessingFile(null);
+    if (processingFile && processingFile.name === fileName) {
+        setProcessingFile(null);
+    }
   };
   
   const getFileIcon = (fileType: string) => {
@@ -410,8 +417,9 @@ export default function NewProjectPage() {
         return;
     }
     
+    const currentProcessingFile = processingFile;
     setProjectTitle(input);
-    setProjectSourceFile(processingFile);
+    setProjectSourceFile(currentProcessingFile);
     
     if (!isProjectStarted) {
         setIsProjectStarted(true);
@@ -422,10 +430,11 @@ export default function NewProjectPage() {
     setIsLoading(true);
     setInput('');
     setSelectedFiles([]);
+    setProcessingFile(null);
     
     try {
         const response = await generateAtoms({ 
-            studyMaterial: processingFile.content,
+            studyMaterial: currentProcessingFile.content,
             userObjective: input
         });
         
@@ -433,17 +442,10 @@ export default function NewProjectPage() {
         
         const koliResponse: Message = { 
             role: 'koli', 
-            content: `${response.initialResponse}`,
-            actions: (
-                <>
-                    <Button variant="outline" onClick={handleReviewAtoms}><Eye className="mr-2"/>Ver Átomos</Button>
-                    <Button onClick={handleGeneratePlan}>Siguiente Paso<ChevronRight className="ml-2"/></Button>
-                </>
-            )
+            content: response.initialResponse,
+            actionId: 'atomActions'
         };
-        // This is a state update, so it is async
         setMessages(prev => [...prev, koliResponse]);
-        // We must wait for the next render to disable isLoading
         
     } catch (error) {
         console.error("Error processing file:", error);
@@ -451,7 +453,6 @@ export default function NewProjectPage() {
         setMessages(prev => [...prev, koliResponse]);
     } finally {
         setIsLoading(false);
-        setProcessingFile(null);
     }
   }
 
@@ -459,13 +460,13 @@ export default function NewProjectPage() {
     if (!atomsResult) return;
 
     setIsLoading(true);
-    setCurrentStep('atomizing'); // Show loading state on atomization view
+    setCurrentStep('atomizing');
 
     try {
         const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
         const plan = await calibratePlanFromQuestionnaire({
             projectTitle: projectTitle,
-            questionnaireResponses: "El usuario quiere prepararse para un examen.", // Placeholder
+            questionnaireResponses: "El usuario quiere prepararse para un examen.",
             learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
         });
 
@@ -493,23 +494,22 @@ export default function NewProjectPage() {
           return;
       }
 
-      // Create a URL-friendly slug from the title
       const slug = projectTitle
         .toLowerCase()
-        .replace(/\s+/g, '-') // Replace spaces with -
-        .replace(/[^\w-]+/g, '') // Remove all non-word chars
-        .replace(/--+/g, '-') // Replace multiple - with single -
-        .replace(/^-+/, '') // Trim - from start of text
-        .replace(/-+$/, ''); // Trim - from end of text
+        .replace(/\s+/g, '-') 
+        .replace(/[^\w-]+/g, '') 
+        .replace(/--+/g, '-') 
+        .replace(/^-+/, '') 
+        .replace(/-+$/, ''); 
       
-      const newProjectId = `${slug}-${Date.now()}`; // Add timestamp for uniqueness
+      const newProjectId = `${slug}-${Date.now()}`;
 
       const newProject = {
           id: newProjectId,
           title: projectTitle,
           mastery: 0,
           categories: learningPlan.categories,
-          icon: "Book", // Default icon
+          icon: "Book", 
           atoms: atomsResult.atoms,
           sessions: learningPlan.fullLearningPlanMarkdown,
           sources: [{name: projectSourceFile.name, type: "Documento"}]
@@ -686,6 +686,8 @@ export default function NewProjectPage() {
                 handleUploadClick={handleFileChange}
                 fileInputRef={fileInputRef}
                 getFileIcon={getFileIcon}
+                onReviewAtoms={handleReviewAtoms}
+                onGeneratePlan={handleGeneratePlan}
             />
         </main>
     </div>
