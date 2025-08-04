@@ -16,6 +16,7 @@ type Source = {
 type Project = {
   id: string;
   title: string;
+  description: string;
   mastery: number;
   icon: string;
   categories: string[];
@@ -28,6 +29,7 @@ type ProjectContextType = {
   projects: Project[];
   addProject: (project: Project) => void;
   updateProjectIcon: (projectId: string, icon: string) => void;
+  updateProjectDetails: (projectId: string, title: string, description: string) => void;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -36,6 +38,7 @@ const initialProjects: Project[] = [
   {
     id: "1",
     title: "Física Cuántica",
+    description: "Un curso introductorio a los principios de la mecánica cuántica.",
     mastery: 85,
     icon: "Book",
     categories: ["Ciencia", "Física"],
@@ -54,6 +57,7 @@ const initialProjects: Project[] = [
   {
     id: "2",
     title: "Historia de Roma",
+    description: "Explora el ascenso y caída del Imperio Romano.",
     mastery: 62,
     icon: "Landmark",
     categories: ["Humanidades", "Historia"],
@@ -70,6 +74,7 @@ const initialProjects: Project[] = [
   {
     id: "3",
     title: "Química Orgánica",
+    description: "Domina las bases de los compuestos basados en carbono.",
     mastery: 45,
     icon: "FlaskConical",
     categories: ["Ciencia", "Química"],
@@ -101,8 +106,16 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   };
   
+  const updateProjectDetails = (projectId: string, title: string, description: string) => {
+    setProjects(prevProjects =>
+      prevProjects.map(p =>
+        p.id === projectId ? { ...p, title, description } : p
+      )
+    );
+  }
+
   return (
-    <ProjectContext.Provider value={{ projects, addProject, updateProjectIcon }}>
+    <ProjectContext.Provider value={{ projects, addProject, updateProjectIcon, updateProjectDetails }}>
       {children}
     </ProjectContext.Provider>
   );

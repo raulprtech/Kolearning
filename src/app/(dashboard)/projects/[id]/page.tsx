@@ -36,6 +36,8 @@ import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical,
 import { useProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 
 const projectIcons: { [key: string]: React.ElementType } = {
@@ -59,9 +61,13 @@ function ProjectDetails() {
   const params = useParams();
   const router = useRouter();
   const slug = params.id as string;
-  const { projects, updateProjectIcon } = useProjects();
-
+  const { projects, updateProjectIcon, updateProjectDetails } = useProjects();
+  
   const project = projects.find(p => p.id === slug);
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableTitle, setEditableTitle] = useState(project?.title || "");
+  const [editableDescription, setEditableDescription] = useState(project?.description || "");
 
   if (!project) {
     return (
@@ -79,6 +85,11 @@ function ProjectDetails() {
     updateProjectIcon(project.id, iconKey);
     setIsIconSelectorOpen(false);
   };
+
+  const handleSaveDetails = () => {
+      updateProjectDetails(project.id, editableTitle, editableDescription);
+      setIsEditing(false);
+  }
   
   const getSessionStatus = (status: string) => {
       switch(status) {
@@ -110,41 +121,68 @@ function ProjectDetails() {
     <ScrollArea className="h-full">
     <div className="flex-1 flex flex-col p-6 bg-background">
       <div className="flex items-start justify-between mb-6">
-          <div className="flex items-start gap-4">
-            <button onClick={() => setIsIconSelectorOpen(true)} className="p-2 rounded-lg hover:bg-muted transition-colors">
+          <div className="flex items-start gap-4 flex-1">
+            <button onClick={() => setIsIconSelectorOpen(true)} className="p-2 rounded-lg hover:bg-muted transition-colors mt-1">
                 <Icon className="w-8 h-8 text-primary" />
             </button>
-            <div>
-                <h1 className="text-2xl font-bold font-headline text-foreground max-w-2xl">{project.title}</h1>
-                <p className="text-sm text-muted-foreground">notes</p>
+            <div className="flex-1">
+                {isEditing ? (
+                     <div className="flex flex-col gap-2 max-w-2xl">
+                        <Input 
+                            value={editableTitle} 
+                            onChange={(e) => setEditableTitle(e.target.value)}
+                            className="text-2xl font-bold font-headline h-auto p-0 border-0 focus-visible:ring-0"
+                        />
+                        <Textarea 
+                            value={editableDescription} 
+                            onChange={(e) => setEditableDescription(e.target.value)}
+                            className="text-sm text-muted-foreground p-0 border-0 focus-visible:ring-0"
+                            rows={1}
+                        />
+                    </div>
+                ) : (
+                    <div>
+                        <h1 className="text-2xl font-bold font-headline text-foreground max-w-2xl">{project.title}</h1>
+                        <p className="text-sm text-muted-foreground">{project.description}</p>
+                    </div>
+                )}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button>
-              <Play className="mr-2 h-4 w-4" />
-              Estudiar
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  <span>Editar Proyecto</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  <span>Compartir</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Eliminar Proyecto</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isEditing ? (
+                 <>
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                    <Button onClick={handleSaveDetails}>Guardar</Button>
+                </>
+            ) : (
+                <>
+                    <Button>
+                        <Play className="mr-2 h-4 w-4" />
+                        Estudiar
+                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            <span>Editar Proyecto</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            <span>Compartir</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Eliminar Proyecto</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </>
+            )}
           </div>
       </div>
 

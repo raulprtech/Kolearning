@@ -15,22 +15,19 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const CalibratePlanInputSchema = z.object({
-  questionnaireResponses: z
-    .string()
-    .describe(
-      'The responses to the pedagogical profile questionnaire.'
-    ),
+  userObjective: z.string().describe("The user's learning objective."),
   learningMaterialSummary: z
     .string()
     .describe(
       'A summary of the learning material for context.'
     ),
-    projectTitle: z.string().describe('The title of the project.')
 });
 
 export type CalibratePlanInput = z.infer<typeof CalibratePlanInputSchema>;
 
 const CalibratePlanOutputSchema = z.object({
+  projectTitle: z.string().describe('A creative and engaging title for the learning project.'),
+  projectDescription: z.string().describe('A brief, one-sentence description of the project.'),
   categories: z.array(z.string()).describe('An array of one to three relevant categories for the project.'),
   learningPath: z.array(z.object({
       session: z.number().describe('The session number.'),
@@ -56,10 +53,9 @@ const calibratePlanPrompt = ai.definePrompt({
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans.
 Your response must be in Spanish.
 
-A learner has provided their learning material. Based on the material, create a comprehensive and strategic learning plan. The plan must follow the Kolearning methodology, structured into four types of sessions. Also, assign one to three relevant categories for this project.
+A learner has provided their learning material and their objective. Based on the material, create a comprehensive and strategic learning plan.
 
-Project Title: {{{projectTitle}}}
-Questionnaire Responses: {{{questionnaireResponses}}}
+User's Learning Objective: {{{userObjective}}}
 Learning Material Summary: {{{learningMaterialSummary}}}
 
 **Kolearning Methodology:**
@@ -86,14 +82,17 @@ Learning Material Summary: {{{learningMaterialSummary}}}
 
 **Your Tasks:**
 
-1.  **Assign Categories:** Based on the project title and material summary, provide 1 to 3 relevant categories (e.g., "Tecnología", "Ciencia", "Humanidades", "Arte").
+1.  **Generate Project Details:**
+    *   **projectTitle:** Create a creative, engaging, and concise title for the learning project based on the material.
+    *   **projectDescription:** Write a brief, one-sentence description summarizing the project's goal.
+    *   **categories:** Assign 1 to 3 relevant categories (e.g., "Tecnología", "Ciencia", "Humanidades", "Arte").
 2.  **Create the Learning Plan Components:**
     *   **learningPath:** Generate a structured array of learning sessions. Each session should have a number, a clear topic, and its corresponding session type from the methodology. Start with a "Calibración Inicial" session. Create at least 3-5 diverse sessions.
     *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy behind the plan.
     *   **expectedProgress:** Write an encouraging paragraph outlining the expected learning progression for the user.
-    *   **fullLearningPlanMarkdown:** Generate a complete, actionable learning plan using Markdown for formatting. Create a title for the plan like "Plan de Conquista para: {{{projectTitle}}}". Structure the plan with the four session types as the main sections (use Markdown headings). For each session type, briefly explain its purpose and suggest a concrete first step or focus area for the learner.
+    *   **fullLearningPlanMarkdown:** Generate a complete, actionable learning plan using Markdown for formatting. Use the generated 'projectTitle'. Structure the plan with the four session types as the main sections (use Markdown headings). For each session type, briefly explain its purpose and suggest a concrete first step or focus area for the learner.
 
-Provide the response in a structured JSON format containing 'categories', 'learningPath', 'koliJustification', 'expectedProgress', and 'fullLearningPlanMarkdown'.
+Provide the response in a structured JSON format.
 `,
 });
 

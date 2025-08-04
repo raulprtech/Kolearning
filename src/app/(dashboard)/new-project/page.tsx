@@ -41,6 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
+import { ProjectSetupDialog } from "@/components/ui/project-setup-dialog";
 import { extractContentFromUrl } from "@/lib/actions";
 
 
@@ -367,7 +368,7 @@ export default function NewProjectPage() {
   const { addProject } = useProjects();
   const { toast } = useToast();
 
-  const [projectTitle, setProjectTitle] = useState("");
+  const [userObjective, setUserObjective] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -379,6 +380,7 @@ export default function NewProjectPage() {
   const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
+  const [isProjectSetupOpen, setIsProjectSetupOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -442,7 +444,7 @@ export default function NewProjectPage() {
     }
     
     const currentProcessingFile = processingFile;
-    setProjectTitle(input);
+    setUserObjective(input);
     setProjectSourceFile(currentProcessingFile);
     
     if (!isProjectStarted) {
@@ -489,8 +491,7 @@ export default function NewProjectPage() {
     try {
         const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
         const plan = await calibratePlanFromQuestionnaire({
-            projectTitle: projectTitle,
-            questionnaireResponses: "El usuario quiere prepararse para un examen.",
+            userObjective: userObjective,
             learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
         });
 
@@ -512,13 +513,19 @@ export default function NewProjectPage() {
     }
   }
 
-    const handleFinalizeProject = () => {
-      if (!atomsResult || !learningPlan || !projectSourceFile || !projectTitle) {
+  const handleSetupProject = () => {
+    if (!learningPlan) return;
+    setIsProjectSetupOpen(true);
+  };
+
+    const handleFinalizeProject = ({title, description}: {title: string, description: string}) => {
+      if (!atomsResult || !learningPlan || !projectSourceFile) {
           toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
+          setIsProjectSetupOpen(false);
           return;
       }
 
-      const slug = projectTitle
+      const slug = title
         .toLowerCase()
         .replace(/\s+/g, '-') 
         .replace(/[^\w-]+/g, '') 
@@ -530,7 +537,8 @@ export default function NewProjectPage() {
 
       const newProject = {
           id: newProjectId,
-          title: projectTitle,
+          title: title,
+          description: description,
           mastery: 0,
           categories: learningPlan.categories,
           icon: "Book", 
@@ -541,8 +549,9 @@ export default function NewProjectPage() {
       addProject(newProject);
       toast({
           title: "¡Proyecto Creado!",
-          description: `${projectTitle} ha sido añadido a tu dashboard.`
+          description: `${title} ha sido añadido a tu dashboard.`
       })
+      setIsProjectSetupOpen(false);
       router.push(`/projects/${newProject.id}`);
   }
 
@@ -621,7 +630,7 @@ export default function NewProjectPage() {
                     className="hidden"
                  />
                 <Input
-                  placeholder="Dale un título a tu proyecto y describe tu objetivo..."
+                  placeholder="Describe tu objetivo de aprendizaje..."
                   className="w-full h-12 rounded-full pl-12 pr-14 bg-card border-border"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -680,7 +689,7 @@ export default function NewProjectPage() {
             if (learningPlan) {
                 return <LearningPlan 
                             plan={learningPlan} 
-                            onFinish={handleFinalizeProject} 
+                            onFinish={handleSetupProject} 
                             onBack={() => setCurrentStep('review')}
                         />
             }
@@ -703,6 +712,18 @@ export default function NewProjectPage() {
                 onImport={handleImportFromUrl}
                 isLoading={isLoading}
             />
+        {learningPlan && (
+            <ProjectSetupDialog
+                isOpen={isProjectSetupOpen}
+                onClose={() => setIsProjectSetupOpen(false)}
+                onSubmit={handleFinalizeProject}
+                isLoading={isLoading}
+                defaultValues={{
+                    title: learningPlan.projectTitle,
+                    description: learningPlan.projectDescription,
+                }}
+            />
+        )}
         <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_450px]">
             <div className="flex flex-col flex-1 h-full overflow-y-auto">
                 {renderContent()}
@@ -726,5 +747,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-    
