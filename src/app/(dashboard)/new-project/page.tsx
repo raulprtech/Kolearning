@@ -667,6 +667,7 @@ export default function NewProjectPage() {
         setIsLoading(true);
         setInput('');
         setAttachedData({});
+        setSelectedFiles([]);
 
         const userMessage: Message = { role: 'user', content: fullUserInput };
         addMessage(userMessage);
