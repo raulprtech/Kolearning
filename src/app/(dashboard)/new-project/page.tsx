@@ -24,7 +24,9 @@ import {
   BookOpen,
   TrendingUp,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Calendar as CalendarIcon,
+  Target
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
@@ -76,7 +78,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleUploadClick, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, isProjectStarted, handleSuggestionClick }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -194,6 +196,18 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                     </Button>
                     </div>
                 </div>
+                 {isProjectStarted && (
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                        <Button variant="outline" size="sm" className="rounded-full" onClick={() => handleSuggestionClick('Agregar Deadline')}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            Agregar Deadline
+                        </Button>
+                        <Button variant="outline" size="sm" className="rounded-full" onClick={() => handleSuggestionClick('Agregar objetivo')}>
+                            <Target className="mr-2 h-4 w-4" />
+                            Agregar objetivo
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -505,8 +519,8 @@ export default function NewProjectPage() {
   }, [dataCollectionStep, collectedData, addMessage]);
 
 
-  const handleSendMessage = async () => {
-    const userInput = input.trim();
+  const handleSendMessage = async (predefinedMessage?: string) => {
+    const userInput = predefinedMessage || input.trim();
     if (!userInput && selectedFiles.length === 0) return;
 
     if (!isProjectStarted) {
@@ -556,6 +570,16 @@ export default function NewProjectPage() {
         processDataCollection(userInput);
     }
   }
+
+  const handleSuggestionClick = (suggestion: 'Agregar Deadline' | 'Agregar objetivo') => {
+    let koliResponse = '';
+    if (suggestion === 'Agregar Deadline') {
+        koliResponse = 'Claro, ¿cuál es tu fecha límite?';
+    } else if (suggestion === 'Agregar objetivo') {
+        koliResponse = 'Por supuesto, ¿cuál es tu principal objetivo de aprendizaje?';
+    }
+    addMessage({ role: 'koli', content: koliResponse });
+  };
 
   useEffect(() => {
     if (dataCollectionStep === 'done' && atomsResult) {
@@ -718,7 +742,7 @@ export default function NewProjectPage() {
                   className="w-full h-12 rounded-full pl-12 pr-14 bg-card border-border"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  onKeyDown={(e) => e.key === 'Enter' && (() => handleSendMessage())}
                   disabled={isLoading}
                 />
                 <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -763,7 +787,7 @@ export default function NewProjectPage() {
                     </Popover>
                 </div>
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <Button variant="ghost" size="icon" onClick={handleSendMessage} disabled={isLoading || !input.trim() || selectedFiles.length === 0}>
+                  <Button variant="ghost" size="icon" onClick={() => handleSendMessage()} disabled={isLoading || !input.trim() || selectedFiles.length === 0}>
                       {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                   </Button>
                 </div>
@@ -830,7 +854,7 @@ export default function NewProjectPage() {
                 }}
             />
         )}
-        <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_450px]">
+        <main className="grid flex-1 grid-cols-1 md:grid-cols-[1fr_450px]">
             <div className="flex flex-col flex-1 h-full overflow-y-auto">
                 {renderContent()}
             </div>
@@ -848,10 +872,10 @@ export default function NewProjectPage() {
                 onReviewAtoms={handleReviewAtoms}
                 onGeneratePlan={handleGeneratePlan}
                 onImportFromUrl={() => setIsUrlImportOpen(true)}
+                isProjectStarted={isProjectStarted}
+                handleSuggestionClick={handleSuggestionClick}
             />
         </main>
     </div>
   )
 }
-
-    
