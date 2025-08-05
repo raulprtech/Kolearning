@@ -15,10 +15,31 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { KoliAvatar } from "../icons/koli-avatar";
+import { format, subDays } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export function Header() {
   const { energy, globalCognitiveCredits, dailyStreak } = useProjects();
   const streakHistory = [true, true, false, true, true]; // Placeholder
+
+  const getDayLabels = () => {
+    const today = new Date();
+    const labels = [];
+    for (let i = 0; i < 5; i++) {
+        const date = subDays(today, i);
+        if (i === 0) {
+            labels.push("Hoy");
+        } else {
+            let dayName = format(date, 'E', { locale: es });
+            // Capitalize first letter and remove period if it exists.
+            dayName = dayName.charAt(0).toUpperCase() + dayName.slice(1).replace('.', '');
+            labels.push(dayName);
+        }
+    }
+    return labels.reverse();
+  }
+
+  const dayLabels = getDayLabels();
 
   return (
     <header className="flex items-center justify-between p-4 border-b border-border">
@@ -64,7 +85,7 @@ export function Header() {
                 {streakHistory.map((completed, index) => (
                   <div key={index} className="flex flex-col items-center gap-1">
                     {completed ? <CheckCircle className="h-6 w-6 text-green-400" /> : <Circle className="h-6 w-6 text-muted-foreground/50" />}
-                    <span className="text-xs text-muted-foreground">{index === 4 ? "Hoy" : `-${4 - index}d`}</span>
+                    <span className="text-xs text-muted-foreground">{dayLabels[index]}</span>
                   </div>
                 ))}
              </div>
