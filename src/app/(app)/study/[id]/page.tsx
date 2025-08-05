@@ -13,7 +13,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap } from "lucide-react";
+import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -27,7 +27,16 @@ export default function StudySessionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { projects, energy, streak, updateEnergy, updateStreak, resetStreak } = useProjects();
+  const { 
+      projects, 
+      energy, 
+      streak, 
+      cognitiveCredits, 
+      masteryPoints, 
+      updateEnergy, 
+      updateStreak, 
+      resetStreak 
+  } = useProjects();
   
   const projectId = params.id as string;
   const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
@@ -50,7 +59,7 @@ export default function StudySessionPage() {
       // For now, we'll just use all atoms for any session.
       setSessionAtoms(project.atoms);
     }
-     // Reset streak at the beginning of a session
+     // Reset streak and other session stats at the beginning of a session
     resetStreak();
   }, [project, resetStreak]);
 
@@ -151,6 +160,14 @@ export default function StudySessionPage() {
                  <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
             </div>
             <div className="w-1/4 flex justify-end items-center gap-4">
+                <div className="flex items-center gap-2" title="Puntos de Dominio (Sesión)">
+                    <Award className="text-purple-400" />
+                    <span className="font-bold text-lg text-foreground">{masteryPoints}</span>
+                </div>
+                <div className="flex items-center gap-2" title="Créditos Cognitivos (Sesión)">
+                    <Brain className="text-blue-400" />
+                    <span className="font-bold text-lg text-foreground">{cognitiveCredits}</span>
+                </div>
                 <div className="flex items-center gap-2" title="Racha de sesión">
                     <Flame className="text-orange-400" />
                     <span className="font-bold text-lg text-foreground">{streak}</span>
@@ -202,7 +219,7 @@ export default function StudySessionPage() {
                         <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
                         <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
                         <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
-                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={() => handleUseEnergy(3)} disabled={viewState === 'answer'} />
+                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={() => handleUseEnergy(3)} disabled={viewState === 'question'} />
                     </div>
                     </div>
                     

@@ -52,6 +52,8 @@ type ProjectContextType = {
   completeSession: (projectId: string, sessionIndex: number) => void;
   energy: number;
   streak: number;
+  cognitiveCredits: number;
+  masteryPoints: number;
   updateEnergy: (amount: number) => void;
   updateStreak: (correct: boolean) => void;
   resetStreak: () => void;
@@ -126,6 +128,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [energy, setEnergy] = useState(20);
   const [streak, setStreak] = useState(0);
+  const [cognitiveCredits, setCognitiveCredits] = useState(0);
+  const [masteryPoints, setMasteryPoints] = useState(0);
 
     const addProject = (newProject: Omit<Project, 'sessions'> & { fullLearningPlanMarkdown: string, learningPath: any[] }) => {
     if (!projects.find(p => p.id === newProject.id)) {
@@ -229,6 +233,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const updateStreak = (correct: boolean) => {
     if (correct) {
       setStreak(prev => prev + 1);
+      setCognitiveCredits(prev => prev + 5);
+      // Assuming 10 points for now, can be adjusted later with question type
+      setMasteryPoints(prev => prev + 10);
     } else {
       setStreak(0);
     }
@@ -236,13 +243,16 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const resetStreak = () => {
     setStreak(0);
+    setCognitiveCredits(0);
+    setMasteryPoints(0);
   };
 
   return (
     <ProjectContext.Provider value={{ 
         projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
         updateAtom, deleteAtom, completeSession,
-        energy, streak, updateEnergy, updateStreak, resetStreak
+        energy, streak, cognitiveCredits, masteryPoints,
+        updateEnergy, updateStreak, resetStreak
     }}>
       {children}
     </ProjectContext.Provider>
