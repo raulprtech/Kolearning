@@ -39,7 +39,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
-import { ProjectSetupDialog } from "@/components/ui/project-setup-dialog";
 import { extractContentFromUrl } from "@/lib/actions";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -534,7 +533,6 @@ export default function NewProjectPage() {
   const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
-  const [isProjectSetupOpen, setIsProjectSetupOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -551,7 +549,10 @@ export default function NewProjectPage() {
           if (atomizationError) {
             return newFiles;
           }
-          return [...prevFiles, ...newFiles];
+          if (isProjectStarted) {
+            return [...prevFiles, ...newFiles];
+          }
+          return newFiles;
         });
         
         if (atomizationError) {
@@ -700,49 +701,40 @@ export default function NewProjectPage() {
 
 
   const handleSendMessage = async () => {
-    const userInput = input.trim();
-    let fullUserInput = userInput;
+    let userInput = input.trim();
+    const combinedObjective = [userInput, attachedData.objective, attachedData.deadline?.text, attachedData.masteryLevel].filter(Boolean).join('. ');
 
-    const attachedContent = [
-        attachedData.objective,
-        attachedData.deadline?.text,
-        attachedData.masteryLevel
-    ].filter(Boolean).join('. ');
+    if (!combinedObjective && selectedFiles.length === 0) return;
 
-    if (attachedContent) {
-        fullUserInput = `${userInput} (${attachedContent})`.trim();
+    if (userInput || selectedFiles.length > 0) {
+        const userMessageContent = userInput || `Procesar: ${selectedFiles.map(f => f.name).join(', ')}`;
+        addMessage({ role: 'user', content: userMessageContent });
     }
-
-    if (!fullUserInput && selectedFiles.length === 0) return;
     
-    const userMessage: Message = { role: 'user', content: fullUserInput || `Procesar archivo(s): ${selectedFiles.map(f => f.name).join(', ')}` };
-    addMessage(userMessage);
     setInput('');
-    setAttachedData({});
-    
     const filesToProcess = [...selectedFiles];
     setSelectedFiles([]);
+    
+    if (!isProjectStarted) {
+        const initialData: Partial<ProjectData> = {};
+        if (attachedData.objective) initialData.userObjective = attachedData.objective;
+        if (attachedData.deadline) initialData.deadline = attachedData.deadline.text;
+        if (attachedData.masteryLevel) initialData.masteryLevel = attachedData.masteryLevel;
+        if (userInput) initialData.userObjective = (initialData.userObjective ? initialData.userObjective + "; " : "") + userInput;
 
-    if (filesToProcess.length > 0) {
-        if (!isProjectStarted) {
-            const userObjective = fullUserInput || "Aprender el contenido del documento.";
-            if (!userObjective) {
-                 toast({
-                    title: "Falta un objetivo",
-                    description: "Por favor, describe tu objetivo de aprendizaje.",
-                    variant: "destructive"
-                });
-                setSelectedFiles(filesToProcess);
-                setMessages(prev => prev.slice(0, -1));
-                return;
-            }
-             await processFiles(filesToProcess, userObjective);
-        } else {
-             await processFiles(filesToProcess, collectedData.userObjective || "Aprender el contenido del documento.");
+        if (filesToProcess.length > 0) {
+            await processFiles(filesToProcess, initialData.userObjective || "Aprender el contenido del documento.");
         }
-    } else if (isProjectStarted) {
-        processDataCollection(userInput);
+        processDataCollection(null, initialData);
+        setIsProjectStarted(true);
+    } else {
+        if (filesToProcess.length > 0) {
+             await processFiles(filesToProcess, projectData.userObjective);
+        } else {
+             processDataCollection(userInput);
+        }
     }
+    setAttachedData({});
   }
 
   useEffect(() => {
@@ -754,6 +746,42 @@ export default function NewProjectPage() {
       });
     }
   }, [dataCollectionStep, atomsResult, addMessage]);
+
+  const handleFinalizeProject = (plan: CalibratePlanOutput) => {
+      if (!atomsResult || projectSourceFiles.length === 0) {
+          toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
+          return;
+      }
+
+      const slug = plan.projectTitle
+        .toLowerCase()
+        .replace(/\s+/g, '-') 
+        .replace(/[^\w-]+/g, '') 
+        .replace(/--+/g, '-') 
+        .replace(/^-+/, '') 
+        .replace(/-+$/, ''); 
+      
+      const newProjectId = `${slug}-${Date.now()}`;
+
+      const newProject = {
+          id: newProjectId,
+          title: plan.projectTitle,
+          description: plan.projectDescription,
+          mastery: 0,
+          categories: plan.categories,
+          icon: "Book", 
+          atoms: atomsResult.atoms,
+          learningPath: plan.learningPath,
+          fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
+          sources: projectSourceFiles.map(f => ({ name: f.name, type: "Documento" }))
+      };
+      addProject(newProject as any);
+      toast({
+          title: "¡Proyecto Creado!",
+          description: `${plan.projectTitle} ha sido añadido a tu dashboard.`
+      })
+      router.push(`/projects/${newProject.id}`);
+  }
 
   const handleGeneratePlan = async () => {
     if (!atomsResult) return;
@@ -771,65 +799,16 @@ export default function NewProjectPage() {
         }
 
         const plan = await calibratePlanFromQuestionnaire(finalProjectData);
-
         setLearningPlan(plan);
-        setCurrentStep('plan');
-
-        addMessage({
-            role: 'koli',
-            content: "¡Excelente! He diseñado un plan de aprendizaje estratégico para ti. Échale un vistazo. Si estás de acuerdo, podemos crear el proyecto.",
-        });
+        handleFinalizeProject(plan);
 
     } catch(error) {
         console.error("Error generating learning plan:", error);
         addMessage({ role: 'koli', content: 'Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.' });
-    } finally {
         setIsLoading(false);
     }
   }
 
-  const handleSetupProject = () => {
-    if (!learningPlan) return;
-    setIsProjectSetupOpen(true);
-  };
-
-    const handleFinalizeProject = ({title, description}: {title: string, description: string}) => {
-      if (!atomsResult || !learningPlan || projectSourceFiles.length === 0) {
-          toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
-          setIsProjectSetupOpen(false);
-          return;
-      }
-
-      const slug = title
-        .toLowerCase()
-        .replace(/\s+/g, '-') 
-        .replace(/[^\w-]+/g, '') 
-        .replace(/--+/g, '-') 
-        .replace(/^-+/, '') 
-        .replace(/-+$/, ''); 
-      
-      const newProjectId = `${slug}-${Date.now()}`;
-
-      const newProject = {
-          id: newProjectId,
-          title: title,
-          description: description,
-          mastery: 0,
-          categories: learningPlan.categories,
-          icon: "Book", 
-          atoms: atomsResult.atoms,
-          learningPath: learningPlan.learningPath,
-          fullLearningPlanMarkdown: learningPlan.fullLearningPlanMarkdown,
-          sources: projectSourceFiles.map(f => ({ name: f.name, type: "Documento" }))
-      };
-      addProject(newProject as any);
-      toast({
-          title: "¡Proyecto Creado!",
-          description: `${title} ha sido añadido a tu dashboard.`
-      })
-      setIsProjectSetupOpen(false);
-      router.push(`/projects/${newProject.id}`);
-  }
 
   const handleReviewAtoms = () => {
     setCurrentStep('review');
@@ -951,7 +930,7 @@ export default function NewProjectPage() {
             if (learningPlan) {
                 return <LearningPlan 
                             plan={learningPlan} 
-                            onFinish={handleSetupProject} 
+                            onFinish={() => handleFinalizeProject(learningPlan)} 
                             onBack={() => setCurrentStep('review')}
                         />
             }
@@ -974,18 +953,6 @@ export default function NewProjectPage() {
                 onImport={handleImportFromUrl}
                 isLoading={isLoading}
             />
-        {learningPlan && (
-            <ProjectSetupDialog
-                isOpen={isProjectSetupOpen}
-                onClose={() => setIsProjectSetupOpen(false)}
-                onSubmit={handleFinalizeProject}
-                isLoading={isLoading}
-                defaultValues={{
-                    title: learningPlan.projectTitle,
-                    description: learningPlan.projectDescription,
-                }}
-            />
-        )}
         <main className="grid flex-1 grid-cols-1 md:grid-cols-[1fr_450px]">
             <div className="flex flex-col flex-1 h-full overflow-y-auto">
                 {renderContent()}
