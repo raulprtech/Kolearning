@@ -59,6 +59,7 @@ type ProjectContextType = {
   updateEnergy: (amount: number) => void;
   updateStreak: (correct: boolean) => void;
   resetSessionStats: () => void;
+  exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -275,13 +276,22 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setCognitiveCredits(0);
     setMasteryPoints(0);
   };
+  
+  const exchangeCreditsForEnergy = (credits: number, energyAmount: number): boolean => {
+      if (globalCognitiveCredits >= credits) {
+          setGlobalCognitiveCredits(prev => prev - credits);
+          setEnergy(prev => prev + energyAmount);
+          return true;
+      }
+      return false;
+  }
 
   return (
     <ProjectContext.Provider value={{ 
         projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
         updateAtom, deleteAtom, completeSession,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints,
-        updateEnergy, updateStreak, resetSessionStats
+        updateEnergy, updateStreak, resetSessionStats, exchangeCreditsForEnergy
     }}>
       {children}
     </ProjectContext.Provider>
