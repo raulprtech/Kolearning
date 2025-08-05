@@ -41,10 +41,12 @@ export type Project = {
   fullLearningPlanMarkdown?: string;
   author?: string; // Make author optional
   category?: string; // Make category optional
+  isPublic?: boolean;
 };
 
 type ProjectContextType = {
   projects: Project[];
+  archivedProjects: Project[];
   addProject: (project: Project) => void;
   updateProjectIcon: (projectId: string, icon: string) => void;
   updateProjectDetails: (projectId: string, title: string, description: string) => void;
@@ -53,6 +55,9 @@ type ProjectContextType = {
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
   deleteAtom: (projectId: string, atomIndex: number) => void;
   completeSession: (projectId: string, sessionIndex: number) => void;
+  archiveProject: (projectId: string) => void;
+  unarchiveProject: (projectId: string) => void;
+  toggleProjectPublic: (projectId: string, isPublic: boolean) => void;
   energy: number;
   sessionStreak: number;
   dailyStreak: number;
@@ -90,7 +95,8 @@ const initialProjects: Project[] = [
         { session: 2, topic: "Superposición y Entrelazamiento", sessionType: "Incursión" },
         { session: 3, topic: "Repaso de Fundamentos", sessionType: "Refuerzo de Dominio" },
     ],
-    sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento"} ]
+    sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento"} ],
+    isPublic: false,
   },
   {
     id: "2",
@@ -109,7 +115,8 @@ const initialProjects: Project[] = [
     learningPath: [
         { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión" },
     ],
-    sources: [ {name: "The_History_of_Rome.pdf", type: "Documento"} ]
+    sources: [ {name: "The_History_of_Rome.pdf", type: "Documento"} ],
+    isPublic: false,
   },
   {
     id: "3",
@@ -127,7 +134,8 @@ const initialProjects: Project[] = [
     learningPath: [
         { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración" },
     ],
-    sources: [ {name: "Organic_Chemistry.pdf", type: "Documento"} ]
+    sources: [ {name: "Organic_Chemistry.pdf", type: "Documento"} ],
+    isPublic: false,
   },
 ];
 
@@ -150,7 +158,8 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Variables y Tipos de Datos", sessionType: "Incursión" },
         { session: 2, topic: "Estructuras de Control", sessionType: "Incursión" },
     ],
-    sources: [{ name: "python_intro.pdf", type: "Documento" }]
+    sources: [{ name: "python_intro.pdf", type: "Documento" }],
+    isPublic: true,
   },
   {
     id: "5",
@@ -170,7 +179,8 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Escalas y Tonalidades", sessionType: "Calibración" },
         { session: 2, topic: "Intervalos y Acordes", sessionType: "Incursión" },
     ],
-    sources: [{ name: "music_theory_basics.docx", type: "Documento" }]
+    sources: [{ name: "music_theory_basics.docx", type: "Documento" }],
+    isPublic: true,
   },
   {
     id: "6",
@@ -190,7 +200,8 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Renacimiento", sessionType: "Incursión" },
         { session: 2, topic: "Impresionismo y Postimpresionismo", sessionType: "Incursión" },
     ],
-    sources: [{ name: "art_history_101.pdf", type: "Documento" }]
+    sources: [{ name: "art_history_101.pdf", type: "Documento" }],
+    isPublic: true,
   },
   {
     id: "7",
@@ -210,7 +221,8 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Componentes y Props", sessionType: "Incursión" },
         { session: 2, topic: "State y Ciclo de Vida", sessionType: "Incursión" },
     ],
-    sources: [{ name: "react_docs_summary.txt", type: "Documento" }]
+    sources: [{ name: "react_docs_summary.txt", type: "Documento" }],
+    isPublic: true,
   },
   {
     id: "8",
@@ -230,7 +242,8 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Filósofos Presocráticos", sessionType: "Calibración" },
         { session: 2, topic: "Sócrates y Platón", sessionType: "Incursión" },
     ],
-    sources: [{ name: "greek_philosophy.pdf", type: "Documento" }]
+    sources: [{ name: "greek_philosophy.pdf", type: "Documento" }],
+    isPublic: true,
   },
 ];
 
@@ -251,6 +264,7 @@ const ENERGY_REGEN_HOURS = 1;
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
   const [energy, setEnergy] = useState(10);
   const [sessionStreak, setSessionStreak] = useState(0);
   const [dailyStreak, setDailyStreak] = useState(0);
@@ -414,6 +428,29 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const archiveProject = (projectId: string) => {
+    const projectToArchive = projects.find(p => p.id === projectId);
+    if (projectToArchive) {
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setArchivedProjects(prev => [...prev, projectToArchive]);
+    }
+  };
+
+  const unarchiveProject = (projectId: string) => {
+    const projectToUnarchive = archivedProjects.find(p => p.id === projectId);
+    if (projectToUnarchive) {
+      setArchivedProjects(prev => prev.filter(p => p.id !== projectId));
+      setProjects(prev => [...prev, projectToUnarchive]);
+    }
+  };
+
+  const toggleProjectPublic = (projectId: string, isPublic: boolean) => {
+    setProjects(prev =>
+      prev.map(p => (p.id === projectId ? { ...p, isPublic } : p))
+    );
+    // This would also be the place to update the public projects list if it's dynamic
+  };
+
   const updateEnergy = (amount: number) => {
     setEnergy(prev => {
       const newEnergy = Math.max(0, prev + amount);
@@ -452,8 +489,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <ProjectContext.Provider value={{ 
-        projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
-        addAtomsToProject, updateAtom, deleteAtom, completeSession,
+        projects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
+        addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints,
         updateEnergy, updateStreak, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn
     }}>
@@ -469,3 +506,5 @@ export const useProjects = () => {
   }
   return context;
 };
+
+    

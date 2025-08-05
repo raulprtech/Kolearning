@@ -13,6 +13,16 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -46,12 +56,10 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive } from "lucide-react";
 import { useProjects, publicProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { Project, Atom } from "@/contexts/ProjectContext";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
@@ -59,6 +67,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
+import { EditProjectDialog } from "@/components/ui/edit-project-dialog";
+import { ShareDialog } from "@/components/ui/share-dialog";
 
 const projectIcons: { [key: string]: React.ElementType } = {
   Book,
@@ -269,14 +279,15 @@ function ProjectDetails() {
   const router = useRouter();
   const { toast } = useToast();
   const slug = params.id as string;
-  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, addProject, addAtomsToProject } = useProjects();
+  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, addProject, addAtomsToProject, archiveProject, toggleProjectPublic } = useProjects();
   
   const project = projects.find(p => p.id === slug) || publicProjects.find(p => p.id === slug);
   const isUserProject = projects.some(p => p.id === slug);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editableTitle, setEditableTitle] = useState(project?.title || "");
-  const [editableDescription, setEditableDescription] = useState(project?.description || "");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+
   const [showUpdateAlert, setShowUpdateAlert] = useState(false);
 
   const [showAllAtoms, setShowAllAtoms] = useState(false);
@@ -312,9 +323,17 @@ function ProjectDetails() {
     setIsIconSelectorOpen(false);
   };
 
-  const handleSaveDetails = () => {
-      updateProjectDetails(project.id, editableTitle, editableDescription);
-      setIsEditing(false);
+  const handleSaveDetails = (title: string, description: string) => {
+      updateProjectDetails(project.id, title, description);
+      setIsEditDialogOpen(false);
+      toast({ title: "Proyecto actualizado", description: "Los detalles de tu proyecto han sido guardados." });
+  }
+
+  const handleArchiveProject = () => {
+    archiveProject(project.id);
+    setIsArchiveDialogOpen(false);
+    toast({ title: "Proyecto archivado", description: `"${project.title}" ha sido movido al archivo.` });
+    router.push('/');
   }
   
   const handleAtomActionConfirm = (data?: Atom) => {
@@ -389,48 +408,40 @@ function ProjectDetails() {
   }
 
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
-  const activeSessionIndex = isUserProject ? project.sessions.findIndex(s => s.status === 'Continue') : -1;
+  const activeSessionIndex = isUserProject && project.sessions ? project.sessions.findIndex(s => s.status === 'Continue') : -1;
 
   const renderActionButtons = () => {
       if (isUserProject) {
            return (
              <div className="flex items-center gap-2">
-                {isEditing ? (
-                    <>
-                        <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
-                        <Button onClick={handleSaveDetails}>Guardar</Button>
-                    </>
-                ) : (
-                    <>
-                        <Link href={`/study/${project.id}?sessionIndex=${activeSessionIndex}`}>
-                            <Button disabled={activeSessionIndex < 0}>
-                                <Play className="mr-2 h-4 w-4" />
-                                Estudiar
-                            </Button>
-                        </Link>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                <span>Editar Proyecto</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                <Share2 className="mr-2 h-4 w-4" />
-                                <span>Compartir</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Eliminar Proyecto</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </>
-                )}
+                <Link href={`/study/${project.id}?sessionIndex=${activeSessionIndex}`}>
+                    <Button disabled={activeSessionIndex < 0}>
+                        <Play className="mr-2 h-4 w-4" />
+                        Estudiar
+                    </Button>
+                </Link>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            <span>Editar Detalles</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)}>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            <span>Compartir</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => setIsArchiveDialogOpen(true)}>
+                            <Archive className="mr-2 h-4 w-4" />
+                            <span>Archivar</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
              </div>
            );
       }
@@ -469,6 +480,35 @@ function ProjectDetails() {
         project={project}
         onCreate={handleCreateNewProject}
       />
+       <EditProjectDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        project={project}
+        onSave={handleSaveDetails}
+      />
+       <ShareDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+        project={project}
+        onTogglePublic={toggleProjectPublic}
+       />
+      <AlertDialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Archivar este proyecto?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    "{project.title}" se moverá al archivo. Podrás restaurarlo más tarde.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleArchiveProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Archivar
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {showUpdateAlert && (
         <Alert className="mb-6 bg-primary/10 border-primary/20">
             <Info className="h-4 w-4 text-primary" />
@@ -488,26 +528,8 @@ function ProjectDetails() {
                 <Icon className="w-8 h-8 text-primary" />
             </button>
             <div className="flex-1">
-                {isEditing ? (
-                     <div className="flex flex-col gap-2 max-w-2xl">
-                        <Input 
-                            value={editableTitle} 
-                            onChange={(e) => setEditableTitle(e.target.value)}
-                            className="text-2xl font-bold font-headline h-auto p-0 border-0 focus-visible:ring-0"
-                        />
-                        <Textarea 
-                            value={editableDescription} 
-                            onChange={(e) => setEditableDescription(e.target.value)}
-                            className="text-sm text-muted-foreground p-0 border-0 focus-visible:ring-0"
-                            rows={1}
-                        />
-                    </div>
-                ) : (
-                    <div>
-                        <h1 className="text-2xl font-bold font-headline text-foreground max-w-2xl">{project.title}</h1>
-                        <p className="text-sm text-muted-foreground">{project.description}</p>
-                    </div>
-                )}
+                <h1 className="text-2xl font-bold font-headline text-foreground max-w-2xl">{project.title}</h1>
+                <p className="text-sm text-muted-foreground">{project.description}</p>
             </div>
           </div>
           {renderActionButtons()}
@@ -563,7 +585,7 @@ function ProjectDetails() {
             </Card>
         </div>
 
-       {isUserProject && (
+       {isUserProject && project.sessions && (
         <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Sesiones</h2>
@@ -716,3 +738,5 @@ export default function ProjectDetailsPage() {
         <ProjectDetails />
     )
 }
+
+    
