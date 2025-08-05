@@ -226,6 +226,7 @@ function ProjectDetails() {
   const getSessionBadge = (type: string) => {
       switch(type) {
           case 'Calibración':
+          case 'Calibración Inicial':
               return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">{type}</Badge>
           case 'Refuerzo de Dominio':
               return <Badge variant="secondary">{type}</Badge>

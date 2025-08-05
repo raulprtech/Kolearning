@@ -67,9 +67,9 @@ const initialProjects: Project[] = [
         { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
     ],
     sessions: [
-        { day: "Día 1", type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Completed" },
-        { day: "Día 2", type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Continue" },
-        { day: "Día 3", type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
+        { day: "Sesión 1", type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Completed" },
+        { day: "Sesión 2", type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Continue" },
+        { day: "Sesión 3", type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
     ],
     learningPath: [
         { session: 1, topic: "Fundamentos de la Mecánica Cuántica", sessionType: "Calibración" },
@@ -90,7 +90,7 @@ const initialProjects: Project[] = [
         { question: "¿Qué fueron las Guerras Púnicas?", answer: "Una serie de tres guerras libradas entre Roma y Cartago desde el 264 a.C. hasta el 146 a.C." }
     ],
     sessions: [
-        { day: "Día 1", type: "Incursión", questions: "Flashcards", duration: "25 min", status: "Continue" },
+        { day: "Sesión 1", type: "Incursión", questions: "Flashcards", duration: "25 min", status: "Continue" },
     ],
     learningPath: [
         { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión" },
@@ -108,7 +108,7 @@ const initialProjects: Project[] = [
         { question: "¿Qué es un alcano?", answer: "Un hidrocarburo acíclico saturado, lo que significa que consiste en átomos de hidrógeno y carbono dispuestos en una estructura de árbol en la que todos los enlaces carbono-carbono son simples." },
     ],
     sessions: [
-        { day: "Día 1", type: "Calibración", questions: "Opción múltiple", duration: "15 min", status: "Continue" },
+        { day: "Sesión 1", type: "Calibración", questions: "Opción múltiple", duration: "15 min", status: "Continue" },
     ],
     learningPath: [
         { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración" },
@@ -125,7 +125,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       const projectWithSessions: Project = {
         ...newProject,
         sessions: newProject.learningPath.map((item, index) => ({
-            day: `Día ${item.session}`,
+            day: `Sesión ${item.session}`,
             type: item.sessionType,
             questions: 'N/A', // This info is not directly available in learningPath
             duration: '20 min', // Default duration
@@ -160,7 +160,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
                   const nextDay = existingSessions.length + 1;
                   const formattedNewSessions: Session[] = newSessions.map((s, i) => ({
                       ...s,
-                      day: `Día ${nextDay + i}`,
+                      day: `Sesión ${nextDay + i}`,
                       status: 'Locked',
                   }));
                   return { ...p, sessions: [...existingSessions, ...formattedNewSessions] };
@@ -229,5 +229,3 @@ export const useProjects = () => {
   }
   return context;
 };
-
-    
