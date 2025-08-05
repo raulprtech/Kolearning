@@ -40,7 +40,16 @@ const allProjects = [
     icon: "Code" as keyof typeof projectIcons,
     mastery: 0,
     category: "Tecnología",
-    author: "Koli Academy"
+    author: "Koli Academy",
+    atoms: [
+        { question: "¿Qué es una variable en Python?", answer: "Un contenedor para almacenar valores de datos." },
+        { question: "Menciona 3 tipos de datos en Python", answer: "int (entero), str (cadena), bool (booleano)." }
+    ],
+    learningPath: [
+        { session: 1, topic: "Variables y Tipos de Datos", sessionType: "Incursión" },
+        { session: 2, topic: "Estructuras de Control", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "python_intro.pdf", type: "Documento" }]
   },
   {
     id: "5",
@@ -49,7 +58,16 @@ const allProjects = [
     icon: "Music" as keyof typeof projectIcons,
     mastery: 0,
     category: "Arte",
-    author: "Comunidad"
+    author: "Comunidad",
+     atoms: [
+        { question: "¿Qué es una escala mayor?", answer: "Una escala diatónica con siete notas, caracterizada por su patrón de tonos y semitonos: T-T-S-T-T-T-S." },
+        { question: "¿Qué es un acorde?", answer: "Un conjunto de tres o más notas que suenan simultáneamente." }
+    ],
+    learningPath: [
+        { session: 1, topic: "Escalas y Tonalidades", sessionType: "Calibración" },
+        { session: 2, topic: "Intervalos y Acordes", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "music_theory_basics.docx", type: "Documento" }]
   },
   {
     id: "6",
@@ -58,7 +76,16 @@ const allProjects = [
     icon: "Palette" as keyof typeof projectIcons,
     mastery: 0,
     category: "Humanidades",
-    author: "Koli Academy"
+    author: "Koli Academy",
+    atoms: [
+        { question: "¿Qué caracteriza al Impresionismo?", answer: "Pinceladas visibles, énfasis en la luz y el color, y la captura de un momento en el tiempo." },
+        { question: "¿Quién pintó 'La noche estrellada'?", answer: "Vincent van Gogh en 1889." }
+    ],
+    learningPath: [
+        { session: 1, topic: "Renacimiento", sessionType: "Incursión" },
+        { session: 2, topic: "Impresionismo y Postimpresionismo", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "art_history_101.pdf", type: "Documento" }]
   },
   {
     id: "7",
@@ -67,7 +94,16 @@ const allProjects = [
     icon: "Code" as keyof typeof projectIcons,
     mastery: 0,
     category: "Tecnología",
-    author: "Comunidad"
+    author: "Comunidad",
+    atoms: [
+        { question: "¿Qué es JSX?", answer: "Una extensión de sintaxis para JavaScript que permite escribir HTML directamente dentro de React." },
+        { question: "¿Qué es el 'state' en React?", answer: "Un objeto JavaScript que almacena los datos de un componente y determina cómo se renderiza y se comporta." }
+    ],
+    learningPath: [
+        { session: 1, topic: "Componentes y Props", sessionType: "Incursión" },
+        { session: 2, topic: "State y Ciclo de Vida", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "react_docs_summary.txt", type: "Documento" }]
   },
   {
     id: "8",
@@ -76,7 +112,16 @@ const allProjects = [
     icon: "Landmark" as keyof typeof projectIcons,
     mastery: 0,
     category: "Humanidades",
-    author: "Koli Academy"
+    author: "Koli Academy",
+    atoms: [
+        { question: "¿Qué es la 'Alegoría de la caverna' de Platón?", answer: "Una metáfora sobre la naturaleza de la realidad, el conocimiento y la educación filosófica." },
+        { question: "¿Cuál es el método socrático?", answer: "Un método de diálogo que utiliza preguntas para estimular el pensamiento crítico y exponer las contradicciones en las creencias de uno." }
+    ],
+    learningPath: [
+        { session: 1, topic: "Filósofos Presocráticos", sessionType: "Calibración" },
+        { session: 2, topic: "Sócrates y Platón", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "greek_philosophy.pdf", type: "Documento" }]
   },
 ];
 
