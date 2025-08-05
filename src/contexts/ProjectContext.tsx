@@ -27,7 +27,7 @@ type LearningPathItem = {
     sessionType: string;
 }
 
-type Project = {
+export type Project = {
   id: string;
   title: string;
   description: string;
@@ -39,6 +39,8 @@ type Project = {
   sources: Source[];
   learningPath: LearningPathItem[];
   fullLearningPlanMarkdown?: string;
+  author?: string; // Make author optional
+  category?: string; // Make category optional
 };
 
 type ProjectContextType = {
@@ -128,6 +130,109 @@ const initialProjects: Project[] = [
   },
 ];
 
+export const publicProjects: Project[] = [
+  {
+    id: "4",
+    title: "Programación en Python",
+    description: "Aprende los fundamentos de Python, uno de los lenguajes más populares.",
+    icon: "Code",
+    mastery: 0,
+    category: "Tecnología",
+    author: "Koli Academy",
+    categories: ["Tecnología"],
+    atoms: [
+        { question: "¿Qué es una variable en Python?", answer: "Un contenedor para almacenar valores de datos." },
+        { question: "Menciona 3 tipos de datos en Python", answer: "int (entero), str (cadena), bool (booleano)." }
+    ],
+    sessions: [],
+    learningPath: [
+        { session: 1, topic: "Variables y Tipos de Datos", sessionType: "Incursión" },
+        { session: 2, topic: "Estructuras de Control", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "python_intro.pdf", type: "Documento" }]
+  },
+  {
+    id: "5",
+    title: "Teoría Musical",
+    description: "Desde escalas hasta acordes, domina la teoría detrás de la música.",
+    icon: "Music",
+    mastery: 0,
+    category: "Arte",
+    author: "Comunidad",
+    categories: ["Arte"],
+     atoms: [
+        { question: "¿Qué es una escala mayor?", answer: "Una escala diatónica con siete notas, caracterizada por su patrón de tonos y semitonos: T-T-S-T-T-T-S." },
+        { question: "¿Qué es un acorde?", answer: "Un conjunto de tres o más notas que suenan simultáneamente." }
+    ],
+    sessions: [],
+    learningPath: [
+        { session: 1, topic: "Escalas y Tonalidades", sessionType: "Calibración" },
+        { session: 2, topic: "Intervalos y Acordes", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "music_theory_basics.docx", type: "Documento" }]
+  },
+  {
+    id: "6",
+    title: "Historia del Arte",
+    description: "Un viaje a través de los movimientos artísticos más importantes.",
+    icon: "Palette",
+    mastery: 0,
+    category: "Humanidades",
+    author: "Koli Academy",
+    categories: ["Humanidades"],
+    atoms: [
+        { question: "¿Qué caracteriza al Impresionismo?", answer: "Pinceladas visibles, énfasis en la luz y el color, y la captura de un momento en el tiempo." },
+        { question: "¿Quién pintó 'La noche estrellada'?", answer: "Vincent van Gogh en 1889." }
+    ],
+    sessions: [],
+    learningPath: [
+        { session: 1, topic: "Renacimiento", sessionType: "Incursión" },
+        { session: 2, topic: "Impresionismo y Postimpresionismo", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "art_history_101.pdf", type: "Documento" }]
+  },
+  {
+    id: "7",
+    title: "Introducción a React",
+    description: "Construye interfaces de usuario modernas y reactivas.",
+    icon: "Code",
+    mastery: 0,
+    category: "Tecnología",
+    author: "Comunidad",
+    categories: ["Tecnología"],
+    atoms: [
+        { question: "¿Qué es JSX?", answer: "Una extensión de sintaxis para JavaScript que permite escribir HTML directamente dentro de React." },
+        { question: "¿Qué es el 'state' en React?", answer: "Un objeto JavaScript que almacena los datos de un componente y determina cómo se renderiza y se comporta." }
+    ],
+    sessions: [],
+    learningPath: [
+        { session: 1, topic: "Componentes y Props", sessionType: "Incursión" },
+        { session: 2, topic: "State y Ciclo de Vida", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "react_docs_summary.txt", type: "Documento" }]
+  },
+  {
+    id: "8",
+    title: "Filosofía Griega",
+    description: "Explora las ideas de Platón, Aristóteles y Sócrates.",
+    icon: "Landmark",
+    mastery: 0,
+    category: "Humanidades",
+    author: "Koli Academy",
+    categories: ["Humanidades"],
+    atoms: [
+        { question: "¿Qué es la 'Alegoría de la caverna' de Platón?", answer: "Una metáfora sobre la naturaleza de la realidad, el conocimiento y la educación filosófica." },
+        { question: "¿Cuál es el método socrático?", answer: "Un método de diálogo que utiliza preguntas para estimular el pensamiento crítico y exponer las contradicciones en las creencias de uno." }
+    ],
+    sessions: [],
+    learningPath: [
+        { session: 1, topic: "Filósofos Presocráticos", sessionType: "Calibración" },
+        { session: 2, topic: "Sócrates y Platón", sessionType: "Incursión" },
+    ],
+    sources: [{ name: "greek_philosophy.pdf", type: "Documento" }]
+  },
+];
+
 const isSameDay = (date1: Date, date2: Date) => {
     return date1.getFullYear() === date2.getFullYear() &&
            date1.getMonth() === date2.getMonth() &&
@@ -179,11 +284,11 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   }, [energy, nextEnergyTimestamp]);
 
 
-  const addProject = (newProject: Omit<Project, 'sessions'> & { fullLearningPlanMarkdown: string, learningPath: any[] }) => {
-    if (!projects.find(p => p.id === newProject.id)) {
+  const addProject = (projectToAdd: Project) => {
+    if (!projects.find(p => p.id === projectToAdd.id)) {
       const projectWithSessions: Project = {
-        ...newProject,
-        sessions: newProject.learningPath.map((item, index) => ({
+        ...projectToAdd,
+        sessions: projectToAdd.learningPath.map((item, index) => ({
             session: item.session,
             type: item.sessionType,
             questions: 'N/A', // This info is not directly available in learningPath

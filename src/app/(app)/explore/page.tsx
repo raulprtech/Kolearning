@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Book, Landmark, FlaskConical, Code, Music, Palette, Search, Filter } from "lucide-react";
-import { useProjects } from "@/contexts/ProjectContext";
+import { useProjects, publicProjects, Project } from "@/contexts/ProjectContext";
 
 const projectIcons = {
   Book: Book,
@@ -32,101 +32,8 @@ const projectIcons = {
   Palette: Palette,
 };
 
-const allProjects = [
-  {
-    id: "4",
-    title: "Programación en Python",
-    description: "Aprende los fundamentos de Python, uno de los lenguajes más populares.",
-    icon: "Code" as keyof typeof projectIcons,
-    mastery: 0,
-    category: "Tecnología",
-    author: "Koli Academy",
-    atoms: [
-        { question: "¿Qué es una variable en Python?", answer: "Un contenedor para almacenar valores de datos." },
-        { question: "Menciona 3 tipos de datos en Python", answer: "int (entero), str (cadena), bool (booleano)." }
-    ],
-    learningPath: [
-        { session: 1, topic: "Variables y Tipos de Datos", sessionType: "Incursión" },
-        { session: 2, topic: "Estructuras de Control", sessionType: "Incursión" },
-    ],
-    sources: [{ name: "python_intro.pdf", type: "Documento" }]
-  },
-  {
-    id: "5",
-    title: "Teoría Musical",
-    description: "Desde escalas hasta acordes, domina la teoría detrás de la música.",
-    icon: "Music" as keyof typeof projectIcons,
-    mastery: 0,
-    category: "Arte",
-    author: "Comunidad",
-     atoms: [
-        { question: "¿Qué es una escala mayor?", answer: "Una escala diatónica con siete notas, caracterizada por su patrón de tonos y semitonos: T-T-S-T-T-T-S." },
-        { question: "¿Qué es un acorde?", answer: "Un conjunto de tres o más notas que suenan simultáneamente." }
-    ],
-    learningPath: [
-        { session: 1, topic: "Escalas y Tonalidades", sessionType: "Calibración" },
-        { session: 2, topic: "Intervalos y Acordes", sessionType: "Incursión" },
-    ],
-    sources: [{ name: "music_theory_basics.docx", type: "Documento" }]
-  },
-  {
-    id: "6",
-    title: "Historia del Arte",
-    description: "Un viaje a través de los movimientos artísticos más importantes.",
-    icon: "Palette" as keyof typeof projectIcons,
-    mastery: 0,
-    category: "Humanidades",
-    author: "Koli Academy",
-    atoms: [
-        { question: "¿Qué caracteriza al Impresionismo?", answer: "Pinceladas visibles, énfasis en la luz y el color, y la captura de un momento en el tiempo." },
-        { question: "¿Quién pintó 'La noche estrellada'?", answer: "Vincent van Gogh en 1889." }
-    ],
-    learningPath: [
-        { session: 1, topic: "Renacimiento", sessionType: "Incursión" },
-        { session: 2, topic: "Impresionismo y Postimpresionismo", sessionType: "Incursión" },
-    ],
-    sources: [{ name: "art_history_101.pdf", type: "Documento" }]
-  },
-  {
-    id: "7",
-    title: "Introducción a React",
-    description: "Construye interfaces de usuario modernas y reactivas.",
-    icon: "Code" as keyof typeof projectIcons,
-    mastery: 0,
-    category: "Tecnología",
-    author: "Comunidad",
-    atoms: [
-        { question: "¿Qué es JSX?", answer: "Una extensión de sintaxis para JavaScript que permite escribir HTML directamente dentro de React." },
-        { question: "¿Qué es el 'state' en React?", answer: "Un objeto JavaScript que almacena los datos de un componente y determina cómo se renderiza y se comporta." }
-    ],
-    learningPath: [
-        { session: 1, topic: "Componentes y Props", sessionType: "Incursión" },
-        { session: 2, topic: "State y Ciclo de Vida", sessionType: "Incursión" },
-    ],
-    sources: [{ name: "react_docs_summary.txt", type: "Documento" }]
-  },
-  {
-    id: "8",
-    title: "Filosofía Griega",
-    description: "Explora las ideas de Platón, Aristóteles y Sócrates.",
-    icon: "Landmark" as keyof typeof projectIcons,
-    mastery: 0,
-    category: "Humanidades",
-    author: "Koli Academy",
-    atoms: [
-        { question: "¿Qué es la 'Alegoría de la caverna' de Platón?", answer: "Una metáfora sobre la naturaleza de la realidad, el conocimiento y la educación filosófica." },
-        { question: "¿Cuál es el método socrático?", answer: "Un método de diálogo que utiliza preguntas para estimular el pensamiento crítico y exponer las contradicciones en las creencias de uno." }
-    ],
-    learningPath: [
-        { session: 1, topic: "Filósofos Presocráticos", sessionType: "Calibración" },
-        { session: 2, topic: "Sócrates y Platón", sessionType: "Incursión" },
-    ],
-    sources: [{ name: "greek_philosophy.pdf", type: "Documento" }]
-  },
-];
-
-const categories = ["Todos", ...new Set(allProjects.map(p => p.category))];
-const authors = ["Todos", ...new Set(allProjects.map(p => p.author))];
+const categories = ["Todos", ...new Set(publicProjects.map(p => p.category))];
+const authors = ["Todos", ...new Set(publicProjects.map(p => p.author))];
 
 export default function ExplorePage() {
   const { toast } = useToast();
@@ -135,7 +42,7 @@ export default function ExplorePage() {
   const [categoryFilter, setCategoryFilter] = useState("Todos");
   const [authorFilter, setAuthorFilter] = useState("Todos");
 
-  const handleAddProject = (e: React.MouseEvent, project: any) => {
+  const handleAddProject = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     addProject(project);
     toast({
@@ -144,7 +51,7 @@ export default function ExplorePage() {
     });
   };
 
-  const filteredProjects = allProjects.filter(project => {
+  const filteredProjects = publicProjects.filter(project => {
     return (
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (categoryFilter === "Todos" || project.category === categoryFilter) &&
@@ -198,7 +105,7 @@ export default function ExplorePage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProjects.length > 0 ? filteredProjects.map((project) => {
-          const Icon = projectIcons[project.icon];
+          const Icon = projectIcons[project.icon as keyof typeof projectIcons];
           return (
             <Link href={`/projects/${project.id}`} key={project.id} className="block hover:bg-muted/30 transition-colors rounded-lg">
                 <Card className="bg-card/50 flex flex-col h-full cursor-pointer border-transparent hover:border-primary">

@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2 } from "lucide-react";
-import { useProjects } from "@/contexts/ProjectContext";
+import { useProjects, publicProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -153,7 +153,7 @@ function ProjectDetails() {
   const slug = params.id as string;
   const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom } = useProjects();
   
-  const project = projects.find(p => p.id === slug);
+  const project = projects.find(p => p.id === slug) || publicProjects.find(p => p.id === slug);
   
   const [isEditing, setIsEditing] = useState(false);
   const [editableTitle, setEditableTitle] = useState(project?.title || "");
