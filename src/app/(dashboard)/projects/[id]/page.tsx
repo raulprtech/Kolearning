@@ -41,6 +41,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import Link from "next/link";
 
 const projectIcons: { [key: string]: React.ElementType } = {
   Book,
@@ -161,10 +162,10 @@ function ProjectDetails() {
 
   const [showAllAtoms, setShowAllAtoms] = useState(false);
   const [showFullPlan, setShowFullPlan] = useState(false);
-  const [atomAction, setAtomAction] = useState<{ mode: 'view' | 'edit' | 'delete' | null, atom: Atom | null, index: number | null }>({ mode: null, atom: null, index: null});
+  const [atomAction, setAtomAction] = useState<{ mode: 'view' | 'edit' | 'delete' | null, atom: Atom | null, index: number | null }>({ mode: null, atom: null, index: null });
   
   useEffect(() => {
-    if (searchParams.get('planUpdated') === 'true') {
+    if (searchParams.get('planUpdated') === 'true' || searchParams.get('sessionCompleted') === 'true') {
         setShowUpdateAlert(true);
         const timer = setTimeout(() => {
             setShowUpdateAlert(false);
@@ -205,12 +206,16 @@ function ProjectDetails() {
       setAtomAction({ mode: null, atom: null, index: null });
   }
 
-  const getSessionStatus = (status: string) => {
+  const getSessionStatus = (status: string, projectId: string, sessionIndex: number) => {
       switch(status) {
           case 'Completed':
               return <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4"/>Completado</div>
           case 'Continue':
-              return <Button size="sm">Continuar</Button>
+              return (
+                <Link href={`/study/${projectId}?sessionIndex=${sessionIndex}`}>
+                    <Button size="sm">Continuar</Button>
+                </Link>
+              )
           case 'Locked':
               return <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4"/> Bloqueada</div>
           default:
@@ -234,6 +239,7 @@ function ProjectDetails() {
   }
 
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
+  const activeSessionIndex = project.sessions.findIndex(s => s.status === 'Continue');
 
   return (
     <ScrollArea className="h-full">
@@ -243,7 +249,10 @@ function ProjectDetails() {
             <Info className="h-4 w-4 text-primary" />
             <AlertTitle>¡Plan de estudio actualizado!</AlertTitle>
             <AlertDescription>
-                Koli ha añadido nuevas sesiones a tu plan basándose en tu última sesión.
+                 {searchParams.get('planUpdated') === 'true' 
+                    ? "Koli ha añadido nuevas sesiones a tu plan basándose en tu última sesión."
+                    : "¡Felicidades por completar tu sesión! La siguiente ya está desbloqueada."
+                 }
             </AlertDescription>
         </Alert>
       )}
@@ -284,10 +293,12 @@ function ProjectDetails() {
                 </>
             ) : (
                 <>
-                    <Button>
-                        <Play className="mr-2 h-4 w-4" />
-                        Estudiar
-                    </Button>
+                    <Link href={`/study/${project.id}?sessionIndex=${activeSessionIndex}`}>
+                        <Button disabled={activeSessionIndex < 0}>
+                            <Play className="mr-2 h-4 w-4" />
+                            Estudiar
+                        </Button>
+                    </Link>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="icon">
@@ -381,13 +392,13 @@ function ProjectDetails() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {project.sessions.map(session => (
+                        {project.sessions.map((session, index) => (
                              <TableRow key={session.day}>
                                 <TableCell>{session.day}</TableCell>
                                 <TableCell>{getSessionBadge(session.type)}</TableCell>
                                 <TableCell>{session.questions}</TableCell>
                                 <TableCell>{session.duration}</TableCell>
-                                <TableCell>{getSessionStatus(session.status)}</TableCell>
+                                <TableCell>{getSessionStatus(session.status, project.id, index)}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
@@ -509,3 +520,5 @@ export default function ProjectDetailsPage() {
         <ProjectDetails />
     )
 }
+
+    

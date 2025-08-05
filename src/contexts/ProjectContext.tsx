@@ -49,6 +49,7 @@ type ProjectContextType = {
   addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'day'>[]) => void;
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
   deleteAtom: (projectId: string, atomIndex: number) => void;
+  completeSession: (projectId: string, sessionIndex: number) => void;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -123,12 +124,12 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     if (!projects.find(p => p.id === newProject.id)) {
       const projectWithSessions: Project = {
         ...newProject,
-        sessions: newProject.learningPath.map((session: any) => ({
-            day: `Día ${session.session}`,
-            type: session.sessionType,
+        sessions: newProject.learningPath.map((item, index) => ({
+            day: `Día ${item.session}`,
+            type: item.sessionType,
             questions: 'N/A', // This info is not directly available in learningPath
             duration: '20 min', // Default duration
-            status: session.session === 1 ? 'Continue' : 'Locked'
+            status: index === 0 ? 'Continue' : 'Locked'
         }))
       };
       setProjects(prevProjects => [...prevProjects, projectWithSessions]);
@@ -193,9 +194,29 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       })
     );
   };
+  
+  const completeSession = (projectId: string, sessionIndex: number) => {
+    setProjects(prevProjects =>
+      prevProjects.map(p => {
+        if (p.id === projectId) {
+          const newSessions = [...p.sessions];
+          // Mark current session as completed
+          if (newSessions[sessionIndex]) {
+            newSessions[sessionIndex].status = 'Completed';
+          }
+          // Unlock next session
+          if (newSessions[sessionIndex + 1]) {
+            newSessions[sessionIndex + 1].status = 'Continue';
+          }
+          return { ...p, sessions: newSessions };
+        }
+        return p;
+      })
+    );
+  };
 
   return (
-    <ProjectContext.Provider value={{ projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, updateAtom, deleteAtom }}>
+    <ProjectContext.Provider value={{ projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, updateAtom, deleteAtom, completeSession }}>
       {children}
     </ProjectContext.Provider>
   );
@@ -208,3 +229,5 @@ export const useProjects = () => {
   }
   return context;
 };
+
+    

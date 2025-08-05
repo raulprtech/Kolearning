@@ -1,3 +1,7 @@
+
+"use client"
+
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,20 +12,43 @@ import {
 } from "@/components/ui/card";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Flame, Lightbulb, Repeat, BrainCircuit, ChevronLeft } from "lucide-react";
+import { Flame, Lightbulb, Repeat, BrainCircuit } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useProjects } from "@/contexts/ProjectContext";
 
-export default function StudySessionPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const question = {
-    text: "Explica el principio de superposición en mecánica cuántica.",
-    answer:
-      "El principio de superposición establece que dos (o más) estados cuánticos pueden ser sumados ('superpuestos') y el resultado será otro estado cuántico válido. A la inversa, cada estado cuántico puede ser representado como una suma de dos o más estados distintos.",
-  };
+export default function StudySessionPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { projects } = useProjects();
+  
+  const projectId = params.id as string;
+  const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
+  
+  const project = projects.find(p => p.id === projectId);
+  
+  const question = useMemo(() => {
+    if (!project || !project.atoms || project.atoms.length === 0) {
+      return { text: "No hay preguntas disponibles.", answer: "" };
+    }
+    // For now, let's just pick a random question from the available atoms.
+    // A more sophisticated approach would be to track which atoms have been studied.
+    const randomIndex = Math.floor(Math.random() * project.atoms.length);
+    return project.atoms[randomIndex];
+  }, [project]);
+
+  const session = project?.sessions[sessionIndex];
+
+  if (!project || !session) {
+    return (
+        <div className="flex flex-col flex-1 items-center justify-center">
+            <h1 className="text-2xl">Sesión no encontrada</h1>
+            <Button onClick={() => router.push('/')} className="mt-4">Volver al Dashboard</Button>
+        </div>
+    )
+  }
 
   const ratings = [
       { label: "Muy Difícil", variant: "destructive", description: "Repetir Pronto", fsrs: 1 },
@@ -34,7 +61,7 @@ export default function StudySessionPage({
     <div className="flex flex-col flex-1">
        <header className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold">Física Cuántica</h2>
+            <h2 className="text-xl font-bold">{project.title}</h2>
           </div>
           <div className="flex items-center gap-2">
             <Flame className="text-yellow-400" />
@@ -46,7 +73,7 @@ export default function StudySessionPage({
             <div className="w-full max-w-3xl">
                 <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-4 right-4">
-                    <Badge variant="secondary">Pregunta Abierta</Badge>
+                    <Badge variant="secondary">{session.type}</Badge>
                 </div>
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl text-center">
@@ -103,7 +130,7 @@ export default function StudySessionPage({
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {ratings.map(rating => (
-                           <Link key={rating.label} href={`/study/${params.id}/summary?fsrs=${rating.fsrs}`} passHref>
+                           <Link key={rating.label} href={`/study/${projectId}/summary?sessionIndex=${sessionIndex}&fsrs=${rating.fsrs}`} passHref>
                                 <Button variant={rating.variant} className="h-auto py-3 flex-col w-full">
                                     <span className="text-lg font-bold">{rating.label}</span>
                                     <span className="text-xs opacity-80">{rating.description}</span>
@@ -119,3 +146,5 @@ export default function StudySessionPage({
     </div>
   );
 }
+
+    

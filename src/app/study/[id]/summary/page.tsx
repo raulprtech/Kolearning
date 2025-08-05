@@ -21,8 +21,9 @@ function SessionSummaryContent() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
-    const { projects, addSessionsToProject } = useProjects();
+    const { projects, addSessionsToProject, completeSession } = useProjects();
     const projectId = params.id as string;
+    const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
     const fsrsRating = searchParams.get('fsrs');
     
     const [tutorResponse, setTutorResponse] = useState<DynamicLearningPathAdjustmentOutput | null>(null);
@@ -38,6 +39,9 @@ function SessionSummaryContent() {
                 setIsLoading(false);
                 return;
             }
+
+            // Mark session as complete first
+            completeSession(projectId, sessionIndex);
 
             try {
                 const response = await dynamicLearningPathAdjustment({
@@ -58,11 +62,12 @@ function SessionSummaryContent() {
         };
 
         getTutorFeedback();
-    }, [projectId, fsrsRating, project, addSessionsToProject]);
+    }, [projectId, fsrsRating, project, addSessionsToProject, completeSession, sessionIndex]);
 
     const handleFinish = () => {
         const planUpdated = tutorResponse && tutorResponse.newSessions.length > 0;
-        router.push(`/projects/${projectId}${planUpdated ? '?planUpdated=true' : ''}`);
+        const query = planUpdated ? '?planUpdated=true' : '?sessionCompleted=true';
+        router.push(`/projects/${projectId}${query}`);
     };
 
     return (
@@ -146,3 +151,4 @@ export default function SessionSummaryPage() {
     );
 }
 
+    
