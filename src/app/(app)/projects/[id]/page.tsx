@@ -36,6 +36,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy } from "lucide-react";
 import { useProjects, publicProjects } from "@/contexts/ProjectContext";
@@ -47,6 +56,9 @@ import Link from "next/link";
 import { Project, Atom } from "@/contexts/ProjectContext";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { es } from 'date-fns/locale';
+import { cn } from "@/lib/utils";
 
 const projectIcons: { [key: string]: React.ElementType } = {
   Book,
@@ -148,7 +160,7 @@ function AtomActionDialog({ atom, mode, isOpen, onClose, onConfirm }: AtomAction
 function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: boolean; onClose: () => void; project: Project, onCreate: (plan: CalibratePlanOutput, project: Project) => void }) {
     const [isLoading, setIsLoading] = useState(false);
     const [userObjective, setUserObjective] = useState('');
-    const [deadline, setDeadline] = useState('');
+    const [deadline, setDeadline] = useState<Date | undefined>(undefined);
     const [masteryLevel, setMasteryLevel] = useState('');
 
     const handleCreate = async () => {
@@ -157,7 +169,7 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
             const atomsSummary = project.atoms.map(a => `- ${a.question}`).join('\n');
             const plan = await calibratePlanFromQuestionnaire({
                 userObjective,
-                deadline,
+                deadline: deadline ? format(deadline, "PPP", { locale: es }) : 'No especificada',
                 masteryLevel,
                 learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
             });
@@ -170,6 +182,15 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
         }
     };
 
+    const objectiveOptions = [
+        "Prepararme para un examen",
+        "Entender los conceptos clave",
+        "Aplicar este conocimiento en un proyecto",
+        "Aprender algo nuevo por curiosidad",
+    ];
+
+    const masteryOptions = [ "Principiante", "Intermedio", "Avanzado"];
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent>
@@ -181,21 +202,57 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <label htmlFor="objective" className="text-sm font-medium flex items-center gap-2"><Target className="h-4 w-4"/>Tu objetivo de aprendizaje</label>
-                        <Input id="objective" placeholder="Ej: Prepararme para un examen final" value={userObjective} onChange={(e) => setUserObjective(e.target.value)} />
+                        <label className="text-sm font-medium flex items-center gap-2"><Target className="h-4 w-4"/>Tu objetivo de aprendizaje</label>
+                        <Select onValueChange={setUserObjective} value={userObjective}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecciona tu objetivo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {objectiveOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="space-y-2">
-                         <label htmlFor="deadline" className="text-sm font-medium flex items-center gap-2"><CalendarIcon className="h-4 w-4"/>¿Tienes una fecha límite?</label>
-                        <Input id="deadline" placeholder="Ej: Dentro de 3 semanas" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+                         <label className="text-sm font-medium flex items-center gap-2"><CalendarIcon className="h-4 w-4"/>¿Tienes una fecha límite?</label>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !deadline && "text-muted-foreground"
+                                )}
+                                >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {deadline ? format(deadline, "PPP", { locale: es}) : <span>Elige una fecha</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={deadline}
+                                    onSelect={setDeadline}
+                                    initialFocus
+                                    locale={es}
+                                />
+                            </PopoverContent>
+                        </Popover>
                     </div>
                     <div className="space-y-2">
-                         <label htmlFor="mastery" className="text-sm font-medium flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Tu nivel de dominio actual</label>
-                        <Input id="mastery" placeholder="Ej: Principiante, ya conozco lo básico" value={masteryLevel} onChange={(e) => setMasteryLevel(e.target.value)} />
+                         <label className="text-sm font-medium flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Tu nivel de dominio actual</label>
+                         <Select onValueChange={setMasteryLevel} value={masteryLevel}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecciona tu nivel" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {masteryOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancelar</Button>
-                    <Button onClick={handleCreate} disabled={isLoading}>
+                    <Button onClick={handleCreate} disabled={isLoading || !userObjective || !masteryLevel}>
                         {isLoading ? <Loader2 className="animate-spin" /> : "Crear Proyecto"}
                     </Button>
                 </DialogFooter>
