@@ -168,7 +168,7 @@ export default function StudySessionPage() {
                         <Button variant="outline" size="icon" aria-label="Reformular" disabled>
                             <Repeat />
                         </Button>
-                        <Button variant="ghost" size="icon" aria-label="Consultar a Koli" disabled>
+                        <Button variant="ghost" size="icon" aria-label="Consultar a Koli">
                             <KoliAvatar className="h-6 w-6" />
                         </Button>
                     </div>
@@ -229,5 +229,3 @@ export default function StudySessionPage() {
     </div>
   );
 }
-
-    
