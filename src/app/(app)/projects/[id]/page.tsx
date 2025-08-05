@@ -1,0 +1,522 @@
+
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2 } from "lucide-react";
+import { useProjects } from "@/contexts/ProjectContext";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import Link from "next/link";
+
+const projectIcons: { [key: string]: React.ElementType } = {
+  Book,
+  Landmark,
+  FlaskConical,
+  Globe,
+  Code,
+  Music,
+  Palette,
+};
+
+type Atom = {
+  question: string;
+  answer: string;
+}
+
+interface AtomActionDialogProps {
+  atom: Atom | null;
+  mode: 'view' | 'edit' | 'delete' | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (data?: Atom) => void;
+}
+
+function AtomActionDialog({ atom, mode, isOpen, onClose, onConfirm }: AtomActionDialogProps) {
+    const [editableAtom, setEditableAtom] = useState<Atom | null>(atom);
+
+    useEffect(() => {
+        setEditableAtom(atom);
+    }, [atom]);
+
+    if (!isOpen || !atom || !mode) return null;
+
+    const handleConfirm = () => {
+        if (mode === 'edit' && editableAtom) {
+            onConfirm(editableAtom);
+        } else {
+            onConfirm();
+        }
+    }
+
+    const titles = {
+        view: "Ver Átomo",
+        edit: "Editar Átomo",
+        delete: "Confirmar Eliminación"
+    }
+    const descriptions = {
+        view: "Detalles del átomo de conocimiento.",
+        edit: "Edita la pregunta y la respuesta de este átomo.",
+        delete: `¿Estás seguro de que quieres eliminar este átomo? Esta acción no se puede deshacer.`
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{titles[mode]}</DialogTitle>
+                    <DialogDescription>{descriptions[mode]}</DialogDescription>
+                </DialogHeader>
+                {mode === 'view' && editableAtom && (
+                    <div className="space-y-4 py-4">
+                        <p className="font-semibold">{editableAtom.question}</p>
+                        <p className="text-muted-foreground">{editableAtom.answer}</p>
+                    </div>
+                )}
+                {mode === 'edit' && editableAtom && (
+                    <div className="space-y-4 py-4">
+                        <div>
+                            <label className="text-sm font-medium">Pregunta</label>
+                            <Textarea 
+                                value={editableAtom.question}
+                                onChange={(e) => setEditableAtom({...editableAtom, question: e.target.value})}
+                                className="mt-1"
+                            />
+                        </div>
+                         <div>
+                            <label className="text-sm font-medium">Respuesta</label>
+                            <Textarea 
+                                value={editableAtom.answer}
+                                onChange={(e) => setEditableAtom({...editableAtom, answer: e.target.value})}
+                                className="mt-1"
+                            />
+                        </div>
+                    </div>
+                )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>
+                        {mode === 'delete' ? 'Cancelar' : 'Cerrar'}
+                    </Button>
+                    {(mode === 'edit' || mode === 'delete') && (
+                        <Button
+                            onClick={handleConfirm}
+                            variant={mode === 'delete' ? 'destructive' : 'default'}
+                        >
+                            {mode === 'edit' ? 'Guardar Cambios' : 'Eliminar'}
+                        </Button>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+function ProjectDetails() {
+  const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const slug = params.id as string;
+  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom } = useProjects();
+  
+  const project = projects.find(p => p.id === slug);
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableTitle, setEditableTitle] = useState(project?.title || "");
+  const [editableDescription, setEditableDescription] = useState(project?.description || "");
+  const [showUpdateAlert, setShowUpdateAlert] = useState(false);
+
+  const [showAllAtoms, setShowAllAtoms] = useState(false);
+  const [showFullPlan, setShowFullPlan] = useState(false);
+  const [atomAction, setAtomAction] = useState<{ mode: 'view' | 'edit' | 'delete' | null, atom: Atom | null, index: number | null }>({ mode: null, atom: null, index: null });
+  
+  useEffect(() => {
+    if (searchParams.get('planUpdated') === 'true' || searchParams.get('sessionCompleted') === 'true') {
+        setShowUpdateAlert(true);
+        const timer = setTimeout(() => {
+            setShowUpdateAlert(false);
+            router.replace(`/projects/${slug}`, { scroll: false });
+        }, 5000);
+        return () => clearTimeout(timer);
+    }
+  }, [searchParams, router, slug]);
+
+  if (!project) {
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background">
+            <h1 className="text-2xl font-bold">Proyecto no encontrado</h1>
+            <p className="text-muted-foreground">El proyecto que buscas no existe o ha sido eliminado.</p>
+            <Button onClick={() => router.push('/')} className="mt-4">Volver al Dashboard</Button>
+        </div>
+    )
+  }
+  
+  const Icon = projectIcons[project.icon] || Globe;
+
+  const handleIconChange = (iconKey: string) => {
+    updateProjectIcon(project.id, iconKey);
+    setIsIconSelectorOpen(false);
+  };
+
+  const handleSaveDetails = () => {
+      updateProjectDetails(project.id, editableTitle, editableDescription);
+      setIsEditing(false);
+  }
+  
+  const handleAtomActionConfirm = (data?: Atom) => {
+      if (atomAction.mode === 'edit' && atomAction.index !== null && data) {
+          updateAtom(project.id, atomAction.index, data);
+      } else if (atomAction.mode === 'delete' && atomAction.index !== null) {
+          deleteAtom(project.id, atomAction.index);
+      }
+      setAtomAction({ mode: null, atom: null, index: null });
+  }
+
+  const getSessionStatus = (status: string, projectId: string, sessionIndex: number) => {
+      switch(status) {
+          case 'Completed':
+              return <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4"/>Completado</div>
+          case 'Continue':
+              return (
+                <Link href={`/study/${projectId}?sessionIndex=${sessionIndex}`}>
+                    <Button size="sm">Continuar</Button>
+                </Link>
+              )
+          case 'Locked':
+              return <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4"/> Bloqueada</div>
+          default:
+              return null;
+      }
+  }
+
+  const getSessionBadge = (type: string) => {
+      switch(type) {
+          case 'Calibración':
+              return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">{type}</Badge>
+          case 'Refuerzo de Dominio':
+              return <Badge variant="secondary">{type}</Badge>
+          case 'Prueba de Dominio':
+              return <Badge variant="destructive">{type}</Badge>
+          case 'Incursión':
+              return <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">{type}</Badge>
+          default:
+              return <Badge variant="outline">{type}</Badge>;
+      }
+  }
+
+  const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
+  const activeSessionIndex = project.sessions.findIndex(s => s.status === 'Continue');
+
+  return (
+    <ScrollArea className="h-full">
+    <div className="flex-1 flex flex-col p-6 bg-background">
+      {showUpdateAlert && (
+        <Alert className="mb-6 bg-primary/10 border-primary/20">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertTitle>¡Plan de estudio actualizado!</AlertTitle>
+            <AlertDescription>
+                 {searchParams.get('planUpdated') === 'true' 
+                    ? "Koli ha añadido nuevas sesiones a tu plan basándose en tu última sesión."
+                    : "¡Felicidades por completar tu sesión! La siguiente ya está desbloqueada."
+                 }
+            </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start gap-4 flex-1">
+            <button onClick={() => setIsIconSelectorOpen(true)} className="p-2 rounded-lg hover:bg-muted transition-colors mt-1">
+                <Icon className="w-8 h-8 text-primary" />
+            </button>
+            <div className="flex-1">
+                {isEditing ? (
+                     <div className="flex flex-col gap-2 max-w-2xl">
+                        <Input 
+                            value={editableTitle} 
+                            onChange={(e) => setEditableTitle(e.target.value)}
+                            className="text-2xl font-bold font-headline h-auto p-0 border-0 focus-visible:ring-0"
+                        />
+                        <Textarea 
+                            value={editableDescription} 
+                            onChange={(e) => setEditableDescription(e.target.value)}
+                            className="text-sm text-muted-foreground p-0 border-0 focus-visible:ring-0"
+                            rows={1}
+                        />
+                    </div>
+                ) : (
+                    <div>
+                        <h1 className="text-2xl font-bold font-headline text-foreground max-w-2xl">{project.title}</h1>
+                        <p className="text-sm text-muted-foreground">{project.description}</p>
+                    </div>
+                )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+                 <>
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                    <Button onClick={handleSaveDetails}>Guardar</Button>
+                </>
+            ) : (
+                <>
+                    <Link href={`/study/${project.id}?sessionIndex=${activeSessionIndex}`}>
+                        <Button disabled={activeSessionIndex < 0}>
+                            <Play className="mr-2 h-4 w-4" />
+                            Estudiar
+                        </Button>
+                    </Link>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            <span>Editar Proyecto</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            <span>Compartir</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Eliminar Proyecto</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </>
+            )}
+          </div>
+      </div>
+
+      <Dialog open={isIconSelectorOpen} onOpenChange={setIsIconSelectorOpen}>
+        <DialogContent>
+            <DialogHeader>
+            <DialogTitle>Elige un icono para tu proyecto</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-4 gap-4 py-4">
+            {Object.entries(projectIcons).map(([key, IconComponent]) => (
+                <Button
+                key={key}
+                variant="outline"
+                className="flex flex-col h-24 gap-2 items-center justify-center"
+                onClick={() => handleIconChange(key)}
+                >
+                <IconComponent className="h-8 w-8 text-primary" />
+                <span className="text-xs">{key}</span>
+                </Button>
+            ))}
+            </div>
+        </DialogContent>
+      </Dialog>
+      
+      <AtomActionDialog 
+        isOpen={!!atomAction.mode}
+        mode={atomAction.mode}
+        atom={atomAction.atom}
+        onClose={() => setAtomAction({ mode: null, atom: null, index: null })}
+        onConfirm={handleAtomActionConfirm}
+      />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card className="bg-card/50">
+                <CardContent className="pt-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">Mejor Racha</p>
+                    <p className="text-4xl font-bold">1</p>
+                </CardContent>
+            </Card>
+             <Card className="bg-card/50">
+                <CardContent className="pt-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">XP ganados</p>
+                    <p className="text-4xl font-bold">0</p>
+                </CardContent>
+            </Card>
+             <Card className="bg-card/50">
+                <CardContent className="pt-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">Dominio del tema</p>
+                    <p className="text-4xl font-bold">{project.mastery}%</p>
+                </CardContent>
+            </Card>
+        </div>
+
+        <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Sesiones</h2>
+                <Button variant="outline" onClick={() => setShowFullPlan(true)}>Ver hoja completa</Button>
+            </div>
+            <Card className="bg-card/50">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Sesión</TableHead>
+                            <TableHead>Tipo de Sesión</TableHead>
+                            <TableHead>Preguntas</TableHead>
+                            <TableHead>Duración</TableHead>
+                            <TableHead>Estado</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {project.sessions.map((session, index) => (
+                             <TableRow key={session.day}>
+                                <TableCell>{session.day}</TableCell>
+                                <TableCell>{getSessionBadge(session.type)}</TableCell>
+                                <TableCell>{session.questions}</TableCell>
+                                <TableCell>{session.duration}</TableCell>
+                                <TableCell>{getSessionStatus(session.status, project.id, index)}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </Card>
+        </div>
+        
+         <Dialog open={showFullPlan} onOpenChange={setShowFullPlan}>
+            <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Hoja de Ruta Completa</DialogTitle>
+                    <DialogDescription>Este es el plan de estudio completo generado por Koli.</DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-96 my-4 pr-4">
+                     <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-20">Sesión</TableHead>
+                                <TableHead>Tema</TableHead>
+                                <TableHead>Tipo de Sesión</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {project.learningPath.map((item) => (
+                                <TableRow key={item.session}>
+                                    <TableCell className="font-medium">{item.session}</TableCell>
+                                    <TableCell>{item.topic}</TableCell>
+                                    <TableCell>{getSessionBadge(item.sessionType)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+                <DialogFooter>
+                    <Button onClick={() => setShowFullPlan(false)}>Cerrar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Átomos de conocimiento</h2>
+                <Button variant="outline" onClick={() => setShowAllAtoms(!showAllAtoms)}>
+                    {showAllAtoms ? "Ver menos" : `Ver todas (${project.atoms?.length || 0})`}
+                </Button>
+            </div>
+            <Card className="bg-card/50">
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Término</TableHead>
+                        <TableHead>Definición</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {displayedAtoms?.map((atom, index) => (
+                        <TableRow key={index}>
+                        <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
+                        <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
+                        <TableCell className="text-right align-top">
+                             <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'view', atom, index })}>
+                                <Eye className="h-4 w-4 mr-2"/>
+                                Ver
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'edit', atom, index })}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Editar
+                            </Button>
+                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Eliminar
+                            </Button>
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+            </Card>
+        </div>
+
+        <div>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Fuentes</h2>
+            </div>
+            <Card className="bg-card/50">
+                <Table>
+                    <TableBody>
+                    {project.sources?.map((source, index) => (
+                        <TableRow key={index}>
+                            <TableCell>
+                                <p className="font-medium">{source.name}</p>
+                                <p className="text-sm text-muted-foreground">{source.type}</p>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                    <Button variant="ghost" size="sm">
+                                    <Eye className="h-4 w-4 mr-2"/>
+                                    Ver
+                                </Button>
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Eliminar
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+            </Card>
+        </div>
+
+    </div>
+    </ScrollArea>
+  );
+}
+
+export default function ProjectDetailsPage() {
+    return (
+        <ProjectDetails />
+    )
+}
