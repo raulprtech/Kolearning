@@ -222,9 +222,9 @@ function ProjectDetails() {
       switch(type) {
           case 'Calibración':
               return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">{type}</Badge>
-          case 'Refuerzo':
+          case 'Refuerzo de Dominio':
               return <Badge variant="secondary">{type}</Badge>
-          case 'Dominio':
+          case 'Prueba de Dominio':
               return <Badge variant="destructive">{type}</Badge>
           case 'Incursión':
               return <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">{type}</Badge>
@@ -396,13 +396,30 @@ function ProjectDetails() {
         </div>
         
          <Dialog open={showFullPlan} onOpenChange={setShowFullPlan}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>Hoja de Ruta Completa</DialogTitle>
                     <DialogDescription>Este es el plan de estudio completo generado por Koli.</DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-96 my-4 pr-4">
-                    <pre className="text-sm whitespace-pre-wrap">{project.fullLearningPlanMarkdown}</pre>
+                     <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-20">Sesión</TableHead>
+                                <TableHead>Tema</TableHead>
+                                <TableHead>Tipo de Sesión</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {project.learningPath.map((item) => (
+                                <TableRow key={item.session}>
+                                    <TableCell className="font-medium">{item.session}</TableCell>
+                                    <TableCell>{item.topic}</TableCell>
+                                    <TableCell>{getSessionBadge(item.sessionType)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </ScrollArea>
                 <DialogFooter>
                     <Button onClick={() => setShowFullPlan(false)}>Cerrar</Button>

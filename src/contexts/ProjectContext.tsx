@@ -21,6 +21,12 @@ type Session = {
   status: 'Completed' | 'Continue' | 'Locked';
 }
 
+type LearningPathItem = {
+    session: number;
+    topic: string;
+    sessionType: string;
+}
+
 type Project = {
   id: string;
   title: string;
@@ -31,6 +37,7 @@ type Project = {
   atoms: Atom[];
   sessions: Session[];
   sources: Source[];
+  learningPath: LearningPathItem[];
   fullLearningPlanMarkdown?: string;
 };
 
@@ -63,6 +70,11 @@ const initialProjects: Project[] = [
         { day: "Día 2", type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Continue" },
         { day: "Día 3", type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
     ],
+    learningPath: [
+        { session: 1, topic: "Fundamentos de la Mecánica Cuántica", sessionType: "Calibración" },
+        { session: 2, topic: "Superposición y Entrelazamiento", sessionType: "Incursión" },
+        { session: 3, topic: "Repaso de Fundamentos", sessionType: "Refuerzo de Dominio" },
+    ],
     sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento"} ]
   },
   {
@@ -79,6 +91,9 @@ const initialProjects: Project[] = [
     sessions: [
         { day: "Día 1", type: "Incursión", questions: "Flashcards", duration: "25 min", status: "Continue" },
     ],
+    learningPath: [
+        { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión" },
+    ],
     sources: [ {name: "The_History_of_Rome.pdf", type: "Documento"} ]
   },
   {
@@ -93,6 +108,9 @@ const initialProjects: Project[] = [
     ],
     sessions: [
         { day: "Día 1", type: "Calibración", questions: "Opción múltiple", duration: "15 min", status: "Continue" },
+    ],
+    learningPath: [
+        { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración" },
     ],
     sources: [ {name: "Organic_Chemistry.pdf", type: "Documento"} ]
   },
