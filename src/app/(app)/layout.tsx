@@ -20,8 +20,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
-import { ProjectProvider, useProjects } from "@/contexts/ProjectContext";
+import { useProjects } from "@/contexts/ProjectContext";
 import { Header } from "@/components/layout/header";
+import { ClientProvider } from "@/contexts/client-provider";
 
 const projectIcons: { [key: string]: React.ElementType } = {
     Book,
@@ -114,7 +115,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProjectProvider>
+    <ClientProvider>
       <div className="flex h-screen bg-background text-foreground">
         <SidebarContent />
         <div className="flex-1 flex flex-col overflow-auto">
@@ -122,6 +123,6 @@ export default function DashboardLayout({
             {children}
         </div>
       </div>
-    </ProjectProvider>
+    </ClientProvider>
   );
 }
