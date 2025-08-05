@@ -20,16 +20,6 @@ export function Header() {
         </h1>
       </Link>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-4 border-r border-border pr-4">
-           <div className="flex items-center gap-2" title="Racha actual">
-              <Flame className="text-orange-400" />
-              <span className="font-bold text-lg text-foreground">{streak}</span>
-          </div>
-          <div className="flex items-center gap-2" title="Energía restante">
-              <Zap className="text-yellow-400" />
-              <span className="font-bold text-lg text-foreground">{energy}</span>
-          </div>
-        </div>
         <Button>Acceder</Button>
       </div>
     </header>

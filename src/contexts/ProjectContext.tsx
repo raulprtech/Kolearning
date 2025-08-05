@@ -72,8 +72,8 @@ const initialProjects: Project[] = [
         { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
     ],
     sessions: [
-        { session: 1, type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Completed" },
-        { session: 2, type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Continue" },
+        { session: 1, type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Continue" },
+        { session: 2, type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Locked" },
         { session: 3, type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
     ],
     learningPath: [

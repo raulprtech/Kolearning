@@ -141,11 +141,24 @@ export default function StudySessionPage() {
   )
 
   return (
-    <div className="flex flex-col flex-1 h-[calc(100vh-theme(space.20))]">
+    <div className="flex flex-col flex-1 h-[calc(100vh-theme(space.16))]">
        <header className="flex items-center justify-between p-4 border-b border-border gap-4 shrink-0">
+            <div className="w-1/4">
+                <Button variant="outline" onClick={() => router.back()}>Salir de la Sesión</Button>
+            </div>
             <div className="flex-1">
                 <Progress value={progress} />
                  <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
+            </div>
+            <div className="w-1/4 flex justify-end items-center gap-4">
+                <div className="flex items-center gap-2" title="Racha de sesión">
+                    <Flame className="text-orange-400" />
+                    <span className="font-bold text-lg text-foreground">{streak}</span>
+                </div>
+                <div className="flex items-center gap-2" title="Energía restante">
+                    <Zap className="text-yellow-400" />
+                    <span className="font-bold text-lg text-foreground">{energy}</span>
+                </div>
             </div>
         </header>
 
@@ -189,7 +202,7 @@ export default function StudySessionPage() {
                         <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
                         <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
                         <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
-                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={() => handleUseEnergy(3)} disabled={viewState === 'question'} />
+                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={() => handleUseEnergy(3)} disabled={viewState === 'answer'} />
                     </div>
                     </div>
                     
