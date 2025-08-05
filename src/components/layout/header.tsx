@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/logo";
 import { useProjects } from "@/contexts/ProjectContext";
-import { Flame, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 
 
 export function Header() {
-  const { energy, streak } = useProjects();
+  const { energy } = useProjects();
 
   return (
     <header className="flex items-center justify-between p-4 border-b border-border">
@@ -19,7 +19,11 @@ export function Header() {
           Kolearning
         </h1>
       </Link>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2" title="Energía">
+            <Zap className="h-5 w-5 text-yellow-400" />
+            <span className="font-bold text-lg">{energy}</span>
+        </div>
         <Button>Acceder</Button>
       </div>
     </header>
