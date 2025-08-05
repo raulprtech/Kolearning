@@ -65,27 +65,20 @@ A learner has provided their learning material, their objective, and some person
 **Learning Material Summary:** 
 {{{learningMaterialSummary}}}
 
-**Kolearning Methodology:**
+**Kolearning Methodology & Rules:**
 
-1.  **Sesión de Calibración:**
-    *   **Intención:** Diagnóstico. Establecer una línea base del conocimiento.
-    *   **Evaluación:** Opción Múltiple.
-    *   **Justificación:** Identificar fortalezas y debilidades.
-
-2.  **Sesión de Incursión:**
-    *   **Intención:** Adquisición. Presentar nuevos "Átomos de Conocimiento".
-    *   **Evaluación:** Pregunta Abierta (Flashcard).
-    *   **Justificación:** Maximizar el esfuerzo cognitivo para la recuperación activa.
-
-3.  **Sesión de Refuerzo de Dominio:**
-    *   **Intención:** Retención a Largo Plazo. Combatir la curva del olvido.
-    *   **Evaluación:** Formatos Mixtos (Opción Múltiple, Ordenamiento, etc.).
-    *   **Justificación:** Repetición espaciada para garantizar la retención.
-
-4.  **Sesión de Prueba de Dominio:**
-    *   **Intención:** Certificación. Evaluar el dominio profundo.
-    *   **Evaluación:** Pregunta Abierta y Casos Prácticos.
-    *   **Justificación:** Medir el resultado final del aprendizaje.
+1.  **Session Size:** Each session MUST contain a MAXIMUM of 10 knowledge atoms (flashcards). This is a strict rule.
+2.  **Sub-modules:** If the material is extensive, you MUST divide it into logical sub-modules or topics.
+3.  **Session Types:**
+    *   **Sesión de Calibración:**
+        *   **Intention:** Diagnostic. Establish a baseline.
+        *   **Content:** Use a small, representative sample of atoms from the entire material. This session should be short.
+    *   **Sesión de Incursión:**
+        *   **Intention:** Acquisition. Introduce NEW knowledge atoms (up to 10).
+    *   **Sesión de Refuerzo de Dominio:**
+        *   **Intention:** Long-term retention. Review previously seen atoms.
+    *   **Sesión de Prueba de Dominio:**
+        *   **Intention:** Certification. Test deep understanding of a sub-module. This should be the final session for a sub-module.
 
 **Your Tasks:**
 
@@ -94,10 +87,14 @@ A learner has provided their learning material, their objective, and some person
     *   **projectDescription:** Write a brief, one-sentence description summarizing the project's goal.
     *   **categories:** Assign 1 to 3 relevant categories (e.g., "Tecnología", "Ciencia", "Humanidades", "Arte").
 2.  **Create the Learning Plan Components:**
-    *   **learningPath:** Generate a structured array of learning sessions. Each session should have a number, a clear topic, and its corresponding session type from the methodology. Start with a "Calibración Inicial" session. Create at least 3-5 diverse sessions.
-    *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy behind the plan.
+    *   **learningPath:** Generate a structured array of learning sessions following all the rules above.
+        *   Start with a "Calibración Inicial" session.
+        *   For each sub-module, create a logical sequence of 'Incursión', 'Refuerzo', and 'Prueba de Dominio' sessions.
+        *   Ensure no session has more than 10 atoms/topics.
+        *   The 'topic' for each session should clearly state what will be learned.
+    *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy behind the plan (mentioning the short sessions and sub-modules).
     *   **expectedProgress:** Write an encouraging paragraph outlining the expected learning progression for the user.
-    *   **fullLearningPlanMarkdown:** Generate a complete, actionable learning plan using Markdown for formatting. Use the generated 'projectTitle'. Structure the plan with the four session types as the main sections (use Markdown headings). For each session type, briefly explain its purpose and suggest a concrete first step or focus area for the learner.
+    *   **fullLearningPlanMarkdown:** Generate a complete, actionable learning plan using Markdown for formatting. Use the generated 'projectTitle'. Structure the plan with the created sub-modules as main sections.
 
 Provide the response in a structured JSON format.
 `,
