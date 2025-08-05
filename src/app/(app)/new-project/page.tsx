@@ -74,16 +74,6 @@ type ProjectData = {
     masteryLevel: string;
 }
 
-type AttachedData = {
-    objective?: string;
-    deadline?: {
-        date: Date;
-        text: string;
-    };
-    masteryLevel?: string;
-}
-
-
 const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -93,7 +83,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, isProjectStarted, attachedData, setAttachedData, processDataCollection }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, isProjectStarted, processDataCollection }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -476,6 +466,23 @@ export default function NewProjectPage() {
 
 
   useEffect(() => {
+    if (!isProjectStarted) {
+        addMessage({ role: 'koli', content: (
+            <div className="flex flex-col items-center text-center max-w-md">
+                <KoliAvatar className="h-24 w-24 mb-6" />
+                <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
+                Hola, soy Koli
+                </h1>
+                <p className="mt-4 text-lg text-muted-foreground">
+                Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
+                </p>
+            </div>
+        )});
+    }
+  }, [isProjectStarted, addMessage]);
+
+
+  useEffect(() => {
     if (isAtomizationComplete && dataCollectionStep === 'done') {
         if (atomsResult) {
              addMessage({ 
@@ -594,8 +601,8 @@ export default function NewProjectPage() {
     setProcessingFile({ name: filesToProcess[0].name, content: '' });
     setIsProjectStarted(true);
 
-    // Don't wait for atomization, start conversation right away
-    processDataCollection(null);
+    // Start conversation right away, passing the initial objective if provided
+    processDataCollection(userObjective);
 
     try {
         const dataUris = await Promise.all(filesToProcess.map(fileToDataUri));
@@ -642,8 +649,11 @@ export default function NewProjectPage() {
     setSelectedFiles([]);
     
     if (filesToProcess.length > 0) {
-        // This is now a fire-and-forget call from the user's perspective
         processFiles(filesToProcess, objective || "Aprender el contenido del documento.");
+    } else if (objective) {
+        // If there's only text, start the conversation with it.
+        setIsProjectStarted(true);
+        processDataCollection(objective);
     }
   }
 
@@ -728,34 +738,13 @@ export default function NewProjectPage() {
             />
           <main className="flex-1 flex flex-col items-center p-4">
             <div className="flex-1 flex flex-col items-center justify-center">
-                <div className="flex flex-col items-center text-center max-w-md">
-                    <KoliAvatar className="h-24 w-24 mb-6" />
-                    <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-                    Hola, soy Koli
-                    </h1>
-                    <p className="mt-4 text-lg text-muted-foreground">
-                    Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
-                    </p>
-                </div>
-                <div className="mt-12 max-w-4xl w-full text-left">
-                    <h2 className="text-xl font-headline text-center mb-6">Crea tu primer proyecto de estudio personalizado</h2>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {initialSteps.map((step, index) => (
-                            <div key={index} className="flex gap-4">
-                                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
-                                    {index + 1}
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold mb-1">{step.title}</h3>
-                                    <p className="text-sm text-muted-foreground">{step.description}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <p className="text-center text-sm text-muted-foreground mt-8">
-                        ¡Y listo! Con estos pasos, Koli generará tu proyecto de estudio personalizado y podrás empezar a aprender.
-                    </p>
-                </div>
+                <KoliAvatar className="h-24 w-24 mb-6" />
+                <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
+                Hola, soy Koli
+                </h1>
+                <p className="mt-4 text-lg text-muted-foreground">
+                Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
+                </p>
             </div>
     
             <div className="w-full max-w-2xl mt-auto p-4">
@@ -794,6 +783,32 @@ export default function NewProjectPage() {
                         </Button>
                     </CardContent>
                 </Card>
+            </div>
+        )
+    }
+
+    if (!isProjectStarted && messages.length > 0) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center">
+                <div className="flex flex-col items-center text-center max-w-md">
+                   {messages[0].content}
+                </div>
+                 <div className="mt-12 max-w-4xl w-full text-left">
+                    <h2 className="text-xl font-headline text-center mb-6">Crea tu primer proyecto de estudio personalizado</h2>
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {initialSteps.map((step, index) => (
+                            <div key={index} className="flex gap-4">
+                                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
+                                    {index + 1}
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold mb-1">{step.title}</h3>
+                                    <p className="text-sm text-muted-foreground">{step.description}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         )
     }
@@ -870,3 +885,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
