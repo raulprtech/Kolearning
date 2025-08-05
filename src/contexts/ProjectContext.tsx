@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
-type Atom = {
+export type Atom = {
   question: string;
   answer: string;
 }
@@ -13,7 +13,7 @@ type Source = {
     type: string;
 }
 
-type Session = {
+export type Session = {
   session: number;
   type: string;
   questions: string;
@@ -21,7 +21,7 @@ type Session = {
   status: 'Completed' | 'Continue' | 'Locked';
 }
 
-type LearningPathItem = {
+export type LearningPathItem = {
     session: number;
     topic: string;
     sessionType: string;
@@ -49,6 +49,7 @@ type ProjectContextType = {
   updateProjectIcon: (projectId: string, icon: string) => void;
   updateProjectDetails: (projectId: string, title: string, description: string) => void;
   addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'session'>[]) => void;
+  addAtomsToProject: (projectId: string, newAtoms: Atom[]) => void;
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
   deleteAtom: (projectId: string, atomIndex: number) => void;
   completeSession: (projectId: string, sessionIndex: number) => void;
@@ -291,7 +292,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         sessions: projectToAdd.learningPath.map((item, index) => ({
             session: item.session,
             type: item.sessionType,
-            questions: 'N/A', // This info is not directly available in learningPath
+            questions: 'Flashcards', // Default value
             duration: '20 min', // Default duration
             status: index === 0 ? 'Continue' : 'Locked'
         }))
@@ -333,6 +334,22 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           });
       });
   }
+
+  const addAtomsToProject = (projectId: string, newAtoms: Atom[]) => {
+    setProjects(prevProjects =>
+      prevProjects.map(p => {
+        if (p.id === projectId) {
+          // Avoid duplicating atoms
+          const uniqueNewAtoms = newAtoms.filter(newAtom => 
+            !p.atoms.some(existingAtom => existingAtom.question === newAtom.question)
+          );
+          return { ...p, atoms: [...p.atoms, ...uniqueNewAtoms] };
+        }
+        return p;
+      })
+    );
+  };
+
 
   const updateAtom = (projectId: string, atomIndex: number, updatedAtom: Atom) => {
     setProjects(prevProjects =>
@@ -436,7 +453,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ProjectContext.Provider value={{ 
         projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
-        updateAtom, deleteAtom, completeSession,
+        addAtomsToProject, updateAtom, deleteAtom, completeSession,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints,
         updateEnergy, updateStreak, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn
     }}>

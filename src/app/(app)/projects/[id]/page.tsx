@@ -25,6 +25,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   Table,
@@ -35,13 +37,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2 } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy } from "lucide-react";
 import { useProjects, publicProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
+import { Project, Atom } from "@/contexts/ProjectContext";
+import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
+import { useToast } from "@/hooks/use-toast";
 
 const projectIcons: { [key: string]: React.ElementType } = {
   Book,
@@ -52,11 +57,6 @@ const projectIcons: { [key: string]: React.ElementType } = {
   Music,
   Palette,
 };
-
-type Atom = {
-  question: string;
-  answer: string;
-}
 
 interface AtomActionDialogProps {
   atom: Atom | null;
@@ -145,16 +145,78 @@ function AtomActionDialog({ atom, mode, isOpen, onClose, onConfirm }: AtomAction
     )
 }
 
+function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: boolean; onClose: () => void; project: Project, onCreate: (plan: CalibratePlanOutput, project: Project) => void }) {
+    const [isLoading, setIsLoading] = useState(false);
+    const [userObjective, setUserObjective] = useState('');
+    const [deadline, setDeadline] = useState('');
+    const [masteryLevel, setMasteryLevel] = useState('');
+
+    const handleCreate = async () => {
+        setIsLoading(true);
+        try {
+            const atomsSummary = project.atoms.map(a => `- ${a.question}`).join('\n');
+            const plan = await calibratePlanFromQuestionnaire({
+                userObjective,
+                deadline,
+                masteryLevel,
+                learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
+            });
+            onCreate(plan, project);
+            onClose();
+        } catch (error) {
+            console.error("Error creating project plan:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Personaliza tu nuevo proyecto</DialogTitle>
+                    <DialogDescription>
+                        Cuéntale a Koli tus objetivos para adaptar "{project.title}" a tus necesidades.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <label htmlFor="objective" className="text-sm font-medium flex items-center gap-2"><Target className="h-4 w-4"/>Tu objetivo de aprendizaje</label>
+                        <Input id="objective" placeholder="Ej: Prepararme para un examen final" value={userObjective} onChange={(e) => setUserObjective(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                         <label htmlFor="deadline" className="text-sm font-medium flex items-center gap-2"><CalendarIcon className="h-4 w-4"/>¿Tienes una fecha límite?</label>
+                        <Input id="deadline" placeholder="Ej: Dentro de 3 semanas" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                         <label htmlFor="mastery" className="text-sm font-medium flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Tu nivel de dominio actual</label>
+                        <Input id="mastery" placeholder="Ej: Principiante, ya conozco lo básico" value={masteryLevel} onChange={(e) => setMasteryLevel(e.target.value)} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancelar</Button>
+                    <Button onClick={handleCreate} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="animate-spin" /> : "Crear Proyecto"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+
 function ProjectDetails() {
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { toast } = useToast();
   const slug = params.id as string;
-  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom } = useProjects();
+  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, addProject, addAtomsToProject } = useProjects();
   
   const project = projects.find(p => p.id === slug) || publicProjects.find(p => p.id === slug);
-  
+  const isUserProject = projects.some(p => p.id === slug);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editableTitle, setEditableTitle] = useState(project?.title || "");
   const [editableDescription, setEditableDescription] = useState(project?.description || "");
@@ -163,6 +225,7 @@ function ProjectDetails() {
   const [showAllAtoms, setShowAllAtoms] = useState(false);
   const [showFullPlan, setShowFullPlan] = useState(false);
   const [atomAction, setAtomAction] = useState<{ mode: 'view' | 'edit' | 'delete' | null, atom: Atom | null, index: number | null }>({ mode: null, atom: null, index: null });
+  const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   
   useEffect(() => {
     if (searchParams.get('planUpdated') === 'true' || searchParams.get('sessionCompleted') === 'true') {
@@ -206,6 +269,35 @@ function ProjectDetails() {
       setAtomAction({ mode: null, atom: null, index: null });
   }
 
+  const handleCreateNewProject = (plan: CalibratePlanOutput, baseProject: Project) => {
+      const slug = plan.projectTitle.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
+      const newProjectId = `${slug}-${Date.now()}`;
+
+      const newProject: Project = {
+          ...baseProject,
+          id: newProjectId,
+          title: plan.projectTitle,
+          description: plan.projectDescription,
+          categories: plan.categories,
+          learningPath: plan.learningPath,
+          fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
+          mastery: 0,
+      };
+      
+      addProject(newProject);
+      toast({ title: "¡Proyecto Creado!", description: `${plan.projectTitle} ha sido añadido a tu dashboard.` });
+      router.push(`/projects/${newProjectId}`);
+  };
+
+  const handleMergeProject = (targetProjectId: string) => {
+      addAtomsToProject(targetProjectId, project.atoms);
+      toast({
+          title: "Contenido Añadido",
+          description: `Se han añadido ${project.atoms.length} átomos de "${project.title}" a tu proyecto.`,
+      });
+      router.push(`/projects/${targetProjectId}`);
+  };
+
   const getSessionStatus = (status: string, projectId: string, sessionIndex: number) => {
       switch(status) {
           case 'Completed':
@@ -240,11 +332,86 @@ function ProjectDetails() {
   }
 
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
-  const activeSessionIndex = project.sessions.findIndex(s => s.status === 'Continue');
+  const activeSessionIndex = isUserProject ? project.sessions.findIndex(s => s.status === 'Continue') : -1;
+
+  const renderActionButtons = () => {
+      if (isUserProject) {
+           return (
+             <div className="flex items-center gap-2">
+                {isEditing ? (
+                    <>
+                        <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                        <Button onClick={handleSaveDetails}>Guardar</Button>
+                    </>
+                ) : (
+                    <>
+                        <Link href={`/study/${project.id}?sessionIndex=${activeSessionIndex}`}>
+                            <Button disabled={activeSessionIndex < 0}>
+                                <Play className="mr-2 h-4 w-4" />
+                                Estudiar
+                            </Button>
+                        </Link>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                <span>Editar Proyecto</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                <Share2 className="mr-2 h-4 w-4" />
+                                <span>Compartir</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Eliminar Proyecto</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </>
+                )}
+             </div>
+           );
+      }
+
+      return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button>
+                    Agregar <ChevronDown className="ml-2 h-4 w-4"/>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsAddProjectDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4"/>
+                    Crear nuevo proyecto
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>o fusionar con existente</DropdownMenuLabel>
+                {projects.map(p => (
+                    <DropdownMenuItem key={p.id} onClick={() => handleMergeProject(p.id)}>
+                        <BookCopy className="mr-2 h-4 w-4" />
+                        <span>{p.title}</span>
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
+      )
+  }
 
   return (
     <ScrollArea className="h-[calc(100vh-theme(space.16))]">
     <div className="flex-1 flex flex-col p-6 bg-background">
+      <AddProjectDialog
+        isOpen={isAddProjectDialogOpen}
+        onClose={() => setIsAddProjectDialogOpen(false)}
+        project={project}
+        onCreate={handleCreateNewProject}
+      />
       {showUpdateAlert && (
         <Alert className="mb-6 bg-primary/10 border-primary/20">
             <Info className="h-4 w-4 text-primary" />
@@ -260,7 +427,7 @@ function ProjectDetails() {
 
       <div className="flex items-start justify-between mb-6">
           <div className="flex items-start gap-4 flex-1">
-            <button onClick={() => setIsIconSelectorOpen(true)} className="p-2 rounded-lg hover:bg-muted transition-colors mt-1">
+            <button onClick={() => isUserProject && setIsIconSelectorOpen(true)} className={`p-2 rounded-lg ${isUserProject && 'hover:bg-muted'} transition-colors mt-1`}>
                 <Icon className="w-8 h-8 text-primary" />
             </button>
             <div className="flex-1">
@@ -286,44 +453,7 @@ function ProjectDetails() {
                 )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {isEditing ? (
-                 <>
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
-                    <Button onClick={handleSaveDetails}>Guardar</Button>
-                </>
-            ) : (
-                <>
-                    <Link href={`/study/${project.id}?sessionIndex=${activeSessionIndex}`}>
-                        <Button disabled={activeSessionIndex < 0}>
-                            <Play className="mr-2 h-4 w-4" />
-                            Estudiar
-                        </Button>
-                    </Link>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            <span>Editar Proyecto</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                            <Share2 className="mr-2 h-4 w-4" />
-                            <span>Compartir</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Eliminar Proyecto</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </>
-            )}
-          </div>
+          {renderActionButtons()}
       </div>
 
       <Dialog open={isIconSelectorOpen} onOpenChange={setIsIconSelectorOpen}>
@@ -359,13 +489,13 @@ function ProjectDetails() {
             <Card className="bg-card/50">
                 <CardContent className="pt-6 text-center">
                     <p className="text-sm text-muted-foreground mb-2">Mejor Racha</p>
-                    <p className="text-4xl font-bold">1</p>
+                    <p className="text-4xl font-bold">{isUserProject ? 1 : 'N/A'}</p>
                 </CardContent>
             </Card>
              <Card className="bg-card/50">
                 <CardContent className="pt-6 text-center">
                     <p className="text-sm text-muted-foreground mb-2">XP ganados</p>
-                    <p className="text-4xl font-bold">0</p>
+                    <p className="text-4xl font-bold">{isUserProject ? 0 : 'N/A'}</p>
                 </CardContent>
             </Card>
              <Card className="bg-card/50">
@@ -376,6 +506,7 @@ function ProjectDetails() {
             </Card>
         </div>
 
+       {isUserProject && (
         <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Sesiones</h2>
@@ -406,6 +537,7 @@ function ProjectDetails() {
                 </Table>
             </Card>
         </div>
+       )}
         
          <Dialog open={showFullPlan} onOpenChange={setShowFullPlan}>
             <DialogContent className="max-w-3xl">
@@ -461,18 +593,22 @@ function ProjectDetails() {
                         <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
                         <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
                         <TableCell className="text-right align-top">
-                             <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'view', atom, index })}>
+                            <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'view', atom, index })}>
                                 <Eye className="h-4 w-4 mr-2"/>
                                 Ver
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'edit', atom, index })}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Editar
-                            </Button>
-                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Eliminar
-                            </Button>
+                            {isUserProject && (
+                                <>
+                                <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'edit', atom, index })}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Editar
+                                </Button>
+                                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Eliminar
+                                </Button>
+                                </>
+                            )}
                         </TableCell>
                         </TableRow>
                     ))}
@@ -499,10 +635,12 @@ function ProjectDetails() {
                                     <Eye className="h-4 w-4 mr-2"/>
                                     Ver
                                 </Button>
+                                {isUserProject && (
                                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Eliminar
                                 </Button>
+                                )}
                             </TableCell>
                         </TableRow>
                     ))}
