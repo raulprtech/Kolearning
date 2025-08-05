@@ -133,10 +133,10 @@ const isSameDay = (date1: Date, date2: Date) => {
            date1.getDate() === date2.getDate();
 }
 
-const isYesterday = (date1: Date, date2: Date) => {
-    const yesterday = new Date(date1);
-    yesterday.setDate(yesterday.getDate() - 1);
-    return isSameDay(yesterday, date2);
+const isYesterday = (today: Date, otherDate: Date) => {
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    return isSameDay(yesterday, otherDate);
 }
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
@@ -226,14 +226,20 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   
   const completeSession = (projectId: string, sessionIndex: number) => {
     const today = new Date();
+    
+    // Only update streak if a session hasn't been completed today
     if (!lastSessionCompletedDate || !isSameDay(today, lastSessionCompletedDate)) {
         if (lastSessionCompletedDate && isYesterday(today, lastSessionCompletedDate)) {
+            // It's a consecutive day
             setDailyStreak(prev => prev + 1);
         } else {
+            // It's not a consecutive day, reset to 1
             setDailyStreak(1);
         }
+        // Update the date of the last completed session
+        setLastSessionCompletedDate(today);
     }
-    setLastSessionCompletedDate(today);
+
     setGlobalCognitiveCredits(prev => prev + cognitiveCredits);
 
 
