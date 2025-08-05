@@ -72,22 +72,22 @@ A learner has provided their learning material, their objective, and some person
 2.  **Sub-modules:** If the material is extensive, you MUST divide it into logical sub-modules or topics.
 3.  **Session Types & Question Formats:** You MUST assign the correct question format to each session type as defined below. This is a critical rule.
 
-    *   **'Calibración'**
+    *   'Calibración'
         *   **Intention:** Diagnostic. Establish a baseline.
         *   **Question Format ('questions' field):** "Opción Múltiple". This allows for a quick assessment of concept recognition.
         *   **Content:** Use a small, representative sample of atoms from the entire material. This session should be short.
 
-    *   **'Incursión'**
+    *   'Incursión'
         *   **Intention:** Acquisition. Introduce NEW knowledge atoms.
         *   **Question Format ('questions' field):** "Pregunta Abierta". Maximizes cognitive effort for strong initial memory encoding (Active Recall).
         *   **Content:** Up to 10 new atoms.
 
-    *   **'Refuerzo de Dominio'**
+    *   'Refuerzo de Dominio'
         *   **Intention:** Long-term retention. Combat the forgetting curve.
         *   **Question Format ('questions' field):** "Formatos Mixtos". Use a mix of question types to reinforce knowledge from different angles.
         *   **Content:** Atoms selected by the FSRS algorithm for review.
 
-    *   **'Prueba de Dominio'**
+    *   'Prueba de Dominio'
         *   **Intention:** Certification. Test deep, applicable understanding of a sub-module.
         *   **Question Format ('questions' field):** "Pregunta Abierta y Casos Prácticos". The most demanding format to validate mastery.
         *   **Content:** All atoms related to a specific sub-module. This should be the final session for that sub-module.
@@ -104,7 +104,12 @@ A learner has provided their learning material, their objective, and some person
         *   Start with a "Calibración" session.
         *   For each sub-module, create a logical sequence of 'Incursión', 'Refuerzo de Dominio', and 'Prueba de Dominio' sessions.
         *   The 'topic' for each session should clearly state what will be learned.
-        *   **Crucially, each session in the 'learningPath' array must have a 'questions' field populated with the correct format based on the rules above.**
+        *   **CRUCIAL RULE: For each session object in the 'learningPath' array, you MUST populate the 'questions' field with the exact corresponding string value based on the 'sessionType' field. Follow these mappings strictly:
+          - If sessionType is 'Calibración', questions MUST BE 'Opción Múltiple'.
+          - If sessionType is 'Incursión', questions MUST BE 'Pregunta Abierta'.
+          - If sessionType is 'Refuerzo de Dominio', questions MUST BE 'Formatos Mixtos'.
+          - If sessionType is 'Prueba de Dominio', questions MUST BE 'Pregunta Abierta y Casos Prácticos'.
+          DO NOT DEVIATE FROM THIS MAPPING.**
     *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy.
     *   **expectedProgress:** Write an encouraging paragraph about the expected learning progression.
     *   **fullLearningPlanMarkdown:** Generate a complete learning plan using Markdown.
