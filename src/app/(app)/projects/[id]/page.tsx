@@ -69,6 +69,7 @@ import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { EditProjectDialog } from "@/components/ui/edit-project-dialog";
 import { ShareDialog } from "@/components/ui/share-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const projectIcons: { [key: string]: React.ElementType } = {
   Book,
@@ -172,6 +173,7 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
     const [userObjective, setUserObjective] = useState('');
     const [deadline, setDeadline] = useState<Date | undefined>(undefined);
     const [masteryLevel, setMasteryLevel] = useState('');
+    const { toast } = useToast();
 
     const handleCreate = async () => {
         setIsLoading(true);
@@ -187,6 +189,11 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
             onClose();
         } catch (error) {
             console.error("Error creating project plan:", error);
+            toast({
+                title: "Error al crear el plan",
+                description: "Koli no pudo generar un plan de estudio. Intenta de nuevo.",
+                variant: "destructive"
+            })
         } finally {
             setIsLoading(false);
         }
@@ -392,19 +399,19 @@ function ProjectDetails() {
   }
 
   const getSessionBadge = (type: string) => {
-      switch(type) {
-          case 'Calibración':
-          case 'Calibración Inicial':
-              return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">{type}</Badge>
-          case 'Refuerzo de Dominio':
-              return <Badge variant="secondary">{type}</Badge>
-          case 'Prueba de Dominio':
-              return <Badge variant="destructive">{type}</Badge>
-          case 'Incursión':
-              return <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">{type}</Badge>
-          default:
-              return <Badge variant="outline">{type}</Badge>;
-      }
+    switch(type) {
+        case 'Calibración':
+        case 'Calibración Inicial':
+            return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 hover:bg-purple-500/30">{type}</Badge>
+        case 'Refuerzo de Dominio':
+            return <Badge variant="secondary">{type}</Badge>
+        case 'Prueba de Dominio':
+            return <Badge variant="destructive">{type}</Badge>
+        case 'Incursión':
+            return <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 hover:bg-blue-500/30">{type}</Badge>
+        default:
+            return <Badge variant="outline">{type}</Badge>;
+    }
   }
 
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
@@ -436,7 +443,7 @@ function ProjectDetails() {
                             <span>Compartir</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => setIsArchiveDialogOpen(true)}>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setIsArchiveDialogOpen(true)}>
                             <Archive className="mr-2 h-4 w-4" />
                             <span>Archivar</span>
                         </DropdownMenuItem>
@@ -485,7 +492,7 @@ function ProjectDetails() {
         onClose={() => setIsEditDialogOpen(false)}
         project={project}
         onSave={handleSaveDetails}
-      />
+       />
        <ShareDialog
         isOpen={isShareDialogOpen}
         onClose={() => setIsShareDialogOpen(false)}
@@ -682,7 +689,7 @@ function ProjectDetails() {
                                     <Pencil className="h-4 w-4 mr-2" />
                                     Editar
                                 </Button>
-                                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
+                                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Eliminar
                                 </Button>
@@ -715,7 +722,7 @@ function ProjectDetails() {
                                     Ver
                                 </Button>
                                 {isUserProject && (
-                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10">
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Eliminar
                                 </Button>
@@ -738,5 +745,3 @@ export default function ProjectDetailsPage() {
         <ProjectDetails />
     )
 }
-
-    
