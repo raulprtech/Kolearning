@@ -152,7 +152,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                        </div>
                     </div>
                 ))}
-                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
+                 {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
                     <div className="flex gap-4">
                         <KoliAvatar className="h-10 w-10 flex-shrink-0" />
                         <div className="p-4 rounded-xl max-w-lg bg-card/80 flex items-center">
@@ -465,12 +465,27 @@ export default function NewProjectPage() {
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
+  const [isAtomizationComplete, setIsAtomizationComplete] = useState(false);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const addMessage = useCallback((message: Message) => {
     setMessages(prev => [...prev, message]);
   }, []);
+
+
+  useEffect(() => {
+    if (isAtomizationComplete && dataCollectionStep === 'done') {
+        if (atomsResult) {
+             addMessage({ 
+                role: 'koli', 
+                content: `${atomsResult.initialResponse} He generado ${atomsResult.atoms.length} 'átomos' para ti. ¿Quieres revisarlos o generamos tu plan de estudios?`,
+                actionId: 'atomActions'
+             });
+        }
+    }
+  }, [isAtomizationComplete, dataCollectionStep, atomsResult, addMessage])
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -576,17 +591,18 @@ export default function NewProjectPage() {
   const processFiles = async (filesToProcess: File[], userObjective: string) => {
     setIsLoading(true);
     setCurrentStep('atomizing');
-
     setProcessingFile({ name: filesToProcess[0].name, content: '' });
+    setIsProjectStarted(true);
+
+    // Don't wait for atomization, start conversation right away
+    processDataCollection(null);
 
     try {
         const dataUris = await Promise.all(filesToProcess.map(fileToDataUri));
         const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: dataUris[i] }));
         setProjectSourceFiles(prev => [...prev, ...newSourceFiles]);
 
-        let combinedResponse: GenerateAtomsOutput = { initialResponse: '', atoms: atomsResult?.atoms || [] };
-        
-        const existingAtomCount = combinedResponse.atoms.length;
+        let combinedResponse: GenerateAtomsOutput = { initialResponse: '', atoms: [] };
 
         for (const sourceFile of newSourceFiles) {
             const response = await generateAtoms({
@@ -594,31 +610,19 @@ export default function NewProjectPage() {
                 userObjective: userObjective
             });
             combinedResponse.atoms.push(...response.atoms);
-            combinedResponse.initialResponse = response.initialResponse; 
+            combinedResponse.initialResponse = response.initialResponse;
         }
 
         setAtomsResult(combinedResponse);
-        
-        if (!isProjectStarted) {
-            processDataCollection(null);
-            setIsProjectStarted(true);
-        } else {
-            addMessage({
-                role: 'koli',
-                content: `¡He procesado el nuevo material! Se añadieron ${combinedResponse.atoms.length - existingAtomCount} nuevos átomos. ¿Quieres revisarlos o continuamos?`,
-                actionId: 'atomActions'
-            });
-        }
-        
+        setIsAtomizationComplete(true);
+
     } catch (error) {
         console.error("Error processing file:", error);
         const errorMessage = "Lo siento, ha ocurrido un error al procesar tu documento. Esto puede deberse a un formato incompatible o a un problema con el contenido. Por favor, intenta con otro archivo.";
-        addMessage({ role: 'koli', content: errorMessage });
         setAtomizationError(errorMessage);
         setProcessingFile(null);
     } finally {
         setIsLoading(false);
-        setProcessingFile(null);
     }
   };
 
@@ -638,19 +642,10 @@ export default function NewProjectPage() {
     setSelectedFiles([]);
     
     if (filesToProcess.length > 0) {
-        await processFiles(filesToProcess, objective || "Aprender el contenido del documento.");
+        // This is now a fire-and-forget call from the user's perspective
+        processFiles(filesToProcess, objective || "Aprender el contenido del documento.");
     }
   }
-
-  useEffect(() => {
-    if (dataCollectionStep === 'done' && atomsResult) {
-      addMessage({ 
-          role: 'koli', 
-          content: `${atomsResult.initialResponse} He generado ${atomsResult.atoms.length} 'átomos' para ti. ¿Quieres revisarlos o generamos tu plan de estudios?`,
-          actionId: 'atomActions'
-      });
-    }
-  }, [dataCollectionStep, atomsResult, addMessage]);
 
   const handleFinalizeProject = (plan: CalibratePlanOutput) => {
       if (!atomsResult || projectSourceFiles.length === 0) {
@@ -706,11 +701,12 @@ export default function NewProjectPage() {
 
         const plan = await calibratePlanFromQuestionnaire(finalProjectData);
         setLearningPlan(plan);
-        handleFinalizeProject(plan);
+        setCurrentStep('plan');
 
     } catch(error) {
         console.error("Error generating learning plan:", error);
         addMessage({ role: 'koli', content: 'Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.' });
+    } finally {
         setIsLoading(false);
     }
   }
@@ -719,10 +715,6 @@ export default function NewProjectPage() {
   const handleReviewAtoms = () => {
     setCurrentStep('review');
     setMessages(prev => prev.filter(m => m.actionId !== 'atomActions'));
-    addMessage({
-        role: 'koli',
-        content: "Claro, aquí están los átomos que he generado para ti. Puedes editarlos directamente. Cuando estés listo, haz clic en 'Siguiente Paso' para continuar.",
-    });
   };
   
   if (!isProjectStarted) {
@@ -805,23 +797,13 @@ export default function NewProjectPage() {
             </div>
         )
     }
-    // Show atomization progress if it's currently happening
-    if (isLoading && processingFile) {
-        return <AtomizationProgress 
-                    atomsResult={null} 
-                    fileName={processingFile.name}
-                    isLoading={true}
-                />;
-    }
 
     switch (currentStep) {
         case 'atomizing':
-             // After atomization, show the chat, which will have the buttons to proceed.
-             // We can maybe show a summary here later.
-            return <AtomizationProgress 
-                        atomsResult={atomsResult} 
-                        fileName={projectSourceFiles[projectSourceFiles.length - 1]?.name ?? ""}
-                        isLoading={isLoading && !atomsResult}
+             return <AtomizationProgress 
+                        atomsResult={isAtomizationComplete ? atomsResult : null} 
+                        fileName={processingFile?.name ?? ""}
+                        isLoading={isLoading && !isAtomizationComplete}
                     />;
         case 'review':
              if (atomsResult) {
@@ -831,7 +813,7 @@ export default function NewProjectPage() {
                             onBack={() => setCurrentStep('atomizing')}
                         />
             }
-            return null;
+            return null; // or a loading state
         case 'plan':
             if (learningPlan) {
                 return <LearningPlan 
@@ -840,12 +822,16 @@ export default function NewProjectPage() {
                             onBack={() => setCurrentStep('review')}
                         />
             }
-            return null;
-        default:
              return <AtomizationProgress 
                         atomsResult={atomsResult} 
                         fileName={projectSourceFiles[projectSourceFiles.length - 1]?.name ?? ""}
-                        isLoading={isLoading && !atomsResult}
+                        isLoading={isLoading && !learningPlan}
+                    />;
+        default:
+             return <AtomizationProgress 
+                        atomsResult={isAtomizationComplete ? atomsResult : null} 
+                        fileName={processingFile?.name ?? ""}
+                        isLoading={isLoading && !isAtomizationComplete}
                     />;
     }
   }
@@ -868,7 +854,7 @@ export default function NewProjectPage() {
                 input={input}
                 setInput={setInput}
                 handleSendMessage={handleSendMessage}
-                isLoading={isLoading}
+                isLoading={isLoading && !isProjectStarted} // Only show chat loading before conversation starts
                 selectedFiles={selectedFiles}
                 removeFile={removeFile}
                 handleFileChange={handleFileChange}
