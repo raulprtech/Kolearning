@@ -60,6 +60,7 @@ type ProjectContextType = {
   updateStreak: (correct: boolean) => void;
   resetSessionStats: () => void;
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
+  nextEnergyIn: number;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -139,17 +140,46 @@ const isYesterday = (today: Date, otherDate: Date) => {
     return isSameDay(yesterday, otherDate);
 }
 
+const MAX_NATURAL_ENERGY = 10;
+const ENERGY_REGEN_HOURS = 1;
+
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [energy, setEnergy] = useState(20);
+  const [energy, setEnergy] = useState(10);
   const [sessionStreak, setSessionStreak] = useState(0);
   const [dailyStreak, setDailyStreak] = useState(0);
   const [cognitiveCredits, setCognitiveCredits] = useState(0);
-  const [globalCognitiveCredits, setGlobalCognitiveCredits] = useState(0);
+  const [globalCognitiveCredits, setGlobalCognitiveCredits] = useState(500);
   const [masteryPoints, setMasteryPoints] = useState(0);
   const [lastSessionCompletedDate, setLastSessionCompletedDate] = useState<Date | null>(null);
+  const [nextEnergyTimestamp, setNextEnergyTimestamp] = useState<number | null>(null);
+  const [nextEnergyIn, setNextEnergyIn] = useState(0);
 
-    const addProject = (newProject: Omit<Project, 'sessions'> & { fullLearningPlanMarkdown: string, learningPath: any[] }) => {
+  useEffect(() => {
+    const timer = setInterval(() => {
+        if (energy < MAX_NATURAL_ENERGY) {
+            const now = Date.now();
+            if (!nextEnergyTimestamp) {
+                setNextEnergyTimestamp(now + ENERGY_REGEN_HOURS * 60 * 60 * 1000);
+            } else if (now >= nextEnergyTimestamp) {
+                setEnergy(prev => prev + 1);
+                const newTimestamp = nextEnergyTimestamp + ENERGY_REGEN_HOURS * 60 * 60 * 1000;
+                setNextEnergyTimestamp(newTimestamp);
+            }
+            if (nextEnergyTimestamp) {
+                setNextEnergyIn(Math.max(0, Math.floor((nextEnergyTimestamp - now) / 1000)));
+            }
+        } else {
+             setNextEnergyIn(0);
+             setNextEnergyTimestamp(null);
+        }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [energy, nextEnergyTimestamp]);
+
+
+  const addProject = (newProject: Omit<Project, 'sessions'> & { fullLearningPlanMarkdown: string, learningPath: any[] }) => {
     if (!projects.find(p => p.id === newProject.id)) {
       const projectWithSessions: Project = {
         ...newProject,
@@ -263,7 +293,13 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateEnergy = (amount: number) => {
-    setEnergy(prev => Math.max(0, prev + amount));
+    setEnergy(prev => {
+      const newEnergy = Math.max(0, prev + amount);
+      if (newEnergy < MAX_NATURAL_ENERGY && energy >= MAX_NATURAL_ENERGY) {
+        setNextEnergyTimestamp(Date.now() + ENERGY_REGEN_HOURS * 60 * 60 * 1000);
+      }
+      return newEnergy;
+    });
   };
 
   const updateStreak = (correct: boolean) => {
@@ -297,7 +333,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
         updateAtom, deleteAtom, completeSession,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints,
-        updateEnergy, updateStreak, resetSessionStats, exchangeCreditsForEnergy
+        updateEnergy, updateStreak, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn
     }}>
       {children}
     </ProjectContext.Provider>

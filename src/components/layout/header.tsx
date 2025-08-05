@@ -19,7 +19,7 @@ import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export function Header() {
-  const { energy, globalCognitiveCredits, dailyStreak } = useProjects();
+  const { energy, globalCognitiveCredits, dailyStreak, nextEnergyIn } = useProjects();
   const streakHistory = [true, true, false, true, true]; // Placeholder
 
   const getDayLabels = () => {
@@ -38,6 +38,12 @@ export function Header() {
     }
     return labels.reverse();
   }
+  
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const dayLabels = getDayLabels();
 
@@ -50,10 +56,27 @@ export function Header() {
         </h1>
       </Link>
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2" title="Energía">
-            <Zap className="h-5 w-5 text-yellow-400" />
-            <span className="font-bold text-lg">{energy}</span>
-        </div>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <div className="flex items-center gap-2 cursor-pointer" title="Energía">
+                    <Zap className="h-5 w-5 text-yellow-400" />
+                    <span className="font-bold text-lg">{energy}</span>
+                </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <div className="p-2 text-center">
+                    <p className="font-bold text-lg">Regeneración de Energía</p>
+                     {nextEnergyIn > 0 ? (
+                        <>
+                            <p className="text-sm text-muted-foreground mt-1">Próximo punto en:</p>
+                            <p className="text-2xl font-mono mt-1">{formatTime(nextEnergyIn)}</p>
+                        </>
+                     ) : (
+                         <p className="text-sm text-muted-foreground mt-2">¡Energía al máximo!</p>
+                     )}
+                </div>
+            </DropdownMenuContent>
+        </DropdownMenu>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
