@@ -31,6 +31,7 @@ type Project = {
   atoms: Atom[];
   sessions: Session[];
   sources: Source[];
+  fullLearningPlanMarkdown?: string;
 };
 
 type ProjectContextType = {
@@ -39,6 +40,8 @@ type ProjectContextType = {
   updateProjectIcon: (projectId: string, icon: string) => void;
   updateProjectDetails: (projectId: string, title: string, description: string) => void;
   addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'day'>[]) => void;
+  updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
+  deleteAtom: (projectId: string, atomIndex: number) => void;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -98,17 +101,17 @@ const initialProjects: Project[] = [
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
 
-  const addProject = (newProject: Omit<Project, 'sessions'> & { sessions: string }) => {
+    const addProject = (newProject: Omit<Project, 'sessions'> & { fullLearningPlanMarkdown: string, learningPath: any[] }) => {
     if (!projects.find(p => p.id === newProject.id)) {
-        const generatedSessions: Session[] = [
-            { day: 'Día 1', type: 'Calibración', questions: 'Flashcards', duration: '20 min', status: 'Continue' },
-            { day: 'Día 2', type: 'Incursión', questions: 'Opción múltiple', duration: '30 min', status: 'Locked' },
-            { day: 'Día 3', type: 'Refuerzo', questions: 'Preguntas abiertas', duration: '25 min', status: 'Locked' },
-        ];
-
       const projectWithSessions: Project = {
         ...newProject,
-        sessions: generatedSessions
+        sessions: newProject.learningPath.map((session: any) => ({
+            day: `Día ${session.session}`,
+            type: session.sessionType,
+            questions: 'N/A', // This info is not directly available in learningPath
+            duration: '20 min', // Default duration
+            status: session.session === 1 ? 'Continue' : 'Locked'
+        }))
       };
       setProjects(prevProjects => [...prevProjects, projectWithSessions]);
     }
@@ -148,8 +151,33 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       });
   }
 
+  const updateAtom = (projectId: string, atomIndex: number, updatedAtom: Atom) => {
+    setProjects(prevProjects =>
+      prevProjects.map(p => {
+        if (p.id === projectId) {
+          const newAtoms = [...p.atoms];
+          newAtoms[atomIndex] = updatedAtom;
+          return { ...p, atoms: newAtoms };
+        }
+        return p;
+      })
+    );
+  };
+
+  const deleteAtom = (projectId: string, atomIndex: number) => {
+    setProjects(prevProjects =>
+      prevProjects.map(p => {
+        if (p.id === projectId) {
+          const newAtoms = p.atoms.filter((_, index) => index !== atomIndex);
+          return { ...p, atoms: newAtoms };
+        }
+        return p;
+      })
+    );
+  };
+
   return (
-    <ProjectContext.Provider value={{ projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject }}>
+    <ProjectContext.Provider value={{ projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, updateAtom, deleteAtom }}>
       {children}
     </ProjectContext.Provider>
   );

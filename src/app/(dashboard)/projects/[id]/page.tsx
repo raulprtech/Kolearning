@@ -17,6 +17,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -33,13 +35,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
 
 const projectIcons: { [key: string]: React.ElementType } = {
   Book,
@@ -51,6 +52,97 @@ const projectIcons: { [key: string]: React.ElementType } = {
   Palette,
 };
 
+type Atom = {
+  question: string;
+  answer: string;
+}
+
+interface AtomActionDialogProps {
+  atom: Atom | null;
+  mode: 'view' | 'edit' | 'delete' | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (data?: Atom) => void;
+}
+
+function AtomActionDialog({ atom, mode, isOpen, onClose, onConfirm }: AtomActionDialogProps) {
+    const [editableAtom, setEditableAtom] = useState<Atom | null>(atom);
+
+    useEffect(() => {
+        setEditableAtom(atom);
+    }, [atom]);
+
+    if (!isOpen || !atom || !mode) return null;
+
+    const handleConfirm = () => {
+        if (mode === 'edit' && editableAtom) {
+            onConfirm(editableAtom);
+        } else {
+            onConfirm();
+        }
+    }
+
+    const titles = {
+        view: "Ver Átomo",
+        edit: "Editar Átomo",
+        delete: "Confirmar Eliminación"
+    }
+    const descriptions = {
+        view: "Detalles del átomo de conocimiento.",
+        edit: "Edita la pregunta y la respuesta de este átomo.",
+        delete: `¿Estás seguro de que quieres eliminar este átomo? Esta acción no se puede deshacer.`
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{titles[mode]}</DialogTitle>
+                    <DialogDescription>{descriptions[mode]}</DialogDescription>
+                </DialogHeader>
+                {mode === 'view' && editableAtom && (
+                    <div className="space-y-4 py-4">
+                        <p className="font-semibold">{editableAtom.question}</p>
+                        <p className="text-muted-foreground">{editableAtom.answer}</p>
+                    </div>
+                )}
+                {mode === 'edit' && editableAtom && (
+                    <div className="space-y-4 py-4">
+                        <div>
+                            <label className="text-sm font-medium">Pregunta</label>
+                            <Textarea 
+                                value={editableAtom.question}
+                                onChange={(e) => setEditableAtom({...editableAtom, question: e.target.value})}
+                                className="mt-1"
+                            />
+                        </div>
+                         <div>
+                            <label className="text-sm font-medium">Respuesta</label>
+                            <Textarea 
+                                value={editableAtom.answer}
+                                onChange={(e) => setEditableAtom({...editableAtom, answer: e.target.value})}
+                                className="mt-1"
+                            />
+                        </div>
+                    </div>
+                )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>
+                        {mode === 'delete' ? 'Cancelar' : 'Cerrar'}
+                    </Button>
+                    {(mode === 'edit' || mode === 'delete') && (
+                        <Button
+                            onClick={handleConfirm}
+                            variant={mode === 'delete' ? 'destructive' : 'default'}
+                        >
+                            {mode === 'edit' ? 'Guardar Cambios' : 'Eliminar'}
+                        </Button>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 function ProjectDetails() {
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
@@ -58,7 +150,7 @@ function ProjectDetails() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const slug = params.id as string;
-  const { projects, updateProjectIcon, updateProjectDetails } = useProjects();
+  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom } = useProjects();
   
   const project = projects.find(p => p.id === slug);
   
@@ -67,12 +159,15 @@ function ProjectDetails() {
   const [editableDescription, setEditableDescription] = useState(project?.description || "");
   const [showUpdateAlert, setShowUpdateAlert] = useState(false);
 
+  const [showAllAtoms, setShowAllAtoms] = useState(false);
+  const [showFullPlan, setShowFullPlan] = useState(false);
+  const [atomAction, setAtomAction] = useState<{ mode: 'view' | 'edit' | 'delete' | null, atom: Atom | null, index: number | null }>({ mode: null, atom: null, index: null});
+  
   useEffect(() => {
     if (searchParams.get('planUpdated') === 'true') {
         setShowUpdateAlert(true);
         const timer = setTimeout(() => {
             setShowUpdateAlert(false);
-            // Clean up URL
             router.replace(`/projects/${slug}`, { scroll: false });
         }, 5000);
         return () => clearTimeout(timer);
@@ -101,6 +196,15 @@ function ProjectDetails() {
       setIsEditing(false);
   }
   
+  const handleAtomActionConfirm = (data?: Atom) => {
+      if (atomAction.mode === 'edit' && atomAction.index !== null && data) {
+          updateAtom(project.id, atomAction.index, data);
+      } else if (atomAction.mode === 'delete' && atomAction.index !== null) {
+          deleteAtom(project.id, atomAction.index);
+      }
+      setAtomAction({ mode: null, atom: null, index: null });
+  }
+
   const getSessionStatus = (status: string) => {
       switch(status) {
           case 'Completed':
@@ -128,6 +232,8 @@ function ProjectDetails() {
               return <Badge variant="outline">{type}</Badge>;
       }
   }
+
+  const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
 
   return (
     <ScrollArea className="h-full">
@@ -229,6 +335,14 @@ function ProjectDetails() {
         </DialogContent>
       </Dialog>
       
+      <AtomActionDialog 
+        isOpen={!!atomAction.mode}
+        mode={atomAction.mode}
+        atom={atomAction.atom}
+        onClose={() => setAtomAction({ mode: null, atom: null, index: null })}
+        onConfirm={handleAtomActionConfirm}
+      />
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="bg-card/50">
                 <CardContent className="pt-6 text-center">
@@ -253,7 +367,7 @@ function ProjectDetails() {
         <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Sesiones</h2>
-                <Button variant="outline">Ver hoja completa</Button>
+                <Button variant="outline" onClick={() => setShowFullPlan(true)}>Ver hoja completa</Button>
             </div>
             <Card className="bg-card/50">
                 <Table>
@@ -281,10 +395,27 @@ function ProjectDetails() {
             </Card>
         </div>
         
+         <Dialog open={showFullPlan} onOpenChange={setShowFullPlan}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Hoja de Ruta Completa</DialogTitle>
+                    <DialogDescription>Este es el plan de estudio completo generado por Koli.</DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-96 my-4 pr-4">
+                    <pre className="text-sm whitespace-pre-wrap">{project.fullLearningPlanMarkdown}</pre>
+                </ScrollArea>
+                <DialogFooter>
+                    <Button onClick={() => setShowFullPlan(false)}>Cerrar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Átomos de conocimiento</h2>
-                <Button variant="outline">Ver todas ({project.atoms?.length || 0})</Button>
+                <Button variant="outline" onClick={() => setShowAllAtoms(!showAllAtoms)}>
+                    {showAllAtoms ? "Ver menos" : `Ver todas (${project.atoms?.length || 0})`}
+                </Button>
             </div>
             <Card className="bg-card/50">
                 <Table>
@@ -296,20 +427,20 @@ function ProjectDetails() {
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {project.atoms?.slice(0, 4).map((atom, index) => (
+                    {displayedAtoms?.map((atom, index) => (
                         <TableRow key={index}>
                         <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
                         <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
                         <TableCell className="text-right align-top">
-                             <Button variant="ghost" size="sm">
+                             <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'view', atom, index })}>
                                 <Eye className="h-4 w-4 mr-2"/>
                                 Ver
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'edit', atom, index })}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
                             </Button>
-                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Eliminar
                             </Button>

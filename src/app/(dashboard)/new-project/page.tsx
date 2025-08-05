@@ -612,23 +612,7 @@ export default function NewProjectPage() {
     let koliResponse = '';
     let nextStep = dataCollectionStep;
 
-    if (dataCollectionStep === 'start') {
-        if (!newCollectedData.userName) {
-            koliResponse = '¡Hola! Soy Koli. Para empezar, ¿cómo te llamas?';
-            nextStep = 'name';
-        } else if (!newCollectedData.userObjective) {
-            koliResponse = `¡Genial, ${newCollectedData.userName}! ¿Cuál es tu principal objetivo de aprendizaje con este material?`;
-            nextStep = 'objective';
-        } else if (!newCollectedData.deadline) {
-            koliResponse = `Entendido. ¿Tienes alguna fecha límite para esto? Si no, puedes decir 'No'.`;
-            nextStep = 'deadline';
-        } else if (!newCollectedData.masteryLevel) {
-            koliResponse = `Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema? (Principiante, Intermedio, Avanzado)`;
-            nextStep = 'masteryLevel';
-        } else {
-            nextStep = 'done';
-        }
-    } else {
+    const askNextQuestion = () => {
         if (!newCollectedData.userName) {
             koliResponse = '¡Hola! Soy Koli. Para empezar, ¿cómo te llamas?';
             nextStep = 'name';
@@ -647,6 +631,12 @@ export default function NewProjectPage() {
         }
     }
 
+    if (dataCollectionStep === 'start') {
+        askNextQuestion();
+    } else {
+        askNextQuestion();
+    }
+    
     setDataCollectionStep(nextStep);
     
     if (koliResponse && (dataCollectionStep !== nextStep || dataCollectionStep === 'start')) {
@@ -663,7 +653,6 @@ export default function NewProjectPage() {
     setIsLoading(true);
     setCurrentStep('atomizing');
 
-    // For the UI, we just show the name of the first file being processed
     setProcessingFile({ name: filesToProcess[0].name, content: '' });
 
     try {
@@ -671,8 +660,9 @@ export default function NewProjectPage() {
         const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: dataUris[i] }));
         setProjectSourceFiles(prev => [...prev, ...newSourceFiles]);
 
-        // We process one file at a time to show progress, but we could do them in parallel
         let combinedResponse: GenerateAtomsOutput = { initialResponse: '', atoms: atomsResult?.atoms || [] };
+        
+        const existingAtomCount = combinedResponse.atoms.length;
 
         for (const sourceFile of newSourceFiles) {
             const response = await generateAtoms({
@@ -680,14 +670,13 @@ export default function NewProjectPage() {
                 userObjective: userObjective
             });
             combinedResponse.atoms.push(...response.atoms);
-            // Use the last initialResponse, or craft a new one
             combinedResponse.initialResponse = response.initialResponse; 
         }
 
         setAtomsResult(combinedResponse);
         
         if (!isProjectStarted) {
-             const initialData: Partial<ProjectData> = {};
+            const initialData: Partial<ProjectData> = {};
             if (userObjective) initialData.userObjective = userObjective;
             if (attachedData.objective) initialData.userObjective = attachedData.objective;
             if (attachedData.deadline) initialData.deadline = attachedData.deadline.text;
@@ -697,7 +686,7 @@ export default function NewProjectPage() {
         } else {
             addMessage({
                 role: 'koli',
-                content: `¡He procesado el nuevo material! Se añadieron ${combinedResponse.atoms.length - (atomsResult?.atoms.length || 0)} nuevos átomos. ¿Quieres revisarlos o continuamos?`,
+                content: `¡He procesado el nuevo material! Se añadieron ${combinedResponse.atoms.length - existingAtomCount} nuevos átomos. ¿Quieres revisarlos o continuamos?`,
                 actionId: 'atomActions'
             });
         }
@@ -707,10 +696,10 @@ export default function NewProjectPage() {
         const errorMessage = "Lo siento, ha ocurrido un error al procesar tu documento. Esto puede deberse a un formato incompatible o a un problema con el contenido. Por favor, intenta con otro archivo.";
         addMessage({ role: 'koli', content: errorMessage });
         setAtomizationError(errorMessage);
-        setProcessingFile(null); // Clear processing file on error
+        setProcessingFile(null);
     } finally {
         setIsLoading(false);
-        setProcessingFile(null); // Clear processing file after completion
+        setProcessingFile(null);
     }
   };
 
@@ -737,27 +726,26 @@ export default function NewProjectPage() {
     setAttachedData({});
     
     const filesToProcess = [...selectedFiles];
-    setSelectedFiles([]); // Clear the queue immediately
+    setSelectedFiles([]);
 
     if (filesToProcess.length > 0) {
         if (!isProjectStarted) {
-            if (!fullUserInput) {
-                toast({
+            const userObjective = fullUserInput || "Aprender el contenido del documento.";
+            if (!userObjective) {
+                 toast({
                     title: "Falta un objetivo",
                     description: "Por favor, describe tu objetivo de aprendizaje.",
                     variant: "destructive"
                 });
-                // Put files back in queue if objective is missing
                 setSelectedFiles(filesToProcess);
-                // Remove the user message we added optimistically
                 setMessages(prev => prev.slice(0, -1));
                 return;
             }
+             await processFiles(filesToProcess, userObjective);
+        } else {
+             await processFiles(filesToProcess, collectedData.userObjective || "Aprender el contenido del documento.");
         }
-        await processFiles(filesToProcess, fullUserInput || collectedData.userObjective || "Aprender el contenido del documento.");
-
     } else if (isProjectStarted) {
-        // Continue data collection conversation if no files are attached
         processDataCollection(userInput);
     }
   }
@@ -836,10 +824,11 @@ export default function NewProjectPage() {
           categories: learningPlan.categories,
           icon: "Book", 
           atoms: atomsResult.atoms,
-          sessions: learningPlan.fullLearningPlanMarkdown,
+          learningPath: learningPlan.learningPath,
+          fullLearningPlanMarkdown: learningPlan.fullLearningPlanMarkdown,
           sources: projectSourceFiles.map(f => ({ name: f.name, type: "Documento" }))
       };
-      addProject(newProject);
+      addProject(newProject as any);
       toast({
           title: "¡Proyecto Creado!",
           description: `${title} ha sido añadido a tu dashboard.`
