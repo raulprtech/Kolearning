@@ -57,6 +57,7 @@ type ProjectContextType = {
   completeSession: (projectId: string, sessionIndex: number) => void;
   archiveProject: (projectId: string) => void;
   unarchiveProject: (projectId: string) => void;
+  deleteProjectPermanently: (projectId: string) => void;
   toggleProjectPublic: (projectId: string, isPublic: boolean) => void;
   energy: number;
   sessionStreak: number;
@@ -444,6 +445,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deleteProjectPermanently = (projectId: string) => {
+    setArchivedProjects(prev => prev.filter(p => p.id !== projectId));
+  };
+
   const toggleProjectPublic = (projectId: string, isPublic: boolean) => {
     setProjects(prev =>
       prev.map(p => (p.id === projectId ? { ...p, isPublic } : p))
@@ -490,7 +495,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ProjectContext.Provider value={{ 
         projects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
-        addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, toggleProjectPublic,
+        addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints,
         updateEnergy, updateStreak, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn
     }}>
@@ -506,5 +511,3 @@ export const useProjects = () => {
   }
   return context;
 };
-
-    
