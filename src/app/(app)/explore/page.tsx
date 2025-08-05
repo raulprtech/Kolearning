@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -89,7 +90,8 @@ export default function ExplorePage() {
   const [categoryFilter, setCategoryFilter] = useState("Todos");
   const [authorFilter, setAuthorFilter] = useState("Todos");
 
-  const handleAddProject = (project: any) => {
+  const handleAddProject = (e: React.MouseEvent, project: any) => {
+    e.stopPropagation();
     addProject(project);
     toast({
       title: "¡Proyecto agregado!",
@@ -153,23 +155,25 @@ export default function ExplorePage() {
         {filteredProjects.length > 0 ? filteredProjects.map((project) => {
           const Icon = projectIcons[project.icon];
           return (
-            <Card key={project.id} className="bg-card/50 flex flex-col">
-              <CardHeader className="flex-row items-center gap-4">
-                {Icon && <Icon className="w-10 h-10 text-primary" />}
-                <div>
-                  <CardTitle>{project.title}</CardTitle>
-                   <p className="text-sm text-muted-foreground">{project.author}</p>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <CardDescription>{project.description}</CardDescription>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" onClick={() => handleAddProject(project)}>
-                  <Plus className="mr-2 h-4 w-4" /> Agregar a mis proyectos
-                </Button>
-              </CardFooter>
-            </Card>
+            <Link href={`/projects/${project.id}`} key={project.id} className="block hover:bg-muted/30 transition-colors rounded-lg">
+                <Card className="bg-card/50 flex flex-col h-full cursor-pointer border-transparent hover:border-primary">
+                <CardHeader className="flex-row items-center gap-4">
+                    {Icon && <Icon className="w-10 h-10 text-primary" />}
+                    <div>
+                    <CardTitle>{project.title}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{project.author}</p>
+                    </div>
+                </CardHeader>
+                <CardContent className="flex-1">
+                    <CardDescription>{project.description}</CardDescription>
+                </CardContent>
+                <CardFooter>
+                    <Button className="w-full" onClick={(e) => handleAddProject(e, project)}>
+                    <Plus className="mr-2 h-4 w-4" /> Agregar a mis proyectos
+                    </Button>
+                </CardFooter>
+                </Card>
+            </Link>
           );
         }) : (
             <div className="col-span-full text-center py-12">
