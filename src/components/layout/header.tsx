@@ -5,16 +5,20 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/logo";
 import { useProjects } from "@/contexts/ProjectContext";
-import { Zap, Brain, Flame, Store } from "lucide-react";
+import { Zap, Brain, Flame, Store, CheckCircle, Circle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { KoliAvatar } from "../icons/koli-avatar";
 
 export function Header() {
   const { energy, globalCognitiveCredits, dailyStreak } = useProjects();
+  const streakHistory = [true, true, false, true, true]; // Placeholder
 
   return (
     <header className="flex items-center justify-between p-4 border-b border-border">
@@ -47,10 +51,31 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="flex items-center gap-2" title="Racha de Días">
-            <Flame className="h-5 w-5 text-orange-400" />
-            <span className="font-bold text-lg">{dailyStreak}</span>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-2 cursor-pointer" title="Racha de Días">
+                <Flame className="h-5 w-5 text-orange-400" />
+                <span className="font-bold text-lg">{dailyStreak}</span>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+             <DropdownMenuLabel>Racha de los últimos 5 días</DropdownMenuLabel>
+             <div className="flex justify-center gap-3 p-2">
+                {streakHistory.map((completed, index) => (
+                  <div key={index} className="flex flex-col items-center gap-1">
+                    {completed ? <CheckCircle className="h-6 w-6 text-green-400" /> : <Circle className="h-6 w-6 text-muted-foreground/50" />}
+                    <span className="text-xs text-muted-foreground">{index === 4 ? "Hoy" : `-${4 - index}d`}</span>
+                  </div>
+                ))}
+             </div>
+             <DropdownMenuSeparator />
+             <div className="p-2 flex items-center gap-3">
+                <KoliAvatar className="h-10 w-10 flex-shrink-0" />
+                <p className="text-sm text-muted-foreground italic">¡Sigue así! La constancia es la clave del dominio.</p>
+             </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Button>Acceder</Button>
       </div>
     </header>
