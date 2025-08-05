@@ -13,13 +13,15 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjects } from "@/contexts/ProjectContext";
 import { explainCorrectAnswer, ExplainCorrectAnswerOutput } from "@/ai/flows/koli-explain-answer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 export default function StudySessionPage() {
   const params = useParams();
@@ -41,6 +43,10 @@ export default function StudySessionPage() {
   const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
   const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
   const [isExplanationLoading, setIsExplanationLoading] = useState(false);
+
+  // Gamification State
+  const [energy, setEnergy] = useState(20);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
     if (project) {
@@ -66,11 +72,30 @@ export default function StudySessionPage() {
     )
   }
 
+  const handleUseEnergy = (cost: number) => {
+      if (energy >= cost) {
+          setEnergy(prev => prev - cost);
+          return true;
+      }
+      return false;
+  }
+
   const handleRevealAnswer = () => {
-    setViewState('answer');
+    if (handleUseEnergy(5)) {
+        setViewState('answer');
+    } else {
+        // Maybe show a toast message that there's not enough energy
+    }
   }
 
   const handleRate = (fsrs: number) => {
+    // Update streak
+    if (fsrs >= 3) { // "Bien" or "Fácil"
+        setStreak(prev => prev + 1);
+    } else { // "Muy Difícil" or "Difícil"
+        setStreak(0);
+    }
+
     if (currentCardIndex < sessionAtoms.length - 1) {
       setCurrentCardIndex(prev => prev + 1);
       setViewState('question');
@@ -82,6 +107,7 @@ export default function StudySessionPage() {
   };
 
   const handleExplainAnswer = async () => {
+      if (!handleUseEnergy(1)) return;
       setIsExplanationDialogOpen(true);
       setIsExplanationLoading(true);
       try {
@@ -108,21 +134,42 @@ export default function StudySessionPage() {
       { label: "Fácil", variant: "default", description: "Revisar en una semana", fsrs: 4 },
   ] as const;
 
-  const cardsRemaining = sessionAtoms.length - currentCardIndex;
+  const progress = (currentCardIndex / sessionAtoms.length) * 100;
+  const TacticalButton = ({ icon, label, cost, action, disabled = false }: { icon: React.ReactNode, label: string, cost: number, action: () => void, disabled?: boolean }) => (
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" aria-label={label} onClick={action} disabled={disabled || energy < cost}>
+                    {icon}
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>{label} (Costo: {cost}⚡)</p>
+            </TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
+  )
 
   return (
-    <div className="flex flex-col flex-1">
-       <header className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold">{project.title}</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <Flame className="text-yellow-400" />
-            <span className="font-bold text-lg text-foreground">⚡ {cardsRemaining}/{sessionAtoms.length}</span>
-          </div>
+    <div className="flex flex-col flex-1 h-screen">
+       <header className="flex items-center justify-between p-4 border-b border-border gap-4">
+            <div className="flex-1">
+                <Progress value={progress} />
+                 <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
+            </div>
+            <div className="flex items-center gap-4">
+                 <div className="flex items-center gap-2" title="Racha actual">
+                    <Flame className="text-orange-400" />
+                    <span className="font-bold text-lg text-foreground">{streak}</span>
+                </div>
+                <div className="flex items-center gap-2" title="Energía restante">
+                    <Zap className="text-yellow-400" />
+                    <span className="font-bold text-lg text-foreground">{energy}</span>
+                </div>
+            </div>
         </header>
 
-        <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
+        <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto">
             <div className="w-full max-w-3xl">
                 <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-4 right-4">
@@ -148,8 +195,8 @@ export default function StudySessionPage() {
 
                     {viewState === 'question' && (
                         <div className="mt-6 flex justify-center">
-                            <Button size="lg" className="w-full max-w-xs" onClick={handleRevealAnswer}>
-                                Revelar Respuesta
+                            <Button size="lg" className="w-full max-w-xs" onClick={handleRevealAnswer} disabled={energy < 5}>
+                                Revelar Respuesta (5⚡)
                             </Button>
                         </div>
                     )}
@@ -159,18 +206,10 @@ export default function StudySessionPage() {
                         Soporte Táctico
                     </h3>
                     <div className="flex items-center justify-center gap-4">
-                        <Button variant="outline" size="icon" aria-label="Pista" disabled={viewState === 'question'}>
-                            <Lightbulb />
-                        </Button>
-                        <Button variant="outline" size="icon" aria-label="Explicar Respuesta" onClick={handleExplainAnswer} disabled={viewState === 'question'}>
-                            <BrainCircuit />
-                        </Button>
-                        <Button variant="outline" size="icon" aria-label="Reformular" disabled>
-                            <Repeat />
-                        </Button>
-                        <Button variant="ghost" size="icon" aria-label="Consultar a Koli">
-                            <KoliAvatar className="h-6 w-6" />
-                        </Button>
+                        <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'question'} />
+                        <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
+                        <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleUseEnergy(1)} disabled={true} />
+                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={() => handleUseEnergy(3)} />
                     </div>
                     </div>
                     
