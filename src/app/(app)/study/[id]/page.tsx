@@ -27,7 +27,7 @@ export default function StudySessionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { projects } = useProjects();
+  const { projects, energy, streak, updateEnergy, updateStreak, resetStreak } = useProjects();
   
   const projectId = params.id as string;
   const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
@@ -44,17 +44,15 @@ export default function StudySessionPage() {
   const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
   const [isExplanationLoading, setIsExplanationLoading] = useState(false);
 
-  // Gamification State
-  const [energy, setEnergy] = useState(20);
-  const [streak, setStreak] = useState(0);
-
   useEffect(() => {
     if (project) {
       // In a real scenario, you'd filter atoms based on the session type and FSRS data.
       // For now, we'll just use all atoms for any session.
       setSessionAtoms(project.atoms);
     }
-  }, [project]);
+     // Reset streak at the beginning of a session
+    resetStreak();
+  }, [project, resetStreak]);
 
   const currentAtom = useMemo(() => {
     if (!sessionAtoms || sessionAtoms.length === 0) {
@@ -74,7 +72,7 @@ export default function StudySessionPage() {
 
   const handleUseEnergy = (cost: number) => {
       if (energy >= cost) {
-          setEnergy(prev => prev - cost);
+          updateEnergy(-cost);
           return true;
       }
       return false;
@@ -85,12 +83,8 @@ export default function StudySessionPage() {
   }
 
   const handleRate = (fsrs: number) => {
-    // Update streak
-    if (fsrs >= 3) { // "Bien" or "Fácil"
-        setStreak(prev => prev + 1);
-    } else { // "Muy Difícil" or "Difícil"
-        setStreak(0);
-    }
+    const isCorrect = fsrs >= 3; // "Bien" or "Fácil"
+    updateStreak(isCorrect);
 
     if (currentCardIndex < sessionAtoms.length - 1) {
       setCurrentCardIndex(prev => prev + 1);
@@ -140,28 +134,18 @@ export default function StudySessionPage() {
                 </Button>
             </TooltipTrigger>
             <TooltipContent>
-                <p>{label} (Costo: {cost}⚡)</p>
+                <p>{label} (⚡-{cost})</p>
             </TooltipContent>
         </Tooltip>
     </TooltipProvider>
   )
 
   return (
-    <div className="flex flex-col flex-1 h-screen">
-       <header className="flex items-center justify-between p-4 border-b border-border gap-4">
+    <div className="flex flex-col flex-1 h-[calc(100vh-theme(space.20))]">
+       <header className="flex items-center justify-between p-4 border-b border-border gap-4 shrink-0">
             <div className="flex-1">
                 <Progress value={progress} />
                  <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
-            </div>
-            <div className="flex items-center gap-4">
-                 <div className="flex items-center gap-2" title="Racha actual">
-                    <Flame className="text-orange-400" />
-                    <span className="font-bold text-lg text-foreground">{streak}</span>
-                </div>
-                <div className="flex items-center gap-2" title="Energía restante">
-                    <Zap className="text-yellow-400" />
-                    <span className="font-bold text-lg text-foreground">{energy}</span>
-                </div>
             </div>
         </header>
 

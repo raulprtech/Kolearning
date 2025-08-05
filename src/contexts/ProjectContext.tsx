@@ -14,7 +14,7 @@ type Source = {
 }
 
 type Session = {
-  day: string;
+  session: number;
   type: string;
   questions: string;
   duration: string;
@@ -46,10 +46,15 @@ type ProjectContextType = {
   addProject: (project: Project) => void;
   updateProjectIcon: (projectId: string, icon: string) => void;
   updateProjectDetails: (projectId: string, title: string, description: string) => void;
-  addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'day'>[]) => void;
+  addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'session'>[]) => void;
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
   deleteAtom: (projectId: string, atomIndex: number) => void;
   completeSession: (projectId: string, sessionIndex: number) => void;
+  energy: number;
+  streak: number;
+  updateEnergy: (amount: number) => void;
+  updateStreak: (correct: boolean) => void;
+  resetStreak: () => void;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -67,9 +72,9 @@ const initialProjects: Project[] = [
         { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
     ],
     sessions: [
-        { day: "Sesión 1", type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Completed" },
-        { day: "Sesión 2", type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Continue" },
-        { day: "Sesión 3", type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
+        { session: 1, type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Completed" },
+        { session: 2, type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Continue" },
+        { session: 3, type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
     ],
     learningPath: [
         { session: 1, topic: "Fundamentos de la Mecánica Cuántica", sessionType: "Calibración" },
@@ -90,7 +95,7 @@ const initialProjects: Project[] = [
         { question: "¿Qué fueron las Guerras Púnicas?", answer: "Una serie de tres guerras libradas entre Roma y Cartago desde el 264 a.C. hasta el 146 a.C." }
     ],
     sessions: [
-        { day: "Sesión 1", type: "Incursión", questions: "Flashcards", duration: "25 min", status: "Continue" },
+        { session: 1, type: "Incursión", questions: "Flashcards", duration: "25 min", status: "Continue" },
     ],
     learningPath: [
         { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión" },
@@ -108,7 +113,7 @@ const initialProjects: Project[] = [
         { question: "¿Qué es un alcano?", answer: "Un hidrocarburo acíclico saturado, lo que significa que consiste en átomos de hidrógeno y carbono dispuestos en una estructura de árbol en la que todos los enlaces carbono-carbono son simples." },
     ],
     sessions: [
-        { day: "Sesión 1", type: "Calibración", questions: "Opción múltiple", duration: "15 min", status: "Continue" },
+        { session: 1, type: "Calibración", questions: "Opción múltiple", duration: "15 min", status: "Continue" },
     ],
     learningPath: [
         { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración" },
@@ -119,13 +124,15 @@ const initialProjects: Project[] = [
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [energy, setEnergy] = useState(20);
+  const [streak, setStreak] = useState(0);
 
     const addProject = (newProject: Omit<Project, 'sessions'> & { fullLearningPlanMarkdown: string, learningPath: any[] }) => {
     if (!projects.find(p => p.id === newProject.id)) {
       const projectWithSessions: Project = {
         ...newProject,
         sessions: newProject.learningPath.map((item, index) => ({
-            day: `Sesión ${item.session}`,
+            session: item.session,
             type: item.sessionType,
             questions: 'N/A', // This info is not directly available in learningPath
             duration: '20 min', // Default duration
@@ -152,15 +159,15 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  const addSessionsToProject = (projectId: string, newSessions: Omit<Session, 'status' | 'day'>[]) => {
+  const addSessionsToProject = (projectId: string, newSessions: Omit<Session, 'status' | 'session'>[]) => {
       setProjects(prevProjects => {
           return prevProjects.map(p => {
               if (p.id === projectId) {
                   const existingSessions = p.sessions;
-                  const nextDay = existingSessions.length + 1;
+                  const nextSessionNumber = (existingSessions[existingSessions.length - 1]?.session || 0) + 1;
                   const formattedNewSessions: Session[] = newSessions.map((s, i) => ({
                       ...s,
-                      day: `Sesión ${nextDay + i}`,
+                      session: nextSessionNumber + i,
                       status: 'Locked',
                   }));
                   return { ...p, sessions: [...existingSessions, ...formattedNewSessions] };
@@ -215,8 +222,28 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const updateEnergy = (amount: number) => {
+    setEnergy(prev => Math.max(0, prev + amount));
+  };
+
+  const updateStreak = (correct: boolean) => {
+    if (correct) {
+      setStreak(prev => prev + 1);
+    } else {
+      setStreak(0);
+    }
+  };
+
+  const resetStreak = () => {
+    setStreak(0);
+  };
+
   return (
-    <ProjectContext.Provider value={{ projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, updateAtom, deleteAtom, completeSession }}>
+    <ProjectContext.Provider value={{ 
+        projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
+        updateAtom, deleteAtom, completeSession,
+        energy, streak, updateEnergy, updateStreak, resetStreak
+    }}>
       {children}
     </ProjectContext.Provider>
   );

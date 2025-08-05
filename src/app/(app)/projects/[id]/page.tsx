@@ -243,7 +243,7 @@ function ProjectDetails() {
   const activeSessionIndex = project.sessions.findIndex(s => s.status === 'Continue');
 
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea className="h-[calc(100vh-theme(space.16))]">
     <div className="flex-1 flex flex-col p-6 bg-background">
       {showUpdateAlert && (
         <Alert className="mb-6 bg-primary/10 border-primary/20">
@@ -394,8 +394,8 @@ function ProjectDetails() {
                     </TableHeader>
                     <TableBody>
                         {project.sessions.map((session, index) => (
-                             <TableRow key={session.day}>
-                                <TableCell>{session.day}</TableCell>
+                             <TableRow key={session.session}>
+                                <TableCell>{session.session}</TableCell>
                                 <TableCell>{getSessionBadge(session.type)}</TableCell>
                                 <TableCell>{session.questions}</TableCell>
                                 <TableCell>{session.duration}</TableCell>
