@@ -70,7 +70,6 @@ type Message = {
 };
 
 type ProjectData = {
-    userName: string;
     userObjective: string;
     deadline: string;
     masteryLevel: string;
@@ -519,9 +518,9 @@ export default function NewProjectPage() {
   const { addProject } = useProjects();
   const { toast } = useToast();
 
-  const [projectData, setProjectData] = useState<ProjectData>({ userName: '', userObjective: '', deadline: '', masteryLevel: '' });
+  const [projectData, setProjectData] = useState<ProjectData>({ userObjective: '', deadline: '', masteryLevel: '' });
   const [collectedData, setCollectedData] = useState<Partial<ProjectData>>({});
-  const [dataCollectionStep, setDataCollectionStep] = useState<'start' | 'name' | 'objective' | 'deadline' | 'masteryLevel' | 'done'>('start');
+  const [dataCollectionStep, setDataCollectionStep] = useState<'start' | 'objective' | 'deadline' | 'masteryLevel' | 'done'>('start');
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [attachedData, setAttachedData] = useState<AttachedData>({});
@@ -601,8 +600,7 @@ export default function NewProjectPage() {
     let newCollectedData = { ...collectedData, ...initialData };
 
     if (userInput && dataCollectionStep !== 'start' && dataCollectionStep !== 'done') {
-        if (dataCollectionStep === 'name') newCollectedData.userName = userInput;
-        else if (dataCollectionStep === 'objective') newCollectedData.userObjective = userInput;
+        if (dataCollectionStep === 'objective') newCollectedData.userObjective = userInput;
         else if (dataCollectionStep === 'deadline') newCollectedData.deadline = userInput;
         else if (dataCollectionStep === 'masteryLevel') newCollectedData.masteryLevel = userInput;
     }
@@ -613,11 +611,8 @@ export default function NewProjectPage() {
     let nextStep = dataCollectionStep;
 
     const askNextQuestion = () => {
-        if (!newCollectedData.userName) {
-            koliResponse = '¡Hola! Soy Koli. Para empezar, ¿cómo te llamas?';
-            nextStep = 'name';
-        } else if (!newCollectedData.userObjective) {
-            koliResponse = `¡Genial, ${newCollectedData.userName}! ¿Cuál es tu principal objetivo de aprendizaje con este material?`;
+        if (!newCollectedData.userObjective) {
+            koliResponse = '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?';
             nextStep = 'objective';
         } else if (!newCollectedData.deadline) {
             koliResponse = `Entendido. ¿Tienes alguna fecha límite para esto? Si no, puedes decir 'No'.`;
@@ -769,7 +764,6 @@ export default function NewProjectPage() {
     try {
         const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
         const finalProjectData = {
-            userName: collectedData.userName || '',
             userObjective: collectedData.userObjective || '',
             deadline: collectedData.deadline || 'No especificada',
             masteryLevel: collectedData.masteryLevel || 'No especificado',
