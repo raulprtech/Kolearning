@@ -605,7 +605,6 @@ function ProjectDetails() {
                             <TableHead>Sesión</TableHead>
                             <TableHead>Tipo de Sesión</TableHead>
                             <TableHead>Preguntas</TableHead>
-                            <TableHead>Duración</TableHead>
                             <TableHead>Estado</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -615,7 +614,6 @@ function ProjectDetails() {
                                 <TableCell>{session.session}</TableCell>
                                 <TableCell>{getSessionBadge(session.type)}</TableCell>
                                 <TableCell>{session.questions}</TableCell>
-                                <TableCell>{session.duration}</TableCell>
                                 <TableCell>{getSessionStatus(session.status, project.id, index)}</TableCell>
                             </TableRow>
                         ))}
