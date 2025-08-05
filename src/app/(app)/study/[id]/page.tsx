@@ -13,7 +13,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award } from "lucide-react";
+import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, HelpCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -48,6 +48,7 @@ export default function StudySessionPage() {
   const [sessionAtoms, setSessionAtoms] = useState(project?.atoms || []);
   const [viewState, setViewState] = useState<'question' | 'answer'>('question');
   const [userAnswer, setUserAnswer] = useState("");
+  const [aidsUsed, setAidsUsed] = useState(false);
   
   const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
   const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
@@ -79,9 +80,12 @@ export default function StudySessionPage() {
     )
   }
 
-  const handleUseEnergy = (cost: number) => {
+  const handleUseEnergy = (cost: number, isConsideredAid: boolean = true) => {
       if (energy >= cost) {
           updateEnergy(-cost);
+          if (isConsideredAid) {
+            setAidsUsed(true);
+          }
           return true;
       }
       return false;
@@ -92,16 +96,21 @@ export default function StudySessionPage() {
   }
 
   const handleRate = (fsrs: number) => {
-    const isCorrect = fsrs >= 3; // "Bien" or "Fácil"
+    let finalFsrs = fsrs;
+    if (aidsUsed && fsrs > 2) {
+        finalFsrs = 2; // Cap rating at "Difficult" if aids were used
+    }
+    const isCorrect = finalFsrs >= 3; // "Bien" or "Fácil"
     updateStreak(isCorrect);
 
     if (currentCardIndex < sessionAtoms.length - 1) {
       setCurrentCardIndex(prev => prev + 1);
       setViewState('question');
       setUserAnswer("");
+      setAidsUsed(false); // Reset aids for the next card
     } else {
       // Last card, go to summary
-      router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}&fsrs=${fsrs}`);
+      router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}&fsrs=${finalFsrs}`);
     }
   };
 
@@ -178,7 +187,19 @@ export default function StudySessionPage() {
         <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto">
             <div className="w-full max-w-3xl">
                 <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 flex items-center gap-2">
+                    {aidsUsed && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <HelpCircle className="h-4 w-4 text-yellow-400" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Has usado ayuda. La calificación será ajustada.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                     <Badge variant="secondary">{session.type}</Badge>
                 </div>
                 <CardHeader>
