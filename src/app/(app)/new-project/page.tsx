@@ -64,8 +64,8 @@ const initialSteps = [
 
 type Message = {
     role: 'user' | 'koli';
-    content: string;
-    actionId?: 'atomActions';
+    content: React.ReactNode;
+    actionId?: 'atomActions' | 'objectiveOptions' | 'deadlineOptions' | 'masteryOptions';
 };
 
 type ProjectData = {
@@ -93,7 +93,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, isProjectStarted, attachedData, setAttachedData }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, isProjectStarted, attachedData, setAttachedData, processDataCollection }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -103,6 +103,15 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
     }, [messages]);
 
     
+    const objectiveOptions = [
+        "Prepararme para un examen",
+        "Entender los conceptos clave",
+        "Aplicar este conocimiento en un proyecto",
+        "Aprender algo nuevo por curiosidad",
+    ];
+
+    const masteryOptions = [ "Principiante", "Intermedio", "Avanzado"];
+    
     return (
         <div className="flex flex-col h-full bg-card/30 border-l border-border overflow-hidden">
             <div ref={scrollRef} className="flex-1 p-6 space-y-6 overflow-y-auto">
@@ -111,15 +120,36 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                        <div className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                          {msg.role === 'koli' && <KoliAvatar className="h-10 w-10 flex-shrink-0" />}
                          <div className={`p-4 rounded-xl max-w-lg ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-card/80'}`}>
-                            <p>{msg.content}</p>
+                            <div>{msg.content}</div>
                          </div>
                        </div>
-                       {msg.actionId === 'atomActions' && (
-                           <div className="ml-14 mt-2 flex gap-2">
-                               <Button variant="outline" onClick={onReviewAtoms} disabled={isLoading}><Eye className="mr-2"/>Ver Átomos</Button>
-                               <Button onClick={onGeneratePlan} disabled={isLoading}>Siguiente Paso<ChevronRight className="ml-2"/></Button>
-                           </div>
-                       )}
+                       <div className="ml-14 mt-2 flex flex-wrap gap-2">
+                            {msg.actionId === 'atomActions' && (
+                                <>
+                                    <Button variant="outline" onClick={onReviewAtoms} disabled={isLoading}><Eye className="mr-2"/>Ver Átomos</Button>
+                                    <Button onClick={onGeneratePlan} disabled={isLoading}>Siguiente Paso<ChevronRight className="ml-2"/></Button>
+                                </>
+                            )}
+                            {msg.actionId === 'objectiveOptions' && objectiveOptions.map(opt => (
+                                <Button key={opt} variant="outline" onClick={() => processDataCollection(opt)}>{opt}</Button>
+                            ))}
+                            {msg.actionId === 'masteryOptions' && masteryOptions.map(opt => (
+                                <Button key={opt} variant="outline" onClick={() => processDataCollection(opt)}>{opt}</Button>
+                            ))}
+                            {msg.actionId === 'deadlineOptions' && (
+                                <>
+                                 <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline"><CalendarIcon className="mr-2"/>Elegir fecha</Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 mb-2" align="start">
+                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection(format(d, "PPP", { locale: es }))} initialFocus locale={es} />
+                                    </PopoverContent>
+                                 </Popover>
+                                 <Button variant="outline" onClick={() => processDataCollection('No tengo')}>No tengo</Button>
+                                </>
+                            )}
+                       </div>
                     </div>
                 ))}
                  {isLoading && messages[messages.length - 1]?.role === 'user' && (
@@ -143,60 +173,15 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                     fileInputRef={fileInputRef}
                     getFileIcon={getFileIcon}
                     onImportFromUrl={() => onImportFromUrl(true)}
-                    attachedData={attachedData}
-                    setAttachedData={setAttachedData}
+                    isDataCollectionDone={messages.some(m => m.actionId)}
                 />
             </div>
         </div>
     );
 }
 
-const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, attachedData, setAttachedData }: any) => {
-    const [isSourceMenuOpen, setIsSourceMenuOpen] = useState(false);
-
-    const handleDateSelect = (selectedDate: Date | undefined) => {
-        if (selectedDate) {
-            const formattedDate = format(selectedDate, "PPP", { locale: es });
-            setAttachedData((prev: AttachedData) => ({...prev, deadline: { date: selectedDate, text: `Mi fecha límite es el ${formattedDate}`}}))
-            setIsSourceMenuOpen(false);
-        }
-    }
-
-    const handleObjectiveSelect = (objective: string) => {
-        setAttachedData((prev: AttachedData) => ({...prev, objective: `Mi objetivo es ${objective}`}));
-        setIsSourceMenuOpen(false);
-    }
-
-    const handleMasterySelect = (level: string) => {
-        setAttachedData((prev: AttachedData) => ({...prev, masteryLevel: `Mi nivel de dominio es ${level}`}));
-        setIsSourceMenuOpen(false);
-    }
-
-    const removeAttachedData = (key: keyof AttachedData) => {
-        setAttachedData((prev: AttachedData) => {
-            const newDaTa = {...prev};
-            delete newDaTa[key];
-            return newDaTa;
-        })
-    }
+const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, isDataCollectionDone }: any) => {
     
-    const objectiveOptions = [
-        "Prepararme para un examen",
-        "Entender los conceptos clave",
-        "Aplicar este conocimiento en un proyecto",
-        "Aprender algo nuevo por curiosidad",
-    ];
-
-    const masteryOptions = [ "Principiante", "Intermedio", "Avanzado"];
-
-    const getAttachedDataPill = (key: keyof AttachedData, icon: React.ReactNode, text: string) => (
-         <div className="bg-primary/20 text-primary-foreground text-xs rounded-full px-3 py-1 flex items-center gap-2">
-            {icon}
-            <span className="truncate max-w-[200px]">{text}</span>
-            <button onClick={() => removeAttachedData(key)}><X className="h-3 w-3"/></button>
-        </div>
-    )
-
     return (
          <div className="flex flex-col gap-2">
               <div className="flex flex-wrap gap-2">
@@ -207,9 +192,6 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                         <button onClick={() => removeFile(file.name)}><X className="h-3 w-3"/></button>
                     </div>
                 ))}
-                {attachedData.objective && getAttachedDataPill('objective', <Target className="h-3 w-3" />, attachedData.objective)}
-                {attachedData.deadline && getAttachedDataPill('deadline', <CalendarIcon className="h-3 w-3" />, attachedData.deadline.text)}
-                {attachedData.masteryLevel && getAttachedDataPill('masteryLevel', <BarChart3 className="h-3 w-3" />, attachedData.masteryLevel)}
             </div>
             <div className="relative">
                 <Input
@@ -218,7 +200,7 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    disabled={isLoading}
+                    disabled={isLoading || isDataCollectionDone}
                 />
                 <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <input
@@ -230,7 +212,7 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                         accept=".pdf,.doc,.docx,.txt,.md"
                         multiple={true}
                     />
-                    <Popover open={isSourceMenuOpen} onOpenChange={setIsSourceMenuOpen}>
+                    <Popover>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" disabled={isLoading}>
                                 <Plus className="h-5 w-5" />
@@ -239,9 +221,9 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                         <PopoverContent className="w-80 mb-2">
                             <div className="grid gap-4">
                             <div className="space-y-2">
-                                <h4 className="font-medium leading-none">Añadir Fuente y Contexto</h4>
+                                <h4 className="font-medium leading-none">Añadir Fuente</h4>
                                 <p className="text-sm text-muted-foreground">
-                                    Completa tu solicitud con más detalles.
+                                    Sube archivos o importa desde una URL.
                                 </p>
                             </div>
                              <div className="grid gap-2">
@@ -259,63 +241,13 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                                         <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
                                     </div>
                                 </button>
-                                 <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button disabled={!!attachedData.objective} className={cn("flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full", attachedData.objective && "opacity-50 cursor-not-allowed")}>
-                                            <Target className="h-5 w-5 text-primary" />
-                                            <div>
-                                                <p className="font-semibold">Agregar objetivo</p>
-                                                <p className="text-sm text-muted-foreground">¿Qué quieres lograr?</p>
-                                            </div>
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-72">
-                                        {objectiveOptions.map((option, index) => (
-                                            <DropdownMenuItem key={index} onClick={() => handleObjectiveSelect(option)}>
-                                                {option}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <button disabled={!!attachedData.deadline} className={cn("flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full", attachedData.deadline && "opacity-50 cursor-not-allowed")}>
-                                            <CalendarIcon className="h-5 w-5 text-primary" />
-                                            <div>
-                                                <p className="font-semibold">Agregar Deadline</p>
-                                                <p className="text-sm text-muted-foreground">¿Para cuándo lo necesitas?</p>
-                                            </div>
-                                        </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 mb-2" align="start">
-                                        <Calendar mode="single" onSelect={handleDateSelect} initialFocus locale={es} />
-                                    </PopoverContent>
-                                </Popover>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button disabled={!!attachedData.masteryLevel} className={cn("flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left w-full", attachedData.masteryLevel && "opacity-50 cursor-not-allowed")}>
-                                            <BarChart3 className="h-5 w-5 text-primary" />
-                                            <div>
-                                                <p className="font-semibold">Definir mi nivel</p>
-                                                <p className="text-sm text-muted-foreground">¿Cuánto sabes del tema?</p>
-                                            </div>
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-72">
-                                        {masteryOptions.map((option, index) => (
-                                            <DropdownMenuItem key={index} onClick={() => handleMasterySelect(option)}>
-                                                {option}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
                             </div>
                             </div>
                         </PopoverContent>
                     </Popover>
                 </div>
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <Button variant="ghost" size="icon" onClick={() => handleSendMessage()} disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}>
+                <Button variant="ghost" size="icon" onClick={() => handleSendMessage()} disabled={isLoading || isDataCollectionDone || (!input.trim() && selectedFiles.length === 0)}>
                     {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                 </Button>
                 </div>
@@ -522,7 +454,6 @@ export default function NewProjectPage() {
   const [dataCollectionStep, setDataCollectionStep] = useState<'start' | 'objective' | 'deadline' | 'masteryLevel' | 'done'>('start');
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [attachedData, setAttachedData] = useState<AttachedData>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -597,51 +528,48 @@ export default function NewProjectPage() {
     return <FileText className="h-3 w-3" />;
   };
   
-  const processDataCollection = useCallback((userInput: string | null = null, initialData: Partial<ProjectData> = {}) => {
-    let newCollectedData = { ...collectedData, ...initialData };
+  const processDataCollection = useCallback((userInput: string | null = null) => {
+    let newCollectedData = { ...collectedData };
+    let currentResponse = '';
+    
+    // Remove the last message if it was a question with options
+    setMessages(prev => prev.filter(m => !m.actionId));
 
-    if (userInput && dataCollectionStep !== 'start' && dataCollectionStep !== 'done') {
-        if (dataCollectionStep === 'objective') newCollectedData.userObjective = userInput;
-        else if (dataCollectionStep === 'deadline') newCollectedData.deadline = userInput;
-        else if (dataCollectionStep === 'masteryLevel') newCollectedData.masteryLevel = userInput;
+    if(userInput) {
+        addMessage({ role: 'user', content: userInput });
+        currentResponse = `Has seleccionado: "${userInput}". `;
     }
 
+    if (dataCollectionStep === 'objective') {
+        newCollectedData.userObjective = userInput || '';
+    } else if (dataCollectionStep === 'deadline') {
+        newCollectedData.deadline = userInput || '';
+    } else if (dataCollectionStep === 'masteryLevel') {
+        newCollectedData.masteryLevel = userInput || '';
+    }
+    
     setCollectedData(newCollectedData);
-
-    let koliResponse = '';
-    let nextStep = dataCollectionStep;
 
     const askNextQuestion = () => {
         if (!newCollectedData.userObjective) {
-            koliResponse = '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?';
-            nextStep = 'objective';
+            addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
+            setDataCollectionStep('objective');
         } else if (!newCollectedData.deadline) {
-            koliResponse = `Entendido. ¿Tienes alguna fecha límite para esto? Si no, puedes decir 'No'.`;
-            nextStep = 'deadline';
+            addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
+            setDataCollectionStep('deadline');
         } else if (!newCollectedData.masteryLevel) {
-            koliResponse = `Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema? (Principiante, Intermedio, Avanzado)`;
-            nextStep = 'masteryLevel';
+            addMessage({ role: 'koli', content: `${currentResponse}Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?`, actionId: 'masteryOptions' });
+            setDataCollectionStep('masteryLevel');
         } else {
-            koliResponse = '¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...';
-            nextStep = 'done';
+            addMessage({ role: 'koli', content: `${currentResponse}¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...` });
+            setDataCollectionStep('done');
+            setProjectData(newCollectedData as ProjectData);
         }
     }
+    
+    // Use a short timeout to make the conversation feel more natural
+    setTimeout(askNextQuestion, 500);
 
-    if (dataCollectionStep === 'start') {
-        askNextQuestion();
-    } else {
-        askNextQuestion();
-    }
-    
-    setDataCollectionStep(nextStep);
-    
-    if (koliResponse && (dataCollectionStep !== nextStep || dataCollectionStep === 'start')) {
-        addMessage({ role: 'koli', content: koliResponse });
-    }
-    
-    if (nextStep === 'done') {
-        setProjectData(newCollectedData as ProjectData);
-    }
   }, [dataCollectionStep, collectedData, addMessage]);
 
 
@@ -672,12 +600,7 @@ export default function NewProjectPage() {
         setAtomsResult(combinedResponse);
         
         if (!isProjectStarted) {
-            const initialData: Partial<ProjectData> = {};
-            if (userObjective) initialData.userObjective = userObjective;
-            if (attachedData.objective) initialData.userObjective = attachedData.objective;
-            if (attachedData.deadline) initialData.deadline = attachedData.deadline.text;
-            if (attachedData.masteryLevel) initialData.masteryLevel = attachedData.masteryLevel;
-            processDataCollection(null, initialData);
+            processDataCollection(null);
             setIsProjectStarted(true);
         } else {
             addMessage({
@@ -702,39 +625,21 @@ export default function NewProjectPage() {
 
   const handleSendMessage = async () => {
     let userInput = input.trim();
-    const combinedObjective = [userInput, attachedData.objective, attachedData.deadline?.text, attachedData.masteryLevel].filter(Boolean).join('. ');
-
-    if (!combinedObjective && selectedFiles.length === 0) return;
+    if (!userInput && selectedFiles.length === 0) return;
 
     if (userInput || selectedFiles.length > 0) {
         const userMessageContent = userInput || `Procesar: ${selectedFiles.map(f => f.name).join(', ')}`;
         addMessage({ role: 'user', content: userMessageContent });
     }
     
+    const objective = input.trim();
     setInput('');
     const filesToProcess = [...selectedFiles];
     setSelectedFiles([]);
     
-    if (!isProjectStarted) {
-        const initialData: Partial<ProjectData> = {};
-        if (attachedData.objective) initialData.userObjective = attachedData.objective;
-        if (attachedData.deadline) initialData.deadline = attachedData.deadline.text;
-        if (attachedData.masteryLevel) initialData.masteryLevel = attachedData.masteryLevel;
-        if (userInput) initialData.userObjective = (initialData.userObjective ? initialData.userObjective + "; " : "") + userInput;
-
-        if (filesToProcess.length > 0) {
-            await processFiles(filesToProcess, initialData.userObjective || "Aprender el contenido del documento.");
-        }
-        processDataCollection(null, initialData);
-        setIsProjectStarted(true);
-    } else {
-        if (filesToProcess.length > 0) {
-             await processFiles(filesToProcess, projectData.userObjective);
-        } else {
-             processDataCollection(userInput);
-        }
+    if (filesToProcess.length > 0) {
+        await processFiles(filesToProcess, objective || "Aprender el contenido del documento.");
     }
-    setAttachedData({});
   }
 
   useEffect(() => {
@@ -785,6 +690,7 @@ export default function NewProjectPage() {
 
   const handleGeneratePlan = async () => {
     if (!atomsResult) return;
+    setMessages(prev => prev.filter(m => m.actionId !== 'atomActions'));
 
     setIsLoading(true);
     setCurrentStep('atomizing');
@@ -812,6 +718,7 @@ export default function NewProjectPage() {
 
   const handleReviewAtoms = () => {
     setCurrentStep('review');
+    setMessages(prev => prev.filter(m => m.actionId !== 'atomActions'));
     addMessage({
         role: 'koli',
         content: "Claro, aquí están los átomos que he generado para ti. Puedes editarlos directamente. Cuando estés listo, haz clic en 'Siguiente Paso' para continuar.",
@@ -871,8 +778,7 @@ export default function NewProjectPage() {
                     fileInputRef={fileInputRef}
                     getFileIcon={getFileIcon}
                     onImportFromUrl={() => setIsUrlImportOpen(true)}
-                    attachedData={attachedData}
-                    setAttachedData={setAttachedData}
+                    isDataCollectionDone={false}
                 />
             </div>
           </main>
@@ -972,8 +878,7 @@ export default function NewProjectPage() {
                 onGeneratePlan={handleGeneratePlan}
                 onImportFromUrl={() => setIsUrlImportOpen(true)}
                 isProjectStarted={isProjectStarted}
-                attachedData={attachedData}
-                setAttachedData={setAttachedData}
+                processDataCollection={processDataCollection}
             />
         </main>
     </div>
