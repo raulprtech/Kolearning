@@ -30,12 +30,12 @@ export default function StudySessionPage() {
   const { 
       projects, 
       energy, 
-      streak, 
+      sessionStreak, 
       cognitiveCredits, 
       masteryPoints, 
       updateEnergy, 
       updateStreak, 
-      resetStreak 
+      resetSessionStats 
   } = useProjects();
   
   const projectId = params.id as string;
@@ -61,8 +61,8 @@ export default function StudySessionPage() {
       setSessionAtoms(project.atoms);
     }
      // Reset streak and other session stats at the beginning of a session
-    resetStreak();
-  }, [project, resetStreak]);
+    resetSessionStats();
+  }, [project, resetSessionStats]);
 
   const currentAtom = useMemo(() => {
     if (!sessionAtoms || sessionAtoms.length === 0) {
@@ -179,7 +179,7 @@ export default function StudySessionPage() {
                 </div>
                 <div className="flex items-center gap-2" title="Racha de sesión">
                     <Flame className="text-orange-400" />
-                    <span className="font-bold text-lg text-foreground">{streak}</span>
+                    <span className="font-bold text-lg text-foreground">{sessionStreak}</span>
                 </div>
             </div>
         </header>
@@ -236,7 +236,7 @@ export default function StudySessionPage() {
                         <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
                         <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
                         <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
-                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={() => handleUseEnergy(3)} disabled={viewState === 'question'} />
+                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={() => handleUseEnergy(3)} disabled={viewState === 'answer'} />
                     </div>
                     </div>
                     

@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/logo";
 import { useProjects } from "@/contexts/ProjectContext";
-import { Zap } from "lucide-react";
+import { Zap, Brain, Flame } from "lucide-react";
 
 
 export function Header() {
-  const { energy } = useProjects();
+  const { energy, globalCognitiveCredits, dailyStreak } = useProjects();
 
   return (
     <header className="flex items-center justify-between p-4 border-b border-border">
@@ -23,6 +23,14 @@ export function Header() {
         <div className="flex items-center gap-2" title="Energía">
             <Zap className="h-5 w-5 text-yellow-400" />
             <span className="font-bold text-lg">{energy}</span>
+        </div>
+        <div className="flex items-center gap-2" title="Créditos Cognitivos">
+            <Brain className="h-5 w-5 text-blue-400" />
+            <span className="font-bold text-lg">{globalCognitiveCredits}</span>
+        </div>
+        <div className="flex items-center gap-2" title="Racha de Días">
+            <Flame className="h-5 w-5 text-orange-400" />
+            <span className="font-bold text-lg">{dailyStreak}</span>
         </div>
         <Button>Acceder</Button>
       </div>

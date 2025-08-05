@@ -51,12 +51,14 @@ type ProjectContextType = {
   deleteAtom: (projectId: string, atomIndex: number) => void;
   completeSession: (projectId: string, sessionIndex: number) => void;
   energy: number;
-  streak: number;
+  sessionStreak: number;
+  dailyStreak: number;
   cognitiveCredits: number;
+  globalCognitiveCredits: number;
   masteryPoints: number;
   updateEnergy: (amount: number) => void;
   updateStreak: (correct: boolean) => void;
-  resetStreak: () => void;
+  resetSessionStats: () => void;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -124,12 +126,27 @@ const initialProjects: Project[] = [
   },
 ];
 
+const isSameDay = (date1: Date, date2: Date) => {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+}
+
+const isYesterday = (date1: Date, date2: Date) => {
+    const yesterday = new Date(date1);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return isSameDay(yesterday, date2);
+}
+
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [energy, setEnergy] = useState(20);
-  const [streak, setStreak] = useState(0);
+  const [sessionStreak, setSessionStreak] = useState(0);
+  const [dailyStreak, setDailyStreak] = useState(0);
   const [cognitiveCredits, setCognitiveCredits] = useState(0);
+  const [globalCognitiveCredits, setGlobalCognitiveCredits] = useState(0);
   const [masteryPoints, setMasteryPoints] = useState(0);
+  const [lastSessionCompletedDate, setLastSessionCompletedDate] = useState<Date | null>(null);
 
     const addProject = (newProject: Omit<Project, 'sessions'> & { fullLearningPlanMarkdown: string, learningPath: any[] }) => {
     if (!projects.find(p => p.id === newProject.id)) {
@@ -207,6 +224,18 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const completeSession = (projectId: string, sessionIndex: number) => {
+    const today = new Date();
+    if (!lastSessionCompletedDate || !isSameDay(today, lastSessionCompletedDate)) {
+        if (lastSessionCompletedDate && isYesterday(today, lastSessionCompletedDate)) {
+            setDailyStreak(prev => prev + 1);
+        } else {
+            setDailyStreak(1);
+        }
+    }
+    setLastSessionCompletedDate(today);
+    setGlobalCognitiveCredits(prev => prev + cognitiveCredits);
+
+
     setProjects(prevProjects =>
       prevProjects.map(p => {
         if (p.id === projectId) {
@@ -232,17 +261,17 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const updateStreak = (correct: boolean) => {
     if (correct) {
-      setStreak(prev => prev + 1);
+      setSessionStreak(prev => prev + 1);
       setCognitiveCredits(prev => prev + 5);
       // Assuming 10 points for now, can be adjusted later with question type
       setMasteryPoints(prev => prev + 10);
     } else {
-      setStreak(0);
+      setSessionStreak(0);
     }
   };
 
-  const resetStreak = () => {
-    setStreak(0);
+  const resetSessionStats = () => {
+    setSessionStreak(0);
     setCognitiveCredits(0);
     setMasteryPoints(0);
   };
@@ -251,8 +280,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     <ProjectContext.Provider value={{ 
         projects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
         updateAtom, deleteAtom, completeSession,
-        energy, streak, cognitiveCredits, masteryPoints,
-        updateEnergy, updateStreak, resetStreak
+        energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints,
+        updateEnergy, updateStreak, resetSessionStats
     }}>
       {children}
     </ProjectContext.Provider>
