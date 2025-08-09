@@ -66,7 +66,7 @@ type ProjectContextType = {
   globalCognitiveCredits: number;
   masteryPoints: number;
   updateEnergy: (amount: number) => void;
-  updateStreak: (correct: boolean) => void;
+  recordAnswer: (fsrs: number, aidsUsed: boolean) => void;
   resetSessionStats: () => void;
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
   nextEnergyIn: number;
@@ -466,15 +466,20 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateStreak = (correct: boolean) => {
-    if (correct) {
+  const recordAnswer = (fsrs: number, aidsUsed: boolean) => {
+    const isCorrect = fsrs >= 3;
+    
+    if (isCorrect) {
       setSessionStreak(prev => prev + 1);
-      setCognitiveCredits(prev => prev + 5);
-      // Assuming 10 points for now, can be adjusted later with question type
-      setMasteryPoints(prev => prev + 10);
+      // Add cognitive credits based on aids used
+      setCognitiveCredits(prev => prev + (aidsUsed ? 1 : 2));
     } else {
       setSessionStreak(0);
     }
+    
+    // Link mastery points to FSRS retrievability
+    // A simple mapping: 5 points per FSRS level.
+    setMasteryPoints(prev => prev + (fsrs * 5));
   };
 
   const resetSessionStats = () => {
@@ -497,7 +502,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         projects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
         addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints,
-        updateEnergy, updateStreak, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn
+        updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn
     }}>
       {children}
     </ProjectContext.Provider>

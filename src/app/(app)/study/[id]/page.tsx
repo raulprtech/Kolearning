@@ -106,7 +106,7 @@ export default function StudySessionPage() {
       cognitiveCredits, 
       masteryPoints, 
       updateEnergy, 
-      updateStreak, 
+      recordAnswer, 
       resetSessionStats 
   } = useProjects();
   
@@ -180,12 +180,7 @@ export default function StudySessionPage() {
   }
 
   const handleRate = (fsrs: number) => {
-    let finalFsrs = fsrs;
-    if (aidsUsed && fsrs > 2) {
-        finalFsrs = 2; // Cap rating at "Difficult" if aids were used
-    }
-    const isCorrect = finalFsrs >= 3; // "Bien" or "Fácil"
-    updateStreak(isCorrect);
+    recordAnswer(fsrs, aidsUsed);
     goToNextCard();
   };
 
