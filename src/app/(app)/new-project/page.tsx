@@ -760,13 +760,35 @@ export default function NewProjectPage() {
             />
           <main className="flex-1 flex flex-col items-center p-4">
             <div className="flex-1 flex flex-col items-center justify-center">
-                <KoliAvatar className="h-24 w-24 mb-6" />
-                <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-                Hola, soy Koli
-                </h1>
-                <p className="mt-4 text-lg text-muted-foreground">
-                Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
-                </p>
+                {messages.length > 0 && messages[0].role === 'koli' ? (
+                    messages[0].content
+                ) : (
+                    <>
+                        <KoliAvatar className="h-24 w-24 mb-6" />
+                        <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
+                        Hola, soy Koli
+                        </h1>
+                        <p className="mt-4 text-lg text-muted-foreground">
+                        Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
+                        </p>
+                    </>
+                )}
+                 <div className="mt-12 max-w-4xl w-full text-left">
+                    <h2 className="text-xl font-headline text-center mb-6">Crea tu primer proyecto de estudio personalizado</h2>
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {initialSteps.map((step, index) => (
+                            <div key={index} className="flex gap-4">
+                                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
+                                    {index + 1}
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold mb-1">{step.title}</h3>
+                                    <p className="text-sm text-muted-foreground">{step.description}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
     
             <div className="w-full max-w-2xl mt-auto p-4">
