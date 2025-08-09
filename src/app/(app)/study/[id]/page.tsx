@@ -15,13 +15,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, HelpCircle, ListChecks, Send, RefreshCw, X } from "lucide-react";
+import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, ListChecks, Send, RefreshCw, X, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjects } from "@/contexts/ProjectContext";
 import { explainCorrectAnswer, ExplainCorrectAnswerOutput } from "@/ai/flows/koli-explain-answer";
-import { getStudyAid, StudyAidOutput } from "@/ai/flows/koli-study-aids";
-import { koliTutorChat, KoliTutorChatOutput } from "@/ai/flows/koli-tutor-chat";
+import { getStudyAid } from "@/ai/flows/koli-study-aids";
+import { koliTutorChat } from "@/ai/flows/koli-tutor-chat";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -349,6 +349,13 @@ export default function StudySessionPage() {
       }
   }
 
+  const handleSeeAnswer = () => {
+    if (handleUseEnergy(5)) {
+      setViewState('answer');
+    }
+  };
+
+
   const handleConvertToMc = () => {
     if (handleUseEnergy(2)) {
         setIsConvertedToMc(true);
@@ -481,6 +488,7 @@ export default function StudySessionPage() {
                         Usar ayuda
                     </h3>
                     <div className="flex items-center justify-center gap-4">
+                        <TacticalButton icon={<Eye/>} label="Ver respuesta" cost={5} action={handleSeeAnswer} disabled={viewState === 'answer'} />
                         <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} isLoading={isAidLoading === 'hint'} />
                         {!isMultipleChoice && !isConvertedToMc && <TacticalButton icon={<ListChecks/>} label="Convertir a Opción Múltiple" cost={2} action={handleConvertToMc} disabled={viewState === 'answer'} />}
                         <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
