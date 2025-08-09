@@ -97,7 +97,7 @@ function SessionSummaryContent() {
         } finally {
             setIsLoading(false);
         }
-    }, [projectId, sessionIndex, fsrsRating, projects, completeSession, addSessionsToProject]);
+    }, [projectId, sessionIndex, fsrsRating, completeSession, addSessionsToProject]);
 
     useEffect(() => {
         getTutorFeedback();
