@@ -23,7 +23,14 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
-const MultipleChoiceQuestion = ({ atom, onAnswer }: { atom: any, onAnswer: (isCorrect: boolean) => void }) => {
+const ratings = [
+    { label: "Muy Difícil", variant: "destructive", description: "Repetir Pronto", fsrs: 1 },
+    { label: "Difícil", variant: "outline", description: "Revisar en un día", fsrs: 2 },
+    { label: "Bien", variant: "secondary", description: "Revisar en unos días", fsrs: 3 },
+    { label: "Fácil", variant: "default", description: "Revisar en una semana", fsrs: 4 },
+] as const;
+
+const MultipleChoiceQuestion = ({ atom, onRate }: { atom: any, onRate: (fsrs: number) => void }) => {
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
     const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
@@ -36,7 +43,7 @@ const MultipleChoiceQuestion = ({ atom, onAnswer }: { atom: any, onAnswer: (isCo
             "La idea de que las partículas se comunican más rápido que la luz."
         ];
         const options = [atom.answer, ...incorrectOptions];
-        // Shuffle the options only on the client-side
+        // Shuffle the options only on the client-side to avoid hydration errors
         setShuffledOptions(options.sort(() => Math.random() - 0.5));
     }, [atom.answer]);
 
@@ -44,11 +51,7 @@ const MultipleChoiceQuestion = ({ atom, onAnswer }: { atom: any, onAnswer: (isCo
         if (isAnswered) return;
         setSelectedOption(option);
         setIsAnswered(true);
-        setTimeout(() => {
-            onAnswer(option === atom.answer);
-            setIsAnswered(false);
-            setSelectedOption(null);
-        }, 1000); // Wait a second before moving to the next question
+        // Don't auto-advance. Wait for FSRS rating.
     };
 
     const getButtonVariant = (option: string) => {
@@ -67,10 +70,26 @@ const MultipleChoiceQuestion = ({ atom, onAnswer }: { atom: any, onAnswer: (isCo
                     size="lg"
                     className="h-auto py-3 justify-start text-left whitespace-normal"
                     onClick={() => handleSelectOption(option)}
+                    disabled={isAnswered}
                 >
                     <div>{option}</div>
                 </Button>
             ))}
+            {isAnswered && (
+                 <div className="mt-8 pt-6 border-t">
+                    <h3 className="font-headline text-muted-foreground mb-4 text-center">
+                        Califica tu rendimiento de recuerdo:
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {ratings.map(rating => (
+                            <Button key={rating.label} variant={rating.variant} className="h-auto py-3 flex-col w-full" onClick={() => onRate(rating.fsrs)}>
+                                <span className="text-lg font-bold">{rating.label}</span>
+                                <span className="text-xs opacity-80">{rating.description}</span>
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -169,13 +188,6 @@ export default function StudySessionPage() {
     updateStreak(isCorrect);
     goToNextCard();
   };
-  
-  const handleMultipleChoiceAnswer = (isCorrect: boolean) => {
-    updateStreak(isCorrect);
-    // For simplicity, we'll use a fixed FSRS rating for multiple choice.
-    // In a real app, this might be handled differently.
-    goToNextCard();
-  };
 
   const handleExplainAnswer = async () => {
       if (!handleUseEnergy(1)) return;
@@ -196,14 +208,6 @@ export default function StudySessionPage() {
           setIsExplanationLoading(false);
       }
   }
-
-
-  const ratings = [
-      { label: "Muy Difícil", variant: "destructive", description: "Repetir Pronto", fsrs: 1 },
-      { label: "Difícil", variant: "outline", description: "Revisar en un día", fsrs: 2 },
-      { label: "Bien", variant: "secondary", description: "Revisar en unos días", fsrs: 3 },
-      { label: "Fácil", variant: "default", description: "Revisar en una semana", fsrs: 4 },
-  ] as const;
 
   const progress = (currentCardIndex / sessionAtoms.length) * 100;
   const TacticalButton = ({ icon, label, cost, action, disabled = false }: { icon: React.ReactNode, label: string, cost: number, action: () => void, disabled?: boolean }) => (
@@ -226,7 +230,7 @@ export default function StudySessionPage() {
 
   const renderQuestionInterface = () => {
     if (isMultipleChoice) {
-        return <MultipleChoiceQuestion atom={currentAtom} onAnswer={handleMultipleChoiceAnswer} />;
+        return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} />;
     }
     // Default to open question
     return (
@@ -254,11 +258,11 @@ export default function StudySessionPage() {
             <div className="w-1/4">
                 <Button variant="outline" onClick={() => router.back()}>Salir de la Sesión</Button>
             </div>
-            <div className="flex-1 flex items-center justify-center">
-                <div className="w-full max-w-md flex flex-col items-center">
-                    <Badge variant="secondary" className="mb-2">{session.type}</Badge>
-                    <Progress value={progress} />
-                    <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
+            <div className="flex-1 flex flex-col items-center justify-center">
+                <Badge variant="secondary" className="mb-2">{session.type}</Badge>
+                <div className="w-full max-w-md">
+                  <Progress value={progress} />
+                  <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
                 </div>
             </div>
             <div className="w-1/4 flex justify-end">
