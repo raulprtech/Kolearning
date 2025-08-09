@@ -14,15 +14,55 @@ import {
 import { KoliAvatar } from '@/components/icons/koli-avatar';
 import { useProjects } from '@/contexts/ProjectContext';
 import { dynamicLearningPathAdjustment, DynamicLearningPathAdjustmentOutput } from '@/ai/flows/koli-strategic-tutor';
-import { Loader2, Star, Target, BrainCircuit, BarChart, ChevronRight, Award } from 'lucide-react';
+import { Loader2, Star, Target, BrainCircuit, Award, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+
+const ranks = [
+    { name: "G", minPoints: 0 },
+    { name: "F", minPoints: 100 },
+    { name: "E", minPoints: 250 },
+    { name: "D", minPoints: 500 },
+    { name: "C", minPoints: 1000 },
+    { name: "B", minPoints: 2000 },
+    { name: "A", minPoints: 5000 },
+    { name: "S", minPoints: 10000 },
+];
+
+const getLearnerRank = (totalMasteryPoints: number) => {
+    let currentRank = ranks[0];
+    let nextRank = ranks[1];
+
+    for (let i = 0; i < ranks.length; i++) {
+        if (totalMasteryPoints >= ranks[i].minPoints) {
+            currentRank = ranks[i];
+            if (i < ranks.length - 1) {
+                nextRank = ranks[i + 1];
+            } else {
+                nextRank = { name: "S", minPoints: Infinity }; // Max rank
+            }
+        }
+    }
+
+    const pointsInCurrentRank = totalMasteryPoints - currentRank.minPoints;
+    const pointsForNextRank = nextRank.minPoints - currentRank.minPoints;
+    const progressPercentage = pointsForNextRank === Infinity ? 100 : Math.round((pointsInCurrentRank / pointsForNextRank) * 100);
+    const pointsToNext = pointsForNextRank - pointsInCurrentRank;
+    
+    return {
+        rankName: currentRank.name,
+        nextRankName: nextRank.name,
+        progress: progressPercentage,
+        pointsToNext: pointsToNext,
+    };
+}
+
 
 function SessionSummaryContent() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
-    const { projects, addSessionsToProject, completeSession, masteryPoints } = useProjects();
+    const { projects, addSessionsToProject, completeSession, masteryPoints, totalMasteryPoints } = useProjects();
     const projectId = params.id as string;
     const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
     const fsrsRating = searchParams.get('fsrs');
@@ -59,18 +99,20 @@ function SessionSummaryContent() {
         } finally {
             setIsLoading(false);
         }
-    }, [projectId, sessionIndex, fsrsRating, project, completeSession, addSessionsToProject]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectId, sessionIndex, fsrsRating]);
 
     useEffect(() => {
         getTutorFeedback();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [getTutorFeedback]);
 
     const handleFinish = () => {
         const planUpdated = tutorResponse && tutorResponse.newSessions.length > 0;
         const query = planUpdated ? '?planUpdated=true' : '?sessionCompleted=true';
         router.push(`/projects/${projectId}${query}`);
     };
+
+    const learnerRankInfo = getLearnerRank(totalMasteryPoints);
 
     return (
         <div className="flex flex-col flex-1 items-center justify-center p-4 md:p-8 bg-background">
@@ -94,9 +136,14 @@ function SessionSummaryContent() {
                             </div>
                              <div className="bg-card/50 p-4 rounded-lg">
                                 <Award className="mx-auto h-8 w-8 text-blue-400 mb-2" />
-                                <p className="text-lg font-bold">Iniciado</p>
-                                <Progress value={60} className="h-2 mt-2" />
-                                <p className="text-xs text-muted-foreground mt-1">400 pts para Novato</p>
+                                <p className="text-lg font-bold">Rango de Aprendedor: {learnerRankInfo.rankName}</p>
+                                <Progress value={learnerRankInfo.progress} className="h-2 mt-2" />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
+                                        ? `${learnerRankInfo.pointsToNext} pts para Rango ${learnerRankInfo.nextRankName}`
+                                        : "¡Rango Máximo!"
+                                    }
+                                </p>
                             </div>
                         </div>
 

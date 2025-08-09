@@ -65,6 +65,7 @@ type ProjectContextType = {
   cognitiveCredits: number;
   globalCognitiveCredits: number;
   masteryPoints: number;
+  totalMasteryPoints: number;
   updateEnergy: (amount: number) => void;
   recordAnswer: (fsrs: number, aidsUsed: boolean) => void;
   resetSessionStats: () => void;
@@ -272,6 +273,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [cognitiveCredits, setCognitiveCredits] = useState(0);
   const [globalCognitiveCredits, setGlobalCognitiveCredits] = useState(500);
   const [masteryPoints, setMasteryPoints] = useState(0);
+  const [totalMasteryPoints, setTotalMasteryPoints] = useState(0);
   const [lastSessionCompletedDate, setLastSessionCompletedDate] = useState<Date | null>(null);
   const [nextEnergyTimestamp, setNextEnergyTimestamp] = useState<number | null>(null);
   const [nextEnergyIn, setNextEnergyIn] = useState(0);
@@ -479,7 +481,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     
     // Link mastery points to FSRS retrievability
     // A simple mapping: 5 points per FSRS level.
-    setMasteryPoints(prev => prev + (fsrs * 5));
+    const newMasteryPoints = fsrs * 5;
+    setMasteryPoints(prev => prev + newMasteryPoints);
+    setTotalMasteryPoints(prev => prev + newMasteryPoints);
   };
 
   const resetSessionStats = () => {
@@ -501,7 +505,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     <ProjectContext.Provider value={{ 
         projects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
         addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
-        energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints,
+        energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
         updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn
     }}>
       {children}
