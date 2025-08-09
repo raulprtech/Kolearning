@@ -168,18 +168,10 @@ export default function StudySessionPage() {
                 <Progress value={progress} />
                  <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
             </div>
-            <div className="w-1/4 flex justify-end items-center gap-4">
-                <div className="flex items-center gap-2" title="Puntos de Dominio (Sesión)">
-                    <Award className="text-purple-400" />
-                    <span className="font-bold text-lg text-foreground">{masteryPoints}</span>
-                </div>
-                <div className="flex items-center gap-2" title="Créditos Cognitivos (Sesión)">
-                    <Brain className="text-blue-400" />
-                    <span className="font-bold text-lg text-foreground">{cognitiveCredits}</span>
-                </div>
-                <div className="flex items-center gap-2" title="Racha de sesión">
-                    <Flame className="text-orange-400" />
-                    <span className="font-bold text-lg text-foreground">{sessionStreak}</span>
+            <div className="w-1/4 flex justify-end">
+                <div className="flex items-center gap-2 bg-card/50 px-3 py-1.5 rounded-md" title="Energía de Sesión">
+                    <Zap className="h-5 w-5 text-yellow-400" />
+                    <span className="font-bold text-lg text-foreground">{energy}</span>
                 </div>
             </div>
         </header>
