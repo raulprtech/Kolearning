@@ -84,12 +84,12 @@ A learner has provided their learning material, their objective, and some person
 
     *   'Refuerzo de Dominio'
         *   **Intention:** Long-term retention. Combat the forgetting curve.
-        *   **Question Format ('questions' field):** "Formatos Mixtos". Use a mix of question types to reinforce knowledge from different angles.
+        *   **Question Format ('questions' field):** "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)". Use a mix of question types to reinforce knowledge from different angles.
         *   **Content:** Atoms selected by the FSRS algorithm for review.
 
     *   'Prueba de Dominio'
         *   **Intention:** Certification. Test deep, applicable understanding of a sub-module.
-        *   **Question Format ('questions' field):** "Pregunta Abierta y Casos Prácticos". The most demanding format to validate mastery.
+        *   **Question Format ('questions' field):** "Pregunta Abierta y Casos Prácticos". The most demanding format to validate mastery, including practical simulations.
         *   **Content:** All atoms related to a specific sub-module. This should be the final session for that sub-module.
 
 
@@ -107,7 +107,7 @@ A learner has provided their learning material, their objective, and some person
         *   **CRUCIAL RULE: For each session object in the 'learningPath' array, you MUST populate the 'questions' field with the exact corresponding string value based on the 'sessionType' field. Follow these mappings strictly:
           - If sessionType is 'Calibración', questions MUST BE 'Opción Múltiple'.
           - If sessionType is 'Incursión', questions MUST BE 'Pregunta Abierta'.
-          - If sessionType is 'Refuerzo de Dominio', questions MUST BE 'Formatos Mixtos'.
+          - If sessionType is 'Refuerzo de Dominio', questions MUST BE 'Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)'.
           - If sessionType is 'Prueba de Dominio', questions MUST BE 'Pregunta Abierta y Casos Prácticos'.
           DO NOT DEVIATE FROM THIS MAPPING.**
     *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy.
