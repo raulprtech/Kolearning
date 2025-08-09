@@ -440,20 +440,6 @@ export default function StudySessionPage() {
         <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto">
             <div className="w-full max-w-3xl">
                 <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-4 right-4 flex items-center gap-2">
-                    {aidsUsed && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <HelpCircle className="h-4 w-4 text-yellow-400" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Has usado ayuda. La calificación será ajustada.</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-                </div>
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl text-center">
                     {questionToDisplay}
