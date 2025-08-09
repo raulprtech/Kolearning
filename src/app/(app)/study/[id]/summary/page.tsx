@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, Suspense, useCallback } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,10 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { KoliAvatar } from '@/components/icons/koli-avatar';
 import { useProjects } from '@/contexts/ProjectContext';
 import { Loader2, Star, Target, BrainCircuit, ChevronRight } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 
 const ranks = [
@@ -61,7 +59,7 @@ function SessionSummaryContent() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
-    const { completeSession, masteryPoints, totalMasteryPoints } = useProjects();
+    const { completeSession, masteryPoints, totalMasteryPoints, sessionAnswers } = useProjects();
     const projectId = params.id as string;
     const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
     
@@ -80,6 +78,10 @@ function SessionSummaryContent() {
 
     const learnerRankInfo = getLearnerRank(totalMasteryPoints);
 
+    const correctAnswers = sessionAnswers.filter(answer => answer === true).length;
+    const totalAnswers = sessionAnswers.length;
+    const accuracy = totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0;
+
     return (
         <div className="flex flex-col flex-1 items-center justify-center p-4 md:p-8 bg-background">
             <div className="w-full max-w-2xl">
@@ -97,7 +99,7 @@ function SessionSummaryContent() {
                             </div>
                             <div className="bg-card/50 p-4 rounded-lg">
                                 <Target className="mx-auto h-8 w-8 text-green-400 mb-2" />
-                                <p className="text-2xl font-bold">92%</p>
+                                <p className="text-2xl font-bold">{accuracy}%</p>
                                 <p className="text-sm text-muted-foreground">Precisión</p>
                             </div>
                              <div className="bg-card/50 p-4 rounded-lg text-center">

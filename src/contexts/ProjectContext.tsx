@@ -72,6 +72,7 @@ type ProjectContextType = {
   resetSessionStats: () => void;
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
   nextEnergyIn: number;
+  sessionAnswers: boolean[];
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -278,6 +279,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [lastSessionCompletedDate, setLastSessionCompletedDate] = useState<Date | null>(null);
   const [nextEnergyTimestamp, setNextEnergyTimestamp] = useState<number | null>(null);
   const [nextEnergyIn, setNextEnergyIn] = useState(0);
+  const [sessionAnswers, setSessionAnswers] = useState<boolean[]>([]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -471,6 +473,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const recordAnswer = (fsrs: number, aidsUsed: boolean) => {
     const isCorrect = fsrs >= 3;
+    setSessionAnswers(prev => [...prev, isCorrect]);
     
     if (isCorrect) {
       setSessionStreak(prev => prev + 1);
@@ -495,6 +498,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setSessionStreak(0);
     setCognitiveCredits(0);
     setMasteryPoints(0);
+    setSessionAnswers([]);
   };
   
   const exchangeCreditsForEnergy = (credits: number, energyAmount: number): boolean => {
@@ -511,7 +515,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         projects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
         addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
-        updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn
+        updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers
     }}>
       {children}
     </ProjectContext.Provider>
