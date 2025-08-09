@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -114,12 +115,15 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isStudyPage = pathname.startsWith('/study');
+
   return (
     <ClientProvider>
       <div className="flex h-screen bg-background text-foreground">
-        <SidebarContent />
+        {!isStudyPage && <SidebarContent />}
         <div className="flex-1 flex flex-col overflow-auto">
-            <Header />
+            {!isStudyPage && <Header />}
             {children}
         </div>
       </div>
