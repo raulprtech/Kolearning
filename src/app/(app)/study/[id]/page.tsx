@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,16 +11,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, HelpCircle, ListChecks } from "lucide-react";
+import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, HelpCircle, ListChecks, Send, RefreshCw, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjects } from "@/contexts/ProjectContext";
 import { explainCorrectAnswer, ExplainCorrectAnswerOutput } from "@/ai/flows/koli-explain-answer";
+import { getStudyAid, StudyAidOutput } from "@/ai/flows/koli-study-aids";
+import { koliTutorChat, KoliTutorChatOutput } from "@/ai/flows/koli-tutor-chat";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 const ratings = [
@@ -72,7 +78,7 @@ const MultipleChoiceQuestion = ({ atom, onRate }: { atom: any, onRate: (fsrs: nu
                     onClick={() => handleSelectOption(option)}
                     disabled={isAnswered}
                 >
-                    <div>{option}</div>
+                    <div className="text-left">{option}</div>
                 </Button>
             ))}
             {isAnswered && (
@@ -92,6 +98,110 @@ const MultipleChoiceQuestion = ({ atom, onRate }: { atom: any, onRate: (fsrs: nu
             )}
         </div>
     );
+};
+
+type ChatMessage = {
+    role: 'user' | 'model';
+    content: string;
+};
+
+const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: { isOpen: boolean, onClose: () => void, question: string, answer: string, onUseEnergy: (cost: number) => boolean }) => {
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [input, setInput] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setMessages([
+                { role: 'model', content: `¡Hola! Estoy aquí para ayudarte con la pregunta: "${question}". ¿Qué duda tienes?` }
+            ]);
+        }
+    }, [isOpen, question]);
+    
+    useEffect(() => {
+        if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    const handleSendMessage = async () => {
+        if (!input.trim()) return;
+
+        const newMessages: ChatMessage[] = [...messages, { role: 'user', content: input }];
+        setMessages(newMessages);
+        setInput("");
+        setIsLoading(true);
+
+        try {
+            const response = await koliTutorChat({
+                questionContext: question,
+                answerContext: answer,
+                chatHistory: newMessages,
+            });
+            setMessages(prev => [...prev, { role: 'model', content: response.response }]);
+        } catch (error) {
+            console.error("Error chatting with Koli:", error);
+            setMessages(prev => [...prev, { role: 'model', content: "Lo siento, tuve un problema para procesar tu pregunta. Inténtalo de nuevo." }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Sheet open={isOpen} onOpenChange={onClose}>
+            <SheetContent className="w-full sm:w-[540px] flex flex-col">
+                <SheetHeader>
+                    <SheetTitle>Consulta a Koli</SheetTitle>
+                    <SheetDescription>
+                        Chatea con tu tutor de IA para resolver tus dudas sobre este tema.
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="flex-1 overflow-hidden flex flex-col">
+                    <ScrollArea className="flex-1 pr-4 -mr-4">
+                        <div ref={scrollAreaRef} className="space-y-4">
+                            {messages.map((msg, index) => (
+                                <div key={index} className={`flex gap-3 ${msg.role === 'model' ? '' : 'justify-end'}`}>
+                                    {msg.role === 'model' && <KoliAvatar className="h-8 w-8 flex-shrink-0" />}
+                                    <div className={`p-3 rounded-lg max-w-sm ${msg.role === 'model' ? 'bg-muted' : 'bg-primary text-primary-foreground'}`}>
+                                        <p className="text-sm">{msg.content}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {isLoading && (
+                                <div className="flex gap-3">
+                                    <KoliAvatar className="h-8 w-8 flex-shrink-0" />
+                                    <div className="p-3 rounded-lg bg-muted flex items-center">
+                                        <Loader2 className="h-5 w-5 animate-spin"/>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </div>
+                <SheetFooter>
+                    <div className="relative w-full">
+                        <Input
+                            placeholder="Escribe tu pregunta..."
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                            disabled={isLoading}
+                        />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                            onClick={handleSendMessage}
+                            disabled={isLoading || !input.trim()}
+                        >
+                            <Send className="h-4 w-4"/>
+                        </Button>
+                    </div>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
+    )
 };
 
 
@@ -126,6 +236,12 @@ export default function StudySessionPage() {
   const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
   const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
   const [isExplanationLoading, setIsExplanationLoading] = useState(false);
+
+  const [isAidLoading, setIsAidLoading] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
+  const [rephrasedQuestion, setRephrasedQuestion] = useState<string | null>(null);
+  const [isTutorPanelOpen, setIsTutorPanelOpen] = useState(false);
+
 
   useEffect(() => {
     if (project) {
@@ -175,6 +291,8 @@ export default function StudySessionPage() {
       setUserAnswer("");
       setAidsUsed(false); // Reset aids for the next card
       setIsConvertedToMc(false); // Reset conversion for next card
+      setHint(null);
+      setRephrasedQuestion(null);
     } else {
       // Last card, go to summary
       router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}&fsrs=4`); // Assume good rating for now
@@ -206,19 +324,50 @@ export default function StudySessionPage() {
       }
   }
 
+  const handleGetStudyAid = async (aidType: 'hint' | 'rephrase') => {
+      const cost = aidType === 'hint' ? 1 : 1;
+      if (!handleUseEnergy(cost)) return;
+
+      setIsAidLoading(aidType);
+      try {
+          const result = await getStudyAid({
+              aidType,
+              question: currentAtom.question,
+              answer: currentAtom.answer,
+          });
+
+          if (aidType === 'hint') {
+              setHint(result.result);
+          } else {
+              setRephrasedQuestion(result.result);
+          }
+      } catch (error) {
+          console.error(`Error getting ${aidType}:`, error);
+          // Optionally show a toast or message
+      } finally {
+          setIsAidLoading(null);
+      }
+  }
+
   const handleConvertToMc = () => {
     if (handleUseEnergy(2)) {
         setIsConvertedToMc(true);
     }
   }
 
+  const handleOpenTutorChat = () => {
+    if (handleUseEnergy(3)) {
+        setIsTutorPanelOpen(true);
+    }
+  }
+
   const progress = (currentCardIndex / sessionAtoms.length) * 100;
-  const TacticalButton = ({ icon, label, cost, action, disabled = false }: { icon: React.ReactNode, label: string, cost: number, action: () => void, disabled?: boolean }) => (
+  const TacticalButton = ({ icon, label, cost, action, disabled = false, isLoading = false }: { icon: React.ReactNode, label: string, cost: number, action: () => void, disabled?: boolean, isLoading?: boolean }) => (
     <TooltipProvider>
         <Tooltip>
             <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" aria-label={label} onClick={action} disabled={disabled || energy < cost}>
-                    {icon}
+                <Button variant="outline" size="icon" aria-label={label} onClick={action} disabled={disabled || energy < cost || isLoading}>
+                    {isLoading ? <Loader2 className="animate-spin" /> : icon}
                 </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -255,6 +404,8 @@ export default function StudySessionPage() {
     );
   }
 
+  const questionToDisplay = rephrasedQuestion || currentAtom.question;
+
   return (
     <div className="flex flex-col flex-1 h-[calc(100vh)]">
        <header className="flex items-center justify-between p-4 border-b border-border gap-4 shrink-0">
@@ -262,7 +413,7 @@ export default function StudySessionPage() {
                 <Button variant="outline" onClick={() => router.back()}>Salir de la Sesión</Button>
             </div>
             <div className="flex-1 flex flex-col items-center justify-center">
-                <Badge variant="secondary" className="mb-2">{session.type}</Badge>
+                 <Badge variant="secondary" className="mb-2">{session.type}</Badge>
                 <div className="w-full max-w-md">
                   <Progress value={progress} />
                   <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
@@ -305,13 +456,36 @@ export default function StudySessionPage() {
                 </div>
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl text-center">
-                    {currentAtom.question}
+                    {questionToDisplay}
+                    {rephrasedQuestion && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="ml-2 h-6 w-6" onClick={() => setRephrasedQuestion(null)}>
+                                        <RefreshCw className="h-3 w-3 text-muted-foreground" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Ver pregunta original</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                     </CardTitle>
                     <CardDescription className="text-center">
                       {isMultipleChoice || isConvertedToMc ? "Selecciona la respuesta correcta." : "Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio."}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
+                    
+                     {hint && (
+                        <Alert className="mb-4 bg-primary/10 border-primary/20 text-primary">
+                            <Lightbulb className="h-4 w-4 text-primary" />
+                            <AlertTitle className="flex justify-between items-center">
+                                Pista de Koli
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setHint(null)}><X className="h-4 w-4"/></Button>
+                            </AlertTitle>
+                            <AlertDescription>{hint}</AlertDescription>
+                        </Alert>
+                    )}
                     
                     {viewState === 'question' && renderQuestionInterface()}
 
@@ -321,11 +495,11 @@ export default function StudySessionPage() {
                         Usar ayuda
                     </h3>
                     <div className="flex items-center justify-center gap-4">
-                        <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
+                        <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} isLoading={isAidLoading === 'hint'} />
                         {!isMultipleChoice && !isConvertedToMc && <TacticalButton icon={<ListChecks/>} label="Convertir a Opción Múltiple" cost={2} action={handleConvertToMc} disabled={viewState === 'answer'} />}
                         <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
-                        <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
-                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={() => handleUseEnergy(3)} disabled={viewState === 'answer'} />
+                        <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleGetStudyAid('rephrase')} disabled={viewState === 'answer' || !!rephrasedQuestion} isLoading={isAidLoading === 'rephrase'} />
+                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={handleOpenTutorChat} />
                     </div>
                     </div>
                     
@@ -379,6 +553,14 @@ export default function StudySessionPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <KoliTutorPanel
+                isOpen={isTutorPanelOpen}
+                onClose={() => setIsTutorPanelOpen(false)}
+                question={currentAtom.question}
+                answer={currentAtom.answer}
+                onUseEnergy={handleUseEnergy}
+            />
 
         </main>
     </div>
