@@ -11,6 +11,7 @@ export type Atom = {
 type Source = {
     name: string;
     type: string;
+    content: string;
 }
 
 export type Session = {
@@ -97,7 +98,7 @@ const initialProjects: Project[] = [
         { session: 2, topic: "Superposición y Entrelazamiento", sessionType: "Incursión" },
         { session: 3, topic: "Repaso de Fundamentos", sessionType: "Refuerzo de Dominio" },
     ],
-    sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento"} ],
+    sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento", content: ""} ],
     isPublic: false,
   },
   {
@@ -117,7 +118,7 @@ const initialProjects: Project[] = [
     learningPath: [
         { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión" },
     ],
-    sources: [ {name: "The_History_of_Rome.pdf", type: "Documento"} ],
+    sources: [ {name: "The_History_of_Rome.pdf", type: "Documento", content: ""} ],
     isPublic: false,
   },
   {
@@ -136,7 +137,7 @@ const initialProjects: Project[] = [
     learningPath: [
         { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración" },
     ],
-    sources: [ {name: "Organic_Chemistry.pdf", type: "Documento"} ],
+    sources: [ {name: "Organic_Chemistry.pdf", type: "Documento", content: ""} ],
     isPublic: false,
   },
 ];
@@ -160,7 +161,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Variables y Tipos de Datos", sessionType: "Incursión" },
         { session: 2, topic: "Estructuras de Control", sessionType: "Incursión" },
     ],
-    sources: [{ name: "python_intro.pdf", type: "Documento" }],
+    sources: [{ name: "python_intro.pdf", type: "Documento", content: "" }],
     isPublic: true,
   },
   {
@@ -181,7 +182,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Escalas y Tonalidades", sessionType: "Calibración" },
         { session: 2, topic: "Intervalos y Acordes", sessionType: "Incursión" },
     ],
-    sources: [{ name: "music_theory_basics.docx", type: "Documento" }],
+    sources: [{ name: "music_theory_basics.docx", type: "Documento", content: "" }],
     isPublic: true,
   },
   {
@@ -202,7 +203,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Renacimiento", sessionType: "Incursión" },
         { session: 2, topic: "Impresionismo y Postimpresionismo", sessionType: "Incursión" },
     ],
-    sources: [{ name: "art_history_101.pdf", type: "Documento" }],
+    sources: [{ name: "art_history_101.pdf", type: "Documento", content: "" }],
     isPublic: true,
   },
   {
@@ -223,7 +224,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Componentes y Props", sessionType: "Incursión" },
         { session: 2, topic: "State y Ciclo de Vida", sessionType: "Incursión" },
     ],
-    sources: [{ name: "react_docs_summary.txt", type: "Documento" }],
+    sources: [{ name: "react_docs_summary.txt", type: "Documento", content: "" }],
     isPublic: true,
   },
   {
@@ -244,7 +245,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Filósofos Presocráticos", sessionType: "Calibración" },
         { session: 2, topic: "Sócrates y Platón", sessionType: "Incursión" },
     ],
-    sources: [{ name: "greek_philosophy.pdf", type: "Documento" }],
+    sources: [{ name: "greek_philosophy.pdf", type: "Documento", content: "" }],
     isPublic: true,
   },
 ];

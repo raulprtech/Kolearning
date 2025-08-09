@@ -56,7 +56,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw } from "lucide-react";
 import { useProjects, publicProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -715,15 +715,21 @@ function ProjectDetails() {
                                 <p className="text-sm text-muted-foreground">{source.type}</p>
                             </TableCell>
                             <TableCell className="text-right">
-                                    <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" onClick={() => window.open(source.content, '_blank')}>
                                     <Eye className="h-4 w-4 mr-2"/>
                                     Ver
                                 </Button>
                                 {isUserProject && (
-                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10">
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Eliminar
-                                </Button>
+                                    <>
+                                        <Button variant="ghost" size="sm" onClick={() => router.push(`/new-project?source=${encodeURIComponent(source.content)}&sourceName=${encodeURIComponent(source.name)}`)}>
+                                            <RefreshCw className="h-4 w-4 mr-2" />
+                                            Reutilizar
+                                        </Button>
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10">
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Eliminar
+                                        </Button>
+                                    </>
                                 )}
                             </TableCell>
                         </TableRow>

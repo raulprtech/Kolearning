@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
@@ -436,6 +436,7 @@ const LearningPlan = ({ plan, onFinish, onBack }: { plan: CalibratePlanOutput, o
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { addProject } = useProjects();
   const { toast } = useToast();
 
@@ -450,7 +451,7 @@ export default function NewProjectPage() {
   const [isProjectStarted, setIsProjectStarted] = useState(false);
   const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
   const [processingFile, setProcessingFile] = useState<{name: string, content: string} | null>(null);
-  const [projectSourceFiles, setProjectSourceFiles] = useState<{name: string, content: string}[]>([]);
+  const [projectSourceFiles, setProjectSourceFiles] = useState<{name: string, content: string, type: string}[]>([]);
   const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
@@ -464,6 +465,26 @@ export default function NewProjectPage() {
     setMessages(prev => [...prev, message]);
   }, []);
 
+  const dataUriToBlob = (dataUri: string) => {
+    const byteString = atob(dataUri.split(',')[1]);
+    const mimeString = dataUri.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
+  }
+
+  useEffect(() => {
+    const preloadedSource = searchParams.get('source');
+    const sourceName = searchParams.get('sourceName') || `reused-source-${Date.now()}`;
+    if (preloadedSource) {
+        const blob = dataUriToBlob(preloadedSource);
+        const file = new File([blob], sourceName, { type: blob.type });
+        processFiles([file], "Aprender sobre esta fuente");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isProjectStarted) {
@@ -595,18 +616,19 @@ export default function NewProjectPage() {
   }, [dataCollectionStep, collectedData, addMessage]);
 
 
-  const processFiles = async (filesToProcess: File[], userObjective: string) => {
+  const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
     setIsLoading(true);
     setCurrentStep('atomizing');
     setProcessingFile({ name: filesToProcess[0].name, content: '' });
     setIsProjectStarted(true);
+    setMessages([]); // Clear initial message
 
     // Start conversation right away, passing the initial objective if provided
     processDataCollection(userObjective);
 
     try {
         const dataUris = await Promise.all(filesToProcess.map(fileToDataUri));
-        const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: dataUris[i] }));
+        const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: dataUris[i], type: "Documento" }));
         setProjectSourceFiles(prev => [...prev, ...newSourceFiles]);
 
         let combinedResponse: GenerateAtomsOutput = { initialResponse: '', atoms: [] };
@@ -631,7 +653,7 @@ export default function NewProjectPage() {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, [processDataCollection]);
 
 
   const handleSendMessage = async () => {
@@ -683,7 +705,7 @@ export default function NewProjectPage() {
           atoms: atomsResult.atoms,
           learningPath: plan.learningPath,
           fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
-          sources: projectSourceFiles.map(f => ({ name: f.name, type: "Documento" }))
+          sources: projectSourceFiles
       };
       addProject(newProject as any);
       toast({
