@@ -477,12 +477,21 @@ export default function NewProjectPage() {
   }
 
   useEffect(() => {
-    const preloadedSource = searchParams.get('source');
+    const preloadedSourceParam = searchParams.get('source');
     const sourceName = searchParams.get('sourceName') || `reused-source-${Date.now()}`;
-    if (preloadedSource) {
-        const blob = dataUriToBlob(preloadedSource);
-        const file = new File([blob], sourceName, { type: blob.type });
-        processFiles([file], "Aprender sobre esta fuente");
+    if (preloadedSourceParam) {
+        try {
+            const decodedSource = decodeURIComponent(preloadedSourceParam);
+            const blob = dataUriToBlob(decodedSource);
+            const file = new File([blob], sourceName, { type: blob.type });
+            processFiles([file], "Aprender sobre esta fuente");
+        } catch (error) {
+            console.error("Failed to process preloaded source:", error);
+            const errorMessage = "Lo siento, no pude procesar la fuente reutilizada. Puede que el enlace esté corrupto. Por favor, intenta de nuevo.";
+            setAtomizationError(errorMessage);
+            setIsProjectStarted(true); // To show the error view
+            setCurrentStep('atomizing'); // To ensure error is rendered in the right view
+        }
     }
   }, [searchParams]);
 
@@ -929,5 +938,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-    
