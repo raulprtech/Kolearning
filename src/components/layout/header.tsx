@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -94,7 +93,7 @@ export function Header() {
              </Link>
           </DropdownMenuContent>
         </DropdownMenu>
-
+{/* 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer" title="Racha de Días">
@@ -118,7 +117,7 @@ export function Header() {
                 <p className="text-sm text-muted-foreground italic">¡Sigue así! La constancia es la clave del dominio.</p>
              </div>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu> */}
 
         <Button>Acceder</Button>
       </div>
