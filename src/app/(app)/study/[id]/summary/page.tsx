@@ -47,7 +47,7 @@ const getLearnerRank = (totalMasteryPoints: number) => {
     const pointsInCurrentRank = totalMasteryPoints - currentRank.minPoints;
     const pointsForNextRank = nextRank.minPoints - currentRank.minPoints;
     const progressPercentage = pointsForNextRank === Infinity ? 100 : Math.round((pointsInCurrentRank / pointsForNextRank) * 100);
-    const pointsToNext = pointsForNextRank - pointsInCurrentRank;
+    const pointsToNext = pointsForNextRank === Infinity ? 0 : pointsForNextRank - pointsInCurrentRank;
     
     return {
         rankName: currentRank.name,
@@ -80,7 +80,6 @@ function SessionSummaryContent() {
             return;
         }
 
-        // Mark session as complete first
         completeSession(projectId, sessionIndex);
 
         try {
@@ -99,8 +98,7 @@ function SessionSummaryContent() {
         } finally {
             setIsLoading(false);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [projectId, sessionIndex, fsrsRating]);
+    }, [projectId, sessionIndex, fsrsRating, project, completeSession, addSessionsToProject]);
 
     useEffect(() => {
         getTutorFeedback();
@@ -134,10 +132,10 @@ function SessionSummaryContent() {
                                 <p className="text-2xl font-bold">92%</p>
                                 <p className="text-sm text-muted-foreground">Precisión</p>
                             </div>
-                             <div className="bg-card/50 p-4 rounded-lg">
-                                <Award className="mx-auto h-8 w-8 text-blue-400 mb-2" />
-                                <p className="text-lg font-bold">Rango de Aprendedor: {learnerRankInfo.rankName}</p>
-                                <Progress value={learnerRankInfo.progress} className="h-2 mt-2" />
+                             <div className="bg-card/50 p-4 rounded-lg text-center">
+                                <p className="text-5xl font-bold font-headline">{learnerRankInfo.rankName}</p>
+                                <p className="text-sm text-muted-foreground mb-2">Rango de Aprendedor</p>
+                                <Progress value={learnerRankInfo.progress} className="h-2" />
                                 <p className="text-xs text-muted-foreground mt-1">
                                     {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
                                         ? `${learnerRankInfo.pointsToNext} pts para Rango ${learnerRankInfo.nextRankName}`
