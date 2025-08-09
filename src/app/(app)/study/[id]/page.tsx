@@ -36,7 +36,7 @@ const ratings = [
     { label: "Fácil", variant: "default", description: "Revisar en una semana", fsrs: 4 },
 ] as const;
 
-const MultipleChoiceQuestion = ({ atom, onRate }: { atom: any, onRate: (fsrs: number) => void }) => {
+const MultipleChoiceQuestion = ({ atom, onRate, isRevealed }: { atom: any, onRate: (fsrs: number) => void, isRevealed: boolean }) => {
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
     const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
@@ -51,7 +51,18 @@ const MultipleChoiceQuestion = ({ atom, onRate }: { atom: any, onRate: (fsrs: nu
         // Shuffle options on client-side to prevent hydration mismatch
         const options = [atom.answer, ...incorrectOptions];
         setShuffledOptions(options.sort(() => Math.random() - 0.5));
-    }, [atom.answer]);
+        
+        // Reset state when atom changes
+        setIsAnswered(false);
+        setSelectedOption(null);
+
+    }, [atom.answer, atom.question]);
+    
+    useEffect(() => {
+        if(isRevealed) {
+            setIsAnswered(true);
+        }
+    }, [isRevealed]);
 
     const handleSelectOption = (option: string) => {
         if (isAnswered) return;
@@ -232,6 +243,7 @@ export default function StudySessionPage() {
   const [userAnswer, setUserAnswer] = useState("");
   const [aidsUsed, setAidsUsed] = useState(false);
   const [isConvertedToMc, setIsConvertedToMc] = useState(false);
+  const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   
   const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
   const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
@@ -291,6 +303,7 @@ export default function StudySessionPage() {
       setUserAnswer("");
       setAidsUsed(false); // Reset aids for the next card
       setIsConvertedToMc(false); // Reset conversion for next card
+      setIsAnswerRevealed(false); // Reset reveal for next card
       setHint(null);
       setRephrasedQuestion(null);
     } else {
@@ -352,6 +365,7 @@ export default function StudySessionPage() {
   const handleSeeAnswer = () => {
     if (handleUseEnergy(5)) {
       setViewState('answer');
+      setIsAnswerRevealed(true);
     }
   };
 
@@ -389,7 +403,7 @@ export default function StudySessionPage() {
 
   const renderQuestionInterface = () => {
     if (isMultipleChoice || isConvertedToMc) {
-        return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} />;
+        return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} isRevealed={isAnswerRevealed} />;
     }
     // Default to open question
     return (
@@ -481,7 +495,8 @@ export default function StudySessionPage() {
                     )}
                     
                     {viewState === 'question' && renderQuestionInterface()}
-
+                    
+                    {viewState === 'answer' && (isMultipleChoice || isConvertedToMc) && renderQuestionInterface()}
 
                     <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
                     <h3 className="font-headline text-muted-foreground mb-4">
