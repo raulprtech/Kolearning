@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,37 +32,38 @@ function SessionSummaryContent() {
 
     const project = projects.find(p => p.id === projectId);
 
+    const getTutorFeedback = useCallback(async () => {
+        if (!project) {
+            setError("Proyecto no encontrado.");
+            setIsLoading(false);
+            return;
+        }
+
+        // Mark session as complete first
+        completeSession(projectId, sessionIndex);
+
+        try {
+            const response = await dynamicLearningPathAdjustment({
+                fsrsData: `User rated last card as FSRS value: ${fsrsRating}`,
+                performanceHistory: 'User has been performing well, with 85% accuracy on last 10 cards.',
+                currentLearningPlan: JSON.stringify(project.sessions),
+            });
+            setTutorResponse(response);
+            if (response.newSessions && response.newSessions.length > 0) {
+                addSessionsToProject(projectId, response.newSessions);
+            }
+        } catch (err) {
+            console.error("Error getting tutor feedback:", err);
+            setError("Koli no pudo generar el feedback en este momento.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [projectId, sessionIndex, fsrsRating, project, completeSession, addSessionsToProject]);
+
     useEffect(() => {
-        const getTutorFeedback = async () => {
-            if (!project) {
-                setError("Proyecto no encontrado.");
-                setIsLoading(false);
-                return;
-            }
-
-            // Mark session as complete first
-            completeSession(projectId, sessionIndex);
-
-            try {
-                const response = await dynamicLearningPathAdjustment({
-                    fsrsData: `User rated last card as FSRS value: ${fsrsRating}`,
-                    performanceHistory: 'User has been performing well, with 85% accuracy on last 10 cards.',
-                    currentLearningPlan: JSON.stringify(project.sessions),
-                });
-                setTutorResponse(response);
-                if (response.newSessions && response.newSessions.length > 0) {
-                    addSessionsToProject(projectId, response.newSessions);
-                }
-            } catch (err) {
-                console.error("Error getting tutor feedback:", err);
-                setError("Koli no pudo generar el feedback en este momento.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         getTutorFeedback();
-    }, [projectId, fsrsRating, project, addSessionsToProject, completeSession, sessionIndex]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleFinish = () => {
         const planUpdated = tutorResponse && tutorResponse.newSessions.length > 0;
