@@ -65,10 +65,10 @@ const MultipleChoiceQuestion = ({ atom, onAnswer }: { atom: any, onAnswer: (isCo
                     key={index}
                     variant={getButtonVariant(option) as any}
                     size="lg"
-                    className="h-auto py-3 justify-start"
+                    className="h-auto py-3 justify-start text-left whitespace-normal"
                     onClick={() => handleSelectOption(option)}
                 >
-                    {option}
+                    <div>{option}</div>
                 </Button>
             ))}
         </div>
