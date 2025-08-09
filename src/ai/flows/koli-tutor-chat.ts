@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const KoliTutorChatInputSchema = z.object({
+const KoliTutorChatInputSchema = z.object({
     questionContext: z.string().describe("The flashcard question the user is currently studying."),
     answerContext: z.string().describe("The answer to the flashcard question for context."),
     chatHistory: z.array(z.object({
@@ -21,7 +21,7 @@ export const KoliTutorChatInputSchema = z.object({
 });
 export type KoliTutorChatInput = z.infer<typeof KoliTutorChatInputSchema>;
 
-export const KoliTutorChatOutputSchema = z.object({
+const KoliTutorChatOutputSchema = z.object({
   response: z.string().describe('Koli\'s response to the user.'),
 });
 export type KoliTutorChatOutput = z.infer<typeof KoliTutorChatOutputSchema>;
