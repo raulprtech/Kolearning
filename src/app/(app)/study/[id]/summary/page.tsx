@@ -14,14 +14,15 @@ import {
 import { KoliAvatar } from '@/components/icons/koli-avatar';
 import { useProjects } from '@/contexts/ProjectContext';
 import { dynamicLearningPathAdjustment, DynamicLearningPathAdjustmentOutput } from '@/ai/flows/koli-strategic-tutor';
-import { Loader2, Star, Target, BrainCircuit, BarChart, ChevronRight } from 'lucide-react';
+import { Loader2, Star, Target, BrainCircuit, BarChart, ChevronRight, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 
 function SessionSummaryContent() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
-    const { projects, addSessionsToProject, completeSession } = useProjects();
+    const { projects, addSessionsToProject, completeSession, masteryPoints } = useProjects();
     const projectId = params.id as string;
     const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
     const fsrsRating = searchParams.get('fsrs');
@@ -83,8 +84,8 @@ function SessionSummaryContent() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-center">
                             <div className="bg-card/50 p-4 rounded-lg">
                                 <Star className="mx-auto h-8 w-8 text-yellow-400 mb-2" />
-                                <p className="text-2xl font-bold">150</p>
-                                <p className="text-sm text-muted-foreground">XP Ganados</p>
+                                <p className="text-2xl font-bold">{masteryPoints}</p>
+                                <p className="text-sm text-muted-foreground">Puntos de Dominio Ganados</p>
                             </div>
                             <div className="bg-card/50 p-4 rounded-lg">
                                 <Target className="mx-auto h-8 w-8 text-green-400 mb-2" />
@@ -92,9 +93,10 @@ function SessionSummaryContent() {
                                 <p className="text-sm text-muted-foreground">Precisión</p>
                             </div>
                              <div className="bg-card/50 p-4 rounded-lg">
-                                <BarChart className="mx-auto h-8 w-8 text-blue-400 mb-2" />
-                                <p className="text-2xl font-bold">4.5/5</p>
-                                <p className="text-sm text-muted-foreground">Calificación</p>
+                                <Award className="mx-auto h-8 w-8 text-blue-400 mb-2" />
+                                <p className="text-lg font-bold">Iniciado</p>
+                                <Progress value={60} className="h-2 mt-2" />
+                                <p className="text-xs text-muted-foreground mt-1">400 pts para Novato</p>
                             </div>
                         </div>
 
