@@ -12,14 +12,14 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const StudyAidInputSchema = z.object({
+const StudyAidInputSchema = z.object({
   aidType: z.enum(['hint', 'rephrase']).describe('The type of aid requested.'),
   question: z.string().describe('The question that was asked.'),
   answer: z.string().describe('The correct answer to the question (used for context, especially for hints).'),
 });
 export type StudyAidInput = z.infer<typeof StudyAidInputSchema>;
 
-export const StudyAidOutputSchema = z.object({
+const StudyAidOutputSchema = z.object({
   result: z.string().describe('The generated hint or rephrased question.'),
 });
 export type StudyAidOutput = z.infer<typeof StudyAidOutputSchema>;
