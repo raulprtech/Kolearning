@@ -13,7 +13,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, HelpCircle } from "lucide-react";
+import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, HelpCircle, ListChecks } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -121,6 +121,7 @@ export default function StudySessionPage() {
   const [viewState, setViewState] = useState<'question' | 'answer'>('question');
   const [userAnswer, setUserAnswer] = useState("");
   const [aidsUsed, setAidsUsed] = useState(false);
+  const [isConvertedToMc, setIsConvertedToMc] = useState(false);
   
   const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
   const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
@@ -173,6 +174,7 @@ export default function StudySessionPage() {
       setViewState('question');
       setUserAnswer("");
       setAidsUsed(false); // Reset aids for the next card
+      setIsConvertedToMc(false); // Reset conversion for next card
     } else {
       // Last card, go to summary
       router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}&fsrs=4`); // Assume good rating for now
@@ -204,6 +206,12 @@ export default function StudySessionPage() {
       }
   }
 
+  const handleConvertToMc = () => {
+    if (handleUseEnergy(2)) {
+        setIsConvertedToMc(true);
+    }
+  }
+
   const progress = (currentCardIndex / sessionAtoms.length) * 100;
   const TacticalButton = ({ icon, label, cost, action, disabled = false }: { icon: React.ReactNode, label: string, cost: number, action: () => void, disabled?: boolean }) => (
     <TooltipProvider>
@@ -224,7 +232,7 @@ export default function StudySessionPage() {
 
 
   const renderQuestionInterface = () => {
-    if (isMultipleChoice) {
+    if (isMultipleChoice || isConvertedToMc) {
         return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} />;
     }
     // Default to open question
@@ -300,7 +308,7 @@ export default function StudySessionPage() {
                     {currentAtom.question}
                     </CardTitle>
                     <CardDescription className="text-center">
-                      {isMultipleChoice ? "Selecciona la respuesta correcta." : "Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio."}
+                      {isMultipleChoice || isConvertedToMc ? "Selecciona la respuesta correcta." : "Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio."}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -314,13 +322,14 @@ export default function StudySessionPage() {
                     </h3>
                     <div className="flex items-center justify-center gap-4">
                         <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
+                        {!isMultipleChoice && !isConvertedToMc && <TacticalButton icon={<ListChecks/>} label="Convertir a Opción Múltiple" cost={2} action={handleConvertToMc} disabled={viewState === 'answer'} />}
                         <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
                         <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
                         <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={() => handleUseEnergy(3)} disabled={viewState === 'answer'} />
                     </div>
                     </div>
                     
-                    {viewState === 'answer' && !isMultipleChoice && (
+                    {viewState === 'answer' && !isMultipleChoice && !isConvertedToMc && (
                         <div className="mt-8 pt-6 border-t">
                             <div className="bg-muted/50 p-4 rounded-lg mb-6">
                                 <h4 className="font-bold font-headline mb-2 text-primary">
