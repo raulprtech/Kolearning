@@ -26,15 +26,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 const MultipleChoiceQuestion = ({ atom, onAnswer }: { atom: any, onAnswer: (isCorrect: boolean) => void }) => {
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
+    const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
 
-    // In a real app, incorrect options would come from the data or be generated.
-    const options = useMemo(() => {
+    useEffect(() => {
+        // In a real app, incorrect options would come from the data or be generated.
         const incorrectOptions = [
             "Es el principio que dice que las partículas solo pueden existir en un estado a la vez.",
             "Una teoría sobre la gravedad a nivel subatómico.",
             "La idea de que las partículas se comunican más rápido que la luz."
         ];
-        return [atom.answer, ...incorrectOptions].sort(() => Math.random() - 0.5);
+        const options = [atom.answer, ...incorrectOptions];
+        // Shuffle the options only on the client-side
+        setShuffledOptions(options.sort(() => Math.random() - 0.5));
     }, [atom.answer]);
 
     const handleSelectOption = (option: string) => {
@@ -57,7 +60,7 @@ const MultipleChoiceQuestion = ({ atom, onAnswer }: { atom: any, onAnswer: (isCo
 
     return (
         <div className="mt-6 flex flex-col gap-4">
-            {options.map((option, index) => (
+            {shuffledOptions.map((option, index) => (
                 <Button
                     key={index}
                     variant={getButtonVariant(option) as any}
