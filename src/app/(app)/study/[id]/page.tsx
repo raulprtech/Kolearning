@@ -164,9 +164,19 @@ export default function StudySessionPage() {
             <div className="w-1/4">
                 <Button variant="outline" onClick={() => router.back()}>Salir de la Sesión</Button>
             </div>
-            <div className="flex-1">
-                <Progress value={progress} />
-                 <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
+            <div className="flex-1 flex items-center justify-center gap-6">
+                 <div className="flex items-center gap-2" title="Puntos de Dominio">
+                    <Award className="h-5 w-5 text-green-400" />
+                    <span className="font-bold text-lg">{masteryPoints}</span>
+                </div>
+                 <div className="flex items-center gap-2" title="Créditos Cognitivos">
+                    <Brain className="h-5 w-5 text-blue-400" />
+                    <span className="font-bold text-lg">{cognitiveCredits}</span>
+                </div>
+                <div className="flex-1 max-w-xs">
+                    <Progress value={progress} />
+                    <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
+                </div>
             </div>
             <div className="w-1/4 flex justify-end">
                 <div className="flex items-center gap-2 bg-card/50 px-3 py-1.5 rounded-md" title="Energía de Sesión">
@@ -287,3 +297,5 @@ export default function StudySessionPage() {
     </div>
   );
 }
+
+    
