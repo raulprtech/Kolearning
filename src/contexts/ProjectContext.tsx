@@ -87,9 +87,9 @@ const initialProjects: Project[] = [
         { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
     ],
     sessions: [
-        { session: 1, type: "Calibración", questions: "Flashcards", duration: "20 min", status: "Continue" },
-        { session: 2, type: "Refuerzo", questions: "Opción múltiple", duration: "30 min", status: "Locked" },
-        { session: 3, type: "Dominio", questions: "Preguntas abiertas", duration: "25 min", status: "Locked" },
+        { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "20 min", status: "Continue" },
+        { session: 2, type: "Refuerzo de Dominio", questions: "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)", duration: "30 min", status: "Locked" },
+        { session: 3, type: "Prueba de Dominio", questions: "Pregunta Abierta y Casos Prácticos", duration: "25 min", status: "Locked" },
     ],
     learningPath: [
         { session: 1, topic: "Fundamentos de la Mecánica Cuántica", sessionType: "Calibración" },
@@ -111,7 +111,7 @@ const initialProjects: Project[] = [
         { question: "¿Qué fueron las Guerras Púnicas?", answer: "Una serie de tres guerras libradas entre Roma y Cartago desde el 264 a.C. hasta el 146 a.C." }
     ],
     sessions: [
-        { session: 1, type: "Incursión", questions: "Flashcards", duration: "25 min", status: "Continue" },
+        { session: 1, type: "Incursión", questions: "Pregunta Abierta", duration: "25 min", status: "Continue" },
     ],
     learningPath: [
         { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión" },
@@ -130,7 +130,7 @@ const initialProjects: Project[] = [
         { question: "¿Qué es un alcano?", answer: "Un hidrocarburo acíclico saturado, lo que significa que consiste en átomos de hidrógeno y carbono dispuestos en una estructura de árbol en la que todos los enlaces carbono-carbono son simples." },
     ],
     sessions: [
-        { session: 1, type: "Calibración", questions: "Opción múltiple", duration: "15 min", status: "Continue" },
+        { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "15 min", status: "Continue" },
     ],
     learningPath: [
         { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración" },
