@@ -42,8 +42,8 @@ const MultipleChoiceQuestion = ({ atom, onRate }: { atom: any, onRate: (fsrs: nu
             "Una teoría sobre la gravedad a nivel subatómico.",
             "La idea de que las partículas se comunican más rápido que la luz."
         ];
+        // Shuffle options on client-side to prevent hydration mismatch
         const options = [atom.answer, ...incorrectOptions];
-        // Shuffle the options only on the client-side to avoid hydration errors
         setShuffledOptions(options.sort(() => Math.random() - 0.5));
     }, [atom.answer]);
 
@@ -315,7 +315,7 @@ export default function StudySessionPage() {
 
                     <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
                     <h3 className="font-headline text-muted-foreground mb-4">
-                        Soporte Táctico
+                        Usar ayuda
                     </h3>
                     <div className="flex items-center justify-center gap-4">
                         <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleUseEnergy(1)} disabled={viewState === 'answer'} />
