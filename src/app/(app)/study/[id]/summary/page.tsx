@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/card';
 import { KoliAvatar } from '@/components/icons/koli-avatar';
 import { useProjects } from '@/contexts/ProjectContext';
-import { dynamicLearningPathAdjustment, DynamicLearningPathAdjustmentOutput } from '@/ai/flows/koli-strategic-tutor';
 import { Loader2, Star, Target, BrainCircuit, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
@@ -62,51 +61,21 @@ function SessionSummaryContent() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
-    const { projects, addSessionsToProject, completeSession, masteryPoints, totalMasteryPoints } = useProjects();
+    const { completeSession, masteryPoints, totalMasteryPoints } = useProjects();
     const projectId = params.id as string;
     const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
-    const fsrsRating = searchParams.get('fsrs');
     
-    const [tutorResponse, setTutorResponse] = useState<DynamicLearningPathAdjustmentOutput | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    const getTutorFeedback = useCallback(async () => {
-        const project = projects.find(p => p.id === projectId);
-        if (!project) {
-            setError("Proyecto no encontrado.");
-            setIsLoading(false);
-            return;
-        }
-
-        completeSession(projectId, sessionIndex);
-
-        try {
-            const response = await dynamicLearningPathAdjustment({
-                fsrsData: `User rated last card as FSRS value: ${fsrsRating}`,
-                performanceHistory: 'User has been performing well, with 85% accuracy on last 10 cards.',
-                currentLearningPlan: JSON.stringify(project.sessions),
-            });
-            setTutorResponse(response);
-            if (response.newSessions && response.newSessions.length > 0) {
-                addSessionsToProject(projectId, response.newSessions);
-            }
-        } catch (err) {
-            console.error("Error getting tutor feedback:", err);
-            setError("Koli no pudo generar el feedback en este momento.");
-        } finally {
-            setIsLoading(false);
-        }
-    }, [projectId, sessionIndex, fsrsRating, completeSession, addSessionsToProject]);
 
     useEffect(() => {
-        getTutorFeedback();
-    }, [getTutorFeedback]);
+        // Mark session as complete when component mounts
+        completeSession(projectId, sessionIndex);
+        setIsLoading(false);
+    }, [projectId, sessionIndex, completeSession]);
+
 
     const handleFinish = () => {
-        const planUpdated = tutorResponse && tutorResponse.newSessions.length > 0;
-        const query = planUpdated ? '?planUpdated=true' : '?sessionCompleted=true';
-        router.push(`/projects/${projectId}${query}`);
+        router.push(`/projects/${projectId}?sessionCompleted=true`);
     };
 
     const learnerRankInfo = getLearnerRank(totalMasteryPoints);
@@ -117,7 +86,7 @@ function SessionSummaryContent() {
                 <Card className="bg-card/50 shadow-2xl">
                     <CardHeader>
                         <CardTitle className="font-headline text-3xl text-center">Resumen de la Sesión</CardTitle>
-                        <CardDescription className="text-center">¡Gran trabajo! Revisa tu progreso y el feedback de Koli.</CardDescription>
+                        <CardDescription className="text-center">¡Gran trabajo! Revisa tu progreso.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-center">
@@ -133,8 +102,8 @@ function SessionSummaryContent() {
                             </div>
                              <div className="bg-card/50 p-4 rounded-lg text-center">
                                 <p className="text-5xl font-bold font-headline">{learnerRankInfo.rankName}</p>
-                                <p className="text-sm text-muted-foreground mb-2">Rango de Aprendedor</p>
-                                <Progress value={learnerRankInfo.progress} className="h-2" />
+                                <p className="text-sm text-muted-foreground">Rango de Aprendedor</p>
+                                <Progress value={learnerRankInfo.progress} className="h-2 mt-2" />
                                 <p className="text-xs text-muted-foreground mt-1">
                                     {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
                                         ? `${learnerRankInfo.pointsToNext} pts para Rango ${learnerRankInfo.nextRankName}`
@@ -143,33 +112,6 @@ function SessionSummaryContent() {
                                 </p>
                             </div>
                         </div>
-
-                        <div className="bg-muted/30 p-4 rounded-lg">
-                            <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                                <KoliAvatar className="h-8 w-8" />
-                                Feedback de Koli
-                            </h3>
-                            {isLoading ? (
-                                <div className="space-y-2">
-                                    <Skeleton className="h-4 w-full" />
-                                    <Skeleton className="h-4 w-2/3" />
-                                </div>
-                            ) : error ? (
-                                <p className="text-destructive-foreground">{error}</p>
-                            ) : (
-                                <p className="text-muted-foreground italic">"{tutorResponse?.feedback}"</p>
-                            )}
-                            
-                            {tutorResponse && tutorResponse.newSessions.length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-border/50">
-                                    <h4 className="font-semibold flex items-center gap-2"><BrainCircuit className="h-5 w-5 text-primary"/>Plan Actualizado</h4>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        He añadido {tutorResponse.newSessions.length} nueva(s) sesión(es) de refuerzo a tu plan.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
                         <div className="mt-8 flex justify-center">
                             <Button size="lg" onClick={handleFinish} disabled={isLoading}>
                                 {isLoading ? (
