@@ -165,7 +165,7 @@ export default function StudySessionPage() {
                 <Button variant="outline" onClick={() => router.back()}>Salir de la Sesión</Button>
             </div>
             <div className="flex-1 flex items-center justify-center">
-                <div className="w-full max-w-xs">
+                <div className="w-full max-w-md">
                     <Progress value={progress} />
                     <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
                 </div>
@@ -299,4 +299,3 @@ export default function StudySessionPage() {
     </div>
   );
 }
-
