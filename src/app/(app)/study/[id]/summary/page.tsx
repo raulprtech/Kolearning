@@ -14,7 +14,7 @@ import {
 import { KoliAvatar } from '@/components/icons/koli-avatar';
 import { useProjects } from '@/contexts/ProjectContext';
 import { dynamicLearningPathAdjustment, DynamicLearningPathAdjustmentOutput } from '@/ai/flows/koli-strategic-tutor';
-import { Loader2, Star, Target, BrainCircuit, Award, ChevronRight } from 'lucide-react';
+import { Loader2, Star, Target, BrainCircuit, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 
@@ -71,9 +71,8 @@ function SessionSummaryContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const project = projects.find(p => p.id === projectId);
-
     const getTutorFeedback = useCallback(async () => {
+        const project = projects.find(p => p.id === projectId);
         if (!project) {
             setError("Proyecto no encontrado.");
             setIsLoading(false);
@@ -98,7 +97,7 @@ function SessionSummaryContent() {
         } finally {
             setIsLoading(false);
         }
-    }, [projectId, sessionIndex, fsrsRating, project, completeSession, addSessionsToProject]);
+    }, [projectId, sessionIndex, fsrsRating, projects, completeSession, addSessionsToProject]);
 
     useEffect(() => {
         getTutorFeedback();
