@@ -34,7 +34,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
@@ -381,23 +380,6 @@ function ProjectDetails() {
       router.push(`/projects/${targetProjectId}`);
   };
 
-  const getSessionStatus = (status: string, projectId: string, sessionIndex: number) => {
-      switch(status) {
-          case 'Completed':
-              return <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4"/>Completado</div>
-          case 'Continue':
-              return (
-                <Link href={`/study/${projectId}?sessionIndex=${sessionIndex}`}>
-                    <Button size="sm">Continuar</Button>
-                </Link>
-              )
-          case 'Locked':
-              return <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4"/> Bloqueada</div>
-          default:
-              return null;
-      }
-  }
-
   const getSessionBadge = (type: string) => {
     switch(type) {
         case 'Calibración':
@@ -609,14 +591,34 @@ function ProjectDetails() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {project.sessions.map((session, index) => (
-                             <TableRow key={session.session}>
-                                <TableCell>{session.session}</TableCell>
-                                <TableCell>{getSessionBadge(session.type)}</TableCell>
-                                <TableCell>{session.questions}</TableCell>
-                                <TableCell>{getSessionStatus(session.status, project.id, index)}</TableCell>
-                            </TableRow>
-                        ))}
+                        {project.sessions.map((session, index) => {
+                             let statusComponent;
+                             switch(session.status) {
+                                 case 'Completed':
+                                     statusComponent = <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4"/>Completado</div>;
+                                     break;
+                                 case 'Continue':
+                                     statusComponent = (
+                                       <Link href={`/study/${project.id}?sessionIndex=${index}`}>
+                                           <Button size="sm">Continuar</Button>
+                                       </Link>
+                                     );
+                                     break;
+                                 case 'Locked':
+                                     statusComponent = <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4"/> Bloqueada</div>;
+                                     break;
+                                 default:
+                                     statusComponent = null;
+                             }
+                             return (
+                                 <TableRow key={session.session}>
+                                    <TableCell>{session.session}</TableCell>
+                                    <TableCell>{getSessionBadge(session.type)}</TableCell>
+                                    <TableCell>{session.questions}</TableCell>
+                                    <TableCell>{statusComponent}</TableCell>
+                                </TableRow>
+                             );
+                        })}
                     </TableBody>
                 </Table>
             </Card>
@@ -749,3 +751,5 @@ export default function ProjectDetailsPage() {
         <ProjectDetails />
     )
 }
+
+    
