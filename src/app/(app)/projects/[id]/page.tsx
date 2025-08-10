@@ -399,6 +399,8 @@ function ProjectDetails() {
 
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
   const activeSessionIndex = isUserProject && project.sessions ? project.sessions.findIndex(s => s.status === 'Continue') : -1;
+  
+  const accuracy = (project.totalAnswers && project.correctAnswers) ? Math.round((project.correctAnswers / project.totalAnswers) * 100) : 0;
 
   const renderActionButtons = () => {
       if (isUserProject) {
@@ -558,13 +560,13 @@ function ProjectDetails() {
             <Card className="bg-card/50">
                 <CardContent className="pt-6 text-center">
                     <p className="text-sm text-muted-foreground mb-2">Mejor Racha</p>
-                    <p className="text-4xl font-bold">{isUserProject ? 1 : 'N/A'}</p>
+                    <p className="text-4xl font-bold">{project.bestStreak || 0}</p>
                 </CardContent>
             </Card>
              <Card className="bg-card/50">
                 <CardContent className="pt-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-2">XP ganados</p>
-                    <p className="text-4xl font-bold">{isUserProject ? 0 : 'N/A'}</p>
+                    <p className="text-sm text-muted-foreground mb-2">Precisión</p>
+                    <p className="text-4xl font-bold">{isUserProject ? `${accuracy}%` : 'N/A'}</p>
                 </CardContent>
             </Card>
              <Card className="bg-card/50">
@@ -753,3 +755,4 @@ export default function ProjectDetailsPage() {
     )
 }
 
+    

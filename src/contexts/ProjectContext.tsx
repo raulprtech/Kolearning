@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 export type Atom = {
   question: string;
   answer: string;
+  retrievability?: number; // FSRS score from 1 to 4
 }
 
 type Source = {
@@ -40,9 +41,12 @@ export type Project = {
   sources: Source[];
   learningPath: LearningPathItem[];
   fullLearningPlanMarkdown?: string;
-  author?: string; // Make author optional
-  category?: string; // Make category optional
+  author?: string; 
+  category?: string;
   isPublic?: boolean;
+  bestStreak?: number;
+  totalAnswers?: number;
+  correctAnswers?: number;
 };
 
 type ProjectContextType = {
@@ -68,7 +72,7 @@ type ProjectContextType = {
   masteryPoints: number;
   totalMasteryPoints: number;
   updateEnergy: (amount: number) => void;
-  recordAnswer: (fsrs: number, aidsUsed: boolean) => void;
+  recordAnswer: (projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean) => void;
   resetSessionStats: () => void;
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
   nextEnergyIn: number;
@@ -85,6 +89,9 @@ const initialProjects: Project[] = [
     mastery: 85,
     icon: "Book",
     categories: ["Ciencia", "Física"],
+    bestStreak: 5,
+    totalAnswers: 20,
+    correctAnswers: 17,
     atoms: [
         { question: "¿Qué es la dualidad onda-partícula?", answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas." },
         { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
@@ -108,6 +115,9 @@ const initialProjects: Project[] = [
     description: "Explora el ascenso y caída del Imperio Romano.",
     mastery: 62,
     icon: "Landmark",
+    bestStreak: 3,
+    totalAnswers: 15,
+    correctAnswers: 9,
     categories: ["Humanidades", "Historia"],
     atoms: [
         { question: "¿Quién fue el primer emperador de Roma?", answer: "César Augusto (nacido como Cayo Octavio)." },
@@ -128,6 +138,9 @@ const initialProjects: Project[] = [
     description: "Domina las bases de los compuestos basados en carbono.",
     mastery: 45,
     icon: "FlaskConical",
+    bestStreak: 2,
+    totalAnswers: 10,
+    correctAnswers: 4,
     categories: ["Ciencia", "Química"],
     atoms: [
         { question: "¿Qué es un alcano?", answer: "Un hidrocarburo acíclico saturado, lo que significa que consiste en átomos de hidrógeno y carbono dispuestos en una estructura de árbol en la que todos los enlaces carbono-carbono son simples." },
@@ -399,35 +412,45 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const completeSession = (projectId: string, sessionIndex: number) => {
     const today = new Date();
     
-    // Only update streak if a session hasn't been completed today
     if (!lastSessionCompletedDate || !isSameDay(today, lastSessionCompletedDate)) {
         if (lastSessionCompletedDate && isYesterday(today, lastSessionCompletedDate)) {
-            // It's a consecutive day
             setDailyStreak(prev => prev + 1);
         } else {
-            // It's not a consecutive day, reset to 1
             setDailyStreak(1);
         }
-        // Update the date of the last completed session
         setLastSessionCompletedDate(today);
     }
 
     setGlobalCognitiveCredits(prev => prev + cognitiveCredits);
 
-
     setProjects(prevProjects =>
       prevProjects.map(p => {
         if (p.id === projectId) {
           const newSessions = [...p.sessions];
-          // Mark current session as completed
           if (newSessions[sessionIndex]) {
             newSessions[sessionIndex].status = 'Completed';
           }
-          // Unlock next session
           if (newSessions[sessionIndex + 1]) {
             newSessions[sessionIndex + 1].status = 'Continue';
           }
-          return { ...p, sessions: newSessions };
+          
+          // Update project-level stats
+          const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
+          const newCorrectAnswers = (p.correctAnswers || 0) + sessionAnswers.filter(a => a).length;
+          const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
+
+          // Calculate new mastery based on retrievability
+          const totalRetrievability = p.atoms.reduce((sum, atom) => sum + (atom.retrievability || 0), 0);
+          const newMastery = p.atoms.length > 0 ? Math.round((totalRetrievability / (p.atoms.length * 4)) * 100) : 0;
+
+          return { 
+            ...p, 
+            sessions: newSessions,
+            totalAnswers: newTotalAnswers,
+            correctAnswers: newCorrectAnswers,
+            bestStreak: newBestStreak,
+            mastery: newMastery,
+          };
         }
         return p;
       })
@@ -458,7 +481,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProjects(prev =>
       prev.map(p => (p.id === projectId ? { ...p, isPublic } : p))
     );
-    // This would also be the place to update the public projects list if it's dynamic
   };
 
   const updateEnergy = (amount: number) => {
@@ -471,24 +493,28 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const recordAnswer = (fsrs: number, aidsUsed: boolean) => {
+  const recordAnswer = (projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean) => {
     const isCorrect = fsrs >= 3;
     setSessionAnswers(prev => [...prev, isCorrect]);
     
+    setProjects(prevProjects => prevProjects.map(p => {
+        if (p.id === projectId) {
+            const newAtoms = [...p.atoms];
+            newAtoms[atomIndex] = { ...newAtoms[atomIndex], retrievability: fsrs };
+            return { ...p, atoms: newAtoms };
+        }
+        return p;
+    }));
+    
     if (isCorrect) {
       setSessionStreak(prev => prev + 1);
-      // Add cognitive credits based on aids used
       setCognitiveCredits(prev => prev + (aidsUsed ? 1 : 2));
     } else {
-      // If the answer is incorrect, reset the streak, but only if no aids were used.
-      // This allows using "See Answer" without penalty to the streak.
       if (!aidsUsed) {
         setSessionStreak(0);
       }
     }
     
-    // Link mastery points to FSRS retrievability
-    // A simple mapping: 5 points per FSRS level.
     const newMasteryPoints = fsrs * 5;
     setMasteryPoints(prev => prev + newMasteryPoints);
     setTotalMasteryPoints(prev => prev + newMasteryPoints);
@@ -529,3 +555,5 @@ export const useProjects = () => {
   }
   return context;
 };
+
+    

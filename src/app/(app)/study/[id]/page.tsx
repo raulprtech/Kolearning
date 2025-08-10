@@ -271,6 +271,11 @@ export default function StudySessionPage() {
     }
     return sessionAtoms[currentCardIndex];
   }, [sessionAtoms, currentCardIndex]);
+  
+  const currentAtomProjectIndex = useMemo(() => {
+    if (!project || !currentAtom) return -1;
+    return project.atoms.findIndex(atom => atom.question === currentAtom.question);
+  }, [project, currentAtom]);
 
   if (!project || !session) {
     return (
@@ -308,12 +313,12 @@ export default function StudySessionPage() {
       setRephrasedQuestion(null);
     } else {
       // Last card, go to summary
-      router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}&fsrs=4`); // Assume good rating for now
+      router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}`);
     }
   }
 
   const handleRate = (fsrs: number) => {
-    recordAnswer(fsrs, aidsUsed);
+    recordAnswer(projectId, currentAtomProjectIndex, fsrs, aidsUsed);
     goToNextCard();
   };
 
@@ -575,3 +580,5 @@ export default function StudySessionPage() {
     </div>
   );
 }
+
+    
