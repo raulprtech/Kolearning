@@ -36,6 +36,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   Table,
@@ -752,4 +753,3 @@ export default function ProjectDetailsPage() {
     )
 }
 
-    
