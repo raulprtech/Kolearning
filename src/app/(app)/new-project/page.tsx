@@ -121,10 +121,10 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                                 </>
                             )}
                             {msg.actionId === 'objectiveOptions' && objectiveOptions.map(opt => (
-                                <Button key={opt} variant="outline" onClick={() => processDataCollection(opt)}>{opt}</Button>
+                                <Button key={opt} variant="outline" onClick={() => processDataCollection(opt, 'objective')}>{opt}</Button>
                             ))}
                             {msg.actionId === 'masteryOptions' && masteryOptions.map(opt => (
-                                <Button key={opt} variant="outline" onClick={() => processDataCollection(opt)}>{opt}</Button>
+                                <Button key={opt} variant="outline" onClick={() => processDataCollection(opt, 'masteryLevel')}>{opt}</Button>
                             ))}
                             {msg.actionId === 'deadlineOptions' && (
                                 <>
@@ -133,10 +133,10 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                                         <Button variant="outline"><CalendarIcon className="mr-2"/>Elegir fecha</Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0 mb-2" align="start">
-                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection(format(d, "PPP", { locale: es }))} initialFocus locale={es} />
+                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection(format(d, "PPP", { locale: es }), 'deadline')} initialFocus locale={es} />
                                     </PopoverContent>
                                  </Popover>
-                                 <Button variant="outline" onClick={() => processDataCollection('No tengo')}>No tengo</Button>
+                                 <Button variant="outline" onClick={() => processDataCollection('No tengo', 'deadline')}>No tengo</Button>
                                 </>
                             )}
                        </div>
@@ -580,7 +580,7 @@ export default function NewProjectPage() {
     return <FileText className="h-3 w-3" />;
   };
   
-  const processDataCollection = useCallback((userInput: string | null = null) => {
+  const processDataCollection = useCallback((userInput: string | null = null, field: keyof ProjectData | null = null) => {
     let newCollectedData = { ...collectedData };
     let currentResponse = '';
     
@@ -592,11 +592,11 @@ export default function NewProjectPage() {
         currentResponse = `Has seleccionado: "${userInput}". `;
     }
 
-    if (dataCollectionStep === 'objective') {
+    if (field === 'userObjective') {
         newCollectedData.userObjective = userInput || '';
-    } else if (dataCollectionStep === 'deadline') {
+    } else if (field === 'deadline') {
         newCollectedData.deadline = userInput || '';
-    } else if (dataCollectionStep === 'masteryLevel') {
+    } else if (field === 'masteryLevel') {
         newCollectedData.masteryLevel = userInput || '';
     }
     
@@ -619,7 +619,6 @@ export default function NewProjectPage() {
         }
     }
     
-    // Use a short timeout to make the conversation feel more natural
     setTimeout(askNextQuestion, 500);
 
   }, [dataCollectionStep, collectedData, addMessage]);
@@ -630,10 +629,13 @@ export default function NewProjectPage() {
     setCurrentStep('atomizing');
     setProcessingFile({ name: filesToProcess[0].name, content: '' });
     setIsProjectStarted(true);
-    setMessages([]); // Clear initial message
+    setMessages([]);
 
-    // Start conversation right away, passing the initial objective if provided
-    processDataCollection(userObjective);
+    const initialData = userObjective ? { userObjective } : {};
+    setCollectedData(initialData);
+
+    // Start conversation, but it will now skip questions that are already answered
+    processDataCollection();
 
     try {
         const dataUris = await Promise.all(filesToProcess.map(fileToDataUri));
@@ -682,9 +684,10 @@ export default function NewProjectPage() {
     if (filesToProcess.length > 0) {
         processFiles(filesToProcess, objective || "Aprender el contenido del documento.");
     } else if (objective) {
-        // If there's only text, start the conversation with it.
         setIsProjectStarted(true);
-        processDataCollection(objective);
+        setMessages([]);
+        setCollectedData({ userObjective: objective });
+        processDataCollection();
     }
   }
 
@@ -938,3 +941,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
