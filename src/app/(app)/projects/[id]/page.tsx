@@ -61,10 +61,10 @@ import { useProjects, publicProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { Project, Atom } from "@/contexts/ProjectContext";
+import { Project, Atom, LearningPathItem } from "@/contexts/ProjectContext";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { EditProjectDialog } from "@/components/ui/edit-project-dialog";
@@ -179,9 +179,15 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
         setIsLoading(true);
         try {
             const atomsSummary = project.atoms.map(a => `- ${a.question}`).join('\n');
+            let daysToDeadline;
+            if (deadline) {
+                const diff = differenceInCalendarDays(deadline, new Date());
+                daysToDeadline = diff >= 0 ? diff : 0;
+            }
+
             const plan = await calibratePlanFromQuestionnaire({
                 userObjective,
-                deadline: deadline ? format(deadline, "PPP", { locale: es }) : 'No especificada',
+                daysToDeadline: daysToDeadline,
                 masteryLevel,
                 learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
             });
@@ -356,15 +362,24 @@ function ProjectDetails() {
       const slug = plan.projectTitle.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
       const newProjectId = `${slug}-${Date.now()}`;
 
+      // This is a bit of a hack. We should get the full learning path with questions from the AI.
+      const learningPathWithQuestions: LearningPathItem[] = plan.learningPath.flatMap(day => day.sessions).map(session => ({
+          session: session.session,
+          topic: session.topic,
+          sessionType: session.sessionType,
+          questions: session.questions,
+      }));
+
       const newProject: Project = {
           ...baseProject,
           id: newProjectId,
           title: plan.projectTitle,
           description: plan.projectDescription,
           categories: plan.categories,
-          learningPath: plan.learningPath,
+          learningPath: learningPathWithQuestions,
           fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
           mastery: 0,
+          sessions: [], // will be populated by addProject
       };
       
       addProject(newProject);
@@ -617,7 +632,7 @@ function ProjectDetails() {
                                  <TableRow key={session.session}>
                                     <TableCell>{session.session}</TableCell>
                                     <TableCell>{getSessionBadge(session.type)}</TableCell>
-                                    <TableCell>{session.questions}</TableCell>
+                                    <TableCell>{session.questions || 'No especificado'}</TableCell>
                                     <TableCell>{statusComponent}</TableCell>
                                 </TableRow>
                              );
@@ -754,5 +769,3 @@ export default function ProjectDetailsPage() {
         <ProjectDetails />
     )
 }
-
-    

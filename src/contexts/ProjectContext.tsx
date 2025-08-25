@@ -27,6 +27,7 @@ export type LearningPathItem = {
     session: number;
     topic: string;
     sessionType: string;
+    questions: string; // Added from CalibratePlanOutput
 }
 
 export type Project = {
@@ -102,9 +103,9 @@ const initialProjects: Project[] = [
         { session: 3, type: "Prueba de Dominio", questions: "Pregunta Abierta y Casos Prácticos", duration: "25 min", status: "Locked" },
     ],
     learningPath: [
-        { session: 1, topic: "Fundamentos de la Mecánica Cuántica", sessionType: "Calibración" },
-        { session: 2, topic: "Superposición y Entrelazamiento", sessionType: "Incursión" },
-        { session: 3, topic: "Repaso de Fundamentos", sessionType: "Refuerzo de Dominio" },
+        { session: 1, topic: "Fundamentos de la Mecánica Cuántica", sessionType: "Calibración", questions: "Opción Múltiple" },
+        { session: 2, topic: "Superposición y Entrelazamiento", sessionType: "Incursión", questions: "Pregunta Abierta" },
+        { session: 3, topic: "Repaso de Fundamentos", sessionType: "Refuerzo de Dominio", questions: "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)" },
     ],
     sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento", content: "data:application/pdf;base64,..."} ],
     isPublic: false,
@@ -127,7 +128,7 @@ const initialProjects: Project[] = [
         { session: 1, type: "Incursión", questions: "Pregunta Abierta", duration: "25 min", status: "Continue" },
     ],
     learningPath: [
-        { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión" },
+        { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
     sources: [ {name: "The_History_of_Rome.pdf", type: "Documento", content: "data:application/pdf;base64,..."} ],
     isPublic: false,
@@ -149,7 +150,7 @@ const initialProjects: Project[] = [
         { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "15 min", status: "Continue" },
     ],
     learningPath: [
-        { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración" },
+        { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración", questions: "Opción Múltiple" },
     ],
     sources: [ {name: "Organic_Chemistry.pdf", type: "Documento", content: "data:application/pdf;base64,..."} ],
     isPublic: false,
@@ -172,8 +173,8 @@ export const publicProjects: Project[] = [
     ],
     sessions: [],
     learningPath: [
-        { session: 1, topic: "Variables y Tipos de Datos", sessionType: "Incursión" },
-        { session: 2, topic: "Estructuras de Control", sessionType: "Incursión" },
+        { session: 1, topic: "Variables y Tipos de Datos", sessionType: "Incursión", questions: "Pregunta Abierta" },
+        { session: 2, topic: "Estructuras de Control", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
     sources: [{ name: "python_intro.pdf", type: "Documento", content: "data:application/pdf;base64,..." }],
     isPublic: true,
@@ -193,8 +194,8 @@ export const publicProjects: Project[] = [
     ],
     sessions: [],
     learningPath: [
-        { session: 1, topic: "Escalas y Tonalidades", sessionType: "Calibración" },
-        { session: 2, topic: "Intervalos y Acordes", sessionType: "Incursión" },
+        { session: 1, topic: "Escalas y Tonalidades", sessionType: "Calibración", questions: "Opción Múltiple" },
+        { session: 2, topic: "Intervalos y Acordes", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
     sources: [{ name: "music_theory_basics.docx", type: "Documento", content: "data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,..." }],
     isPublic: true,
@@ -214,8 +215,8 @@ export const publicProjects: Project[] = [
     ],
     sessions: [],
     learningPath: [
-        { session: 1, topic: "Renacimiento", sessionType: "Incursión" },
-        { session: 2, topic: "Impresionismo y Postimpresionismo", sessionType: "Incursión" },
+        { session: 1, topic: "Renacimiento", sessionType: "Incursión", questions: "Pregunta Abierta" },
+        { session: 2, topic: "Impresionismo y Postimpresionismo", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
     sources: [{ name: "art_history_101.pdf", type: "Documento", content: "data:application/pdf;base64,..." }],
     isPublic: true,
@@ -235,8 +236,8 @@ export const publicProjects: Project[] = [
     ],
     sessions: [],
     learningPath: [
-        { session: 1, topic: "Componentes y Props", sessionType: "Incursión" },
-        { session: 2, topic: "State y Ciclo de Vida", sessionType: "Incursión" },
+        { session: 1, topic: "Componentes y Props", sessionType: "Incursión", questions: "Pregunta Abierta" },
+        { session: 2, topic: "State y Ciclo de Vida", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
     sources: [{ name: "react_docs_summary.txt", type: "Documento", content: "data:text/plain;base64,..." }],
     isPublic: true,
@@ -256,8 +257,8 @@ export const publicProjects: Project[] = [
     ],
     sessions: [],
     learningPath: [
-        { session: 1, topic: "Filósofos Presocráticos", sessionType: "Calibración" },
-        { session: 2, topic: "Sócrates y Platón", sessionType: "Incursión" },
+        { session: 1, topic: "Filósofos Presocráticos", sessionType: "Calibración", questions: "Opción Múltiple" },
+        { session: 2, topic: "Sócrates y Platón", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
     sources: [{ name: "greek_philosophy.pdf", type: "Documento", content: "data:application/pdf;base64,..." }],
     isPublic: true,
@@ -325,7 +326,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         sessions: projectToAdd.learningPath.map((item, index) => ({
             session: item.session,
             type: item.sessionType,
-            questions: 'Flashcards', // Default value
+            questions: item.questions || 'Preguntas Abiertas', // Use correct question type
             duration: '20 min', // Default duration
             status: index === 0 ? 'Continue' : 'Locked'
         }))
@@ -555,5 +556,3 @@ export const useProjects = () => {
   }
   return context;
 };
-
-    
