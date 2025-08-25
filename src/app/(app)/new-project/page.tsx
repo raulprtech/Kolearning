@@ -85,7 +85,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, onPasteText, isProjectStarted, processDataCollection }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, onPasteText, isProjectStarted, processDataCollection, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -167,14 +167,31 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                     onImportFromUrl={() => onImportFromUrl(true)}
                     onPasteText={() => onPasteText(true)}
                     isDataCollectionDone={messages.some(m => m.actionId)}
+                    isSourcePopoverOpen={isSourcePopoverOpen}
+                    setIsSourcePopoverOpen={setIsSourcePopoverOpen}
                 />
             </div>
         </div>
     );
 }
 
-const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isDataCollectionDone }: any) => {
+const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isDataCollectionDone, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
     
+    const handleFileButtonClick = () => {
+        fileInputRef.current?.click();
+        setIsSourcePopoverOpen(false);
+    }
+    
+    const handleUrlImportClick = () => {
+        onImportFromUrl();
+        setIsSourcePopoverOpen(false);
+    }
+
+    const handlePasteTextClick = () => {
+        onPasteText();
+        setIsSourcePopoverOpen(false);
+    }
+
     return (
          <div className="flex flex-col gap-2">
               <div className="flex flex-wrap gap-2">
@@ -205,7 +222,7 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                         accept=".pdf,.doc,.docx,.txt,.md"
                         multiple={true}
                     />
-                    <Popover>
+                    <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" disabled={isLoading}>
                                 <Plus className="h-5 w-5" />
@@ -220,21 +237,21 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                                 </p>
                             </div>
                              <div className="grid gap-2">
-                                <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                <button onClick={handleFileButtonClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
                                     <Paperclip className="h-5 w-5 text-primary" />
                                     <div>
                                         <p className="font-semibold">Subir archivos</p>
                                         <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
                                     </div>
                                 </button>
-                                <button onClick={onImportFromUrl} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                <button onClick={handleUrlImportClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
                                     <LinkIcon className="h-5 w-5 text-primary" />
                                     <div>
                                         <p className="font-semibold">Importar desde enlace</p>
                                         <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
                                     </div>
                                 </button>
-                                <button onClick={onPasteText} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                <button onClick={handlePasteTextClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
                                     <ClipboardPaste className="h-5 w-5 text-primary" />
                                     <div>
                                         <p className="font-semibold">Pegar texto</p>
@@ -469,6 +486,7 @@ export default function NewProjectPage() {
   const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
   const [isAtomizationComplete, setIsAtomizationComplete] = useState(false);
+  const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -635,7 +653,7 @@ export default function NewProjectPage() {
         }
     };
     
-    setTimeout(() => askNextQuestion(newCollectedData), 100);
+    askNextQuestion(newCollectedData);
 
   }, [collectedData, addMessage]);
 
@@ -841,6 +859,8 @@ export default function NewProjectPage() {
                     onImportFromUrl={() => setIsUrlImportOpen(true)}
                     onPasteText={() => setIsPasteTextOpen(true)}
                     isDataCollectionDone={false}
+                    isSourcePopoverOpen={isSourcePopoverOpen}
+                    setIsSourcePopoverOpen={setIsSourcePopoverOpen}
                 />
             </div>
           </main>
@@ -967,6 +987,8 @@ export default function NewProjectPage() {
                 onPasteText={() => setIsPasteTextOpen(true)}
                 isProjectStarted={isProjectStarted}
                 processDataCollection={processDataCollection}
+                isSourcePopoverOpen={isSourcePopoverOpen}
+                setIsSourcePopoverOpen={setIsSourcePopoverOpen}
             />
         </main>
     </div>
