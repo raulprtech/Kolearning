@@ -556,25 +556,20 @@ export default function NewProjectPage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      const newFiles = Array.from(event.target.files);
-      if (newFiles.length > 0) {
-        setSelectedFiles(prevFiles => {
-          if (atomizationError) {
-            return newFiles;
-          }
-          if (isProjectStarted) {
-            return [...prevFiles, ...newFiles];
-          }
-          return newFiles;
-        });
-        
-        if (atomizationError) {
-          setAtomizationError(null);
-          setIsProjectStarted(false); 
-          setMessages([]); 
-          setAtomsResult(null);
+        const newFiles = Array.from(event.target.files);
+        if (newFiles.length > 0) {
+            setSelectedFiles(prevFiles => {
+                if (atomizationError) {
+                    setAtomizationError(null);
+                    setIsProjectStarted(false);
+                    setMessages([]);
+                    setAtomsResult(null);
+                    return newFiles;
+                }
+                // Always append new files to the existing list
+                return [...prevFiles, ...newFiles];
+            });
         }
-      }
     }
   };
   
@@ -621,41 +616,43 @@ export default function NewProjectPage() {
   };
   
   const processDataCollection = useCallback((newData: Partial<ProjectData>) => {
-    const newCollectedData = { ...collectedData, ...newData };
-    setCollectedData(newCollectedData);
-    
-    const userInput = Object.values(newData)[0];
-    if (userInput) {
-        addMessage({ role: 'user', content: userInput });
-    }
-
-    setMessages(prev => prev.filter(m => !m.actionId));
-    
-    const askNextQuestion = (currentData: Partial<ProjectData>) => {
-        let currentResponse = '';
-        if (userInput) {
-            currentResponse = `Has seleccionado: "${userInput}". `;
-        }
+      setCollectedData(currentData => {
+        const newCollectedData = { ...currentData, ...newData };
         
-        if (!currentData.userObjective) {
-            addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
-            setDataCollectionStep('objective');
-        } else if (!currentData.deadline) {
-            addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
-            setDataCollectionStep('deadline');
-        } else if (!currentData.masteryLevel) {
-            addMessage({ role: 'koli', content: `${currentResponse}Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?`, actionId: 'masteryOptions' });
-            setDataCollectionStep('masteryLevel');
-        } else {
-            addMessage({ role: 'koli', content: `${currentResponse}¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...` });
-            setDataCollectionStep('done');
-            setProjectData(currentData as ProjectData);
+        const userInput = Object.values(newData)[0];
+        if (userInput) {
+            addMessage({ role: 'user', content: userInput });
         }
-    };
-    
-    askNextQuestion(newCollectedData);
 
-  }, [collectedData, addMessage]);
+        setMessages(prev => prev.filter(m => !m.actionId));
+        
+        const askNextQuestion = (data: Partial<ProjectData>) => {
+            let currentResponse = '';
+            if (userInput) {
+                currentResponse = `Has seleccionado: "${userInput}". `;
+            }
+            
+            if (!data.userObjective) {
+                addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
+                setDataCollectionStep('objective');
+            } else if (!data.deadline) {
+                addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
+                setDataCollectionStep('deadline');
+            } else if (!data.masteryLevel) {
+                addMessage({ role: 'koli', content: `${currentResponse}Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?`, actionId: 'masteryOptions' });
+                setDataCollectionStep('masteryLevel');
+            } else {
+                addMessage({ role: 'koli', content: `${currentResponse}¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...` });
+                setDataCollectionStep('done');
+                setProjectData(data as ProjectData);
+            }
+        };
+        
+        askNextQuestion(newCollectedData);
+        return newCollectedData;
+      });
+
+  }, [addMessage]);
 
 
   const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
@@ -669,10 +666,8 @@ export default function NewProjectPage() {
     const initialData: Partial<ProjectData> = {};
     if (userObjective) {
         initialData.userObjective = userObjective;
-    } else {
-      setCollectedData({});
     }
-
+    setCollectedData({}); // Reset collected data for new submission
     processDataCollection(initialData);
 
     try {
@@ -694,7 +689,7 @@ export default function NewProjectPage() {
             }
         }
         
-        const combinedDataUri = `data:text/plain;base64,${btoa(combinedTextContent)}`;
+        const combinedDataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(combinedTextContent)))}`;
 
         const finalUserObjective = collectedData.userObjective || userObjective || "Aprender el contenido de este documento";
 
@@ -734,8 +729,9 @@ export default function NewProjectPage() {
     if (filesToProcess.length > 0) {
         processFiles(filesToProcess, objective);
     } else if (objective) {
+        // If there's only text input but no files, we start the conversation with the objective.
         setIsProjectStarted(true);
-        setMessages([]);
+        setMessages([]); // Clear initial message
         processDataCollection({ userObjective: objective });
     }
   }
@@ -894,6 +890,13 @@ export default function NewProjectPage() {
                             <Paperclip className="mr-2"/>
                             Subir un archivo diferente
                         </Button>
+                         <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                            multiple
+                         />
                     </CardContent>
                 </Card>
             </div>
