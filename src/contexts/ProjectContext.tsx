@@ -21,6 +21,7 @@ export type Session = {
   questions: string;
   duration: string;
   status: 'Completed' | 'Continue' | 'Locked';
+  atoms: Atom[];
 }
 
 export type LearningPathItem = {
@@ -56,7 +57,7 @@ type ProjectContextType = {
   addProject: (project: Project) => void;
   updateProjectIcon: (projectId: string, icon: string) => void;
   updateProjectDetails: (projectId: string, title: string, description: string) => void;
-  addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'session'>[]) => void;
+  addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[]) => void;
   addAtomsToProject: (projectId: string, newAtoms: Atom[]) => void;
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
   deleteAtom: (projectId: string, atomIndex: number) => void;
@@ -98,9 +99,12 @@ const initialProjects: Project[] = [
         { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
     ],
     sessions: [
-        { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "20 min", status: "Continue" },
-        { session: 2, type: "Refuerzo de Dominio", questions: "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)", duration: "30 min", status: "Locked" },
-        { session: 3, type: "Prueba de Dominio", questions: "Pregunta Abierta y Casos Prácticos", duration: "25 min", status: "Locked" },
+        { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "20 min", status: "Continue", atoms: [
+            { question: "¿Qué es la dualidad onda-partícula?", answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas." },
+            { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
+        ] },
+        { session: 2, type: "Refuerzo de Dominio", questions: "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)", duration: "30 min", status: "Locked", atoms: [] },
+        { session: 3, type: "Prueba de Dominio", questions: "Pregunta Abierta y Casos Prácticos", duration: "25 min", status: "Locked", atoms: [] },
     ],
     learningPath: [
         { session: 1, topic: "Fundamentos de la Mecánica Cuántica", sessionType: "Calibración", questions: "Opción Múltiple" },
@@ -125,7 +129,10 @@ const initialProjects: Project[] = [
         { question: "¿Qué fueron las Guerras Púnicas?", answer: "Una serie de tres guerras libradas entre Roma y Cartago desde el 264 a.C. hasta el 146 a.C." }
     ],
     sessions: [
-        { session: 1, type: "Incursión", questions: "Pregunta Abierta", duration: "25 min", status: "Continue" },
+        { session: 1, type: "Incursión", questions: "Pregunta Abierta", duration: "25 min", status: "Continue", atoms: [
+            { question: "¿Quién fue el primer emperador de Roma?", answer: "César Augusto (nacido como Cayo Octavio)." },
+            { question: "¿Qué fueron las Guerras Púnicas?", answer: "Una serie de tres guerras libradas entre Roma y Cartago desde el 264 a.C. hasta el 146 a.C." }
+        ] },
     ],
     learningPath: [
         { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión", questions: "Pregunta Abierta" },
@@ -147,7 +154,9 @@ const initialProjects: Project[] = [
         { question: "¿Qué es un alcano?", answer: "Un hidrocarburo acíclico saturado, lo que significa que consiste en átomos de hidrógeno y carbono dispuestos en una estructura de árbol en la que todos los enlaces carbono-carbono son simples." },
     ],
     sessions: [
-        { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "15 min", status: "Continue" },
+        { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "15 min", status: "Continue", atoms: [
+            { question: "¿Qué es un alcano?", answer: "Un hidrocarburo acíclico saturado, lo que significa que consiste en átomos de hidrógeno y carbono dispuestos en una estructura de árbol en la que todos los enlaces carbono-carbono son simples." },
+        ] },
     ],
     learningPath: [
         { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración", questions: "Opción Múltiple" },
@@ -321,15 +330,22 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const addProject = (projectToAdd: Project) => {
     if (!projects.find(p => p.id === projectToAdd.id)) {
+      
+      const atoms = [...projectToAdd.atoms]; // Make a mutable copy
+      
       const projectWithSessions: Project = {
         ...projectToAdd,
-        sessions: projectToAdd.learningPath.map((item, index) => ({
-            session: item.session,
-            type: item.sessionType,
-            questions: item.questions || 'Preguntas Abiertas', // Use correct question type
-            duration: '20 min', // Default duration
-            status: index === 0 ? 'Continue' : 'Locked'
-        }))
+        sessions: projectToAdd.learningPath.map((item, index) => {
+            const sessionAtoms = atoms.splice(0, 10); // Take up to 10 atoms
+            return {
+                session: item.session,
+                type: item.sessionType,
+                questions: item.questions || 'Preguntas Abiertas', // Use correct question type
+                duration: '20 min', // Default duration
+                status: index === 0 ? 'Continue' : 'Locked',
+                atoms: sessionAtoms
+            };
+        })
       };
       setProjects(prevProjects => [...prevProjects, projectWithSessions]);
     }
@@ -351,7 +367,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  const addSessionsToProject = (projectId: string, newSessions: Omit<Session, 'status' | 'session'>[]) => {
+  const addSessionsToProject = (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[]) => {
       setProjects(prevProjects => {
           return prevProjects.map(p => {
               if (p.id === projectId) {
@@ -361,6 +377,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
                       ...s,
                       session: nextSessionNumber + i,
                       status: 'Locked',
+                      atoms: [] // Atoms should be added separately if needed
                   }));
                   return { ...p, sessions: [...existingSessions, ...formattedNewSessions] };
               }
@@ -402,7 +419,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProjects(prevProjects =>
       prevProjects.map(p => {
         if (p.id === projectId) {
-          const newAtoms = p.atoms.filter((_, index) => index !== atomIndex);
+          const newAtoms = p.atoms.filter((_, index) => index !== index);
           return { ...p, atoms: newAtoms };
         }
         return p;

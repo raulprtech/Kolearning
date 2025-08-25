@@ -238,7 +238,7 @@ export default function StudySessionPage() {
   const session = project?.sessions[sessionIndex];
 
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [sessionAtoms, setSessionAtoms] = useState(project?.atoms || []);
+  const [sessionAtoms, setSessionAtoms] = useState(session?.atoms || []);
   const [viewState, setViewState] = useState<'question' | 'answer'>('question');
   const [userAnswer, setUserAnswer] = useState("");
   const [aidsUsed, setAidsUsed] = useState(false);
@@ -256,14 +256,12 @@ export default function StudySessionPage() {
 
 
   useEffect(() => {
-    if (project) {
-      // In a real scenario, you'd filter atoms based on the session type and FSRS data.
-      // For now, we'll just use all atoms for any session.
-      setSessionAtoms(project.atoms);
+    if (session) {
+      setSessionAtoms(session.atoms);
     }
      // Reset streak and other session stats at the beginning of a session
     resetSessionStats();
-  }, [project, resetSessionStats]);
+  }, [session, resetSessionStats]);
 
   const currentAtom = useMemo(() => {
     if (!sessionAtoms || sessionAtoms.length === 0) {
@@ -580,5 +578,3 @@ export default function StudySessionPage() {
     </div>
   );
 }
-
-    
