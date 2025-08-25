@@ -66,6 +66,9 @@ IMPORTANT: If the provided study material has an unsupported MIME type (like 'ap
 
 Generate the "initialResponse" and the "atoms" array. Return the result in the specified JSON format.
   `,
+  config: {
+    temperature: 0,
+  },
 });
 
 const SUPPORTED_MIME_TYPES_REGEX = /^(image\/(jpeg|png|webp))|(audio\/(mpeg|mp3|wav|ogg))|(video\/(mp4|mpeg|quicktime))|(text\/(plain|html|css|csv|markdown|xml))|application\/(pdf|json|rtf|vnd\.openxmlformats-officedocument\.wordprocessingml\.document|msword|vnd\.ms-powerpoint|vnd\.openxmlformats-officedocument\.presentationml\.presentation|vnd\.ms-excel|vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet)/;

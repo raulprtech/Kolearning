@@ -503,7 +503,7 @@ export default function NewProjectPage() {
             const decodedSource = decodeURIComponent(preloadedSourceParam);
             const blob = dataUriToBlob(decodedSource);
             const file = new File([blob], sourceName, { type: blob.type });
-            processFiles([file]);
+            processFiles([file], '');
         } catch (error) {
             console.error("Failed to process preloaded source:", error);
             const errorMessage = "Lo siento, no pude procesar la fuente reutilizada. Puede que el enlace esté corrupto. Por favor, intenta de nuevo.";
@@ -644,7 +644,7 @@ export default function NewProjectPage() {
   }, [addMessage]);
 
 
-  const processFiles = useCallback(async (filesToProcess: File[]) => {
+  const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
     setIsLoading(true);
     setCurrentStep('atomizing');
     const fileNames = filesToProcess.map(f => f.name).join(', ');
@@ -653,32 +653,34 @@ export default function NewProjectPage() {
     setMessages([]);
 
     const initialData: Partial<ProjectData> = {};
+    if (userObjective) {
+        initialData.userObjective = userObjective;
+    }
     
-    setCollectedData({}); // Reset collected data for new submission
+    setCollectedData(initialData); // Reset collected data for new submission
     processDataCollection(initialData);
 
     try {
-        const dataUris = await Promise.all(filesToProcess.map(fileToDataUri));
-        const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: dataUris[i], type: "Documento" }));
+        const fileContents = await Promise.all(
+            filesToProcess.map(async file => {
+                const dataUri = await fileToDataUri(file);
+                try {
+                    const text = atob(dataUri.split(',')[1]);
+                    return `--- INICIO: ${file.name} ---\n${text}\n--- FIN: ${file.name} ---`;
+                } catch (e) {
+                    console.warn(`Could not decode base64 for ${file.name}, skipping.`, e);
+                    return `--- INICIO: ${file.name} ---\n[Contenido no pudo ser decodificado]\n--- FIN: ${file.name} ---`;
+                }
+            })
+        );
+        
+        const combinedTextContent = fileContents.join('\n\n');
+        const combinedDataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(combinedTextContent)))}`;
+        
+        const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: fileContents[i], type: "Documento" }));
         setProjectSourceFiles(prev => [...prev, ...newSourceFiles]);
 
-        // For simplicity, we'll combine text-based files into one data URI for processing.
-        // A more advanced implementation might handle different file types differently.
-        let combinedTextContent = "";
-        for (const uri of dataUris) {
-            if (uri.startsWith('data:text') || uri.startsWith('data:application/pdf') || uri.startsWith('data:application/msword')) {
-                 try {
-                    const text = atob(uri.split(',')[1]);
-                    combinedTextContent += text + "\n\n";
-                 } catch (e) {
-                    console.warn("Could not decode base64 for file content, skipping:", e);
-                 }
-            }
-        }
-        
-        const combinedDataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(combinedTextContent)))}`;
-
-        const finalUserObjective = collectedData.userObjective || "Aprender el contenido de este documento";
+        const finalUserObjective = userObjective || collectedData.userObjective || "Aprender el contenido de este documento";
 
         const response = await generateAtoms({
             studyMaterial: combinedDataUri,
@@ -699,14 +701,16 @@ export default function NewProjectPage() {
   }, [processDataCollection, collectedData.userObjective]);
 
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (initialObjective?: string) => {
     if (selectedFiles.length === 0) return;
 
     const filesToProcess = [...selectedFiles];
     setSelectedFiles([]);
     
+    const objective = initialObjective || '';
+
     if (filesToProcess.length > 0) {
-        processFiles(filesToProcess);
+        processFiles(filesToProcess, objective);
     }
   }
 
@@ -844,7 +848,7 @@ export default function NewProjectPage() {
     
             <div className="w-full max-w-md mt-auto p-4">
                <InputBar 
-                    handleSendMessage={handleSendMessage}
+                    handleSendMessage={() => handleSendMessage()}
                     isLoading={isLoading}
                     selectedFiles={selectedFiles}
                     removeFile={removeFile}
