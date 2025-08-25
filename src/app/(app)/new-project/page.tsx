@@ -477,6 +477,55 @@ export default function NewProjectPage() {
     }
     return new Blob([ab], { type: mimeString });
   }
+  
+  const processDataCollection = useCallback((newData: Partial<ProjectData>) => {
+      setCollectedData(currentData => {
+        const newCollectedData = { ...currentData, ...newData };
+        
+        let userInput: React.ReactNode = Object.values(newData)[0];
+        if (newData.deadline instanceof Date) {
+            userInput = format(newData.deadline, "PPP", { locale: es });
+        } else if (newData.deadline === undefined) {
+            userInput = "No tengo fecha límite";
+        }
+
+        if (userInput) {
+            addMessage({ role: 'user', content: userInput });
+        }
+
+        setMessages(prev => prev.filter(m => !m.actionId));
+        
+        const askNextQuestion = (data: Partial<ProjectData>) => {
+            let currentResponse = '';
+            if (userInput) {
+                 if (typeof userInput === 'string') {
+                    currentResponse = `Has seleccionado: "${userInput}". `;
+                 } else {
+                    currentResponse = '¡Fecha seleccionada! ';
+                 }
+            }
+            
+            if (!data.userObjective) {
+                addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
+                setDataCollectionStep('objective');
+            } else if (!('deadline' in data)) {
+                addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
+                setDataCollectionStep('deadline');
+            } else if (!data.masteryLevel) {
+                addMessage({ role: 'koli', content: `${currentResponse}Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?`, actionId: 'masteryOptions' });
+                setDataCollectionStep('masteryLevel');
+            } else {
+                addMessage({ role: 'koli', content: `${currentResponse}¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...` });
+                setDataCollectionStep('done');
+                setProjectData(data as ProjectData);
+            }
+        };
+        
+        askNextQuestion(newCollectedData);
+        return newCollectedData;
+      });
+
+  }, [addMessage]);
 
   const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
     setIsLoading(true);
@@ -656,56 +705,6 @@ export default function NewProjectPage() {
   const getFileIcon = (fileType: string) => {
     return <FileText className="h-3 w-3" />;
   };
-  
-  const processDataCollection = useCallback((newData: Partial<ProjectData>) => {
-      setCollectedData(currentData => {
-        const newCollectedData = { ...currentData, ...newData };
-        
-        let userInput: React.ReactNode = Object.values(newData)[0];
-        if (newData.deadline instanceof Date) {
-            userInput = format(newData.deadline, "PPP", { locale: es });
-        } else if (newData.deadline === undefined) {
-            userInput = "No tengo fecha límite";
-        }
-
-        if (userInput) {
-            addMessage({ role: 'user', content: userInput });
-        }
-
-        setMessages(prev => prev.filter(m => !m.actionId));
-        
-        const askNextQuestion = (data: Partial<ProjectData>) => {
-            let currentResponse = '';
-            if (userInput) {
-                 if (typeof userInput === 'string') {
-                    currentResponse = `Has seleccionado: "${userInput}". `;
-                 } else {
-                    currentResponse = '¡Fecha seleccionada! ';
-                 }
-            }
-            
-            if (!data.userObjective) {
-                addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
-                setDataCollectionStep('objective');
-            } else if (!('deadline' in data)) {
-                addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
-                setDataCollectionStep('deadline');
-            } else if (!data.masteryLevel) {
-                addMessage({ role: 'koli', content: `${currentResponse}Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?`, actionId: 'masteryOptions' });
-                setDataCollectionStep('masteryLevel');
-            } else {
-                addMessage({ role: 'koli', content: `${currentResponse}¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...` });
-                setDataCollectionStep('done');
-                setProjectData(data as ProjectData);
-            }
-        };
-        
-        askNextQuestion(newCollectedData);
-        return newCollectedData;
-      });
-
-  }, [addMessage]);
-
 
   const handleSendMessage = async (initialObjective?: string) => {
     if (selectedFiles.length === 0) return;
