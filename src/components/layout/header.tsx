@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/logo";
@@ -44,7 +46,7 @@ export function Header() {
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const dayLabels = getDayLabels();
+  const dayLabels = useMemo(() => getDayLabels(), []);
 
   return (
     <header className="flex items-center justify-between p-4 border-b border-border">
