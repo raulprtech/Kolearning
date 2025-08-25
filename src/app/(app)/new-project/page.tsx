@@ -661,15 +661,17 @@ export default function NewProjectPage() {
   const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
     setIsLoading(true);
     setCurrentStep('atomizing');
-    setProcessingFile({ name: filesToProcess[0].name, content: '' });
+    const fileNames = filesToProcess.map(f => f.name).join(', ');
+    setProcessingFile({ name: fileNames, content: '' });
     setIsProjectStarted(true);
     setMessages([]);
 
     const initialData: Partial<ProjectData> = {};
     if (userObjective) {
         initialData.userObjective = userObjective;
+    } else {
+      setCollectedData({});
     }
-    setCollectedData(initialData);
 
     processDataCollection(initialData);
 
@@ -678,20 +680,30 @@ export default function NewProjectPage() {
         const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: dataUris[i], type: "Documento" }));
         setProjectSourceFiles(prev => [...prev, ...newSourceFiles]);
 
-        let combinedResponse: GenerateAtomsOutput = { initialResponse: '', atoms: [] };
+        // For simplicity, we'll combine text-based files into one data URI for processing.
+        // A more advanced implementation might handle different file types differently.
+        let combinedTextContent = "";
+        for (const uri of dataUris) {
+            if (uri.startsWith('data:text') || uri.startsWith('data:application/pdf') || uri.startsWith('data:application/msword')) {
+                 try {
+                    const text = atob(uri.split(',')[1]);
+                    combinedTextContent += text + "\n\n";
+                 } catch (e) {
+                    console.warn("Could not decode base64 for file content, skipping:", e);
+                 }
+            }
+        }
+        
+        const combinedDataUri = `data:text/plain;base64,${btoa(combinedTextContent)}`;
 
         const finalUserObjective = collectedData.userObjective || userObjective || "Aprender el contenido de este documento";
 
-        for (const sourceFile of newSourceFiles) {
-            const response = await generateAtoms({
-                studyMaterial: sourceFile.content,
-                userObjective: finalUserObjective
-            });
-            combinedResponse.atoms.push(...response.atoms);
-            combinedResponse.initialResponse = response.initialResponse;
-        }
-
-        setAtomsResult(combinedResponse);
+        const response = await generateAtoms({
+            studyMaterial: combinedDataUri,
+            userObjective: finalUserObjective
+        });
+        
+        setAtomsResult(response);
         setIsAtomizationComplete(true);
 
     } catch (error) {
