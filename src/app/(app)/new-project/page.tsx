@@ -43,7 +43,7 @@ import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
 import { extractContentFromUrl } from "@/lib/actions";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -72,7 +72,7 @@ type Message = {
 
 type ProjectData = {
     userObjective: string;
-    deadline: string;
+    deadline?: Date;
     masteryLevel: string;
 }
 
@@ -135,10 +135,10 @@ const ChatPanel = ({ messages, handleSendMessage, isLoading, selectedFiles, remo
                                         <Button variant="outline"><CalendarIcon className="mr-2"/>Elegir fecha</Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0 mb-2" align="start">
-                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection({ deadline: format(d, "PPP", { locale: es }) })} initialFocus locale={es} />
+                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection({ deadline: d })} initialFocus locale={es} />
                                     </PopoverContent>
                                  </Popover>
-                                 <Button variant="outline" onClick={() => processDataCollection({ deadline: 'No tengo' })}>No tengo</Button>
+                                 <Button variant="outline" onClick={() => processDataCollection({ deadline: undefined })}>No tengo</Button>
                                 </>
                             )}
                        </div>
@@ -441,7 +441,7 @@ export default function NewProjectPage() {
   const { addProject } = useProjects();
   const { toast } = useToast();
 
-  const [projectData, setProjectData] = useState<ProjectData>({ userObjective: '', deadline: '', masteryLevel: '' });
+  const [projectData, setProjectData] = useState<ProjectData>({ userObjective: '', masteryLevel: '' });
   const [collectedData, setCollectedData] = useState<Partial<ProjectData>>({});
   const [dataCollectionStep, setDataCollectionStep] = useState<'start' | 'objective' | 'deadline' | 'masteryLevel' | 'done'>('start');
 
@@ -478,6 +478,76 @@ export default function NewProjectPage() {
     return new Blob([ab], { type: mimeString });
   }
 
+  const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
+    setIsLoading(true);
+    setCurrentStep('atomizing');
+    setIsProjectStarted(true);
+    setMessages([]);
+
+    const initialData: Partial<ProjectData> = {};
+    if (userObjective) {
+        initialData.userObjective = userObjective;
+    }
+    setCollectedData(initialData);
+    processDataCollection(initialData);
+
+    const totalFiles = filesToProcess.length;
+    let accumulatedAtoms: GenerateAtomsOutput['atoms'] = [];
+
+    for (let i = 0; i < totalFiles; i++) {
+        const file = filesToProcess[i];
+        setProcessingFile({ name: file.name, content: '', index: i + 1, total: totalFiles });
+
+        try {
+            let studyMaterialUri: string;
+            
+            // Re-implementing the logic from the previous correction that worked for single PDFs
+            if (filesToProcess.length === 1) {
+                studyMaterialUri = await fileToDataUri(file);
+            } else {
+                 // Fallback for multiple files - treat as text (might need refinement)
+                const textContent = await file.text();
+                const b64 = btoa(textContent);
+                studyMaterialUri = `data:text/plain;base64,${b64}`;
+            }
+
+            const newSourceFile = { name: file.name, content: studyMaterialUri, type: "Documento" };
+            setProjectSourceFiles(prev => [...prev, newSourceFile]);
+            
+            const finalUserObjective = userObjective || collectedData.userObjective || "Aprender el contenido de este documento";
+
+            const response = await generateAtoms({
+                studyMaterial: studyMaterialUri,
+                userObjective: finalUserObjective
+            });
+            
+            accumulatedAtoms = [...accumulatedAtoms, ...response.atoms];
+            setAtomsResult({
+                initialResponse: "¡Hola! He analizado los documentos que me has proporcionado.", // Generic response
+                atoms: accumulatedAtoms
+            });
+
+            addMessage({
+                role: 'koli',
+                content: `He terminado con "${file.name}" y generé ${response.atoms.length} átomos. Ahora analizando el siguiente...`
+            });
+
+        } catch (error) {
+            console.error(`Error processing file ${file.name}:`, error);
+            const errorMessage = `Lo siento, ha ocurrido un error al procesar tu documento "${file.name}". Por favor, intenta de nuevo.`;
+            setAtomizationError(errorMessage);
+            setProcessingFile(null);
+            setIsLoading(false);
+            return; // Stop the process on error
+        }
+    }
+    
+    setIsAtomizationComplete(true);
+    setIsLoading(false);
+    setProcessingFile(prev => prev ? { ...prev, index: totalFiles } : null);
+
+  }, [processDataCollection, collectedData.userObjective, addMessage]);
+
   useEffect(() => {
     const preloadedSourceParam = searchParams.get('source');
     const sourceName = searchParams.get('sourceName') || `reused-source-${Date.now()}`;
@@ -495,7 +565,7 @@ export default function NewProjectPage() {
             setCurrentStep('atomizing'); // To ensure error is rendered in the right view
         }
     }
-  }, [searchParams]);
+  }, [searchParams, processFiles]);
 
   useEffect(() => {
     if (!isProjectStarted) {
@@ -591,7 +661,13 @@ export default function NewProjectPage() {
       setCollectedData(currentData => {
         const newCollectedData = { ...currentData, ...newData };
         
-        const userInput = Object.values(newData)[0];
+        let userInput: React.ReactNode = Object.values(newData)[0];
+        if (newData.deadline instanceof Date) {
+            userInput = format(newData.deadline, "PPP", { locale: es });
+        } else if (newData.deadline === undefined) {
+            userInput = "No tengo fecha límite";
+        }
+
         if (userInput) {
             addMessage({ role: 'user', content: userInput });
         }
@@ -601,13 +677,17 @@ export default function NewProjectPage() {
         const askNextQuestion = (data: Partial<ProjectData>) => {
             let currentResponse = '';
             if (userInput) {
-                currentResponse = `Has seleccionado: "${userInput}". `;
+                 if (typeof userInput === 'string') {
+                    currentResponse = `Has seleccionado: "${userInput}". `;
+                 } else {
+                    currentResponse = '¡Fecha seleccionada! ';
+                 }
             }
             
             if (!data.userObjective) {
                 addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
                 setDataCollectionStep('objective');
-            } else if (!data.deadline) {
+            } else if (!('deadline' in data)) {
                 addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
                 setDataCollectionStep('deadline');
             } else if (!data.masteryLevel) {
@@ -625,66 +705,6 @@ export default function NewProjectPage() {
       });
 
   }, [addMessage]);
-
-
-  const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
-    setIsLoading(true);
-    setCurrentStep('atomizing');
-    setIsProjectStarted(true);
-    setMessages([]);
-
-    const initialData: Partial<ProjectData> = {};
-    if (userObjective) {
-        initialData.userObjective = userObjective;
-    }
-    setCollectedData(initialData);
-    processDataCollection(initialData);
-
-    const totalFiles = filesToProcess.length;
-    let accumulatedAtoms: GenerateAtomsOutput['atoms'] = [];
-
-    for (let i = 0; i < totalFiles; i++) {
-        const file = filesToProcess[i];
-        setProcessingFile({ name: file.name, content: '', index: i + 1, total: totalFiles });
-
-        try {
-            const studyMaterialUri = await fileToDataUri(file);
-            const newSourceFile = { name: file.name, content: studyMaterialUri, type: "Documento" };
-            setProjectSourceFiles(prev => [...prev, newSourceFile]);
-            
-            const finalUserObjective = userObjective || collectedData.userObjective || "Aprender el contenido de este documento";
-
-            const response = await generateAtoms({
-                studyMaterial: studyMaterialUri,
-                userObjective: finalUserObjective
-            });
-            
-            accumulatedAtoms = [...accumulatedAtoms, ...response.atoms];
-            setAtomsResult({
-                initialResponse: "¡Hola! He analizado los documentos que me has proporcionado.", // Generic response
-                atoms: accumulatedAtoms
-            });
-
-            addMessage({
-                role: 'koli',
-                content: `He terminado con "${file.name}" y generé ${response.atoms.length} átomos. Ahora analizando el siguiente...`
-            });
-
-        } catch (error) {
-            console.error(`Error processing file ${file.name}:`, error);
-            const errorMessage = `Lo siento, ha ocurrido un error al procesar tu documento "${file.name}". Por favor, intenta de nuevo.`;
-            setAtomizationError(errorMessage);
-            setProcessingFile(null);
-            setIsLoading(false);
-            return; // Stop the process on error
-        }
-    }
-    
-    setIsAtomizationComplete(true);
-    setIsLoading(false);
-    setProcessingFile(prev => prev ? { ...prev, index: totalFiles } : null);
-
-  }, [processDataCollection, collectedData.userObjective, addMessage]);
 
 
   const handleSendMessage = async (initialObjective?: string) => {
@@ -724,7 +744,7 @@ export default function NewProjectPage() {
           categories: plan.categories,
           icon: "Book", 
           atoms: atomsResult.atoms,
-          learningPath: plan.learningPath,
+          learningPath: plan.learningPath.flatMap(day => day.sessions),
           fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
           sources: projectSourceFiles
       };
@@ -745,9 +765,15 @@ export default function NewProjectPage() {
 
     try {
         const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
+        
+        let daysToDeadline: number | undefined;
+        if (collectedData.deadline) {
+            daysToDeadline = differenceInCalendarDays(collectedData.deadline, new Date());
+        }
+
         const finalProjectData = {
             userObjective: collectedData.userObjective || '',
-            deadline: collectedData.deadline || 'No especificada',
+            daysToDeadline: daysToDeadline,
             masteryLevel: collectedData.masteryLevel || 'No especificado',
             learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
         }
@@ -998,3 +1024,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    

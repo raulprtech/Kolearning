@@ -16,7 +16,7 @@ import {z} from 'genkit';
 
 const CalibratePlanInputSchema = z.object({
   userObjective: z.string().describe("The user's learning objective."),
-  deadline: z.string().optional().describe('The deadline the user has for their objective.'),
+  daysToDeadline: z.number().optional().describe('The number of days the user has to meet their objective.'),
   masteryLevel: z.string().optional().describe('The self-reported mastery level of the user on the subject.'),
   learningMaterialSummary: z
     .string()
@@ -63,7 +63,7 @@ A learner has provided their learning material, their objective, and some person
 
 **Learner's Profile:**
 - Learning Objective: {{{userObjective}}}
-- Deadline: {{{deadline}}}
+- Days to Deadline: {{{daysToDeadline}}}
 - Stated Mastery Level: {{{masteryLevel}}}
 
 **Learning Material Summary:** 
@@ -71,7 +71,7 @@ A learner has provided their learning material, their objective, and some person
 
 **Kolearning Methodology & Strict Rules:**
 
-1.  **Daily Structure:** If the user provides a deadline, you MUST structure the learning plan by days. Group the sessions within each day. Your 'learningPath' output should be an array of day objects. Explain in your 'koliJustification' why you've grouped certain sessions on the same day (e.g., "Para el Día 1, he combinado una sesión de Incursión para introducir nuevos conceptos con una de Refuerzo para consolidar lo aprendido ayer, optimizando tu tiempo.").
+1.  **Daily Structure:** If the user provides 'daysToDeadline', you MUST structure the learning plan by days. Group the sessions within each day, distributing the total number of sessions across the available days. Your 'learningPath' output should be an array of day objects. Explain in your 'koliJustification' why you've grouped certain sessions on the same day (e.g., "Para el Día 1, he combinado una sesión de Incursión para introducir nuevos conceptos con una de Refuerzo para consolidar lo aprendido ayer, optimizando tu tiempo.").
 2.  **Session Numbering:** The 'session' field for each learning path item MUST be a simple, sequential integer (1, 2, 3, 4, ...), even when grouped by day. This is a critical rule.
 3.  **Session Size:** Each session MUST contain a MAXIMUM of 10 knowledge atoms (flashcards).
 4.  **Sub-modules:** If the material is extensive, you MUST divide it into logical sub-modules or topics. Reflect these topics in the 'topic' field.
@@ -127,3 +127,5 @@ const calibratePlanFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
