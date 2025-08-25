@@ -661,20 +661,23 @@ export default function NewProjectPage() {
     processDataCollection(initialData);
 
     try {
-        const fileContents = await Promise.all(
-            filesToProcess.map(async file => {
-                const dataUri = await fileToDataUri(file);
-                try {
-                    const text = atob(dataUri.split(',')[1]);
-                    return `--- INICIO: ${file.name} ---\n${text}\n--- FIN: ${file.name} ---`;
-                } catch (e) {
-                    console.warn(`Could not decode base64 for ${file.name}, skipping.`, e);
-                    return `--- INICIO: ${file.name} ---\n[Contenido no pudo ser decodificado]\n--- FIN: ${file.name} ---`;
-                }
-            })
-        );
+        const fileContentsPromises = filesToProcess.map(file => {
+            return new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target?.result as string;
+                    resolve(`--- INICIO: ${file.name} ---\n${text}\n--- FIN: ${file.name} ---`);
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsText(file); // Read as text
+            });
+        });
+
+        const fileContents = await Promise.all(fileContentsPromises);
         
         const combinedTextContent = fileContents.join('\n\n');
+        
+        // Encode the combined text to Base64 to create the data URI
         const combinedDataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(combinedTextContent)))}`;
         
         const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: fileContents[i], type: "Documento" }));
@@ -1006,3 +1009,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
