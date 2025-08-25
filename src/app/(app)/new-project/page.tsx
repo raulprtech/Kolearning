@@ -123,10 +123,10 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                                 </>
                             )}
                             {msg.actionId === 'objectiveOptions' && objectiveOptions.map(opt => (
-                                <Button key={opt} variant="outline" onClick={() => processDataCollection(opt, 'objective')}>{opt}</Button>
+                                <Button key={opt} variant="outline" onClick={() => processDataCollection({ userObjective: opt })}>{opt}</Button>
                             ))}
                             {msg.actionId === 'masteryOptions' && masteryOptions.map(opt => (
-                                <Button key={opt} variant="outline" onClick={() => processDataCollection(opt, 'masteryLevel')}>{opt}</Button>
+                                <Button key={opt} variant="outline" onClick={() => processDataCollection({ masteryLevel: opt })}>{opt}</Button>
                             ))}
                             {msg.actionId === 'deadlineOptions' && (
                                 <>
@@ -135,10 +135,10 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                                         <Button variant="outline"><CalendarIcon className="mr-2"/>Elegir fecha</Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0 mb-2" align="start">
-                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection(format(d, "PPP", { locale: es }), 'deadline')} initialFocus locale={es} />
+                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection({ deadline: format(d, "PPP", { locale: es }) })} initialFocus locale={es} />
                                     </PopoverContent>
                                  </Popover>
-                                 <Button variant="outline" onClick={() => processDataCollection('No tengo', 'deadline')}>No tengo</Button>
+                                 <Button variant="outline" onClick={() => processDataCollection({ deadline: 'No tengo' })}>No tengo</Button>
                                 </>
                             )}
                        </div>
@@ -601,48 +601,41 @@ export default function NewProjectPage() {
     return <FileText className="h-3 w-3" />;
   };
   
-  const processDataCollection = useCallback((userInput: string | null = null, field: keyof ProjectData | null = null) => {
-    let newCollectedData = { ...collectedData };
-    let currentResponse = '';
-    
-    // Remove the last message if it was a question with options
+  const processDataCollection = useCallback((newData: Partial<ProjectData>) => {
+    const updatedData = { ...collectedData, ...newData };
+    setCollectedData(updatedData);
+  
+    const userInput = Object.values(newData)[0];
+    if (userInput) {
+      addMessage({ role: 'user', content: userInput });
+    }
+  
     setMessages(prev => prev.filter(m => !m.actionId));
-
-    if(userInput) {
-        addMessage({ role: 'user', content: userInput });
+  
+    const askNextQuestion = (currentData: Partial<ProjectData>) => {
+      let currentResponse = '';
+      if (userInput) {
         currentResponse = `Has seleccionado: "${userInput}". `;
-    }
-
-    if (field === 'userObjective') {
-        newCollectedData.userObjective = userInput || '';
-    } else if (field === 'deadline') {
-        newCollectedData.deadline = userInput || '';
-    } else if (field === 'masteryLevel') {
-        newCollectedData.masteryLevel = userInput || '';
-    }
-    
-    setCollectedData(newCollectedData);
-
-    const askNextQuestion = () => {
-        if (!newCollectedData.userObjective) {
-            addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
-            setDataCollectionStep('objective');
-        } else if (!newCollectedData.deadline) {
-            addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
-            setDataCollectionStep('deadline');
-        } else if (!newCollectedData.masteryLevel) {
-            addMessage({ role: 'koli', content: `${currentResponse}Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?`, actionId: 'masteryOptions' });
-            setDataCollectionStep('masteryLevel');
-        } else {
-            addMessage({ role: 'koli', content: `${currentResponse}¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...` });
-            setDataCollectionStep('done');
-            setProjectData(newCollectedData as ProjectData);
-        }
-    }
-    
-    setTimeout(askNextQuestion, 500);
-
-  }, [dataCollectionStep, collectedData, addMessage]);
+      }
+  
+      if (!currentData.userObjective) {
+        addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
+        setDataCollectionStep('objective');
+      } else if (!currentData.deadline) {
+        addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
+        setDataCollectionStep('deadline');
+      } else if (!currentData.masteryLevel) {
+        addMessage({ role: 'koli', content: `${currentResponse}Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?`, actionId: 'masteryOptions' });
+        setDataCollectionStep('masteryLevel');
+      } else {
+        addMessage({ role: 'koli', content: `${currentResponse}¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...` });
+        setDataCollectionStep('done');
+        setProjectData(currentData as ProjectData);
+      }
+    };
+  
+    setTimeout(() => askNextQuestion(updatedData), 500);
+  }, [collectedData, addMessage]);
 
 
   const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
@@ -652,11 +645,13 @@ export default function NewProjectPage() {
     setIsProjectStarted(true);
     setMessages([]);
 
-    const initialData = userObjective ? { userObjective } : {};
+    const initialData: Partial<ProjectData> = {};
+    if (userObjective) {
+        initialData.userObjective = userObjective;
+    }
     setCollectedData(initialData);
 
-    // Start conversation, but it will now skip questions that are already answered
-    processDataCollection(null, null);
+    processDataCollection(initialData);
 
     try {
         const dataUris = await Promise.all(filesToProcess.map(fileToDataUri));
@@ -707,8 +702,7 @@ export default function NewProjectPage() {
     } else if (objective) {
         setIsProjectStarted(true);
         setMessages([]);
-        setCollectedData({ userObjective: objective });
-        processDataCollection(null, null);
+        processDataCollection({ userObjective: objective });
     }
   }
 
@@ -974,5 +968,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-    
