@@ -110,23 +110,29 @@ const SidebarContent = () => {
   );
 };
 
+const DashboardLayoutContent = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname();
+  const isStudyPage = pathname.startsWith('/study');
+
+  return (
+    <div className="flex h-screen bg-background text-foreground">
+      {!isStudyPage && <SidebarContent />}
+      <div className="flex-1 flex flex-col overflow-auto">
+        {!isStudyPage && <Header />}
+        {children}
+      </div>
+    </div>
+  );
+};
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isStudyPage = pathname.startsWith('/study');
-
   return (
     <ClientProvider>
-      <div className="flex h-screen bg-background text-foreground">
-        {!isStudyPage && <SidebarContent />}
-        <div className="flex-1 flex flex-col overflow-auto">
-            {!isStudyPage && <Header />}
-            {children}
-        </div>
-      </div>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
     </ClientProvider>
   );
 }
