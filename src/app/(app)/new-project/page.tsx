@@ -264,17 +264,9 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
 }
 
 
-const AtomizationProgress = ({ atomsResult, fileName, isLoading }: { atomsResult: GenerateAtomsOutput | null, fileName: string, isLoading: boolean }) => {
-    const steps = [
-        { name: "Análisis de contenido", status: "completed" },
-        { name: "Extracción de entidades", status: "completed" },
-        { name: "Generación de átomos", status: atomsResult ? "completed" : "pending" },
-        { name: "Validación de calidad", status: atomsResult ? "completed" : "pending" },
-    ];
-
-    const completedSteps = steps.filter(s => s.status === 'completed').length;
-    const totalSteps = steps.length;
-    const progress = (completedSteps / totalSteps) * 100;
+const AtomizationProgress = ({ atomsResult, fileName, isLoading, totalFiles, currentFileIndex }: { atomsResult: GenerateAtomsOutput | null, fileName: string, isLoading: boolean, totalFiles: number, currentFileIndex: number }) => {
+    
+    const progress = totalFiles > 0 ? (currentFileIndex / totalFiles) * 100 : 0;
     
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
@@ -286,36 +278,27 @@ const AtomizationProgress = ({ atomsResult, fileName, isLoading }: { atomsResult
                     <div className="flex items-center gap-4 mb-6 p-4 border border-border rounded-lg">
                          <FileText className="h-8 w-8 text-primary" />
                          <div>
-                            <p className="font-semibold">{fileName}</p>
-                            <p className="text-sm text-muted-foreground">Procesando archivo...</p>
+                            <p className="font-semibold">{fileName || "Preparando..."}</p>
+                            <p className="text-sm text-muted-foreground">
+                                {isLoading ? `Procesando archivo ${currentFileIndex} de ${totalFiles}...` : "Proceso completado."}
+                            </p>
                          </div>
                     </div>
 
                     <div className="mb-4">
                         <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                           <span>Progreso</span>
-                           <span>{completedSteps}/{totalSteps} Pasos</span>
+                           <span>Progreso General</span>
+                           <span>{currentFileIndex}/{totalFiles} Archivos</span>
                         </div>
                         <div className="w-full bg-muted rounded-full h-2.5">
                             <div className="bg-primary h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
                         </div>
                     </div>
 
-                    <ul className="space-y-4">
-                        {steps.map((step, index) => (
-                             <li key={index} className="flex items-center gap-4">
-                                <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${step.status === 'completed' ? 'bg-primary' : 'bg-muted'}`}>
-                                    {step.status === 'completed' ? <CheckCircle className="h-5 w-5 text-primary-foreground" /> : <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />}
-                                </div>
-                                <span className={`${step.status === 'completed' ? 'text-foreground' : 'text-muted-foreground'}`}>{step.name}</span>
-                             </li>
-                        ))}
-                    </ul>
-
                     {atomsResult && (
                         <div className="mt-8 text-center">
                             <h3 className="text-lg font-semibold text-primary">¡Proceso completado!</h3>
-                            <p className="text-muted-foreground mt-2">Hemos generado <span className="font-bold">{atomsResult.atoms.length}</span> átomos de conocimiento.</p>
+                            <p className="text-muted-foreground mt-2">Hemos generado un total de <span className="font-bold">{atomsResult.atoms.length}</span> átomos de conocimiento de tus archivos.</p>
                         </div>
                     )}
                      {isLoading && !atomsResult && (
@@ -467,7 +450,7 @@ export default function NewProjectPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isProjectStarted, setIsProjectStarted] = useState(false);
   const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
-  const [processingFile, setProcessingFile] = useState<{name: string, content: string} | null>(null);
+  const [processingFile, setProcessingFile] = useState<{name: string, content: string, index: number, total: number} | null>(null);
   const [projectSourceFiles, setProjectSourceFiles] = useState<{name: string, content: string, type: string}[]>([]);
   const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
@@ -536,7 +519,7 @@ export default function NewProjectPage() {
         if (atomsResult) {
              addMessage({ 
                 role: 'koli', 
-                content: `${atomsResult.initialResponse} He generado ${atomsResult.atoms.length} 'átomos' para ti. ¿Quieres revisarlos o generamos tu plan de estudios?`,
+                content: `${atomsResult.initialResponse} He generado un total de ${atomsResult.atoms.length} 'átomos' de tus archivos. ¿Quieres revisarlos o generamos tu plan de estudios?`,
                 actionId: 'atomActions'
              });
         }
@@ -647,8 +630,6 @@ export default function NewProjectPage() {
   const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
     setIsLoading(true);
     setCurrentStep('atomizing');
-    const fileNames = filesToProcess.map(f => f.name).join(', ');
-    setProcessingFile({ name: fileNames, content: '' });
     setIsProjectStarted(true);
     setMessages([]);
 
@@ -656,62 +637,54 @@ export default function NewProjectPage() {
     if (userObjective) {
         initialData.userObjective = userObjective;
     }
-    
     setCollectedData(initialData);
     processDataCollection(initialData);
 
-    try {
-        let studyMaterialUri: string;
+    const totalFiles = filesToProcess.length;
+    let accumulatedAtoms: GenerateAtomsOutput['atoms'] = [];
 
-        if (filesToProcess.length === 1) {
-            // If single file, read as Data URL to preserve original MIME type (good for PDFs)
-            studyMaterialUri = await fileToDataUri(filesToProcess[0]);
-            const newSourceFile = { name: filesToProcess[0].name, content: studyMaterialUri, type: "Documento" };
+    for (let i = 0; i < totalFiles; i++) {
+        const file = filesToProcess[i];
+        setProcessingFile({ name: file.name, content: '', index: i + 1, total: totalFiles });
+
+        try {
+            const studyMaterialUri = await fileToDataUri(file);
+            const newSourceFile = { name: file.name, content: studyMaterialUri, type: "Documento" };
             setProjectSourceFiles(prev => [...prev, newSourceFile]);
+            
+            const finalUserObjective = userObjective || collectedData.userObjective || "Aprender el contenido de este documento";
 
-        } else {
-            // If multiple files, combine them as plain text
-            const fileContentsPromises = filesToProcess.map(file => {
-                return new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const text = event.target?.result as string;
-                        resolve(`--- INICIO: ${file.name} ---\n${text}\n--- FIN: ${file.name} ---`);
-                    };
-                    reader.onerror = (error) => reject(error);
-                    reader.readAsText(file);
-                });
+            const response = await generateAtoms({
+                studyMaterial: studyMaterialUri,
+                userObjective: finalUserObjective
+            });
+            
+            accumulatedAtoms = [...accumulatedAtoms, ...response.atoms];
+            setAtomsResult({
+                initialResponse: "¡Hola! He analizado los documentos que me has proporcionado.", // Generic response
+                atoms: accumulatedAtoms
             });
 
-            const fileContents = await Promise.all(fileContentsPromises);
-            const combinedTextContent = fileContents.join('\n\n');
-            
-            // Encode the combined text to Base64 to create the data URI
-            studyMaterialUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(combinedTextContent)))}`;
-            
-            const newSourceFiles = filesToProcess.map((file, i) => ({ name: file.name, content: fileContents[i], type: "Documento" }));
-            setProjectSourceFiles(prev => [...prev, ...newSourceFiles]);
+            addMessage({
+                role: 'koli',
+                content: `He terminado con "${file.name}" y generé ${response.atoms.length} átomos. Ahora analizando el siguiente...`
+            });
+
+        } catch (error) {
+            console.error(`Error processing file ${file.name}:`, error);
+            const errorMessage = `Lo siento, ha ocurrido un error al procesar tu documento "${file.name}". Por favor, intenta de nuevo.`;
+            setAtomizationError(errorMessage);
+            setProcessingFile(null);
+            setIsLoading(false);
+            return; // Stop the process on error
         }
-        
-        const finalUserObjective = userObjective || collectedData.userObjective || "Aprender el contenido de este documento";
-
-        const response = await generateAtoms({
-            studyMaterial: studyMaterialUri,
-            userObjective: finalUserObjective
-        });
-        
-        setAtomsResult(response);
-        setIsAtomizationComplete(true);
-
-    } catch (error) {
-        console.error("Error processing file:", error);
-        const errorMessage = "Lo siento, ha ocurrido un error al procesar tu documento. Esto puede deberse a un formato incompatible o a un problema con el contenido. Por favor, intenta con otro archivo.";
-        setAtomizationError(errorMessage);
-        setProcessingFile(null);
-    } finally {
-        setIsLoading(false);
     }
-  }, [processDataCollection, collectedData.userObjective]);
+    
+    setIsAtomizationComplete(true);
+    setIsLoading(false);
+    setProcessingFile(prev => prev ? { ...prev, index: totalFiles } : null);
+
+  }, [processDataCollection, collectedData.userObjective, addMessage]);
 
 
   const handleSendMessage = async (initialObjective?: string) => {
@@ -938,7 +911,9 @@ export default function NewProjectPage() {
              return <AtomizationProgress 
                         atomsResult={isAtomizationComplete ? atomsResult : null} 
                         fileName={processingFile?.name ?? ""}
-                        isLoading={isLoading && !isAtomizationComplete}
+                        isLoading={isLoading}
+                        totalFiles={processingFile?.total ?? 0}
+                        currentFileIndex={processingFile?.index ?? 0}
                     />;
         case 'review':
              if (atomsResult) {
@@ -961,12 +936,16 @@ export default function NewProjectPage() {
                         atomsResult={atomsResult} 
                         fileName={projectSourceFiles[projectSourceFiles.length - 1]?.name ?? ""}
                         isLoading={isLoading && !learningPlan}
+                        totalFiles={processingFile?.total ?? 0}
+                        currentFileIndex={processingFile?.index ?? 0}
                     />;
         default:
              return <AtomizationProgress 
                         atomsResult={isAtomizationComplete ? atomsResult : null} 
                         fileName={processingFile?.name ?? ""}
-                        isLoading={isLoading && !isAtomizationComplete}
+                        isLoading={isLoading}
+                        totalFiles={processingFile?.total ?? 0}
+                        currentFileIndex={processingFile?.index ?? 0}
                     />;
     }
   }
@@ -1019,6 +998,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-
-    
