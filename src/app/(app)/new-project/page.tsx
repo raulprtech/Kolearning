@@ -634,7 +634,7 @@ export default function NewProjectPage() {
         }
     };
     
-    setTimeout(() => askNextQuestion(newCollectedData), 500);
+    askNextQuestion(newCollectedData);
 
   }, [collectedData, addMessage]);
 
@@ -661,10 +661,12 @@ export default function NewProjectPage() {
 
         let combinedResponse: GenerateAtomsOutput = { initialResponse: '', atoms: [] };
 
+        const finalUserObjective = collectedData.userObjective || userObjective || "Aprender el contenido de este documento";
+
         for (const sourceFile of newSourceFiles) {
             const response = await generateAtoms({
                 studyMaterial: sourceFile.content,
-                userObjective: userObjective
+                userObjective: finalUserObjective
             });
             combinedResponse.atoms.push(...response.atoms);
             combinedResponse.initialResponse = response.initialResponse;
@@ -681,7 +683,7 @@ export default function NewProjectPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [processDataCollection]);
+  }, [processDataCollection, collectedData.userObjective]);
 
 
   const handleSendMessage = async () => {
@@ -693,7 +695,7 @@ export default function NewProjectPage() {
         addMessage({ role: 'user', content: userMessageContent });
     }
     
-    const objective = input.trim() || (selectedFiles.length > 0 ? "Aprender el contenido del documento." : "");
+    const objective = input.trim();
     setInput('');
     const filesToProcess = [...selectedFiles];
     setSelectedFiles([]);
