@@ -32,7 +32,7 @@ const CalibratePlanOutputSchema = z.object({
   projectDescription: z.string().describe('A brief, one-sentence description of the project.'),
   categories: z.array(z.string()).describe('An array of one to three relevant categories for the project.'),
   learningPath: z.array(z.object({
-      session: z.number().describe('The session number.'),
+      session: z.number().describe('The session number. MUST be a simple, sequential integer (1, 2, 3, ...).'),
       topic: z.string().describe('What the user will learn in this session.'),
       sessionType: z.string().describe('The type of the session (e.g., Calibración, Incursión).'),
       questions: z.string().describe('The format of the questions for this session (e.g., "Opción Múltiple", "Preguntas Abiertas").')
@@ -68,9 +68,10 @@ A learner has provided their learning material, their objective, and some person
 
 **Kolearning Methodology & Strict Rules:**
 
-1.  **Session Size:** Each session MUST contain a MAXIMUM of 10 knowledge atoms (flashcards).
-2.  **Sub-modules:** If the material is extensive, you MUST divide it into logical sub-modules or topics.
-3.  **Session Types & Question Formats:** You MUST assign the correct question format to each session type as defined below. This is a critical rule.
+1.  **Session Numbering:** The 'session' field for each learning path item MUST be a simple, sequential integer (1, 2, 3, 4, ...). DO NOT use decimal points or composite numbers (e.g., 1.1, 1.2). This is a critical rule.
+2.  **Session Size:** Each session MUST contain a MAXIMUM of 10 knowledge atoms (flashcards).
+3.  **Sub-modules:** If the material is extensive, you MUST divide it into logical sub-modules or topics. Reflect these topics in the 'topic' field, but keep the session numbering sequential.
+4.  **Session Types & Question Formats:** You MUST assign the correct question format to each session type as defined below. This is a critical rule.
 
     *   'Calibración'
         *   **Intention:** Diagnostic. Establish a baseline.
@@ -103,6 +104,7 @@ A learner has provided their learning material, their objective, and some person
     *   **learningPath:** Generate a structured array of learning sessions.
         *   Start with a "Calibración" session.
         *   For each sub-module, create a logical sequence of 'Incursión', 'Refuerzo de Dominio', and 'Prueba de Dominio' sessions.
+        *   **CRUCIAL RULE: The 'session' numbers MUST be sequential integers starting from 1.**
         *   The 'topic' for each session should clearly state what will be learned.
         *   **CRUCIAL RULE: For each session object in the 'learningPath' array, you MUST populate the 'questions' field with the exact corresponding string value based on the 'sessionType' field. Follow these mappings strictly:
           - If sessionType is 'Calibración', questions MUST BE 'Opción Múltiple'.
