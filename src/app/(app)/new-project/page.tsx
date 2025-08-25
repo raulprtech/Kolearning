@@ -123,10 +123,10 @@ const ChatPanel = ({ messages, handleSendMessage, isLoading, selectedFiles, remo
                                 </>
                             )}
                             {msg.actionId === 'objectiveOptions' && objectiveOptions.map(opt => (
-                                <Button key={opt} variant="outline" onClick={() => processDataCollection({ userObjective: opt })}>{opt}</Button>
+                                <Button key={opt} variant="outline" onClick={() => processDataCollection({ userObjective: opt }, opt)}>{opt}</Button>
                             ))}
                             {msg.actionId === 'masteryOptions' && masteryOptions.map(opt => (
-                                <Button key={opt} variant="outline" onClick={() => processDataCollection({ masteryLevel: opt })}>{opt}</Button>
+                                <Button key={opt} variant="outline" onClick={() => processDataCollection({ masteryLevel: opt }, opt)}>{opt}</Button>
                             ))}
                             {msg.actionId === 'deadlineOptions' && (
                                 <>
@@ -135,10 +135,10 @@ const ChatPanel = ({ messages, handleSendMessage, isLoading, selectedFiles, remo
                                         <Button variant="outline"><CalendarIcon className="mr-2"/>Elegir fecha</Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0 mb-2" align="start">
-                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection({ deadline: d })} initialFocus locale={es} />
+                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection({ deadline: d }, format(d, "PPP", { locale: es }))} initialFocus locale={es} />
                                     </PopoverContent>
                                  </Popover>
-                                 <Button variant="outline" onClick={() => processDataCollection({ deadline: undefined })}>No tengo</Button>
+                                 <Button variant="outline" onClick={() => processDataCollection({ deadline: undefined }, "No tengo fecha límite")}>No tengo</Button>
                                 </>
                             )}
                        </div>
@@ -495,26 +495,26 @@ export default function NewProjectPage() {
     }
   }, [addMessage]);
   
-  const processDataCollection = useCallback((newData: Partial<ProjectData>) => {
+  const processDataCollection = useCallback((newData: Partial<ProjectData>, userMessage: string) => {
+      setMessages(prev => {
+          // Filter out previous user message if it exists
+          const lastMessage = prev[prev.length - 1];
+          let newMessages = [...prev];
+          if (lastMessage && lastMessage.role === 'user') {
+              newMessages.pop();
+          }
+          // Filter out the action buttons message from Koli
+          newMessages = newMessages.filter(m => !m.actionId);
+          // Add the new user message
+          newMessages.push({ role: 'user', content: userMessage });
+          return newMessages;
+      });
+
       const newCollectedData = { ...collectedData, ...newData };
       setCollectedData(newCollectedData);
       
-      let userInput: React.ReactNode = Object.values(newData)[0];
-      if (newData.deadline instanceof Date) {
-          userInput = format(newData.deadline, "PPP", { locale: es });
-      } else if (newData.deadline === undefined) {
-          userInput = "No tengo fecha límite";
-      }
-
-      if (userInput) {
-          addMessage({ role: 'user', content: userInput });
-      }
-
-      setMessages(prev => prev.filter(m => !m.actionId));
-      
       askNextQuestion(newCollectedData);
-
-  }, [addMessage, askNextQuestion, collectedData]);
+  }, [addMessage, askNextQuestion, collectedData, setMessages]);
   
   const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
     setIsLoading(true);
@@ -587,7 +587,8 @@ export default function NewProjectPage() {
             const decodedSource = decodeURIComponent(preloadedSourceParam);
             const blob = dataUriToBlob(decodedSource);
             const file = new File([blob], sourceName, { type: blob.type });
-            processFiles([file], '');
+            setSelectedFiles([file]);
+            // User will initiate processing via button click
         } catch (error) {
             console.error("Failed to process preloaded source:", error);
             const errorMessage = "Lo siento, no pude procesar la fuente reutilizada. Puede que el enlace esté corrupto. Por favor, intenta de nuevo.";
@@ -596,11 +597,11 @@ export default function NewProjectPage() {
             setCurrentStep('atomizing'); // To ensure error is rendered in the right view
         }
     }
-  }, [searchParams, processFiles]);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isProjectStarted) {
-        addMessage({ role: 'koli', content: (
+        setMessages([{ role: 'koli', content: (
             <div className="flex flex-col items-center text-center max-w-md">
                 <KoliAvatar className="h-24 w-24 mb-6" />
                 <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
@@ -610,9 +611,9 @@ export default function NewProjectPage() {
                 Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
                 </p>
             </div>
-        )});
+        )}]);
     }
-  }, [isProjectStarted, addMessage]);
+  }, [isProjectStarted]);
 
 
   useEffect(() => {
@@ -1007,3 +1008,4 @@ export default function NewProjectPage() {
   )
 }
 
+    
