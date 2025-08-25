@@ -391,26 +391,27 @@ const LearningPlan = ({ plan, onFinish, onBack }: { plan: CalibratePlanOutput, o
                     </CardHeader>
                     <CardContent>
                         <h3 className="font-semibold mb-2">Ruta de aprendizaje</h3>
-                        <ScrollArea className="h-48 w-full rounded-md border border-border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-12">Sesión</TableHead>
-                                        <TableHead>¿Qué aprenderás en esta sesión?</TableHead>
-                                        <TableHead>Tipo de Sesión</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {plan.learningPath.map((item) => (
-                                        <TableRow key={item.session}>
-                                            <TableCell className="font-medium">{item.session}</TableCell>
-                                            <TableCell>{item.topic}</TableCell>
-                                            <TableCell>{item.sessionType}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                            <ScrollBar orientation="vertical" />
+                        <ScrollArea className="h-60 w-full rounded-md border border-border p-4">
+                            <div className="space-y-6">
+                                {plan.learningPath.map((day) => (
+                                    <div key={day.day}>
+                                        <h4 className="font-bold font-headline text-lg mb-2">Día {day.day}</h4>
+                                        <div className="space-y-3">
+                                            {day.sessions.map((session) => (
+                                                <div key={session.session} className="flex items-start gap-4 p-3 bg-card/50 rounded-md">
+                                                    <div className="bg-primary/20 text-primary h-8 w-8 rounded-full flex items-center justify-center font-bold flex-shrink-0 mt-1">
+                                                        {session.session}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold">{session.topic}</p>
+                                                        <p className="text-sm text-muted-foreground">{session.sessionType}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </ScrollArea>
 
                         <div className="mt-6">
@@ -611,7 +612,7 @@ export default function NewProjectPage() {
     }
 
     setMessages(prev => prev.filter(m => !m.actionId));
-
+    
     const askNextQuestion = (currentData: Partial<ProjectData>) => {
         let currentResponse = '';
         if (userInput) {
@@ -634,7 +635,7 @@ export default function NewProjectPage() {
         }
     };
     
-    askNextQuestion(newCollectedData);
+    setTimeout(() => askNextQuestion(newCollectedData), 100);
 
   }, [collectedData, addMessage]);
 
