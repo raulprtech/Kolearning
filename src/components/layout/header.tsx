@@ -19,9 +19,10 @@ import { KoliAvatar } from "../icons/koli-avatar";
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+const streakHistory = [true, true, false, true, true]; // Placeholder
+
 export function Header() {
   const { energy, globalCognitiveCredits, dailyStreak, nextEnergyIn } = useProjects();
-  const streakHistory = [true, true, false, true, true]; // Placeholder
 
   const getDayLabels = () => {
     const today = new Date();
