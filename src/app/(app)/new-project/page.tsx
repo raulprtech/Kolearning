@@ -85,7 +85,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, onPasteText, isProjectStarted, processDataCollection, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
+const ChatPanel = ({ messages, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, onPasteText, isProjectStarted, processDataCollection, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -155,8 +155,6 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
             </div>
             <div className="p-4 border-t border-border">
                 <InputBar 
-                    input={input}
-                    setInput={setInput}
                     handleSendMessage={handleSendMessage}
                     isLoading={isLoading}
                     selectedFiles={selectedFiles}
@@ -175,7 +173,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
     );
 }
 
-const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isDataCollectionDone, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
+const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isDataCollectionDone, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
     
     const handleFileButtonClick = () => {
         fileInputRef.current?.click();
@@ -194,80 +192,72 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
 
     return (
          <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap gap-2">
-                 {selectedFiles.map((file: File) => (
-                    <div key={file.name} className="bg-primary/20 text-primary-foreground text-xs rounded-full px-3 py-1 flex items-center gap-2">
-                        {getFileIcon(file.type)}
-                        <span className="truncate max-w-[200px]">{file.name}</span>
-                        <button onClick={() => removeFile(file.name)}><X className="h-3 w-3"/></button>
-                    </div>
-                ))}
-            </div>
-            <div className="relative">
-                <Input
-                    placeholder="Describe tu objetivo de aprendizaje y sube un archivo para empezar..."
-                    className="w-full h-12 rounded-full pl-12 pr-14 bg-background border-border"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    disabled={isLoading || isDataCollectionDone}
+              {selectedFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    {selectedFiles.map((file: File) => (
+                        <div key={file.name} className="bg-primary/20 text-primary-foreground text-xs rounded-full px-3 py-1 flex items-center gap-2">
+                            {getFileIcon(file.type)}
+                            <span className="truncate max-w-[200px]">{file.name}</span>
+                            <button onClick={() => removeFile(file.name)}><X className="h-3 w-3"/></button>
+                        </div>
+                    ))}
+                </div>
+              )}
+            <div className="flex items-center gap-2">
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    disabled={isLoading}
+                    accept=".pdf,.doc,.docx,.txt,.md"
+                    multiple={true}
                 />
-                <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        disabled={isLoading}
-                        accept=".pdf,.doc,.docx,.txt,.md"
-                        multiple={true}
-                    />
-                    <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={isLoading}>
-                                <Plus className="h-5 w-5" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 mb-2">
-                            <div className="grid gap-4">
-                            <div className="space-y-2">
-                                <h4 className="font-medium leading-none">Añadir Fuente</h4>
-                                <p className="text-sm text-muted-foreground">
-                                    Sube archivos o importa desde una URL.
-                                </p>
-                            </div>
-                             <div className="grid gap-2">
-                                <button onClick={handleFileButtonClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                    <Paperclip className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold">Subir archivos</p>
-                                        <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
-                                    </div>
-                                </button>
-                                <button onClick={handleUrlImportClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                    <LinkIcon className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold">Importar desde enlace</p>
-                                        <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
-                                    </div>
-                                </button>
-                                <button onClick={handlePasteTextClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                    <ClipboardPaste className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold">Pegar texto</p>
-                                        <p className="text-sm text-muted-foreground">Importa texto de tu portapapeles</p>
-                                    </div>
-                                </button>
-                            </div>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <Button variant="ghost" size="icon" onClick={() => handleSendMessage()} disabled={isLoading || isDataCollectionDone || (!input.trim() && selectedFiles.length === 0)}>
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" size="lg" disabled={isLoading} className="w-full">
+                            <Plus className="h-5 w-5 mr-2" />
+                            Añadir Fuente
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 mb-2">
+                        <div className="grid gap-4">
+                        <div className="space-y-2">
+                            <h4 className="font-medium leading-none">Añadir Fuente</h4>
+                            <p className="text-sm text-muted-foreground">
+                                Sube archivos o importa desde una URL.
+                            </p>
+                        </div>
+                            <div className="grid gap-2">
+                            <button onClick={handleFileButtonClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                <Paperclip className="h-5 w-5 text-primary" />
+                                <div>
+                                    <p className="font-semibold">Subir archivos</p>
+                                    <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
+                                </div>
+                            </button>
+                            <button onClick={handleUrlImportClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                <LinkIcon className="h-5 w-5 text-primary" />
+                                <div>
+                                    <p className="font-semibold">Importar desde enlace</p>
+                                    <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
+                                </div>
+                            </button>
+                            <button onClick={handlePasteTextClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                <ClipboardPaste className="h-5 w-5 text-primary" />
+                                <div>
+                                    <p className="font-semibold">Pegar texto</p>
+                                    <p className="text-sm text-muted-foreground">Importa texto de tu portapapeles</p>
+                                </div>
+                            </button>
+                        </div>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+
+                <Button size="lg" onClick={() => handleSendMessage()} disabled={isLoading || isDataCollectionDone || selectedFiles.length === 0}>
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Empezar"}
                 </Button>
-                </div>
             </div>
         </div>
     )
@@ -474,7 +464,6 @@ export default function NewProjectPage() {
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isProjectStarted, setIsProjectStarted] = useState(false);
   const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
@@ -514,7 +503,7 @@ export default function NewProjectPage() {
             const decodedSource = decodeURIComponent(preloadedSourceParam);
             const blob = dataUriToBlob(decodedSource);
             const file = new File([blob], sourceName, { type: blob.type });
-            processFiles([file], "Aprender sobre esta fuente");
+            processFiles([file]);
         } catch (error) {
             console.error("Failed to process preloaded source:", error);
             const errorMessage = "Lo siento, no pude procesar la fuente reutilizada. Puede que el enlace esté corrupto. Por favor, intenta de nuevo.";
@@ -655,7 +644,7 @@ export default function NewProjectPage() {
   }, [addMessage]);
 
 
-  const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
+  const processFiles = useCallback(async (filesToProcess: File[]) => {
     setIsLoading(true);
     setCurrentStep('atomizing');
     const fileNames = filesToProcess.map(f => f.name).join(', ');
@@ -664,9 +653,7 @@ export default function NewProjectPage() {
     setMessages([]);
 
     const initialData: Partial<ProjectData> = {};
-    if (userObjective) {
-        initialData.userObjective = userObjective;
-    }
+    
     setCollectedData({}); // Reset collected data for new submission
     processDataCollection(initialData);
 
@@ -691,7 +678,7 @@ export default function NewProjectPage() {
         
         const combinedDataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(combinedTextContent)))}`;
 
-        const finalUserObjective = collectedData.userObjective || userObjective || "Aprender el contenido de este documento";
+        const finalUserObjective = collectedData.userObjective || "Aprender el contenido de este documento";
 
         const response = await generateAtoms({
             studyMaterial: combinedDataUri,
@@ -713,26 +700,13 @@ export default function NewProjectPage() {
 
 
   const handleSendMessage = async () => {
-    let userInput = input.trim();
-    if (!userInput && selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0) return;
 
-    if (userInput || selectedFiles.length > 0) {
-        const userMessageContent = userInput || `Procesar: ${selectedFiles.map(f => f.name).join(', ')}`;
-        addMessage({ role: 'user', content: userMessageContent });
-    }
-    
-    const objective = input.trim();
-    setInput('');
     const filesToProcess = [...selectedFiles];
     setSelectedFiles([]);
     
     if (filesToProcess.length > 0) {
-        processFiles(filesToProcess, objective);
-    } else if (objective) {
-        // If there's only text input but no files, we start the conversation with the objective.
-        setIsProjectStarted(true);
-        setMessages([]); // Clear initial message
-        processDataCollection({ userObjective: objective });
+        processFiles(filesToProcess);
     }
   }
 
@@ -853,10 +827,8 @@ export default function NewProjectPage() {
                 </div>
             </div>
     
-            <div className="w-full max-w-2xl mt-auto p-4">
+            <div className="w-full max-w-md mt-auto p-4">
                <InputBar 
-                    input={input}
-                    setInput={setInput}
                     handleSendMessage={handleSendMessage}
                     isLoading={isLoading}
                     selectedFiles={selectedFiles}
@@ -987,8 +959,6 @@ export default function NewProjectPage() {
             </div>
             <ChatPanel
                 messages={messages}
-                input={input}
-                setInput={setInput}
                 handleSendMessage={handleSendMessage}
                 isLoading={isLoading && !isProjectStarted} // Only show chat loading before conversation starts
                 selectedFiles={selectedFiles}
