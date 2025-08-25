@@ -27,7 +27,8 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   Target,
-  BarChart3
+  BarChart3,
+  ClipboardPaste,
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
@@ -39,6 +40,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
+import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
 import { extractContentFromUrl } from "@/lib/actions";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -83,7 +85,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, isProjectStarted, processDataCollection }: any) => {
+const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, onPasteText, isProjectStarted, processDataCollection }: any) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -163,6 +165,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
                     fileInputRef={fileInputRef}
                     getFileIcon={getFileIcon}
                     onImportFromUrl={() => onImportFromUrl(true)}
+                    onPasteText={() => onPasteText(true)}
                     isDataCollectionDone={messages.some(m => m.actionId)}
                 />
             </div>
@@ -170,7 +173,7 @@ const ChatPanel = ({ messages, input, setInput, handleSendMessage, isLoading, se
     );
 }
 
-const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, isDataCollectionDone }: any) => {
+const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isDataCollectionDone }: any) => {
     
     return (
          <div className="flex flex-col gap-2">
@@ -229,6 +232,13 @@ const InputBar = ({ input, setInput, handleSendMessage, isLoading, selectedFiles
                                     <div>
                                         <p className="font-semibold">Importar desde enlace</p>
                                         <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
+                                    </div>
+                                </button>
+                                <button onClick={onPasteText} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                    <ClipboardPaste className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Pegar texto</p>
+                                        <p className="text-sm text-muted-foreground">Importa texto de tu portapapeles</p>
                                     </div>
                                 </button>
                             </div>
@@ -455,6 +465,7 @@ export default function NewProjectPage() {
   const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
   const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
+  const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
   const [isAtomizationComplete, setIsAtomizationComplete] = useState(false);
 
@@ -572,6 +583,16 @@ export default function NewProjectPage() {
     }
   };
 
+  const handleImportFromText = (text: string) => {
+    setIsPasteTextOpen(false);
+    if (!text.trim()) return;
+
+    const file = new File([text], `texto-pegado-${Date.now()}.txt`, { type: 'text/plain' });
+    setSelectedFiles(prevFiles => [...prevFiles, file]);
+    toast({ title: '¡Texto importado!', description: 'El texto ha sido añadido como fuente.' });
+  };
+
+
   const removeFile = (fileName: string) => {
     setSelectedFiles(prevFiles => prevFiles.filter(file => file.name !== fileName));
   };
@@ -635,7 +656,7 @@ export default function NewProjectPage() {
     setCollectedData(initialData);
 
     // Start conversation, but it will now skip questions that are already answered
-    processDataCollection();
+    processDataCollection(null, null);
 
     try {
         const dataUris = await Promise.all(filesToProcess.map(fileToDataUri));
@@ -687,7 +708,7 @@ export default function NewProjectPage() {
         setIsProjectStarted(true);
         setMessages([]);
         setCollectedData({ userObjective: objective });
-        processDataCollection();
+        processDataCollection(null, null);
     }
   }
 
@@ -770,6 +791,11 @@ export default function NewProjectPage() {
                 onImport={handleImportFromUrl}
                 isLoading={isLoading}
             />
+            <PasteTextDialog 
+                isOpen={isPasteTextOpen}
+                onClose={() => setIsPasteTextOpen(false)}
+                onImport={handleImportFromText}
+            />
           <main className="flex-1 flex flex-col items-center p-4">
             <div className="flex-1 flex flex-col items-center justify-center">
                 {messages.length > 0 && messages[0].role === 'koli' ? (
@@ -815,6 +841,7 @@ export default function NewProjectPage() {
                     fileInputRef={fileInputRef}
                     getFileIcon={getFileIcon}
                     onImportFromUrl={() => setIsUrlImportOpen(true)}
+                    onPasteText={() => setIsPasteTextOpen(true)}
                     isDataCollectionDone={false}
                 />
             </div>
@@ -916,6 +943,11 @@ export default function NewProjectPage() {
                 onImport={handleImportFromUrl}
                 isLoading={isLoading}
             />
+        <PasteTextDialog 
+                isOpen={isPasteTextOpen}
+                onClose={() => setIsPasteTextOpen(false)}
+                onImport={handleImportFromText}
+            />
         <main className="grid flex-1 grid-cols-1 md:grid-cols-[1fr_450px]">
             <div className="flex flex-col flex-1 h-full overflow-y-auto">
                 {renderContent()}
@@ -934,6 +966,7 @@ export default function NewProjectPage() {
                 onReviewAtoms={handleReviewAtoms}
                 onGeneratePlan={handleGeneratePlan}
                 onImportFromUrl={() => setIsUrlImportOpen(true)}
+                onPasteText={() => setIsPasteTextOpen(true)}
                 isProjectStarted={isProjectStarted}
                 processDataCollection={processDataCollection}
             />
