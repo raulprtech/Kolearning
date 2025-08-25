@@ -602,39 +602,40 @@ export default function NewProjectPage() {
   };
   
   const processDataCollection = useCallback((newData: Partial<ProjectData>) => {
-    const updatedData = { ...collectedData, ...newData };
-    setCollectedData(updatedData);
-  
+    const newCollectedData = { ...collectedData, ...newData };
+    setCollectedData(newCollectedData);
+    
     const userInput = Object.values(newData)[0];
     if (userInput) {
-      addMessage({ role: 'user', content: userInput });
+        addMessage({ role: 'user', content: userInput });
     }
-  
+
     setMessages(prev => prev.filter(m => !m.actionId));
-  
+
     const askNextQuestion = (currentData: Partial<ProjectData>) => {
-      let currentResponse = '';
-      if (userInput) {
-        currentResponse = `Has seleccionado: "${userInput}". `;
-      }
-  
-      if (!currentData.userObjective) {
-        addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
-        setDataCollectionStep('objective');
-      } else if (!currentData.deadline) {
-        addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
-        setDataCollectionStep('deadline');
-      } else if (!currentData.masteryLevel) {
-        addMessage({ role: 'koli', content: `${currentResponse}Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?`, actionId: 'masteryOptions' });
-        setDataCollectionStep('masteryLevel');
-      } else {
-        addMessage({ role: 'koli', content: `${currentResponse}¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...` });
-        setDataCollectionStep('done');
-        setProjectData(currentData as ProjectData);
-      }
+        let currentResponse = '';
+        if (userInput) {
+            currentResponse = `Has seleccionado: "${userInput}". `;
+        }
+        
+        if (!currentData.userObjective) {
+            addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
+            setDataCollectionStep('objective');
+        } else if (!currentData.deadline) {
+            addMessage({ role: 'koli', content: `${currentResponse}Ahora, ¿tienes alguna fecha límite para esto?`, actionId: 'deadlineOptions' });
+            setDataCollectionStep('deadline');
+        } else if (!currentData.masteryLevel) {
+            addMessage({ role: 'koli', content: `${currentResponse}Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?`, actionId: 'masteryOptions' });
+            setDataCollectionStep('masteryLevel');
+        } else {
+            addMessage({ role: 'koli', content: `${currentResponse}¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...` });
+            setDataCollectionStep('done');
+            setProjectData(currentData as ProjectData);
+        }
     };
-  
-    setTimeout(() => askNextQuestion(updatedData), 500);
+    
+    setTimeout(() => askNextQuestion(newCollectedData), 500);
+
   }, [collectedData, addMessage]);
 
 
@@ -692,13 +693,13 @@ export default function NewProjectPage() {
         addMessage({ role: 'user', content: userMessageContent });
     }
     
-    const objective = input.trim();
+    const objective = input.trim() || (selectedFiles.length > 0 ? "Aprender el contenido del documento." : "");
     setInput('');
     const filesToProcess = [...selectedFiles];
     setSelectedFiles([]);
     
     if (filesToProcess.length > 0) {
-        processFiles(filesToProcess, objective || "Aprender el contenido del documento.");
+        processFiles(filesToProcess, objective);
     } else if (objective) {
         setIsProjectStarted(true);
         setMessages([]);
@@ -968,3 +969,5 @@ export default function NewProjectPage() {
     </div>
   )
 }
+
+    
