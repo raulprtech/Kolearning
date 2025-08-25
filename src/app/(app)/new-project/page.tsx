@@ -526,7 +526,7 @@ export default function NewProjectPage() {
       });
 
   }, [addMessage]);
-
+  
   const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
     setIsLoading(true);
     setCurrentStep('atomizing');
@@ -548,17 +548,7 @@ export default function NewProjectPage() {
         setProcessingFile({ name: file.name, content: '', index: i + 1, total: totalFiles });
 
         try {
-            let studyMaterialUri: string;
-            
-            // Re-implementing the logic from the previous correction that worked for single PDFs
-            if (filesToProcess.length === 1) {
-                studyMaterialUri = await fileToDataUri(file);
-            } else {
-                 // Fallback for multiple files - treat as text (might need refinement)
-                const textContent = await file.text();
-                const b64 = btoa(textContent);
-                studyMaterialUri = `data:text/plain;base64,${b64}`;
-            }
+            const studyMaterialUri = await fileToDataUri(file);
 
             const newSourceFile = { name: file.name, content: studyMaterialUri, type: "Documento" };
             setProjectSourceFiles(prev => [...prev, newSourceFile]);
@@ -767,7 +757,8 @@ export default function NewProjectPage() {
         
         let daysToDeadline: number | undefined;
         if (collectedData.deadline) {
-            daysToDeadline = differenceInCalendarDays(collectedData.deadline, new Date());
+            const diff = differenceInCalendarDays(collectedData.deadline, new Date());
+            daysToDeadline = diff >= 0 ? diff : 0;
         }
 
         const finalProjectData = {
