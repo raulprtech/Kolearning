@@ -780,6 +780,21 @@ export default function NewProjectPage() {
     setMessages(prev => prev.filter(m => m.actionId !== 'atomActions'));
   };
   
+  const handleResetProcess = () => {
+    setIsProjectStarted(false);
+    setSelectedFiles([]);
+    setAtomsResult(null);
+    setProcessingFile(null);
+    setProjectSourceFiles([]);
+    setCurrentStep('atomizing');
+    setLearningPlan(null);
+    setAtomizationError(null);
+    setIsAtomizationComplete(false);
+    setCollectedData({});
+    setDataCollectionStep('start');
+    setMessages([]); // Will be repopulated by useEffect
+  };
+
   if (!isProjectStarted) {
     return (
         <div className="flex flex-col flex-1 h-full overflow-hidden">
@@ -954,7 +969,15 @@ export default function NewProjectPage() {
                 onImport={handleImportFromText}
             />
         <main className="grid flex-1 grid-cols-1 md:grid-cols-[1fr_450px]">
-            <div className="flex flex-col flex-1 h-full overflow-y-auto">
+            <div className="flex flex-col flex-1 h-full overflow-y-auto relative p-6">
+                 <Button 
+                    variant="outline" 
+                    onClick={handleResetProcess} 
+                    className="absolute top-8 left-8"
+                >
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Volver
+                </Button>
                 {renderContent()}
             </div>
             <ChatPanel
@@ -979,5 +1002,3 @@ export default function NewProjectPage() {
     </div>
   )
 }
-
-    
