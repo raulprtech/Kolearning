@@ -18,7 +18,7 @@ const GenerateAtomsInputSchema = z.object({
     .describe(
       'The study material to be atomized, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' 
     ),
-  userObjective: z.string().describe('The user\'s stated objective for learning the material.')
+  userObjective: z.string().describe('The user\'s stated objective for learning the material.').optional()
 });
 export type GenerateAtomsInput = z.infer<typeof GenerateAtomsInputSchema>;
 
@@ -42,7 +42,7 @@ const orchestratorPrompt = ai.definePrompt({
   prompt: `You are Koli, an AI-powered tutor specializing in knowledge extraction and atomization.
 All your responses must be in Spanish.
 
-The user has uploaded study material and stated their learning objective.
+The user has uploaded study material.
 
 **Your Mission:**
 
@@ -56,11 +56,10 @@ Your one and only mission is to read the study material provided and extract EVE
 
 **Your Tasks:**
 
-1.  **Generate 'initialResponse':** Craft a brief, friendly, and conversational "initialResponse". This response should acknowledge their uploaded material and their objective, confirming that you are beginning the analysis.
+1.  **Generate 'initialResponse':** Craft a brief, friendly, and conversational "initialResponse". This response should acknowledge their uploaded material, confirming that you are beginning the analysis.
 2.  **Generate 'atoms':** Perform your mission. Read the user's material and generate a comprehensive array of question-and-answer pairs. There is no limit.
 
 **User Input:**
-User's Learning Objective: {{{userObjective}}}
 Study Material: {{media url=studyMaterial}}
 
 IMPORTANT: If the provided study material has an unsupported MIME type (like 'application/octet-stream'), you must treat it as a 'text/plain' file and process its content accordingly.
@@ -83,3 +82,5 @@ const generateAtomsFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

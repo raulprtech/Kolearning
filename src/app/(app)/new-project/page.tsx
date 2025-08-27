@@ -4,7 +4,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -52,8 +51,6 @@ const fileToDataUri = (file: File): Promise<string> => {
 
 const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
     
-    const [objective, setObjective] = useState("");
-    
     const handleFileButtonClick = () => {
         fileInputRef.current?.click();
         setIsSourcePopoverOpen(false);
@@ -72,7 +69,7 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
     return (
          <div className="flex flex-col gap-2">
               {selectedFiles.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-4">
                     {selectedFiles.map((file: File) => (
                         <div key={file.name} className="bg-primary/20 text-primary-foreground text-xs rounded-full px-3 py-1 flex items-center gap-2">
                             {getFileIcon(file.type)}
@@ -82,75 +79,67 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
                     ))}
                 </div>
               )}
-            <div className="flex flex-col gap-4">
-                <Input 
-                    placeholder="Describe tu objetivo de aprendizaje (ej. 'aprobar mi examen de historia')"
-                    value={objective}
-                    onChange={(e) => setObjective(e.target.value)}
+            <div className="flex items-center gap-2">
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
                     disabled={isLoading}
+                    accept=".pdf,.doc,.docx,.txt,.md"
+                    multiple={true}
                 />
-                <div className="flex items-center gap-2">
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        disabled={isLoading}
-                        accept=".pdf,.doc,.docx,.txt,.md"
-                        multiple={true}
-                    />
-                    <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" size="lg" disabled={isLoading} className="w-full">
-                                <Plus className="h-5 w-5 mr-2" />
-                                Añadir Fuente
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 mb-2">
-                            <div className="grid gap-4">
-                            <div className="space-y-2">
-                                <h4 className="font-medium leading-none">Añadir Fuente</h4>
-                                <p className="text-sm text-muted-foreground">
-                                    Sube archivos o importa desde una URL.
-                                </p>
-                            </div>
-                                <div className="grid gap-2">
-                                <button onClick={handleFileButtonClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                    <Paperclip className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold">Subir archivos</p>
-                                        <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
-                                    </div>
-                                </button>
-                                <button onClick={handleUrlImportClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                    <LinkIcon className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold">Importar desde enlace</p>
-                                        <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
-                                    </div>
-                                </button>
-                                <button onClick={handlePasteTextClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                    <ClipboardPaste className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold">Pegar texto</p>
-                                        <p className="text-sm text-muted-foreground">Importa texto de tu portapapeles</p>
-                                    </div>
-                                </button>
-                            </div>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
+                <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" size="lg" disabled={isLoading} className="w-full">
+                            <Plus className="h-5 w-5 mr-2" />
+                            Añadir Fuente
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 mb-2">
+                        <div className="grid gap-4">
+                        <div className="space-y-2">
+                            <h4 className="font-medium leading-none">Añadir Fuente</h4>
+                            <p className="text-sm text-muted-foreground">
+                                Sube archivos o importa desde una URL.
+                            </p>
+                        </div>
+                            <div className="grid gap-2">
+                            <button onClick={handleFileButtonClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                <Paperclip className="h-5 w-5 text-primary" />
+                                <div>
+                                    <p className="font-semibold">Subir archivos</p>
+                                    <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
+                                </div>
+                            </button>
+                            <button onClick={handleUrlImportClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                <LinkIcon className="h-5 w-5 text-primary" />
+                                <div>
+                                    <p className="font-semibold">Importar desde enlace</p>
+                                    <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
+                                </div>
+                            </button>
+                            <button onClick={handlePasteTextClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                <ClipboardPaste className="h-5 w-5 text-primary" />
+                                <div>
+                                    <p className="font-semibold">Pegar texto</p>
+                                    <p className="text-sm text-muted-foreground">Importa texto de tu portapapeles</p>
+                                </div>
+                            </button>
+                        </div>
+                        </div>
+                    </PopoverContent>
+                </Popover>
 
-                    <Button size="lg" onClick={() => handleSendMessage(objective)} disabled={isLoading || selectedFiles.length === 0 || !objective.trim()}>
-                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Empezar"}
-                    </Button>
-                </div>
+                <Button size="lg" onClick={() => handleSendMessage()} disabled={isLoading || selectedFiles.length === 0}>
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Empezar"}
+                </Button>
             </div>
         </div>
     )
 }
 
-const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex }: { fileName: string, status: string, totalFiles: number, currentFileIndex: number }) => {
+const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, totalAtoms }: { fileName: string, status: string, totalFiles: number, currentFileIndex: number, totalAtoms: number }) => {
     
     const progress = totalFiles > 0 ? (currentFileIndex / totalFiles) * 100 : 0;
     
@@ -174,11 +163,12 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex }:
                     <div className="mb-4">
                         <div className="flex justify-between text-sm text-muted-foreground mb-2">
                            <span>Progreso General</span>
-                           <span>{currentFileIndex}/{totalFiles} Archivos</span>
+                           <span>{currentFileIndex > totalFiles ? totalFiles : currentFileIndex}/{totalFiles} Archivos</span>
                         </div>
                         <div className="w-full bg-muted rounded-full h-2.5">
                             <div className="bg-primary h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
                         </div>
+                         <p className="text-xs text-center text-muted-foreground mt-2">{totalAtoms} átomos generados hasta ahora...</p>
                     </div>
                 </CardContent>
             </Card>
@@ -195,7 +185,7 @@ export default function NewProjectPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isProjectStarted, setIsProjectStarted] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState({ name: '', status: '', index: 0, total: 0});
+  const [processingStatus, setProcessingStatus] = useState({ name: '', status: '', index: 0, total: 0, atoms: 0});
   const [projectSourceFiles, setProjectSourceFiles] = useState<{name: string, content: string, type: string}[]>([]);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
   const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
@@ -252,7 +242,7 @@ export default function NewProjectPage() {
       router.push(`/projects/${newProject.id}`);
   }, [addProject, projectSourceFiles, router, toast]);
 
-  const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
+  const processFiles = useCallback(async (filesToProcess: File[]) => {
     setIsLoading(true);
     setIsProjectStarted(true);
     
@@ -261,7 +251,7 @@ export default function NewProjectPage() {
 
     for (let i = 0; i < totalFiles; i++) {
         const file = filesToProcess[i];
-        setProcessingStatus({ name: file.name, status: `Procesando archivo ${i + 1} de ${totalFiles}...`, index: i + 1, total: totalFiles });
+        setProcessingStatus({ name: file.name, status: `Procesando archivo ${i + 1} de ${totalFiles}...`, index: i + 1, total: totalFiles, atoms: accumulatedAtoms.length });
 
         try {
             const studyMaterialUri = await fileToDataUri(file);
@@ -271,7 +261,7 @@ export default function NewProjectPage() {
             
             const response = await generateAtoms({
                 studyMaterial: studyMaterialUri,
-                userObjective: userObjective
+                userObjective: "Aprender el contenido de este documento." // Generic objective
             });
             
             accumulatedAtoms = [...accumulatedAtoms, ...response.atoms];
@@ -290,11 +280,11 @@ export default function NewProjectPage() {
         atoms: accumulatedAtoms
     };
 
-    setProcessingStatus(prev => ({ ...prev, status: `Generando plan de aprendizaje...` }));
+    setProcessingStatus(prev => ({ ...prev, status: `Generando plan de aprendizaje...`, index: totalFiles + 1 }));
 
     try {
         const plan = await calibratePlanFromQuestionnaire({
-            userObjective,
+            userObjective: "Aprender el contenido de los documentos proporcionados.",
             atoms: finalAtomsResult.atoms
         });
         handleFinalizeProject(plan, finalAtomsResult);
@@ -382,17 +372,17 @@ export default function NewProjectPage() {
     return <FileText className="h-3 w-3" />;
   };
 
-  const handleSendMessage = async (objective: string) => {
-    if (selectedFiles.length === 0 || !objective.trim()) return;
+  const handleSendMessage = async () => {
+    if (selectedFiles.length === 0) return;
     const filesToProcess = [...selectedFiles];
     setSelectedFiles([]);
-    processFiles(filesToProcess, objective);
+    processFiles(filesToProcess);
   }
   
   const handleResetProcess = () => {
     setIsProjectStarted(false);
     setSelectedFiles([]);
-    setProcessingStatus({ name: '', status: '', index: 0, total: 0 });
+    setProcessingStatus({ name: '', status: '', index: 0, total: 0, atoms: 0});
     setProjectSourceFiles([]);
     setAtomizationError(null);
     setIsLoading(false);
@@ -440,6 +430,7 @@ export default function NewProjectPage() {
                 status={processingStatus.status}
                 totalFiles={processingStatus.total}
                 currentFileIndex={processingStatus.index}
+                totalAtoms={processingStatus.atoms}
             />
         </div>
     );
@@ -506,3 +497,5 @@ export default function NewProjectPage() {
     </div>
     );
 }
+
+    

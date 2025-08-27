@@ -20,7 +20,7 @@ const AtomSchema = z.object({
 });
 
 const CalibratePlanInputSchema = z.object({
-  userObjective: z.string().describe("The user's learning objective."),
+  userObjective: z.string().describe("The user's learning objective.").optional(),
   atoms: z.array(AtomSchema).describe('The complete list of knowledge atoms generated from the material.'),
 });
 
@@ -63,10 +63,7 @@ const calibratePlanPrompt = ai.definePrompt({
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans based on a deep pedagogical framework.
 Your response must be in Spanish.
 
-A learner has provided their learning material and their objective. Based on this information, create a comprehensive and strategic learning plan.
-
-**Learner's Profile:**
-- Learning Objective: {{{userObjective}}}
+A learner has provided their learning material. Based on this information, create a comprehensive and strategic learning plan.
 
 **Knowledge Atoms:** {{{atoms}}}
 
@@ -131,3 +128,5 @@ const calibratePlanFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
