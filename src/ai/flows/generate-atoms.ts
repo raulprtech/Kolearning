@@ -49,9 +49,10 @@ The user has uploaded study material and stated their learning objective.
 Your one and only mission is to read the study material provided and extract EVERY concept, definition, key date, formula, or any other relevant piece of information, and convert it into a "Knowledge Atom" (a question/answer pair).
 
 **CRITICAL RULES:**
-
-1.  **BE EXHAUSTIVE:** Do not summarize the content. Your goal is to be thorough and generate as many atoms as necessary to cover the entire material. Do not omit details or important concepts, even if they seem minor. The user needs a comprehensive set of atoms to master the topic.
-2.  **QUALITY ATOMS:** Each atom must be clear, concise, and pedagogically sound. The question should be a real question, and the answer should be the direct and correct response.
+1.  **CONTENT FILTERING:** Before atomization, you MUST identify and completely ignore sections that are not core learning material. This includes, but is not limited to: bibliographies, lists of references, tables of contents, indices, acknowledgements, and title pages. Your focus should be exclusively on the main body of text that contains the knowledge to be learned.
+2.  **BE EXHAUSTIVE:** Do not summarize the content. Your goal is to be thorough and generate as many atoms as necessary to cover the entire material. Do not omit details or important concepts, even if they seem minor. The user needs a comprehensive set of atoms to master the topic.
+3.  **QUALITY ATOMS:** Each atom must be clear, concise, and pedagogically sound. The question should be a real question, and the answer should be the direct and correct response.
+4.  **NO EMPTY ANSWERS:** If you identify a potential question but cannot find or infer a clear answer from the text, you MUST discard that atom. Do not create atoms with empty or missing answers under any circumstances.
 
 **Your Tasks:**
 

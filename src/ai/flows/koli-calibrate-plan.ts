@@ -14,15 +14,16 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const AtomSchema = z.object({
+  question: z.string(),
+  answer: z.string(),
+});
+
 const CalibratePlanInputSchema = z.object({
   userObjective: z.string().describe("The user's learning objective."),
   daysToDeadline: z.number().optional().describe('The number of days the user has to meet their objective.'),
   masteryLevel: z.string().optional().describe('The self-reported mastery level of the user on the subject.'),
-  learningMaterialSummary: z
-    .string()
-    .describe(
-      'A summary of the learning material for context.'
-    ),
+  atoms: z.array(AtomSchema).describe('The complete list of knowledge atoms generated from the material.'),
 });
 
 export type CalibratePlanInput = z.infer<typeof CalibratePlanInputSchema>;
@@ -37,7 +38,8 @@ const CalibratePlanOutputSchema = z.object({
         session: z.number().describe('The overall session number (1, 2, 3...).'),
         topic: z.string().describe('What the user will learn in this session.'),
         sessionType: z.string().describe('The type of the session (e.g., Calibración, Incursión).'),
-        questions: z.string().describe('The format of the questions for this session (e.g., "Opción Múltiple", "Preguntas Abiertas").')
+        questions: z.string().describe('The format of the questions for this session (e.g., "Opción Múltiple", "Preguntas Abiertas").'),
+        atoms: z.array(AtomSchema).describe('The specific atoms assigned to this session.')
       })).describe("An array of sessions for this specific day.")
   })).describe('The structured learning path with sessions grouped by day.'),
   koliJustification: z.string().describe('The justification from Koli about the plan, explaining the daily structure if applicable.'),
@@ -54,7 +56,12 @@ export async function calibratePlanFromQuestionnaire(input: CalibratePlanInput):
 
 const calibratePlanPrompt = ai.definePrompt({
   name: 'calibratePlanPrompt',
-  input: {schema: CalibratePlanInputSchema},
+    input: {
+    // El prompt ahora espera que 'atoms' sea un string, no un objeto
+    schema: CalibratePlanInputSchema.extend({
+      atoms: z.string(), 
+    }),
+  },
   output: {schema: CalibratePlanOutputSchema},
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans based on a deep pedagogical framework.
 Your response must be in Spanish.
@@ -66,8 +73,7 @@ A learner has provided their learning material, their objective, and some person
 - Days to Deadline: {{{daysToDeadline}}}
 - Stated Mastery Level: {{{masteryLevel}}}
 
-**Learning Material Summary:** 
-{{{learningMaterialSummary}}}
+**Knowledge Atoms:** {{{atoms}}}
 
 **Kolearning Methodology & Strict Rules:**
 
@@ -123,7 +129,10 @@ const calibratePlanFlow = ai.defineFlow(
     outputSchema: CalibratePlanOutputSchema,
   },
   async input => {
-    const {output} = await calibratePlanPrompt(input);
+    const {output} = await calibratePlanPrompt({
+      ...input,
+      atoms: JSON.stringify(input.atoms, null, 2),
+    });
     return output!;
   }
 );

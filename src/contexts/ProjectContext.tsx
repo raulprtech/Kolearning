@@ -1,12 +1,13 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 
 export type Atom = {
   question: string;
   answer: string;
   retrievability?: number; // FSRS score from 1 to 4
+  incorrectAnswers?: string[]; // For multiple choice questions
 }
 
 type Source = {
@@ -95,12 +96,24 @@ const initialProjects: Project[] = [
     totalAnswers: 20,
     correctAnswers: 17,
     atoms: [
-        { question: "¿Qué es la dualidad onda-partícula?", answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas." },
+        { 
+            question: "¿Qué es la dualidad onda-partícula?", 
+            answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas.",
+            incorrectAnswers: [
+                "Es el principio que dice que las partículas solo pueden existir en un estado a la vez.",
+                "Una teoría sobre la gravedad a nivel subatómico.",
+                "La idea de que las partículas se comunican más rápido que la luz."
+            ]
+        },
         { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
     ],
     sessions: [
         { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "20 min", status: "Continue", atoms: [
-            { question: "¿Qué es la dualidad onda-partícula?", answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas." },
+            { question: "¿Qué es la dualidad onda-partícula?", answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas.", incorrectAnswers: [
+                "Es el principio que dice que las partículas solo pueden existir en un estado a la vez.",
+                "Una teoría sobre la gravedad a nivel subatómico.",
+                "La idea de que las partículas se comunican más rápido que la luz."
+            ] },
             { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
         ] },
         { session: 2, type: "Refuerzo de Dominio", questions: "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)", duration: "30 min", status: "Locked", atoms: [] },
@@ -328,28 +341,26 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   }, [energy, nextEnergyTimestamp]);
 
 
-  const addProject = (projectToAdd: Project) => {
+  const addProject = useCallback((projectToAdd: Project) => {
     if (!projects.find(p => p.id === projectToAdd.id)) {
       
       const atoms = [...projectToAdd.atoms]; // Make a mutable copy
       
       const projectWithSessions: Project = {
         ...projectToAdd,
-        sessions: projectToAdd.learningPath.map((item, index) => {
-            const sessionAtoms = atoms.splice(0, 10); // Take up to 10 atoms
-            return {
+        sessions: projectToAdd.learningPath.map((item, index) => ({
                 session: item.session,
                 type: item.sessionType,
                 questions: item.questions || 'Preguntas Abiertas', // Use correct question type
                 duration: '20 min', // Default duration
                 status: index === 0 ? 'Continue' : 'Locked',
-                atoms: sessionAtoms
-            };
-        })
+                atoms: (item as any).atoms || [],
+                topic: item.topic,
+            }))
       };
       setProjects(prevProjects => [...prevProjects, projectWithSessions]);
     }
-  };
+  }, [projects]);
 
   const updateProjectIcon = (projectId: string, icon: string) => {
     setProjects(prevProjects =>
@@ -427,7 +438,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   };
   
-  const completeSession = (projectId: string, sessionIndex: number) => {
+  const completeSession = useCallback((projectId: string, sessionIndex: number) => {
     const today = new Date();
     
     if (!lastSessionCompletedDate || !isSameDay(today, lastSessionCompletedDate)) {
@@ -473,7 +484,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         return p;
       })
     );
-  };
+  }, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak]);
 
   const archiveProject = (projectId: string) => {
     const projectToArchive = projects.find(p => p.id === projectId);
@@ -511,7 +522,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const recordAnswer = (projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean) => {
+  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean) => {
     const isCorrect = fsrs >= 3;
     setSessionAnswers(prev => [...prev, isCorrect]);
     
@@ -536,14 +547,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const newMasteryPoints = fsrs * 5;
     setMasteryPoints(prev => prev + newMasteryPoints);
     setTotalMasteryPoints(prev => prev + newMasteryPoints);
-  };
+  }, [setSessionAnswers, setProjects, setSessionStreak, setCognitiveCredits, setMasteryPoints, setTotalMasteryPoints]);
 
-  const resetSessionStats = () => {
+  const resetSessionStats = useCallback(() => {
     setSessionStreak(0);
     setCognitiveCredits(0);
     setMasteryPoints(0);
     setSessionAnswers([]);
-  };
+  }, [setSessionStreak, setCognitiveCredits, setMasteryPoints, setSessionAnswers]);
   
   const exchangeCreditsForEnergy = (credits: number, energyAmount: number): boolean => {
       if (globalCognitiveCredits >= credits) {

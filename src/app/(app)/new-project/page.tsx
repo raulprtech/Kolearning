@@ -164,7 +164,7 @@ const ChatPanel = ({ messages, handleSendMessage, isLoading, selectedFiles, remo
                     getFileIcon={getFileIcon}
                     onImportFromUrl={() => onImportFromUrl(true)}
                     onPasteText={() => onPasteText(true)}
-                    isDataCollectionDone={messages.some(m => m.actionId)}
+                    isDataCollectionDone={messages.some((m: { actionId: any; }) => m.actionId)}
                     isSourcePopoverOpen={isSourcePopoverOpen}
                     setIsSourcePopoverOpen={setIsSourcePopoverOpen}
                 />
@@ -746,8 +746,7 @@ export default function NewProjectPage() {
     setCurrentStep('atomizing');
 
     try {
-        const atomsSummary = atomsResult.atoms.map(a => `- ${a.question}`).join('\n');
-        
+
         let daysToDeadline: number | undefined;
         if (collectedData.deadline) {
             const diff = differenceInCalendarDays(collectedData.deadline, new Date());
@@ -758,7 +757,7 @@ export default function NewProjectPage() {
             userObjective: collectedData.userObjective || '',
             daysToDeadline: daysToDeadline,
             masteryLevel: collectedData.masteryLevel || 'No especificado',
-            learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
+            atoms: atomsResult.atoms
         }
 
         const plan = await calibratePlanFromQuestionnaire(finalProjectData);

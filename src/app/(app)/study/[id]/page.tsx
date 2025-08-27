@@ -27,7 +27,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { generateDistractors } from "@/ai/flows/generate-distractors";
 
 const ratings = [
     { label: "Muy Difícil", variant: "destructive", description: "Repetir Pronto", fsrs: 1 },
@@ -40,23 +40,53 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed }: { atom: any, onRat
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
     const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState(true);
 
     useEffect(() => {
-        // In a real app, incorrect options would come from the data or be generated.
-        const incorrectOptions = [
-            "Es el principio que dice que las partículas solo pueden existir en un estado a la vez.",
-            "Una teoría sobre la gravedad a nivel subatómico.",
-            "La idea de que las partículas se comunican más rápido que la luz."
-        ];
-        // Shuffle options on client-side to prevent hydration mismatch
-        const options = [atom.answer, ...incorrectOptions];
-        setShuffledOptions(options.sort(() => Math.random() - 0.5));
+        const getOptions = async () => {
+            if (!atom.question || !atom.answer) return;
+
+            setIsLoadingOptions(true);
+            try {
+                const response = await generateDistractors({
+                    question: atom.question,
+                    answer: atom.answer,
+                    count: 3, // Genera 3 opciones incorrectas
+                });
+                const options = [atom.answer, ...response.distractors];
+                setShuffledOptions(options.sort(() => Math.random() - 0.5));
+            } catch (error) {
+                console.error("Error generating distractors:", error);
+                // Opciones de respaldo en caso de error
+                const incorrectOptions = [
+                    "Opción incorrecta genérica 1",
+                    "Opción incorrecta genérica 2",
+                    "Opción incorrecta genérica 3"
+                ];
+                const options = [atom.answer, ...incorrectOptions];
+                setShuffledOptions(options.sort(() => Math.random() - 0.5));
+            } finally {
+                setIsLoadingOptions(false);
+            }
+        };
+
+        getOptions();
         
-        // Reset state when atom changes
         setIsAnswered(false);
         setSelectedOption(null);
 
     }, [atom.answer, atom.question]);
+
+    if (isLoadingOptions) {
+        return (
+            <div className="mt-6 flex flex-col gap-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+            </div>
+        );
+    }
     
     useEffect(() => {
         if(isRevealed) {
@@ -254,14 +284,13 @@ export default function StudySessionPage() {
   const [rephrasedQuestion, setRephrasedQuestion] = useState<string | null>(null);
   const [isTutorPanelOpen, setIsTutorPanelOpen] = useState(false);
 
-
   useEffect(() => {
     if (session) {
       setSessionAtoms(session.atoms);
     }
      // Reset streak and other session stats at the beginning of a session
     resetSessionStats();
-  }, [session, resetSessionStats]);
+  }, [session]);
 
   const currentAtom = useMemo(() => {
     if (!sessionAtoms || sessionAtoms.length === 0) {
