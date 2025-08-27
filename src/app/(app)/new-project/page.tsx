@@ -286,7 +286,7 @@ export default function NewProjectPage() {
 
     try {
         const plan = await calibratePlanFromQuestionnaire({
-            atoms: finalAtomsResult.atoms
+            atoms: finalAtomsResult.atoms,
         });
         handleFinalizeProject(plan, finalAtomsResult);
     } catch(error) {
