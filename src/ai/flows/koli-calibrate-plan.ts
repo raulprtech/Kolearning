@@ -54,9 +54,9 @@ export async function calibratePlanFromQuestionnaire(input: CalibratePlanInput):
 
 const calibratePlanPrompt = ai.definePrompt({
   name: 'calibratePlanPrompt',
-    input: {
-    schema: CalibratePlanInputSchema.extend({
-      atoms: z.string(), 
+  input: {
+    schema: z.object({
+      atoms: z.string(),
     }),
   },
   output: {schema: CalibratePlanOutputSchema},
@@ -120,10 +120,9 @@ const calibratePlanFlow = ai.defineFlow(
     inputSchema: CalibratePlanInputSchema,
     outputSchema: CalibratePlanOutputSchema,
   },
-  async input => {
-    const {output} = await calibratePlanPrompt({
-      ...input,
-      atoms: JSON.stringify(input.atoms, null, 2),
+  async (input) => {
+    const { output } = await calibratePlanPrompt({
+      atoms: JSON.stringify(input.atoms),
     });
     return output!;
   }
