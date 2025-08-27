@@ -3,7 +3,7 @@
 'use server';
 
 /**
- * @fileOverview This file defines a Genkit flow for calibrating a learning plan based on a user's pedagogical profile questionnaire.
+ * @fileOverview This file defines a Genkit flow for calibrating a learning plan.
  *
  * It includes:
  * - calibratePlanFromQuestionnaire - A function to trigger the learning plan calibration.
@@ -21,8 +21,6 @@ const AtomSchema = z.object({
 
 const CalibratePlanInputSchema = z.object({
   userObjective: z.string().describe("The user's learning objective."),
-  daysToDeadline: z.number().optional().describe('The number of days the user has to meet their objective.'),
-  masteryLevel: z.string().optional().describe('The self-reported mastery level of the user on the subject.'),
   atoms: z.array(AtomSchema).describe('The complete list of knowledge atoms generated from the material.'),
 });
 
@@ -57,7 +55,6 @@ export async function calibratePlanFromQuestionnaire(input: CalibratePlanInput):
 const calibratePlanPrompt = ai.definePrompt({
   name: 'calibratePlanPrompt',
     input: {
-    // El prompt ahora espera que 'atoms' sea un string, no un objeto
     schema: CalibratePlanInputSchema.extend({
       atoms: z.string(), 
     }),
@@ -66,18 +63,16 @@ const calibratePlanPrompt = ai.definePrompt({
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans based on a deep pedagogical framework.
 Your response must be in Spanish.
 
-A learner has provided their learning material, their objective, and some personal details. Based on all this information, create a comprehensive and strategic learning plan.
+A learner has provided their learning material and their objective. Based on this information, create a comprehensive and strategic learning plan.
 
 **Learner's Profile:**
 - Learning Objective: {{{userObjective}}}
-- Days to Deadline: {{{daysToDeadline}}}
-- Stated Mastery Level: {{{masteryLevel}}}
 
 **Knowledge Atoms:** {{{atoms}}}
 
 **Kolearning Methodology & Strict Rules:**
 
-1.  **Daily Structure:** If the user provides 'daysToDeadline', you MUST structure the learning plan by days. Group the sessions within each day, distributing the total number of sessions across the available days. Your 'learningPath' output should be an array of day objects. Explain in your 'koliJustification' why you've grouped certain sessions on the same day (e.g., "Para el Día 1, he combinado una sesión de Incursión para introducir nuevos conceptos con una de Refuerzo para consolidar lo aprendido ayer, optimizando tu tiempo.").
+1.  **Structure:** You MUST structure the learning plan logically. Group the sessions into a reasonable number of days (e.g., 3-7 days for moderately sized topics). Your 'learningPath' output should be an array of day objects. Explain in your 'koliJustification' why you've grouped certain sessions on the same day (e.g., "Para el Día 1, he combinado una sesión de Incursión para introducir nuevos conceptos con una de Refuerzo para consolidar lo aprendido, optimizando tu tiempo.").
 2.  **Session Numbering:** The 'session' field for each learning path item MUST be a simple, sequential integer (1, 2, 3, 4, ...), even when grouped by day. This is a critical rule.
 3.  **Session Size:** Each session MUST contain a MAXIMUM of 10 knowledge atoms (flashcards).
 4.  **Sub-modules:** If the material is extensive, you MUST divide it into logical sub-modules or topics. Reflect these topics in the 'topic' field.
@@ -107,11 +102,11 @@ A learner has provided their learning material, their objective, and some person
 **Your Tasks:**
 
 1.  **Generate Project Details:**
-    *   **projectTitle, projectDescription, categories:** Create these as before.
+    *   **projectTitle, projectDescription, categories:** Create these based on the content.
 2.  **Create the Learning Plan Components:**
     *   **learningPath:** Generate a structured array of *day objects*. Each day object contains the sessions for that day.
         *   Start with a "Calibración" session on Day 1.
-        *   Distribute 'Incursión', 'Refuerzo', and 'Prueba de Dominio' sessions logically across the available days to meet the deadline. If the user has an 'Avanzado' mastery level, you can schedule more sessions per day.
+        *   Distribute 'Incursión', 'Refuerzo', and 'Prueba de Dominio' sessions logically across the days.
         *   **CRUCIAL RULE:** The 'session' numbers inside the session objects MUST remain sequential integers (1, 2, 3...).
         *   **CRUCIAL RULE:** For each session object, you MUST populate the 'questions' field with the exact corresponding string value based on the 'sessionType' field.
     *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy, *especially the daily distribution of sessions*.
@@ -136,5 +131,3 @@ const calibratePlanFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

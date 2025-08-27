@@ -11,43 +11,20 @@ import {
   Plus,
   FileText,
   X,
-  Send,
+  Loader2,
   Paperclip,
   Link as LinkIcon,
-  Loader2,
-  CheckCircle,
-  Eye,
-  Settings,
-  BrainCircuit,
-  Share2,
-  Trash2,
-  BookOpen,
-  TrendingUp,
   ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  Target,
-  BarChart3,
   ClipboardPaste,
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
 import { extractContentFromUrl } from "@/lib/actions";
-import { Calendar } from "@/components/ui/calendar";
-import { format, differenceInCalendarDays } from "date-fns";
-import { es } from "date-fns/locale";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-
 
 const initialSteps = [
     {
@@ -55,26 +32,14 @@ const initialSteps = [
         description: "Usa el icono '+' para subir tus apuntes, PDFs, o enlaces. Describe qué quieres aprender y por qué."
     },
     {
-        title: "Interactúa con Koli",
-        description: "Responde a las preguntas de Koli mientras procesa y atomiza tu contenido para entenderlo a fondo."
+        title: "Koli Procesa y Atomiza",
+        description: "Nuestra IA analiza tu contenido, lo descompone en conceptos clave y prepara tu plan de estudios."
     },
     {
-        title: "Verifica y ajusta",
-        description: "Asegúrate de que todo el material se haya asimilado correctamente. Puedes añadir más si es necesario."
+        title: "¡A Estudiar!",
+        description: "Tu proyecto se creará automáticamente y serás redirigido para que comiences a aprender de inmediato."
     }
 ];
-
-type Message = {
-    role: 'user' | 'koli';
-    content: React.ReactNode;
-    actionId?: 'atomActions' | 'objectiveOptions' | 'deadlineOptions' | 'masteryOptions';
-};
-
-type ProjectData = {
-    userObjective: string;
-    deadline?: Date;
-    masteryLevel: string;
-}
 
 const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -85,95 +50,9 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const ChatPanel = ({ messages, handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onReviewAtoms, onGeneratePlan, onImportFromUrl, onPasteText, isProjectStarted, processDataCollection, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
-    const scrollRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [messages]);
-
+const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
     
-    const objectiveOptions = [
-        "Prepararme para un examen",
-        "Entender los conceptos clave",
-        "Aplicar este conocimiento en un proyecto",
-        "Aprender algo nuevo por curiosidad",
-    ];
-
-    const masteryOptions = [ "Principiante", "Intermedio", "Avanzado"];
-    
-    return (
-        <div className="flex flex-col h-full bg-card/30 border-l border-border overflow-hidden">
-            <div ref={scrollRef} className="flex-1 p-6 space-y-6 overflow-y-auto">
-                {messages.map((msg: Message, index: number) => (
-                    <div key={index} className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                       <div className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                         {msg.role === 'koli' && <KoliAvatar className="h-10 w-10 flex-shrink-0" />}
-                         <div className={`p-4 rounded-xl max-w-lg ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-card/80'}`}>
-                            <div>{msg.content}</div>
-                         </div>
-                       </div>
-                       <div className="ml-14 mt-2 flex flex-wrap gap-2">
-                            {msg.actionId === 'atomActions' && (
-                                <>
-                                    <Button variant="outline" onClick={onReviewAtoms} disabled={isLoading}><Eye className="mr-2"/>Ver Átomos</Button>
-                                    <Button onClick={onGeneratePlan} disabled={isLoading}>Siguiente Paso<ChevronRight className="ml-2"/></Button>
-                                </>
-                            )}
-                            {msg.actionId === 'objectiveOptions' && objectiveOptions.map(opt => (
-                                <Button key={opt} variant="outline" onClick={() => processDataCollection({ userObjective: opt }, opt)}>{opt}</Button>
-                            ))}
-                            {msg.actionId === 'masteryOptions' && masteryOptions.map(opt => (
-                                <Button key={opt} variant="outline" onClick={() => processDataCollection({ masteryLevel: opt }, opt)}>{opt}</Button>
-                            ))}
-                            {msg.actionId === 'deadlineOptions' && (
-                                <>
-                                 <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline"><CalendarIcon className="mr-2"/>Elegir fecha</Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 mb-2" align="start">
-                                        <Calendar mode="single" onSelect={(d) => d && processDataCollection({ deadline: d }, format(d, "PPP", { locale: es }))} initialFocus locale={es} />
-                                    </PopoverContent>
-                                 </Popover>
-                                 <Button variant="outline" onClick={() => processDataCollection({ deadline: undefined }, "No tengo fecha límite")}>No tengo</Button>
-                                </>
-                            )}
-                       </div>
-                    </div>
-                ))}
-                 {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
-                    <div className="flex gap-4">
-                        <KoliAvatar className="h-10 w-10 flex-shrink-0" />
-                        <div className="p-4 rounded-xl max-w-lg bg-card/80 flex items-center">
-                           <Loader2 className="h-5 w-5 animate-spin"/>
-                        </div>
-                    </div>
-                )}
-            </div>
-            <div className="p-4 border-t border-border">
-                <InputBar 
-                    handleSendMessage={handleSendMessage}
-                    isLoading={isLoading}
-                    selectedFiles={selectedFiles}
-                    removeFile={removeFile}
-                    handleFileChange={handleFileChange}
-                    fileInputRef={fileInputRef}
-                    getFileIcon={getFileIcon}
-                    onImportFromUrl={() => onImportFromUrl(true)}
-                    onPasteText={() => onPasteText(true)}
-                    isDataCollectionDone={messages.some((m: { actionId: any; }) => m.actionId)}
-                    isSourcePopoverOpen={isSourcePopoverOpen}
-                    setIsSourcePopoverOpen={setIsSourcePopoverOpen}
-                />
-            </div>
-        </div>
-    );
-}
-
-const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isDataCollectionDone, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
+    const [objective, setObjective] = useState("");
     
     const handleFileButtonClick = () => {
         fileInputRef.current?.click();
@@ -203,68 +82,75 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
                     ))}
                 </div>
               )}
-            <div className="flex items-center gap-2">
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
+            <div className="flex flex-col gap-4">
+                <Input 
+                    placeholder="Describe tu objetivo de aprendizaje (ej. 'aprobar mi examen de historia')"
+                    value={objective}
+                    onChange={(e) => setObjective(e.target.value)}
                     disabled={isLoading}
-                    accept=".pdf,.doc,.docx,.txt,.md"
-                    multiple={true}
                 />
-                <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" size="lg" disabled={isLoading} className="w-full">
-                            <Plus className="h-5 w-5 mr-2" />
-                            Añadir Fuente
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 mb-2">
-                        <div className="grid gap-4">
-                        <div className="space-y-2">
-                            <h4 className="font-medium leading-none">Añadir Fuente</h4>
-                            <p className="text-sm text-muted-foreground">
-                                Sube archivos o importa desde una URL.
-                            </p>
-                        </div>
-                            <div className="grid gap-2">
-                            <button onClick={handleFileButtonClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                <Paperclip className="h-5 w-5 text-primary" />
-                                <div>
-                                    <p className="font-semibold">Subir archivos</p>
-                                    <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
-                                </div>
-                            </button>
-                            <button onClick={handleUrlImportClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                <LinkIcon className="h-5 w-5 text-primary" />
-                                <div>
-                                    <p className="font-semibold">Importar desde enlace</p>
-                                    <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
-                                </div>
-                            </button>
-                            <button onClick={handlePasteTextClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                <ClipboardPaste className="h-5 w-5 text-primary" />
-                                <div>
-                                    <p className="font-semibold">Pegar texto</p>
-                                    <p className="text-sm text-muted-foreground">Importa texto de tu portapapeles</p>
-                                </div>
-                            </button>
-                        </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
+                <div className="flex items-center gap-2">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        disabled={isLoading}
+                        accept=".pdf,.doc,.docx,.txt,.md"
+                        multiple={true}
+                    />
+                    <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="lg" disabled={isLoading} className="w-full">
+                                <Plus className="h-5 w-5 mr-2" />
+                                Añadir Fuente
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 mb-2">
+                            <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <h4 className="font-medium leading-none">Añadir Fuente</h4>
+                                <p className="text-sm text-muted-foreground">
+                                    Sube archivos o importa desde una URL.
+                                </p>
+                            </div>
+                                <div className="grid gap-2">
+                                <button onClick={handleFileButtonClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                    <Paperclip className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Subir archivos</p>
+                                        <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
+                                    </div>
+                                </button>
+                                <button onClick={handleUrlImportClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                    <LinkIcon className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Importar desde enlace</p>
+                                        <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
+                                    </div>
+                                </button>
+                                <button onClick={handlePasteTextClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                    <ClipboardPaste className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Pegar texto</p>
+                                        <p className="text-sm text-muted-foreground">Importa texto de tu portapapeles</p>
+                                    </div>
+                                </button>
+                            </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
 
-                <Button size="lg" onClick={() => handleSendMessage()} disabled={isLoading || isDataCollectionDone || selectedFiles.length === 0}>
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Empezar"}
-                </Button>
+                    <Button size="lg" onClick={() => handleSendMessage(objective)} disabled={isLoading || selectedFiles.length === 0 || !objective.trim()}>
+                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Empezar"}
+                    </Button>
+                </div>
             </div>
         </div>
     )
 }
 
-
-const AtomizationProgress = ({ atomsResult, fileName, isLoading, totalFiles, currentFileIndex }: { atomsResult: GenerateAtomsOutput | null, fileName: string, isLoading: boolean, totalFiles: number, currentFileIndex: number }) => {
+const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex }: { fileName: string, status: string, totalFiles: number, currentFileIndex: number }) => {
     
     const progress = totalFiles > 0 ? (currentFileIndex / totalFiles) * 100 : 0;
     
@@ -272,7 +158,7 @@ const AtomizationProgress = ({ atomsResult, fileName, isLoading, totalFiles, cur
         <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
             <Card className="w-full max-w-3xl bg-card/50">
                 <CardHeader>
-                    <CardTitle className="text-center text-2xl font-headline">Atomizando Conocimiento</CardTitle>
+                    <CardTitle className="text-center text-2xl font-headline">Creando tu Proyecto</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center gap-4 mb-6 p-4 border border-border rounded-lg">
@@ -280,7 +166,7 @@ const AtomizationProgress = ({ atomsResult, fileName, isLoading, totalFiles, cur
                          <div>
                             <p className="font-semibold">{fileName || "Preparando..."}</p>
                             <p className="text-sm text-muted-foreground">
-                                {isLoading ? `Procesando archivo ${currentFileIndex} de ${totalFiles}...` : "Proceso completado."}
+                                {status}
                             </p>
                          </div>
                     </div>
@@ -294,146 +180,11 @@ const AtomizationProgress = ({ atomsResult, fileName, isLoading, totalFiles, cur
                             <div className="bg-primary h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
                         </div>
                     </div>
-
-                    {atomsResult && (
-                        <div className="mt-8 text-center">
-                            <h3 className="text-lg font-semibold text-primary">¡Proceso completado!</h3>
-                            <p className="text-muted-foreground mt-2">Hemos generado un total de <span className="font-bold">{atomsResult.atoms.length}</span> átomos de conocimiento de tus archivos.</p>
-                        </div>
-                    )}
-                     {isLoading && !atomsResult && (
-                         <div className="mt-8 text-center">
-                             <p className="text-muted-foreground mt-2">Generando plan de aprendizaje...</p>
-                         </div>
-                    )}
                 </CardContent>
             </Card>
         </div>
     );
 };
-
-const AtomReview = ({ atoms, onNextStep, onBack }: { atoms: GenerateAtomsOutput['atoms'], onNextStep: () => void, onBack: () => void }) => {
-    
-    const [editableAtoms, setEditableAtoms] = useState(atoms);
-
-    const handleDelete = (index: number) => {
-        setEditableAtoms(currentAtoms => currentAtoms.filter((_, i) => i !== index));
-    };
-
-    return (
-        <div className="flex flex-col h-full p-4 md:p-8 bg-background overflow-hidden">
-             <div className="text-center mb-8 shrink-0">
-                <h1 className="text-3xl font-bold font-headline">Revisa tus Tarjetas</h1>
-                <p className="text-muted-foreground">Añade, edita o elimina tarjetas para perfeccionar tu mazo de estudio.</p>
-            </div>
-            <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full pr-4">
-                    <div className="space-y-4 max-w-4xl mx-auto">
-                    {editableAtoms.map((atom, index) => (
-                        <Card key={index} className="flex flex-col md:flex-row items-start gap-4 p-4 bg-card/50">
-                            <span className="text-sm font-bold text-muted-foreground mt-1 hidden md:inline-block">{index + 1}.</span>
-                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                                <div>
-                                    <label className="text-xs text-muted-foreground">TÉRMINO</label>
-                                    <Textarea defaultValue={atom.question} className="mt-1 bg-background/50" />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-muted-foreground">DEFINICIÓN</label>
-                                    <Textarea defaultValue={atom.answer} className="mt-1 bg-background/50"/>
-                                </div>
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(index)} className="self-start md:self-center h-8 w-8">
-                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive"/>
-                            </Button>
-                        </Card>
-                    ))}
-                    </div>
-                </ScrollArea>
-            </div>
-             <div className="pt-6 flex justify-center items-center gap-4 shrink-0">
-                <Button variant="outline" size="lg" onClick={onBack}>
-                    <ChevronLeft className="mr-2"/>
-                    Volver
-                </Button>
-                <Button size="lg" onClick={onNextStep}>
-                    Siguiente Paso
-                </Button>
-            </div>
-        </div>
-    )
-}
-
-const LearningPlan = ({ plan, onFinish, onBack }: { plan: CalibratePlanOutput, onFinish: () => void, onBack: () => void }) => {
-    return (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-            <div className="w-full max-w-4xl">
-                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold font-headline">Crear un nuevo proyecto</h1>
-                    <p className="text-muted-foreground">Paso 3 de 3</p>
-                    <Progress value={100} className="w-1/2 mx-auto mt-2 h-2" />
-                </div>
-                <Card className="w-full bg-card/50 overflow-hidden">
-                    <CardHeader>
-                        <CardTitle className="text-2xl font-headline">¡Conoce tu Plan de Estudios!</CardTitle>
-                        <CardDescription>
-                            Este es el camino que Koli ha diseñado para que alcances tu objetivo.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <h3 className="font-semibold mb-2">Ruta de aprendizaje</h3>
-                        <ScrollArea className="h-60 w-full rounded-md border border-border p-4">
-                            <div className="space-y-6">
-                                {plan.learningPath.map((day) => (
-                                    <div key={day.day}>
-                                        <h4 className="font-bold font-headline text-lg mb-2">Día {day.day}</h4>
-                                        <div className="space-y-3">
-                                            {day.sessions.map((session) => (
-                                                <div key={session.session} className="flex items-start gap-4 p-3 bg-card/50 rounded-md">
-                                                    <div className="bg-primary/20 text-primary h-8 w-8 rounded-full flex items-center justify-center font-bold flex-shrink-0 mt-1">
-                                                        {session.session}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-semibold">{session.topic}</p>
-                                                        <p className="text-sm text-muted-foreground">{session.sessionType}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
-
-                        <div className="mt-6">
-                             <h3 className="font-semibold mb-2 flex items-center gap-2">
-                                <BrainCircuit className="h-5 w-5 text-primary"/>
-                                Justificación de Koli
-                            </h3>
-                            <p className="text-sm text-muted-foreground">{plan.koliJustification}</p>
-                        </div>
-
-                         <div className="mt-6">
-                             <h3 className="font-semibold mb-2 flex items-center gap-2">
-                                <TrendingUp className="h-5 w-5 text-primary"/>
-                                Progreso Esperado
-                            </h3>
-                            <p className="text-sm text-muted-foreground">{plan.expectedProgress}</p>
-                        </div>
-                        
-                        <div className="mt-8 flex justify-between items-center">
-                            <Button variant="outline" onClick={onBack}>
-                                <ChevronLeft className="mr-2"/>
-                                Volver
-                            </Button>
-                            <Button size="lg" onClick={onFinish}>Crear Proyecto y Empezar</Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-    );
-};
-
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -441,32 +192,19 @@ export default function NewProjectPage() {
   const { addProject } = useProjects();
   const { toast } = useToast();
 
-  const [projectData, setProjectData] = useState<ProjectData>({ userObjective: '', masteryLevel: '' });
-  const [collectedData, setCollectedData] = useState<Partial<ProjectData>>({});
-  const [dataCollectionStep, setDataCollectionStep] = useState<'start' | 'objective' | 'deadline' | 'masteryLevel' | 'done'>('start');
-
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isProjectStarted, setIsProjectStarted] = useState(false);
-  const [atomsResult, setAtomsResult] = useState<GenerateAtomsOutput | null>(null);
-  const [processingFile, setProcessingFile] = useState<{name: string, content: string, index: number, total: number} | null>(null);
+  const [processingStatus, setProcessingStatus] = useState({ name: '', status: '', index: 0, total: 0});
   const [projectSourceFiles, setProjectSourceFiles] = useState<{name: string, content: string, type: string}[]>([]);
-  const [currentStep, setCurrentStep] = useState<'atomizing' | 'review' | 'plan'>('atomizing');
-  const [learningPlan, setLearningPlan] = useState<CalibratePlanOutput | null>(null);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
   const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
-  const [isAtomizationComplete, setIsAtomizationComplete] = useState(false);
   const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const addMessage = useCallback((message: Message) => {
-    setMessages(prev => [...prev, message]);
-  }, []);
-
   const dataUriToBlob = (dataUri: string) => {
     const byteString = atob(dataUri.split(',')[1]);
     const mimeString = dataUri.split(',')[0].split(':')[1].split(';')[0];
@@ -478,58 +216,52 @@ export default function NewProjectPage() {
     return new Blob([ab], { type: mimeString });
   }
 
-  const askNextQuestion = useCallback((data: Partial<ProjectData>) => {
-    if (!data.userObjective) {
-        addMessage({ role: 'koli', content: '¡Hola! Soy Koli. Para empezar, ¿Cuál es tu principal objetivo de aprendizaje con este material?', actionId: 'objectiveOptions' });
-        setDataCollectionStep('objective');
-    } else if (!('deadline' in data)) {
-        addMessage({ role: 'koli', content: 'Ahora, ¿tienes alguna fecha límite para esto?', actionId: 'deadlineOptions' });
-        setDataCollectionStep('deadline');
-    } else if (!data.masteryLevel) {
-        addMessage({ role: 'koli', content: 'Casi listo. ¿Cómo describirías tu nivel de conocimiento actual sobre el tema?', actionId: 'masteryOptions' });
-        setDataCollectionStep('masteryLevel');
-    } else {
-        addMessage({ role: 'koli', content: '¡Perfecto! Ya tengo todo lo que necesito. Estoy terminando de procesar tu material...' });
-        setDataCollectionStep('done');
-        setProjectData(data as ProjectData);
-    }
-  }, [addMessage]);
-  
-  const processDataCollection = useCallback((newData: Partial<ProjectData>, userMessage: string) => {
-      setMessages(prev => {
-          // Filter out previous user message if it exists
-          const lastMessage = prev[prev.length - 1];
-          let newMessages = [...prev];
-          if (lastMessage && lastMessage.role === 'user') {
-              newMessages.pop();
-          }
-          // Filter out the action buttons message from Koli
-          newMessages = newMessages.filter(m => !m.actionId);
-          // Add the new user message
-          newMessages.push({ role: 'user', content: userMessage });
-          return newMessages;
-      });
+  const handleFinalizeProject = useCallback((plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput) => {
+      if (!atomsResult || projectSourceFiles.length === 0) {
+          toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
+          return;
+      }
 
-      const newCollectedData = { ...collectedData, ...newData };
-      setCollectedData(newCollectedData);
+      const slug = plan.projectTitle
+        .toLowerCase()
+        .replace(/\s+/g, '-') 
+        .replace(/[^\w-]+/g, '') 
+        .replace(/--+/g, '-') 
+        .replace(/^-+/, '') 
+        .replace(/-+$/, ''); 
       
-      askNextQuestion(newCollectedData);
-  }, [addMessage, askNextQuestion, collectedData, setMessages]);
-  
+      const newProjectId = `${slug}-${Date.now()}`;
+
+      const newProject = {
+          id: newProjectId,
+          title: plan.projectTitle,
+          description: plan.projectDescription,
+          mastery: 0,
+          categories: plan.categories,
+          icon: "Book", 
+          atoms: atomsResult.atoms,
+          learningPath: plan.learningPath.flatMap(day => day.sessions),
+          fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
+          sources: projectSourceFiles
+      };
+      addProject(newProject as any);
+      toast({
+          title: "¡Proyecto Creado!",
+          description: `${plan.projectTitle} ha sido añadido a tu dashboard.`
+      })
+      router.push(`/projects/${newProject.id}`);
+  }, [addProject, projectSourceFiles, router, toast]);
+
   const processFiles = useCallback(async (filesToProcess: File[], userObjective: string) => {
     setIsLoading(true);
-    setCurrentStep('atomizing');
     setIsProjectStarted(true);
     
-    // Clear messages and set a welcome message from Koli.
-    setMessages([{ role: 'koli', content: "¡Genial! Estoy analizando tus archivos. Esto puede tardar un momento..." }]);
-
     const totalFiles = filesToProcess.length;
     let accumulatedAtoms: GenerateAtomsOutput['atoms'] = [];
 
     for (let i = 0; i < totalFiles; i++) {
         const file = filesToProcess[i];
-        setProcessingFile({ name: file.name, content: '', index: i + 1, total: totalFiles });
+        setProcessingStatus({ name: file.name, status: `Procesando archivo ${i + 1} de ${totalFiles}...`, index: i + 1, total: totalFiles });
 
         try {
             const studyMaterialUri = await fileToDataUri(file);
@@ -537,47 +269,42 @@ export default function NewProjectPage() {
             const newSourceFile = { name: file.name, content: studyMaterialUri, type: "Documento" };
             setProjectSourceFiles(prev => [...prev, newSourceFile]);
             
-            const finalUserObjective = userObjective || collectedData.userObjective || "Aprender el contenido de este documento";
-
             const response = await generateAtoms({
                 studyMaterial: studyMaterialUri,
-                userObjective: finalUserObjective
+                userObjective: userObjective
             });
             
             accumulatedAtoms = [...accumulatedAtoms, ...response.atoms];
-            setAtomsResult({
-                initialResponse: "¡Hola! He analizado los documentos que me has proporcionado.", // Generic response
-                atoms: accumulatedAtoms
-            });
-
-            addMessage({
-                role: 'koli',
-                content: `He terminado con "${file.name}" y generé ${response.atoms.length} átomos. Ahora analizando el siguiente...`
-            });
 
         } catch (error) {
             console.error(`Error processing file ${file.name}:`, error);
             const errorMessage = `Lo siento, ha ocurrido un error al procesar tu documento "${file.name}". Por favor, intenta de nuevo.`;
             setAtomizationError(errorMessage);
-            setProcessingFile(null);
             setIsLoading(false);
-            return; // Stop the process on error
+            return;
         }
     }
     
-    setIsAtomizationComplete(true);
-    setIsLoading(false);
-    setProcessingFile(prev => prev ? { ...prev, index: totalFiles } : null);
+    const finalAtomsResult: GenerateAtomsOutput = {
+        initialResponse: "Proceso completado.",
+        atoms: accumulatedAtoms
+    };
 
-    // After processing files, start the data collection conversation.
-    const initialData: Partial<ProjectData> = {};
-    if (userObjective) {
-        initialData.userObjective = userObjective;
+    setProcessingStatus(prev => ({ ...prev, status: `Generando plan de aprendizaje...` }));
+
+    try {
+        const plan = await calibratePlanFromQuestionnaire({
+            userObjective,
+            atoms: finalAtomsResult.atoms
+        });
+        handleFinalizeProject(plan, finalAtomsResult);
+    } catch(error) {
+        console.error("Error generating learning plan:", error);
+        setAtomizationError('Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.');
+        setIsLoading(false);
     }
-    setCollectedData(initialData);
-    askNextQuestion(initialData);
 
-  }, [askNextQuestion, collectedData.userObjective, addMessage]);
+  }, [handleFinalizeProject]);
 
   useEffect(() => {
     const preloadedSourceParam = searchParams.get('source');
@@ -588,45 +315,14 @@ export default function NewProjectPage() {
             const blob = dataUriToBlob(decodedSource);
             const file = new File([blob], sourceName, { type: blob.type });
             setSelectedFiles([file]);
-            // User will initiate processing via button click
         } catch (error) {
             console.error("Failed to process preloaded source:", error);
             const errorMessage = "Lo siento, no pude procesar la fuente reutilizada. Puede que el enlace esté corrupto. Por favor, intenta de nuevo.";
             setAtomizationError(errorMessage);
-            setIsProjectStarted(true); // To show the error view
-            setCurrentStep('atomizing'); // To ensure error is rendered in the right view
+            setIsProjectStarted(true);
         }
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    if (!isProjectStarted) {
-        setMessages([{ role: 'koli', content: (
-            <div className="flex flex-col items-center text-center max-w-md">
-                <KoliAvatar className="h-24 w-24 mb-6" />
-                <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-                Hola, soy Koli
-                </h1>
-                <p className="mt-4 text-lg text-muted-foreground">
-                Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
-                </p>
-            </div>
-        )}]);
-    }
-  }, [isProjectStarted]);
-
-
-  useEffect(() => {
-    if (isAtomizationComplete && dataCollectionStep === 'done') {
-        if (atomsResult) {
-             addMessage({ 
-                role: 'koli', 
-                content: `${atomsResult.initialResponse} He generado un total de ${atomsResult.atoms.length} 'átomos' de tus archivos. ¿Quieres revisarlos o generamos tu plan de estudios?`,
-                actionId: 'atomActions'
-             });
-        }
-    }
-  }, [isAtomizationComplete, dataCollectionStep, atomsResult, addMessage])
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -636,11 +332,8 @@ export default function NewProjectPage() {
                 if (atomizationError) {
                     setAtomizationError(null);
                     setIsProjectStarted(false);
-                    setMessages([]);
-                    setAtomsResult(null);
                     return newFiles;
                 }
-                // Always append new files to the existing list
                 return [...prevFiles, ...newFiles];
             });
         }
@@ -689,291 +382,26 @@ export default function NewProjectPage() {
     return <FileText className="h-3 w-3" />;
   };
 
-  const handleSendMessage = async (initialObjective?: string) => {
-    if (selectedFiles.length === 0) return;
-
+  const handleSendMessage = async (objective: string) => {
+    if (selectedFiles.length === 0 || !objective.trim()) return;
     const filesToProcess = [...selectedFiles];
     setSelectedFiles([]);
-    
-    const objective = initialObjective || '';
-
-    if (filesToProcess.length > 0) {
-        processFiles(filesToProcess, objective);
-    }
+    processFiles(filesToProcess, objective);
   }
-
-  const handleFinalizeProject = (plan: CalibratePlanOutput) => {
-      if (!atomsResult || projectSourceFiles.length === 0) {
-          toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
-          return;
-      }
-
-      const slug = plan.projectTitle
-        .toLowerCase()
-        .replace(/\s+/g, '-') 
-        .replace(/[^\w-]+/g, '') 
-        .replace(/--+/g, '-') 
-        .replace(/^-+/, '') 
-        .replace(/-+$/, ''); 
-      
-      const newProjectId = `${slug}-${Date.now()}`;
-
-      const newProject = {
-          id: newProjectId,
-          title: plan.projectTitle,
-          description: plan.projectDescription,
-          mastery: 0,
-          categories: plan.categories,
-          icon: "Book", 
-          atoms: atomsResult.atoms,
-          learningPath: plan.learningPath.flatMap(day => day.sessions),
-          fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
-          sources: projectSourceFiles
-      };
-      addProject(newProject as any);
-      toast({
-          title: "¡Proyecto Creado!",
-          description: `${plan.projectTitle} ha sido añadido a tu dashboard.`
-      })
-      router.push(`/projects/${newProject.id}`);
-  }
-
-  const handleGeneratePlan = async () => {
-    if (!atomsResult) return;
-    setMessages(prev => prev.filter(m => m.actionId !== 'atomActions'));
-
-    setIsLoading(true);
-    setCurrentStep('atomizing');
-
-    try {
-
-        let daysToDeadline: number | undefined;
-        if (collectedData.deadline) {
-            const diff = differenceInCalendarDays(collectedData.deadline, new Date());
-            daysToDeadline = diff >= 0 ? diff : 0;
-        }
-
-        const finalProjectData = {
-            userObjective: collectedData.userObjective || '',
-            daysToDeadline: daysToDeadline,
-            masteryLevel: collectedData.masteryLevel || 'No especificado',
-            atoms: atomsResult.atoms
-        }
-
-        const plan = await calibratePlanFromQuestionnaire(finalProjectData);
-        setLearningPlan(plan);
-        setCurrentStep('plan');
-
-    } catch(error) {
-        console.error("Error generating learning plan:", error);
-        addMessage({ role: 'koli', content: 'Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.' });
-    } finally {
-        setIsLoading(false);
-    }
-  }
-
-
-  const handleReviewAtoms = () => {
-    setCurrentStep('review');
-    setMessages(prev => prev.filter(m => m.actionId !== 'atomActions'));
-  };
   
   const handleResetProcess = () => {
     setIsProjectStarted(false);
     setSelectedFiles([]);
-    setAtomsResult(null);
-    setProcessingFile(null);
+    setProcessingStatus({ name: '', status: '', index: 0, total: 0 });
     setProjectSourceFiles([]);
-    setCurrentStep('atomizing');
-    setLearningPlan(null);
     setAtomizationError(null);
-    setIsAtomizationComplete(false);
-    setCollectedData({});
-    setDataCollectionStep('start');
-    setMessages([]); // Will be repopulated by useEffect
+    setIsLoading(false);
   };
 
-  if (!isProjectStarted) {
-    return (
-        <div className="flex flex-col flex-1 h-full overflow-hidden">
-          <UrlImportDialog 
-                isOpen={isUrlImportOpen}
-                onClose={() => setIsUrlImportOpen(false)}
-                onImport={handleImportFromUrl}
-                isLoading={isLoading}
-            />
-            <PasteTextDialog 
-                isOpen={isPasteTextOpen}
-                onClose={() => setIsPasteTextOpen(false)}
-                onImport={handleImportFromText}
-            />
-          <main className="flex-1 flex flex-col items-center p-4">
-            <div className="flex-1 flex flex-col items-center justify-center">
-                {messages.length > 0 && messages[0].role === 'koli' ? (
-                    messages[0].content
-                ) : (
-                    <>
-                        <KoliAvatar className="h-24 w-24 mb-6" />
-                        <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-                        Hola, soy Koli
-                        </h1>
-                        <p className="mt-4 text-lg text-muted-foreground">
-                        Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
-                        </p>
-                    </>
-                )}
-                 <div className="mt-12 max-w-4xl w-full text-left">
-                    <h2 className="text-xl font-headline text-center mb-6">Crea tu primer proyecto de estudio personalizado</h2>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {initialSteps.map((step, index) => (
-                            <div key={index} className="flex gap-4">
-                                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
-                                    {index + 1}
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold mb-1">{step.title}</h3>
-                                    <p className="text-sm text-muted-foreground">{step.description}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-    
-            <div className="w-full max-w-md mt-auto p-4">
-               <InputBar 
-                    handleSendMessage={() => handleSendMessage()}
-                    isLoading={isLoading}
-                    selectedFiles={selectedFiles}
-                    removeFile={removeFile}
-                    handleFileChange={handleFileChange}
-                    fileInputRef={fileInputRef}
-                    getFileIcon={getFileIcon}
-                    onImportFromUrl={() => setIsUrlImportOpen(true)}
-                    onPasteText={() => setIsPasteTextOpen(true)}
-                    isDataCollectionDone={false}
-                    isSourcePopoverOpen={isSourcePopoverOpen}
-                    setIsSourcePopoverOpen={setIsSourcePopoverOpen}
-                />
-            </div>
-          </main>
-        </div>
-      );
-  }
-
-  const renderContent = () => {
+  if (isProjectStarted) {
     if (atomizationError) {
         return (
              <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-                <Card className="w-full max-w-3xl bg-card/50">
-                    <CardHeader>
-                        <CardTitle className="text-center text-2xl font-headline text-destructive">Error de Atomización</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                        <p className="text-muted-foreground mb-6">{atomizationError}</p>
-                        <Button onClick={() => fileInputRef.current?.click()}>
-                            <Paperclip className="mr-2"/>
-                            Subir un archivo diferente
-                        </Button>
-                         <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="hidden"
-                            multiple
-                         />
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
-
-    if (!isProjectStarted && messages.length > 0) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center">
-                <div className="flex flex-col items-center text-center max-w-md">
-                   {messages[0].content}
-                </div>
-                 <div className="mt-12 max-w-4xl w-full text-left">
-                    <h2 className="text-xl font-headline text-center mb-6">Crea tu primer proyecto de estudio personalizado</h2>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {initialSteps.map((step, index) => (
-                            <div key={index} className="flex gap-4">
-                                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
-                                    {index + 1}
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold mb-1">{step.title}</h3>
-                                    <p className="text-sm text-muted-foreground">{step.description}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    switch (currentStep) {
-        case 'atomizing':
-             return <AtomizationProgress 
-                        atomsResult={isAtomizationComplete ? atomsResult : null} 
-                        fileName={processingFile?.name ?? ""}
-                        isLoading={isLoading}
-                        totalFiles={processingFile?.total ?? 0}
-                        currentFileIndex={processingFile?.index ?? 0}
-                    />;
-        case 'review':
-             if (atomsResult) {
-                return <AtomReview 
-                            atoms={atomsResult.atoms} 
-                            onNextStep={handleGeneratePlan}
-                            onBack={() => setCurrentStep('atomizing')}
-                        />
-            }
-            return null; // or a loading state
-        case 'plan':
-            if (learningPlan) {
-                return <LearningPlan 
-                            plan={learningPlan} 
-                            onFinish={() => handleFinalizeProject(learningPlan)} 
-                            onBack={() => setCurrentStep('review')}
-                        />
-            }
-             return <AtomizationProgress 
-                        atomsResult={atomsResult} 
-                        fileName={projectSourceFiles[projectSourceFiles.length - 1]?.name ?? ""}
-                        isLoading={isLoading && !learningPlan}
-                        totalFiles={processingFile?.total ?? 0}
-                        currentFileIndex={processingFile?.index ?? 0}
-                    />;
-        default:
-             return <AtomizationProgress 
-                        atomsResult={isAtomizationComplete ? atomsResult : null} 
-                        fileName={processingFile?.name ?? ""}
-                        isLoading={isLoading}
-                        totalFiles={processingFile?.total ?? 0}
-                        currentFileIndex={processingFile?.index ?? 0}
-                    />;
-    }
-  }
-
-
-  return (
-    <div className="flex flex-1 h-[calc(100vh-theme(space.16))] overflow-hidden">
-        <UrlImportDialog 
-                isOpen={isUrlImportOpen}
-                onClose={() => setIsUrlImportOpen(false)}
-                onImport={handleImportFromUrl}
-                isLoading={isLoading}
-            />
-        <PasteTextDialog 
-                isOpen={isPasteTextOpen}
-                onClose={() => setIsPasteTextOpen(false)}
-                onImport={handleImportFromText}
-            />
-        <main className="grid flex-1 grid-cols-1 md:grid-cols-[1fr_450px]">
-            <div className="flex flex-col flex-1 h-full overflow-y-auto relative p-6">
                  <Button 
                     variant="outline" 
                     onClick={handleResetProcess} 
@@ -982,29 +410,99 @@ export default function NewProjectPage() {
                     <ChevronLeft className="mr-2 h-4 w-4" />
                     Volver
                 </Button>
-                {renderContent()}
+                <Card className="w-full max-w-3xl bg-card/50">
+                    <CardHeader>
+                        <CardTitle className="text-center text-2xl font-headline text-destructive">Error en el Proceso</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <p className="text-muted-foreground mb-6">{atomizationError}</p>
+                        <Button onClick={handleResetProcess}>
+                            Intentar de nuevo
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
-            <ChatPanel
-                messages={messages}
+        )
+    }
+    
+    return (
+        <div className="flex flex-col flex-1 h-full overflow-hidden relative">
+            <Button 
+                variant="outline" 
+                onClick={handleResetProcess} 
+                className="absolute top-8 left-8 z-10"
+            >
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Volver
+            </Button>
+            <AtomizationProgress 
+                fileName={processingStatus.name}
+                status={processingStatus.status}
+                totalFiles={processingStatus.total}
+                currentFileIndex={processingStatus.index}
+            />
+        </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col flex-1 h-full overflow-hidden">
+        <UrlImportDialog 
+            isOpen={isUrlImportOpen}
+            onClose={() => setIsUrlImportOpen(false)}
+            onImport={handleImportFromUrl}
+            isLoading={isLoading}
+        />
+        <PasteTextDialog 
+            isOpen={isPasteTextOpen}
+            onClose={() => setIsPasteTextOpen(false)}
+            onImport={handleImportFromText}
+        />
+        <main className="flex-1 flex flex-col items-center p-4">
+        <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="flex flex-col items-center text-center max-w-md">
+                <KoliAvatar className="h-24 w-24 mb-6" />
+                <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
+                Hola, soy Koli
+                </h1>
+                <p className="mt-4 text-lg text-muted-foreground">
+                Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
+                </p>
+            </div>
+            <div className="mt-12 max-w-4xl w-full text-left">
+                <h2 className="text-xl font-headline text-center mb-6">Crea tu primer proyecto de estudio personalizado</h2>
+                <div className="grid md:grid-cols-3 gap-8">
+                    {initialSteps.map((step, index) => (
+                        <div key={index} className="flex gap-4">
+                            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
+                                {index + 1}
+                            </div>
+                            <div>
+                                <h3 className="font-semibold mb-1">{step.title}</h3>
+                                <p className="text-sm text-muted-foreground">{step.description}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+
+        <div className="w-full max-w-lg mt-auto p-4">
+            <InputBar 
                 handleSendMessage={handleSendMessage}
-                isLoading={isLoading && !isProjectStarted} // Only show chat loading before conversation starts
+                isLoading={isLoading}
                 selectedFiles={selectedFiles}
                 removeFile={removeFile}
                 handleFileChange={handleFileChange}
                 fileInputRef={fileInputRef}
                 getFileIcon={getFileIcon}
-                onReviewAtoms={handleReviewAtoms}
-                onGeneratePlan={handleGeneratePlan}
                 onImportFromUrl={() => setIsUrlImportOpen(true)}
                 onPasteText={() => setIsPasteTextOpen(true)}
-                isProjectStarted={isProjectStarted}
-                processDataCollection={processDataCollection}
                 isSourcePopoverOpen={isSourcePopoverOpen}
                 setIsSourcePopoverOpen={setIsSourcePopoverOpen}
             />
+        </div>
         </main>
     </div>
-  )
+    );
 }
-
-    
