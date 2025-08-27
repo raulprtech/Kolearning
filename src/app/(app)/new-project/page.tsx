@@ -28,7 +28,7 @@ import { extractContentFromUrl } from "@/lib/actions";
 const initialSteps = [
     {
         title: "Importa tu material",
-        description: "Usa el icono '+' para subir tus apuntes, PDFs, o enlaces. Describe qué quieres aprender y por qué."
+        description: "Usa el icono '+' para subir tus apuntes, PDFs, o enlaces."
     },
     {
         title: "Koli Procesa y Atomiza",
@@ -186,12 +186,10 @@ export default function NewProjectPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isProjectStarted, setIsProjectStarted] = useState(false);
   const [processingStatus, setProcessingStatus] = useState({ name: '', status: '', index: 0, total: 0, atoms: 0});
-  const [projectSourceFiles, setProjectSourceFiles] = useState<{name: string, content: string, type: string}[]>([]);
   const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
   const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
   const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
-
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -206,8 +204,8 @@ export default function NewProjectPage() {
     return new Blob([ab], { type: mimeString });
   }
 
-  const handleFinalizeProject = useCallback((plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput) => {
-      if (!atomsResult || projectSourceFiles.length === 0) {
+  const handleFinalizeProject = useCallback((plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput, sourceFiles: {name: string, content: string, type: string}[]) => {
+      if (!atomsResult || sourceFiles.length === 0) {
           toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
           return;
       }
@@ -232,7 +230,7 @@ export default function NewProjectPage() {
           atoms: atomsResult.atoms,
           learningPath: plan.learningPath.flatMap(day => day.sessions),
           fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
-          sources: projectSourceFiles
+          sources: sourceFiles
       };
       addProject(newProject as any);
       toast({
@@ -240,7 +238,7 @@ export default function NewProjectPage() {
           description: `${plan.projectTitle} ha sido añadido a tu dashboard.`
       })
       router.push(`/projects/${newProject.id}`);
-  }, [addProject, projectSourceFiles, router, toast]);
+  }, [addProject, router, toast]);
 
   const processFiles = useCallback(async (filesToProcess: File[]) => {
     setIsLoading(true);
@@ -249,6 +247,7 @@ export default function NewProjectPage() {
     
     const totalFiles = filesToProcess.length;
     let accumulatedAtoms: GenerateAtomsOutput['atoms'] = [];
+    const sourceFiles: {name: string, content: string, type: string}[] = [];
 
     for (let i = 0; i < totalFiles; i++) {
         const file = filesToProcess[i];
@@ -256,9 +255,7 @@ export default function NewProjectPage() {
 
         try {
             const studyMaterialUri = await fileToDataUri(file);
-
-            const newSourceFile = { name: file.name, content: studyMaterialUri, type: "Documento" };
-            setProjectSourceFiles(prev => [...prev, newSourceFile]);
+            sourceFiles.push({ name: file.name, content: studyMaterialUri, type: "Documento" });
             
             const response = await generateAtoms({
                 studyMaterial: studyMaterialUri
@@ -288,7 +285,7 @@ export default function NewProjectPage() {
         const plan = await calibratePlanFromQuestionnaire({
             atoms: finalAtomsResult.atoms,
         });
-        handleFinalizeProject(plan, finalAtomsResult);
+        handleFinalizeProject(plan, finalAtomsResult, sourceFiles);
     } catch(error) {
         console.error("Error generating learning plan:", error);
         setAtomizationError('Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.');
@@ -384,7 +381,6 @@ export default function NewProjectPage() {
     setIsProjectStarted(false);
     setSelectedFiles([]);
     setProcessingStatus({ name: '', status: '', index: 0, total: 0, atoms: 0});
-    setProjectSourceFiles([]);
     setAtomizationError(null);
     setIsLoading(false);
   };
@@ -498,3 +494,5 @@ export default function NewProjectPage() {
     </div>
     );
 }
+
+    
