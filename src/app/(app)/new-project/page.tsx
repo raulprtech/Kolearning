@@ -141,7 +141,7 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
 
 const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, totalAtoms }: { fileName: string, status: string, totalFiles: number, currentFileIndex: number, totalAtoms: number }) => {
     
-    const progress = totalFiles > 0 ? (currentFileIndex / totalFiles) * 100 : 0;
+    const progress = totalFiles > 0 ? (currentFileIndex / (totalFiles + 1)) * 100 : 0;
     
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
@@ -245,6 +245,7 @@ export default function NewProjectPage() {
   const processFiles = useCallback(async (filesToProcess: File[]) => {
     setIsLoading(true);
     setIsProjectStarted(true);
+    setAtomizationError(null);
     
     const totalFiles = filesToProcess.length;
     let accumulatedAtoms: GenerateAtomsOutput['atoms'] = [];
@@ -260,11 +261,12 @@ export default function NewProjectPage() {
             setProjectSourceFiles(prev => [...prev, newSourceFile]);
             
             const response = await generateAtoms({
-                studyMaterial: studyMaterialUri,
-                userObjective: "Aprender el contenido de este documento." // Generic objective
+                studyMaterial: studyMaterialUri
             });
             
             accumulatedAtoms = [...accumulatedAtoms, ...response.atoms];
+            setProcessingStatus(prev => ({ ...prev, atoms: accumulatedAtoms.length }));
+
 
         } catch (error) {
             console.error(`Error processing file ${file.name}:`, error);
@@ -284,7 +286,6 @@ export default function NewProjectPage() {
 
     try {
         const plan = await calibratePlanFromQuestionnaire({
-            userObjective: "Aprender el contenido de los documentos proporcionados.",
             atoms: finalAtomsResult.atoms
         });
         handleFinalizeProject(plan, finalAtomsResult);
@@ -497,5 +498,3 @@ export default function NewProjectPage() {
     </div>
     );
 }
-
-    
