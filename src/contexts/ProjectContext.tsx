@@ -11,7 +11,7 @@ export type Atom = {
   incorrectAnswers?: string[]; // For multiple choice questions
 }
 
-type Source = {
+export type Source = {
     name: string;
     type: string;
     content: string;

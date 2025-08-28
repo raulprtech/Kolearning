@@ -61,7 +61,7 @@ import { useProjects, publicProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { Project, Atom, LearningPathItem } from "@/contexts/ProjectContext";
+import { Project, Atom, LearningPathItem, Source } from "@/contexts/ProjectContext";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInCalendarDays } from "date-fns";
@@ -425,6 +425,32 @@ function ProjectDetails() {
     }
   }
 
+  const handleViewSource = (source: Source) => {
+    const [header, base64Data] = source.content.split(',');
+    if (!header || !base64Data) return;
+
+    const mimeType = header.split(':')[1].split(';')[0];
+    
+    try {
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+    } catch (error) {
+        console.error("Error decoding or opening source:", error);
+        toast({
+            title: "Error al abrir la fuente",
+            description: "No se pudo decodificar o mostrar el archivo.",
+            variant: "destructive",
+        });
+    }
+  };
+
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
   const activeSessionIndex = isUserProject && project.sessions ? project.sessions.findIndex(s => s.status === 'Continue') : -1;
   
@@ -757,7 +783,7 @@ function ProjectDetails() {
                                 <p className="text-sm text-muted-foreground">{source.type}</p>
                             </TableCell>
                             <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => window.open(source.content, '_blank')}>
+                                <Button variant="ghost" size="sm" onClick={() => handleViewSource(source)}>
                                     <Eye className="h-4 w-4 mr-2"/>
                                     Ver
                                 </Button>
