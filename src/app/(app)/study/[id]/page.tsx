@@ -38,7 +38,7 @@ const ratings = [
     { label: "Fácil", variant: "default", description: "Revisar en una semana", fsrs: 4 },
 ] as const;
 
-const MultipleChoiceQuestion = ({ atom, onRate, isRevealed }: { atom: any, onRate: (fsrs: number) => void, isRevealed: boolean }) => {
+const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: { atom: any, onRate: (fsrs: number) => void, isRevealed: boolean, onAnswerSelect: (answer: string) => void }) => {
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
     const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
@@ -99,6 +99,7 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed }: { atom: any, onRat
     const handleSelectOption = (option: string) => {
         if (isAnswered) return;
         setSelectedOption(option);
+        onAnswerSelect(option);
         setIsAnswered(true);
         // Don't auto-advance. Wait for FSRS rating.
     };
@@ -294,7 +295,7 @@ export default function StudySessionPage() {
     }
      // Reset streak and other session stats at the beginning of a session
     resetSessionStats();
-  }, [session, sessionIndex]);
+  }, [session, sessionIndex, resetSessionStats]);
 
   const currentAtom = useMemo(() => {
     if (!sessionAtoms || sessionAtoms.length === 0) {
@@ -466,7 +467,7 @@ const handleCheckAnswer = async () => {
 
   const renderQuestionInterface = () => {
     if (isMultipleChoice || isConvertedToMc) {
-        return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} isRevealed={isAnswerRevealed} />;
+        return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} isRevealed={isAnswerRevealed} onAnswerSelect={setUserAnswer} />;
     }
     // Default to open question
     return (
@@ -580,6 +581,7 @@ const handleCheckAnswer = async () => {
                             {verificationResult && (
                                 <Alert className={`mb-4 ${verificationResult.isCorrect ? 'border-green-500/50 text-green-300' : 'border-destructive/50 text-destructive'}`}>
                                     <AlertTitle>{verificationResult.isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</AlertTitle>
+
                                     <AlertDescription>{verificationResult.feedback}</AlertDescription>
                                 </Alert>
                             )}
