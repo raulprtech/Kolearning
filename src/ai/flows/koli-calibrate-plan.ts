@@ -20,9 +20,6 @@ const AtomSchema = z.object({
 });
 
 const CalibratePlanInputSchema = z.object({
-  userObjective: z.string().describe("The user's learning objective.").optional(),
-  daysToDeadline: z.number().optional().describe('The number of days the user has to meet their objective.'),
-  masteryLevel: z.string().optional().describe('The self-reported mastery level of the user on the subject.'),
   atoms: z.array(AtomSchema).describe('The complete list of knowledge atoms generated from the material.'),
 });
 
@@ -56,11 +53,7 @@ export async function calibratePlanFromQuestionnaire(input: CalibratePlanInput):
 
 const calibratePlanPrompt = ai.definePrompt({
   name: 'calibratePlanPrompt',
-  input: {
-    schema: z.object({
-      atoms: z.string(),
-    }),
-  },
+  input: { schema: CalibratePlanInputSchema },
   output: {schema: CalibratePlanOutputSchema},
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans based on a deep pedagogical framework.
 Your response must be in Spanish.
@@ -123,9 +116,7 @@ const calibratePlanFlow = ai.defineFlow(
     outputSchema: CalibratePlanOutputSchema,
   },
   async (input) => {
-    const { output } = await calibratePlanPrompt({
-      atoms: JSON.stringify(input.atoms),
-    });
+    const { output } = await calibratePlanPrompt(input);
     return output!;
   }
 );
