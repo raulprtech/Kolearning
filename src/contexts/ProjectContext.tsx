@@ -343,24 +343,29 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const addProject = useCallback((projectToAdd: Project) => {
     if (!projects.find(p => p.id === projectToAdd.id)) {
-      
-      const atoms = [...projectToAdd.atoms]; // Make a mutable copy
-      
-      const projectWithSessions: Project = {
-        ...projectToAdd,
-        sessions: projectToAdd.learningPath.map((item, index) => ({
+        const atoms = [...projectToAdd.atoms];
+        const sessions: Session[] = projectToAdd.learningPath.map((item, index) => {
+            const sessionSize = 10;
+            const sessionAtoms = atoms.slice(index * sessionSize, (index + 1) * sessionSize);
+
+            return {
                 session: item.session,
                 type: item.sessionType,
-                questions: item.questions || 'Preguntas Abiertas', // Use correct question type
-                duration: '20 min', // Default duration
+                questions: item.questions,
+                duration: '20 min',
                 status: index === 0 ? 'Continue' : 'Locked',
-                atoms: (item as any).atoms || [],
-                topic: item.topic,
-            }))
-      };
-      setProjects(prevProjects => [...prevProjects, projectWithSessions]);
+                atoms: sessionAtoms,
+            };
+        });
+
+        const projectWithSessions: Project = {
+            ...projectToAdd,
+            sessions: sessions,
+        };
+        setProjects(prevProjects => [...prevProjects, projectWithSessions]);
     }
-  }, [projects]);
+}, [projects]);
+
 
   const updateProjectIcon = (projectId: string, icon: string) => {
     setProjects(prevProjects =>
@@ -455,12 +460,12 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProjects(prevProjects =>
       prevProjects.map(p => {
         if (p.id === projectId) {
-          const newSessions = [...p.sessions];
-          if (newSessions[sessionIndex]) {
-            newSessions[sessionIndex].status = 'Completed';
+          const updatedSessions = [...p.sessions];
+          if (updatedSessions[sessionIndex]) {
+            updatedSessions[sessionIndex].status = 'Completed';
           }
-          if (newSessions[sessionIndex + 1]) {
-            newSessions[sessionIndex + 1].status = 'Continue';
+          if (updatedSessions[sessionIndex + 1]) {
+            updatedSessions[sessionIndex + 1].status = 'Continue';
           }
           
           // Update project-level stats
@@ -473,7 +478,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
           return { 
             ...p, 
-            sessions: newSessions,
+            sessions: updatedSessions,
             totalAnswers: newTotalAnswers,
             correctAnswers: newCorrectAnswers,
             bestStreak: newBestStreak,
@@ -527,7 +532,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProjects(prevProjects => prevProjects.map(p => {
         if (p.id === projectId) {
             const newAtoms = [...p.atoms];
-            newAtoms[atomIndex] = { ...newAtoms[atomIndex], retrievability: fsrs };
+            if (newAtoms[atomIndex]) {
+                newAtoms[atomIndex] = { ...newAtoms[atomIndex], retrievability: fsrs };
+            }
             return { ...p, atoms: newAtoms };
         }
         return p;
@@ -545,14 +552,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const newMasteryPoints = fsrs * 5;
     setMasteryPoints(prev => prev + newMasteryPoints);
     setTotalMasteryPoints(prev => prev + newMasteryPoints);
-  }, [setSessionAnswers, setProjects, setSessionStreak, setCognitiveCredits, setMasteryPoints, setTotalMasteryPoints]);
+  }, []);
 
   const resetSessionStats = useCallback(() => {
     setSessionStreak(0);
     setCognitiveCredits(0);
     setMasteryPoints(0);
     setSessionAnswers([]);
-  }, [setSessionStreak, setCognitiveCredits, setMasteryPoints, setSessionAnswers]);
+  }, []);
   
   const exchangeCreditsForEnergy = (credits: number, energyAmount: number): boolean => {
       if (globalCognitiveCredits >= credits) {
