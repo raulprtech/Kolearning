@@ -763,10 +763,10 @@ function ProjectDetails() {
                                 </Button>
                                 {isUserProject && (
                                     <>
-                                        <Button variant="ghost" size="sm" onClick={() => router.push(`/new-project?source=${encodeURIComponent(source.content)}&sourceName=${encodeURIComponent(source.name)}`)}>
+                                        {/* <Button variant="ghost" size="sm" onClick={() => router.push(`/new-project?source=${encodeURIComponent(source.content)}&sourceName=${encodeURIComponent(source.name)}`)}>
                                             <RefreshCw className="h-4 w-4 mr-2" />
                                             Reutilizar
-                                        </Button>
+                                        </Button> */}
                                         <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10">
                                             <Trash2 className="h-4 w-4 mr-2" />
                                             Eliminar
