@@ -469,8 +469,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           }
           
           // Update project-level stats
+          const sessionCorrectAnswers = sessionAnswers.filter(a => a).length;
           const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
-          const newCorrectAnswers = (p.correctAnswers || 0) + sessionAnswers.filter(a => a).length;
+          const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
           const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
 
           // Calculate new mastery based on correct answer percentage
