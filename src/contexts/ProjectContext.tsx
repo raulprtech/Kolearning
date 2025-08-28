@@ -2,6 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { CalibratePlanOutput } from '@/ai/flows/koli-calibrate-plan';
 
 export type Atom = {
   question: string;
@@ -58,6 +59,7 @@ type ProjectContextType = {
   addProject: (project: Project) => void;
   updateProjectIcon: (projectId: string, icon: string) => void;
   updateProjectDetails: (projectId: string, title: string, description: string) => void;
+  updateProjectPlan: (projectId: string, plan: CalibratePlanOutput) => void;
   addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[]) => void;
   addAtomsToProject: (projectId: string, newAtoms: Atom[]) => void;
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
@@ -383,6 +385,37 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   }
 
+  const updateProjectPlan = (projectId: string, plan: CalibratePlanOutput) => {
+    setProjects(prevProjects =>
+      prevProjects.map(p => {
+        if (p.id === projectId) {
+          const newLearningPath = plan.learningPath.flatMap(day => day.sessions);
+          const newSessions: Session[] = newLearningPath.map((item, index) => ({
+            session: item.session,
+            type: item.sessionType,
+            questions: item.questions,
+            duration: '20 min', // Default duration
+            status: index === 0 ? 'Continue' : 'Locked',
+            atoms: p.atoms.slice(index * 10, (index + 1) * 10),
+          }));
+
+          return {
+            ...p,
+            learningPath: newLearningPath,
+            sessions: newSessions,
+            fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
+            // Reset stats as it's a new plan
+            mastery: 0,
+            bestStreak: 0,
+            totalAnswers: 0,
+            correctAnswers: 0,
+          };
+        }
+        return p;
+      })
+    );
+  };
+
   const addSessionsToProject = (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[]) => {
       setProjects(prevProjects => {
           return prevProjects.map(p => {
@@ -468,13 +501,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             updatedSessions[sessionIndex + 1].status = 'Continue';
           }
           
-          // Update project-level stats
           const sessionCorrectAnswers = sessionAnswers.filter(a => a).length;
           const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
           const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
           const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
-
-          // Calculate new mastery based on correct answer percentage
           const newMastery = newTotalAnswers > 0 ? Math.round((newCorrectAnswers / newTotalAnswers) * 100) : 0;
 
           return { 
@@ -545,9 +575,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       setSessionStreak(prev => prev + 1);
       setCognitiveCredits(prev => prev + (aidsUsed ? 1 : 2));
     } else {
-      if (!aidsUsed) {
-        setSessionStreak(0);
-      }
+      setSessionStreak(0);
     }
     
     const newMasteryPoints = fsrs * 5;
@@ -573,7 +601,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <ProjectContext.Provider value={{ 
-        projects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, addSessionsToProject, 
+        projects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, updateProjectPlan, addSessionsToProject, 
         addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
         updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers

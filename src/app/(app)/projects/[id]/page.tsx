@@ -55,7 +55,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2 } from "lucide-react";
 import { useProjects, publicProjects } from "@/contexts/ProjectContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -69,6 +69,7 @@ import { cn } from "@/lib/utils";
 import { EditProjectDialog } from "@/components/ui/edit-project-dialog";
 import { ShareDialog } from "@/components/ui/share-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { RecalibratePlanDialog } from "@/components/ui/recalibrate-plan-dialog";
 
 const projectIcons: { [key: string]: React.ElementType } = {
   Book,
@@ -177,17 +178,7 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
     const handleCreate = async () => {
         setIsLoading(true);
         try {
-            const atomsSummary = project.atoms.map(a => `- ${a.question}`).join('\n');
-            let daysToDeadline;
-            if (deadline) {
-                const diff = differenceInCalendarDays(deadline, new Date());
-                daysToDeadline = diff >= 0 ? diff : 0;
-            }
-
             const plan = await calibratePlanFromQuestionnaire({
-                userObjective,
-                daysToDeadline,
-                masteryLevel,
                 atoms: project.atoms 
             });
             onCreate(plan, project);
@@ -291,7 +282,7 @@ function ProjectDetails() {
   const router = useRouter();
   const { toast } = useToast();
   const slug = params.id as string;
-  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, addProject, addAtomsToProject, archiveProject, toggleProjectPublic } = useProjects();
+  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan } = useProjects();
   
   const project = projects.find(p => p.id === slug) || publicProjects.find(p => p.id === slug);
   const isUserProject = projects.some(p => p.id === slug);
@@ -299,6 +290,7 @@ function ProjectDetails() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isRecalibrateDialogOpen, setIsRecalibrateDialogOpen] = useState(false);
 
   const [showUpdateAlert, setShowUpdateAlert] = useState(false);
 
@@ -395,6 +387,27 @@ function ProjectDetails() {
       router.push(`/projects/${targetProjectId}`);
   };
 
+  const handleRecalibratePlan = async (objective: string, deadline?: Date) => {
+    try {
+        const plan = await calibratePlanFromQuestionnaire({
+            atoms: project.atoms
+        });
+        updateProjectPlan(project.id, plan);
+        setIsRecalibrateDialogOpen(false);
+        toast({
+            title: "¡Plan Recalibrado!",
+            description: "Koli ha generado una nueva hoja de ruta para tu proyecto.",
+        });
+    } catch (error) {
+        console.error("Error recalibrating plan:", error);
+        toast({
+            title: "Error al recalibrar",
+            description: "No se pudo generar un nuevo plan. Inténtalo de nuevo.",
+            variant: "destructive"
+        });
+    }
+  };
+
   const getSessionBadge = (type: string) => {
     switch(type) {
         case 'Calibración':
@@ -414,7 +427,7 @@ function ProjectDetails() {
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
   const activeSessionIndex = isUserProject && project.sessions ? project.sessions.findIndex(s => s.status === 'Continue') : -1;
   
-  const accuracy = (project.totalAnswers && project.correctAnswers) ? Math.round((project.correctAnswers / project.totalAnswers) * 100) : 0;
+  const accuracy = (project.totalAnswers && project.correctAnswers && project.totalAnswers > 0) ? Math.round((project.correctAnswers / project.totalAnswers) * 100) : 0;
 
   const renderActionButtons = () => {
       if (isUserProject) {
@@ -436,6 +449,10 @@ function ProjectDetails() {
                         <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             <span>Editar Detalles</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setIsRecalibrateDialogOpen(true)}>
+                            <Wand2 className="mr-2 h-4 w-4" />
+                            <span>Recalibrar Plan</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)}>
                             <Share2 className="mr-2 h-4 w-4" />
@@ -497,6 +514,11 @@ function ProjectDetails() {
         onClose={() => setIsShareDialogOpen(false)}
         project={project}
         onTogglePublic={toggleProjectPublic}
+       />
+       <RecalibratePlanDialog
+        isOpen={isRecalibrateDialogOpen}
+        onClose={() => setIsRecalibrateDialogOpen(false)}
+        onRecalibrate={handleRecalibratePlan}
        />
       <AlertDialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
         <AlertDialogContent>
