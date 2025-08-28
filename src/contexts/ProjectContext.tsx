@@ -75,7 +75,7 @@ type ProjectContextType = {
   masteryPoints: number;
   totalMasteryPoints: number;
   updateEnergy: (amount: number) => void;
-  recordAnswer: (projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean) => void;
+  recordAnswer: (projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean, isCorrect: boolean) => void;
   resetSessionStats: () => void;
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
   nextEnergyIn: number;
@@ -430,7 +430,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProjects(prevProjects =>
       prevProjects.map(p => {
         if (p.id === projectId) {
-          const newAtoms = p.atoms.filter((_, index) => index !== index);
+          const newAtoms = p.atoms.filter((_, index) => index !== atomIndex);
           return { ...p, atoms: newAtoms };
         }
         return p;
@@ -468,9 +468,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           const newCorrectAnswers = (p.correctAnswers || 0) + sessionAnswers.filter(a => a).length;
           const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
 
-          // Calculate new mastery based on retrievability
-          const totalRetrievability = p.atoms.reduce((sum, atom) => sum + (atom.retrievability || 0), 0);
-          const newMastery = p.atoms.length > 0 ? Math.round((totalRetrievability / (p.atoms.length * 4)) * 100) : 0;
+          // Calculate new mastery based on correct answer percentage
+          const newMastery = newTotalAnswers > 0 ? Math.round((newCorrectAnswers / newTotalAnswers) * 100) : 0;
 
           return { 
             ...p, 
@@ -522,8 +521,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean) => {
-    const isCorrect = fsrs >= 3;
+  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean, isCorrect: boolean) => {
     setSessionAnswers(prev => [...prev, isCorrect]);
     
     setProjects(prevProjects => prevProjects.map(p => {

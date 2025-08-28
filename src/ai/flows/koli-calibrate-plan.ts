@@ -21,6 +21,8 @@ const AtomSchema = z.object({
 
 const CalibratePlanInputSchema = z.object({
   userObjective: z.string().describe("The user's learning objective.").optional(),
+  daysToDeadline: z.number().optional().describe('The number of days the user has to meet their objective.'),
+  masteryLevel: z.string().optional().describe('The self-reported mastery level of the user on the subject.'),
   atoms: z.array(AtomSchema).describe('The complete list of knowledge atoms generated from the material.'),
 });
 

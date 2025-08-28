@@ -19,7 +19,7 @@ import {
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useProjects } from "@/contexts/ProjectContext";
+import { Project, useProjects } from "@/contexts/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
@@ -220,7 +220,7 @@ export default function NewProjectPage() {
       
       const newProjectId = `${slug}-${Date.now()}`;
 
-      const newProject = {
+      const newProject: Omit<Project, 'sessions'> = {
           id: newProjectId,
           title: plan.projectTitle,
           description: plan.projectDescription,
@@ -258,7 +258,8 @@ export default function NewProjectPage() {
             sourceFiles.push({ name: file.name, content: studyMaterialUri, type: "Documento" });
             
             const response = await generateAtoms({
-                studyMaterial: studyMaterialUri
+                studyMaterial: studyMaterialUri,
+                userObjective: "Crear un plan de estudio a partir de este material." 
             });
             
             accumulatedAtoms = [...accumulatedAtoms, ...response.atoms];

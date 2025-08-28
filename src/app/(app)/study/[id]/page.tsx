@@ -28,6 +28,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { generateDistractors } from "@/ai/flows/generate-distractors";
+import { verifyAnswer, VerifyAnswerOutput } from "@/ai/flows/koli-verify-answer";
+
 
 const ratings = [
     { label: "Muy Difícil", variant: "destructive", description: "Repetir Pronto", fsrs: 1 },
@@ -77,6 +79,12 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed }: { atom: any, onRat
 
     }, [atom.answer, atom.question]);
 
+    useEffect(() => {
+        if(isRevealed) {
+            setIsAnswered(true);
+        }
+    }, [isRevealed]);
+
     if (isLoadingOptions) {
         return (
             <div className="mt-6 flex flex-col gap-4">
@@ -87,12 +95,6 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed }: { atom: any, onRat
             </div>
         );
     }
-    
-    useEffect(() => {
-        if(isRevealed) {
-            setIsAnswered(true);
-        }
-    }, [isRevealed]);
 
     const handleSelectOption = (option: string) => {
         if (isAnswered) return;
@@ -274,6 +276,8 @@ export default function StudySessionPage() {
   const [aidsUsed, setAidsUsed] = useState(false);
   const [isConvertedToMc, setIsConvertedToMc] = useState(false);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerifyAnswerOutput | null>(null);
   
   const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
   const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
@@ -290,7 +294,7 @@ export default function StudySessionPage() {
     }
      // Reset streak and other session stats at the beginning of a session
     resetSessionStats();
-  }, [session]);
+  }, [session, sessionIndex]);
 
   const currentAtom = useMemo(() => {
     if (!sessionAtoms || sessionAtoms.length === 0) {
@@ -324,8 +328,26 @@ export default function StudySessionPage() {
       return false;
   }
 
-  const handleCheckAnswer = () => {
-    setViewState('answer');
+const handleCheckAnswer = async () => {
+    if (!userAnswer.trim()) return;
+
+    setIsVerifying(true);
+    setVerificationResult(null);
+    try {
+        const result = await verifyAnswer({
+            question: currentAtom.question,
+            correctAnswer: currentAtom.answer,
+            userAnswer: userAnswer,
+        });
+        setVerificationResult(result);
+    } catch (error) {
+        console.error("Error verifying answer:", error);
+        // Manejo de error: si la IA falla, consideramos la respuesta como incorrecta
+        setVerificationResult({ isCorrect: false, feedback: "Hubo un problema al verificar tu respuesta. Inténtalo de nuevo." });
+    } finally {
+        setIsVerifying(false);
+        setViewState('answer');
+    }
   }
 
   const goToNextCard = () => {
@@ -333,6 +355,7 @@ export default function StudySessionPage() {
       setCurrentCardIndex(prev => prev + 1);
       setViewState('question');
       setUserAnswer("");
+      setVerificationResult(null);
       setAidsUsed(false); // Reset aids for the next card
       setIsConvertedToMc(false); // Reset conversion for next card
       setIsAnswerRevealed(false); // Reset reveal for next card
@@ -345,7 +368,15 @@ export default function StudySessionPage() {
   }
 
   const handleRate = (fsrs: number) => {
-    recordAnswer(projectId, currentAtomProjectIndex, fsrs, aidsUsed);
+    // 1. Determina si la respuesta fue correcta basándose en el resultado de la IA.
+    // Para preguntas de opción múltiple, se basa en la selección directa.
+    const isCorrect = isMultipleChoice || isConvertedToMc
+      ? userAnswer === currentAtom.answer // Lógica simple para opción múltiple
+      : verificationResult?.isCorrect ?? false; // Lógica de IA para preguntas abiertas
+
+    // 2. Llama a recordAnswer con los 5 argumentos correctos.
+    recordAnswer(projectId, currentAtomProjectIndex, fsrs, aidsUsed, isCorrect);
+    
     goToNextCard();
   };
 
@@ -449,8 +480,8 @@ export default function StudySessionPage() {
                 readOnly={viewState === 'answer'}
             />
             <div className="mt-6 flex justify-center">
-                <Button size="lg" className="w-full max-w-xs" onClick={handleCheckAnswer}>
-                    Comprobar
+                <Button size="lg" className="w-full max-w-xs" onClick={handleCheckAnswer} disabled={isVerifying}>
+                    {isVerifying ? <Loader2 className="animate-spin" /> : "Comprobar"}
                 </Button>
             </div>
         </>
@@ -490,7 +521,7 @@ export default function StudySessionPage() {
             </div>
         </header>
 
-        <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto">
+        <main className="flex-1 flex flex-col items-center p-4 md:p-8 overflow-y-auto">
             <div className="w-full max-w-3xl">
                 <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
                 <CardHeader>
@@ -546,6 +577,12 @@ export default function StudySessionPage() {
                     
                     {viewState === 'answer' && !isMultipleChoice && !isConvertedToMc && (
                         <div className="mt-8 pt-6 border-t">
+                            {verificationResult && (
+                                <Alert className={`mb-4 ${verificationResult.isCorrect ? 'border-green-500/50 text-green-300' : 'border-destructive/50 text-destructive'}`}>
+                                    <AlertTitle>{verificationResult.isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</AlertTitle>
+                                    <AlertDescription>{verificationResult.feedback}</AlertDescription>
+                                </Alert>
+                            )}
                             <div className="bg-muted/50 p-4 rounded-lg mb-6">
                                 <h4 className="font-bold font-headline mb-2 text-primary">
                                 Respuesta Correcta

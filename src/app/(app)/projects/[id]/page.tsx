@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -187,9 +186,9 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
 
             const plan = await calibratePlanFromQuestionnaire({
                 userObjective,
-                daysToDeadline: daysToDeadline,
+                daysToDeadline,
                 masteryLevel,
-                learningMaterialSummary: `El material trata sobre:\n${atomsSummary}`
+                atoms: project.atoms 
             });
             onCreate(plan, project);
             onClose();
@@ -324,7 +323,7 @@ function ProjectDetails() {
         <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background">
             <h1 className="text-2xl font-bold">Proyecto no encontrado</h1>
             <p className="text-muted-foreground">El proyecto que buscas no existe o ha sido eliminado.</p>
-            <Button onClick={() => router.push('/')} className="mt-4">Volver al Dashboard</Button>
+            <Button onClick={() => router.push('/new-project')} className="mt-4">Crear Nuevo Proyecto</Button>
         </div>
     )
   }

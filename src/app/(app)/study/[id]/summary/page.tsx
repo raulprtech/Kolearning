@@ -64,12 +64,15 @@ function SessionSummaryContent() {
     const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
     
     const [isLoading, setIsLoading] = useState(true);
+    const [hasCompleted, setHasCompleted] = useState(false);
 
     useEffect(() => {
         // Mark session as complete when component mounts
+        if (hasCompleted) return;
         completeSession(projectId, sessionIndex);
+        setHasCompleted(true);
         setIsLoading(false);
-    }, [projectId, sessionIndex, completeSession]);
+    }, [projectId, sessionIndex, completeSession, hasCompleted]);
 
 
     const handleFinish = () => {
