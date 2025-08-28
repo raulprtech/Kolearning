@@ -14,6 +14,7 @@ import {
 import { useProjects } from '@/contexts/ProjectContext';
 import { Loader2, Star, Target, BrainCircuit, ChevronRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { ProjectCompletionDialog } from '@/components/ui/project-completion-dialog';
 
 const ranks = [
     { name: "G", minPoints: 0 },
@@ -59,20 +60,32 @@ function SessionSummaryContent() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
-    const { completeSession, masteryPoints, totalMasteryPoints, sessionAnswers } = useProjects();
+    const { projects, completeSession, masteryPoints, totalMasteryPoints, sessionAnswers, cognitiveCredits } = useProjects();
     const projectId = params.id as string;
     const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
     
     const [isLoading, setIsLoading] = useState(true);
     const [hasCompleted, setHasCompleted] = useState(false);
+    const [isProjectCompleted, setIsProjectCompleted] = useState(false);
+    const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+
+    const project = projects.find(p => p.id === projectId);
 
     useEffect(() => {
-        // Mark session as complete when component mounts
-        if (hasCompleted) return;
+        if (hasCompleted || !project) return;
+        
+        const isLastSession = sessionIndex === project.sessions.length - 1;
+        setIsProjectCompleted(isLastSession);
+
         completeSession(projectId, sessionIndex);
         setHasCompleted(true);
         setIsLoading(false);
-    }, [projectId, sessionIndex, completeSession, hasCompleted]);
+        
+        if (isLastSession) {
+            setShowCompletionDialog(true);
+        }
+
+    }, [projectId, sessionIndex, completeSession, hasCompleted, project]);
 
 
     const handleFinish = () => {
@@ -84,8 +97,19 @@ function SessionSummaryContent() {
     const correctAnswers = sessionAnswers.filter(answer => answer === true).length;
     const totalAnswers = sessionAnswers.length;
     const accuracy = totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0;
+    
+    if (!project) {
+      return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin"/></div>;
+    }
 
     return (
+        <>
+        <ProjectCompletionDialog 
+            isOpen={showCompletionDialog}
+            onClose={() => setShowCompletionDialog(false)}
+            project={project}
+            onFinish={handleFinish}
+        />
         <div className="flex flex-col flex-1 items-center justify-center p-4 md:p-8 bg-background">
             <div className="w-full max-w-2xl">
                 <Card className="bg-card/50 shadow-2xl">
@@ -98,14 +122,21 @@ function SessionSummaryContent() {
                             <div className="bg-card/50 p-4 rounded-lg">
                                 <Star className="mx-auto h-8 w-8 text-yellow-400 mb-2" />
                                 <p className="text-2xl font-bold">{masteryPoints}</p>
-                                <p className="text-sm text-muted-foreground">Puntos de Dominio Ganados</p>
+                                <p className="text-sm text-muted-foreground">Puntos de Dominio</p>
                             </div>
                             <div className="bg-card/50 p-4 rounded-lg">
                                 <Target className="mx-auto h-8 w-8 text-green-400 mb-2" />
                                 <p className="text-2xl font-bold">{accuracy}%</p>
                                 <p className="text-sm text-muted-foreground">Precisión</p>
                             </div>
-                             <div className="bg-card/50 p-4 rounded-lg text-center">
+                             <div className="bg-card/50 p-4 rounded-lg">
+                                <BrainCircuit className="mx-auto h-8 w-8 text-blue-400 mb-2" />
+                                <p className="text-2xl font-bold">{cognitiveCredits}</p>
+                                <p className="text-sm text-muted-foreground">Créditos Cognitivos</p>
+                            </div>
+                        </div>
+
+                         <div className="bg-card/50 p-4 rounded-lg text-center mb-8">
                                 <p className="text-5xl font-bold font-headline">{learnerRankInfo.rankName}</p>
                                 <p className="text-sm text-muted-foreground">Rango de Aprendedor</p>
                                 <Progress value={learnerRankInfo.progress} className="h-2 mt-2" />
@@ -116,7 +147,7 @@ function SessionSummaryContent() {
                                     }
                                 </p>
                             </div>
-                        </div>
+
                         <div className="mt-8 flex justify-center">
                             <Button size="lg" onClick={handleFinish} disabled={isLoading}>
                                 {isLoading ? (
@@ -133,6 +164,7 @@ function SessionSummaryContent() {
                 </Card>
             </div>
         </div>
+        </>
     );
 }
 

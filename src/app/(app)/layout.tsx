@@ -17,7 +17,8 @@ import {
   Music,
   Palette,
   Archive,
-  LayoutDashboard
+  LayoutDashboard,
+  CheckCircle
 } from "lucide-react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
@@ -36,7 +37,7 @@ const projectIcons: { [key: string]: React.ElementType } = {
 
 const SidebarContent = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { projects } = useProjects();
+  const { projects, completedProjects } = useProjects();
   
   return (
     <aside
@@ -92,6 +93,31 @@ const SidebarContent = () => {
             )
           })}
         </div>
+        
+        {completedProjects.length > 0 && (
+          <>
+            <h3 className={`mt-6 mb-2 text-sm font-semibold text-muted-foreground ${isSidebarOpen ? 'px-2' : 'text-center'}`}>
+              {isSidebarOpen ? 'Completados' : 'Ok'}
+            </h3>
+            <div className="flex flex-col gap-4">
+              {completedProjects.map((project) => {
+                const Icon = projectIcons[project.icon];
+                return (
+                  <Link href={`/projects/${project.id}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-400 shrink-0" />
+                      {isSidebarOpen && (
+                        <div className="flex flex-col w-full">
+                          <span className="text-sm font-medium">{project.title}</span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </>
+        )}
       </nav>
 
       <div className="mt-auto flex flex-col gap-2">

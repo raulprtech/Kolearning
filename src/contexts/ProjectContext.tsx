@@ -55,6 +55,7 @@ export type Project = {
 
 type ProjectContextType = {
   projects: Project[];
+  completedProjects: Project[];
   archivedProjects: Project[];
   addProject: (project: Project) => void;
   updateProjectIcon: (projectId: string, icon: string) => void;
@@ -306,6 +307,7 @@ const ENERGY_REGEN_HOURS = 1;
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
   const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
   const [energy, setEnergy] = useState(10);
   const [sessionStreak, setSessionStreak] = useState(0);
@@ -476,7 +478,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   };
   
-  const completeSession = useCallback((projectId: string, sessionIndex: number) => {
+ const completeSession = useCallback((projectId: string, sessionIndex: number) => {
     const today = new Date();
     
     if (!lastSessionCompletedDate || !isSameDay(today, lastSessionCompletedDate)) {
@@ -490,36 +492,45 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
     setGlobalCognitiveCredits(prev => prev + cognitiveCredits);
 
-    setProjects(prevProjects =>
-      prevProjects.map(p => {
-        if (p.id === projectId) {
-          const updatedSessions = [...p.sessions];
-          if (updatedSessions[sessionIndex]) {
-            updatedSessions[sessionIndex].status = 'Completed';
-          }
-          if (updatedSessions[sessionIndex + 1]) {
-            updatedSessions[sessionIndex + 1].status = 'Continue';
-          }
-          
-          const sessionCorrectAnswers = sessionAnswers.filter(a => a).length;
-          const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
-          const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
-          const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
-          const newMastery = newTotalAnswers > 0 ? Math.round((newCorrectAnswers / newTotalAnswers) * 100) : 0;
+    let projectToUpdate: Project | undefined;
 
-          return { 
-            ...p, 
-            sessions: updatedSessions,
-            totalAnswers: newTotalAnswers,
-            correctAnswers: newCorrectAnswers,
-            bestStreak: newBestStreak,
-            mastery: newMastery,
-          };
-        }
-        return p;
-      })
+    setProjects(prevProjects =>
+        prevProjects.map(p => {
+            if (p.id === projectId) {
+                projectToUpdate = p;
+                const updatedSessions = [...p.sessions];
+                if (updatedSessions[sessionIndex]) {
+                    updatedSessions[sessionIndex].status = 'Completed';
+                }
+                if (updatedSessions[sessionIndex + 1]) {
+                    updatedSessions[sessionIndex + 1].status = 'Continue';
+                }
+                
+                const sessionCorrectAnswers = sessionAnswers.filter(a => a).length;
+                const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
+                const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
+                const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
+                const newMastery = newTotalAnswers > 0 ? Math.round((newCorrectAnswers / newTotalAnswers) * 100) : 0;
+
+                return { 
+                    ...p, 
+                    sessions: updatedSessions,
+                    totalAnswers: newTotalAnswers,
+                    correctAnswers: newCorrectAnswers,
+                    bestStreak: newBestStreak,
+                    mastery: newMastery,
+                };
+            }
+            return p;
+        })
     );
-  }, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak]);
+
+    if (projectToUpdate && sessionIndex === projectToUpdate.sessions.length - 1) {
+        setProjects(prev => prev.filter(p => p.id !== projectId));
+        setCompletedProjects(prev => [...prev, { ...projectToUpdate, mastery: 100 }]);
+    }
+}, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak]);
+
 
   const archiveProject = (projectId: string) => {
     const projectToArchive = projects.find(p => p.id === projectId);
@@ -601,7 +612,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <ProjectContext.Provider value={{ 
-        projects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, updateProjectPlan, addSessionsToProject, 
+        projects, completedProjects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, updateProjectPlan, addSessionsToProject, 
         addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
         updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers
