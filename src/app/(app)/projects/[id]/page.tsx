@@ -338,7 +338,7 @@ function ProjectDetails() {
     archiveProject(project.id);
     setIsArchiveDialogOpen(false);
     toast({ title: "Proyecto archivado", description: `"${project.title}" ha sido movido al archivo.` });
-    router.push('/');
+    router.push('/new-project');
   }
   
   const handleAtomActionConfirm = (data?: Atom) => {

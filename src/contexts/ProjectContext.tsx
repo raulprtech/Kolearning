@@ -524,10 +524,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const archiveProject = (projectId: string) => {
     const projectToArchive = projects.find(p => p.id === projectId);
     if (projectToArchive) {
-      setProjects(prev => prev.filter(p => p.id !== projectId));
-      setArchivedProjects(prev => [...prev, projectToArchive]);
+        setProjects(prevProjects => prevProjects.filter(p => p.id !== projectId));
+        setArchivedProjects(prevArchived => [...prevArchived, projectToArchive]);
     }
-  };
+};
 
   const unarchiveProject = (projectId: string) => {
     const projectToUnarchive = archivedProjects.find(p => p.id === projectId);
