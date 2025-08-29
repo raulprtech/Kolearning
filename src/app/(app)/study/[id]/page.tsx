@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -261,7 +261,8 @@ export default function StudySessionPage() {
       masteryPoints, 
       updateEnergy, 
       recordAnswer, 
-      resetSessionStats 
+      resetSessionStats,
+      isAuthenticated
   } = useProjects();
   
   const projectId = params.id as string;
@@ -290,6 +291,12 @@ export default function StudySessionPage() {
   const [isTutorPanelOpen, setIsTutorPanelOpen] = useState(false);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+        router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  useEffect(() => {
     if (session) {
       setSessionAtoms(session.atoms);
     }
@@ -308,6 +315,40 @@ export default function StudySessionPage() {
     if (!project || !currentAtom) return -1;
     return project.atoms.findIndex(atom => atom.question === currentAtom.question);
   }, [project, currentAtom]);
+
+  const isMultipleChoice = useMemo(() => session?.questions === "Opción Múltiple", [session]);
+  
+  const handleRate = useCallback((fsrs: number) => {
+    const isCorrect = isMultipleChoice || isConvertedToMc
+      ? userAnswer === currentAtom.answer
+      : verificationResult?.isCorrect ?? false;
+      
+    recordAnswer(projectId, currentAtomProjectIndex, fsrs, aidsUsed, isCorrect);
+    
+    if (currentCardIndex < sessionAtoms.length - 1) {
+      setCurrentCardIndex(prev => prev + 1);
+      setViewState('question');
+      setUserAnswer("");
+      setVerificationResult(null);
+      setAidsUsed(false);
+      setIsConvertedToMc(false);
+      setIsAnswerRevealed(false);
+      setHint(null);
+      setRephrasedQuestion(null);
+    } else {
+      router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}`);
+    }
+  }, [isMultipleChoice, isConvertedToMc, userAnswer, currentAtom.answer, verificationResult, recordAnswer, projectId, currentAtomProjectIndex, aidsUsed, currentCardIndex, sessionAtoms.length, router, sessionIndex]);
+
+
+  if (!isAuthenticated) {
+    return (
+        <div className="flex flex-col flex-1 items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="mt-4 text-muted-foreground">Redirigiendo a inicio de sesión...</p>
+        </div>
+    );
+  }
 
   if (!project || !session) {
     return (
@@ -350,36 +391,6 @@ const handleCheckAnswer = async () => {
         setViewState('answer');
     }
   }
-
-  const goToNextCard = () => {
-    if (currentCardIndex < sessionAtoms.length - 1) {
-      setCurrentCardIndex(prev => prev + 1);
-      setViewState('question');
-      setUserAnswer("");
-      setVerificationResult(null);
-      setAidsUsed(false); // Reset aids for the next card
-      setIsConvertedToMc(false); // Reset conversion for next card
-      setIsAnswerRevealed(false); // Reset reveal for next card
-      setHint(null);
-      setRephrasedQuestion(null);
-    } else {
-      // Last card, go to summary
-      router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}`);
-    }
-  }
-
-  const handleRate = (fsrs: number) => {
-    // 1. Determina si la respuesta fue correcta basándose en el resultado de la IA.
-    // Para preguntas de opción múltiple, se basa en la selección directa.
-    const isCorrect = isMultipleChoice || isConvertedToMc
-      ? userAnswer === currentAtom.answer // Lógica simple para opción múltiple
-      : verificationResult?.isCorrect ?? false; // Lógica de IA para preguntas abiertas
-
-    // 2. Llama a recordAnswer con los 5 argumentos correctos.
-    recordAnswer(projectId, currentAtomProjectIndex, fsrs, aidsUsed, isCorrect);
-    
-    goToNextCard();
-  };
 
   const handleExplainAnswer = async () => {
       if (!handleUseEnergy(1)) return;
@@ -461,9 +472,6 @@ const handleCheckAnswer = async () => {
         </Tooltip>
     </TooltipProvider>
   )
-
-  const isMultipleChoice = session.questions === "Opción Múltiple";
-
 
   const renderQuestionInterface = () => {
     if (isMultipleChoice || isConvertedToMc) {

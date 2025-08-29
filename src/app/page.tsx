@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/logo";
 import Link from "next/link";
@@ -16,7 +17,7 @@ export default function LandingPage() {
           <Link href="#" className="text-sm font-medium hover:text-primary transition-colors">
             Blog
           </Link>
-          <Link href="/" className="text-sm font-medium hover:text-primary transition-colors">
+          <Link href="/login" className="text-sm font-medium hover:text-primary transition-colors">
             Iniciar Sesión
           </Link>
           <Link href="/new-project" passHref>
