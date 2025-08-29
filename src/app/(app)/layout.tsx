@@ -24,6 +24,7 @@ import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Header } from "@/components/layout/header";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const projectIcons: { [key: string]: React.ElementType } = {
     Book,
@@ -36,7 +37,7 @@ const projectIcons: { [key: string]: React.ElementType } = {
 
 const SidebarContent = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { projects, completedProjects, learnerRankInfo } = useProjects();
+  const { projects, completedProjects, learnerRankInfo, isLoading } = useProjects();
   
   return (
     <aside
@@ -72,25 +73,33 @@ const SidebarContent = () => {
           {isSidebarOpen ? 'Proyectos' : 'Mis'}
         </h3>
         <div className="flex flex-col gap-4">
-          {projects.map((project) => {
-            const Icon = projectIcons[project.icon];
-            return (
-              <Link href={`/projects/${project.id}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
-                <div className="flex items-center gap-3">
-                  {Icon && <Icon className="h-5 w-5 text-primary shrink-0" />}
-                  {isSidebarOpen && (
-                    <div className="flex flex-col w-full">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium">{project.title}</span>
-                        <span className="text-xs text-muted-foreground">{project.mastery}%</span>
+          {isLoading ? (
+            <>
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </>
+          ) : (
+            projects.map((project) => {
+              const Icon = projectIcons[project.icon];
+              return (
+                <Link href={`/projects/${project.id}`} key={project.id} className={`p-2 rounded-md hover:bg-muted ${isSidebarOpen ? '' : 'flex justify-center'}`}>
+                  <div className="flex items-center gap-3">
+                    {Icon && <Icon className="h-5 w-5 text-primary shrink-0" />}
+                    {isSidebarOpen && (
+                      <div className="flex flex-col w-full">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium">{project.title}</span>
+                          <span className="text-xs text-muted-foreground">{project.mastery}%</span>
+                        </div>
+                        <Progress value={project.mastery} className="h-1.5" />
                       </div>
-                      <Progress value={project.mastery} className="h-1.5" />
-                    </div>
-                  )}
-                </div>
-              </Link>
-            )
-          })}
+                    )}
+                  </div>
+                </Link>
+              )
+            })
+          )}
         </div>
         
         {completedProjects.length > 0 && (

@@ -107,6 +107,7 @@ type ProjectContextType = {
   logout: () => void;
   updateUserProfile: (profileData: Partial<User>) => boolean;
   learnerRankInfo: LearnerRankInfo | null;
+  isLoading: boolean;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -386,7 +387,7 @@ const ENERGY_REGEN_HOURS = 1;
 const MAX_ARCHIVED_PROJECTS = 5;
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
   const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
   const [energy, setEnergy] = useState(10);
@@ -402,6 +403,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [sessionAnswers, setSessionAnswers] = useState<boolean[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Effect to load data from localStorage after initial render
   useEffect(() => {
@@ -411,7 +413,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       const storedArchived = localStorage.getItem('kolearning_archived_projects');
       const user = localStorage.getItem('kolearning_user');
 
-      setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
+      if (storedProjects) setProjects(JSON.parse(storedProjects));
       if (storedCompleted) setCompletedProjects(JSON.parse(storedCompleted));
       if (storedArchived) setArchivedProjects(JSON.parse(storedArchived));
       
@@ -423,22 +425,27 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to load data from localStorage", error);
       // Fallback to initial state if localStorage is corrupt
       setProjects(initialProjects);
+    } finally {
+        setIsLoading(false);
     }
   }, []);
 
   // Effect to save data to localStorage whenever it changes
   useEffect(() => {
+    if (isLoading) return; // Don't save initial state until it's loaded
     try {
-      const storedProjectsData = projects.map(({ sources, ...rest }) => rest);
-      localStorage.setItem('kolearning_projects', JSON.stringify(storedProjectsData));
-      const storedCompletedData = completedProjects.map(({ sources, ...rest }) => rest);
-      localStorage.setItem('kolearning_completed_projects', JSON.stringify(storedCompletedData));
-       const storedArchivedData = archivedProjects.map(({ sources, ...rest }) => rest);
-      localStorage.setItem('kolearning_archived_projects', JSON.stringify(storedArchivedData));
+      localStorage.setItem('kolearning_projects', JSON.stringify(projects));
+      localStorage.setItem('kolearning_completed_projects', JSON.stringify(completedProjects));
+      localStorage.setItem('kolearning_archived_projects', JSON.stringify(archivedProjects));
     } catch (error) {
-      console.error("Failed to save projects to localStorage", error);
+        if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+            console.error("LocalStorage quota exceeded. Cannot save projects.");
+            // Here you could implement a user notification
+        } else {
+            console.error("Failed to save projects to localStorage", error);
+        }
     }
-  }, [projects, completedProjects, archivedProjects]);
+  }, [projects, completedProjects, archivedProjects, isLoading]);
 
 
   const login = (email: string, password: string): boolean => {
@@ -835,7 +842,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
         updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers,
         isAuthenticated, currentUser, login, signup, logout, updateUserProfile,
-        learnerRankInfo
+        learnerRankInfo, isLoading
     }}>
       {children}
     </ProjectContext.Provider>
