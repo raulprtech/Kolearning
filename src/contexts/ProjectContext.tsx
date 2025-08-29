@@ -370,30 +370,10 @@ const MAX_NATURAL_ENERGY = 10;
 const ENERGY_REGEN_HOURS = 1;
 const MAX_ARCHIVED_PROJECTS = 5;
 
-const loadProjectsFromStorage = () => {
-  if (typeof window === 'undefined') {
-    return { projects: initialProjects, completed: [], archived: [] };
-  }
-  try {
-    const storedProjects = localStorage.getItem('kolearning_projects');
-    const storedCompleted = localStorage.getItem('kolearning_completed_projects');
-    const storedArchived = localStorage.getItem('kolearning_archived_projects');
-    
-    return {
-      projects: storedProjects ? JSON.parse(storedProjects) : initialProjects,
-      completed: storedCompleted ? JSON.parse(storedCompleted) : [],
-      archived: storedArchived ? JSON.parse(storedArchived) : [],
-    };
-  } catch (error) {
-    console.error("Failed to load projects from localStorage", error);
-    return { projects: initialProjects, completed: [], archived: [] };
-  }
-};
-
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
-  const [projects, setProjects] = useState<Project[]>(() => loadProjectsFromStorage().projects);
-  const [completedProjects, setCompletedProjects] = useState<Project[]>(() => loadProjectsFromStorage().completed);
-  const [archivedProjects, setArchivedProjects] = useState<Project[]>(() => loadProjectsFromStorage().archived);
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
+  const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
   const [energy, setEnergy] = useState(10);
   const [sessionStreak, setSessionStreak] = useState(0);
   const [dailyStreak, setDailyStreak] = useState(0);
@@ -408,6 +388,28 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  // Effect to load data from localStorage after initial render
+  useEffect(() => {
+    try {
+      const storedProjects = localStorage.getItem('kolearning_projects');
+      const storedCompleted = localStorage.getItem('kolearning_completed_projects');
+      const storedArchived = localStorage.getItem('kolearning_archived_projects');
+      const user = localStorage.getItem('kolearning_user');
+
+      if (storedProjects) setProjects(JSON.parse(storedProjects));
+      if (storedCompleted) setCompletedProjects(JSON.parse(storedCompleted));
+      if (storedArchived) setArchivedProjects(JSON.parse(storedArchived));
+      
+      if (user) {
+        setCurrentUser(JSON.parse(user));
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error("Failed to load data from localStorage", error);
+    }
+  }, []);
+
+  // Effect to save data to localStorage whenever it changes
   useEffect(() => {
     try {
       localStorage.setItem('kolearning_projects', JSON.stringify(projects));
@@ -418,17 +420,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [projects, completedProjects, archivedProjects]);
 
-  useEffect(() => {
-    try {
-      const user = localStorage.getItem('kolearning_user');
-      if (user) {
-        setCurrentUser(JSON.parse(user));
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-    }
-  }, []);
 
   const login = (email: string, password: string): boolean => {
     try {
@@ -656,7 +647,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       })
     );
   };
-
+  
   const resetSessionStats = useCallback(() => {
     setSessionStreak(0);
     setCognitiveCredits(0);
