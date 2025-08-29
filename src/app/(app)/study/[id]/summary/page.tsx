@@ -25,31 +25,30 @@ function SessionSummaryContent() {
     const projectId = params.id as string;
     const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
     
-    const [isLoading, setIsLoading] = useState(true);
-    const [hasCompleted, setHasCompleted] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [isProjectCompleted, setIsProjectCompleted] = useState(false);
     const [showCompletionDialog, setShowCompletionDialog] = useState(false);
 
     const project = projects.find(p => p.id === projectId);
 
     useEffect(() => {
-        if (hasCompleted || !project) return;
-        
+        if (!project) return;
         const isLastSession = sessionIndex === project.sessions.length - 1;
-        setIsProjectCompleted(isLastSession);
-
-        completeSession(projectId, sessionIndex);
-        setHasCompleted(true);
-        setIsLoading(false);
         
-        if (isLastSession) {
+        // Check if all sessions are completed
+        const allSessionsDone = project.sessions.every(s => s.status === 'Completed');
+
+        if (isLastSession || allSessionsDone) {
+            setIsProjectCompleted(true);
+            // Open the dialog automatically if the project is finished
             setShowCompletionDialog(true);
         }
-
-    }, [projectId, sessionIndex, completeSession, hasCompleted, project]);
+    }, [project, sessionIndex]);
 
 
     const handleFinish = () => {
+        setIsLoading(true);
+        completeSession(projectId, sessionIndex);
         router.push(`/projects/${projectId}?sessionCompleted=true`);
     };
 
