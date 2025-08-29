@@ -123,6 +123,12 @@ export function Header() {
                   </>
                 )}
                 <DropdownMenuSeparator />
+                <Link href="/profile" passHref>
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
+                  </DropdownMenuItem>
+                </Link>
                 <Link href="/archive" passHref>
                   <DropdownMenuItem>
                     <Archive className="mr-2 h-4 w-4" />

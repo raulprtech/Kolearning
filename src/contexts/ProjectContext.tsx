@@ -53,10 +53,14 @@ export type Project = {
   correctAnswers?: number;
 };
 
-type User = {
+export type User = {
     name: string;
     email: string;
     password?: string; // Should not be stored long-term in a real app
+    profession?: string;
+    company?: string;
+    age?: string;
+    additionalInfo?: string;
 }
 
 type LearnerRankInfo = {
@@ -101,6 +105,7 @@ type ProjectContextType = {
   login: (email: string, password: string) => boolean;
   signup: (name: string, email: string, password: string) => boolean;
   logout: () => void;
+  updateUserProfile: (profileData: Partial<User>) => boolean;
   learnerRankInfo: LearnerRankInfo | null;
 };
 
@@ -439,6 +444,31 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setCurrentUser(null);
     setIsAuthenticated(false);
   };
+  
+  const updateUserProfile = (profileData: Partial<User>): boolean => {
+    if (!currentUser) return false;
+    try {
+      // Update state
+      const updatedUser = { ...currentUser, ...profileData };
+      setCurrentUser(updatedUser);
+
+      // Update localStorage for persistence
+      localStorage.setItem('kolearning_user', JSON.stringify(updatedUser));
+      
+      // Also update the full user list in localStorage if they change credentials
+      const users: User[] = JSON.parse(localStorage.getItem('kolearning_users') || '[]');
+      const userIndex = users.findIndex(u => u.email === currentUser.email);
+      if (userIndex > -1) {
+          const originalUser = users[userIndex];
+          users[userIndex] = { ...originalUser, ...updatedUser };
+          localStorage.setItem('kolearning_users', JSON.stringify(users));
+      }
+      return true;
+    } catch (error) {
+      console.error("Failed to update user profile:", error);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -741,7 +771,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
         updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers,
-        isAuthenticated, currentUser, login, signup, logout,
+        isAuthenticated, currentUser, login, signup, logout, updateUserProfile,
         learnerRankInfo
     }}>
       {children}
