@@ -514,10 +514,6 @@ const handleCheckAnswer = async () => {
             </div>
             <div className="w-1/4 flex justify-end">
                 <div className="flex items-center gap-6 bg-card/50 px-4 py-1.5 rounded-md">
-                    <div className="flex items-center gap-2" title="Puntos de Dominio">
-                        <Award className="h-5 w-5 text-green-400" />
-                        <span className="font-bold text-lg">{masteryPoints}</span>
-                    </div>
                     <div className="flex items-center gap-2" title="Créditos Cognitivos">
                         <Brain className="h-5 w-5 text-blue-400" />
                         <span className="font-bold text-lg">{cognitiveCredits}</span>
