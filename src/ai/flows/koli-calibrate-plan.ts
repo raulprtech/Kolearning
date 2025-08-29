@@ -7,7 +7,7 @@
  *
  * It includes:
  * - calibratePlanFromQuestionnaire - A function to trigger the learning plan calibration.
- * - CalibratePlanInput - The input type for the calibratePlanFromQuestionnaire function.
+ * - CalibratePlanInput - The input type for the calibratePlanfromQuestionnaire function.
  * - CalibratePlanOutput - The return type for the calibratePlanFromQuestionnaire function.
  */
 
@@ -58,7 +58,24 @@ const calibratePlanPrompt = ai.definePrompt({
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans based on a deep pedagogical framework.
 Your response must be in Spanish.
 
-A learner has provided their learning material. Based on this information, create a comprehensive and strategic learning plan.
+A learner has provided their learning material, which has been converted into the following "Knowledge Atoms".
+
+**Your Tasks:**
+
+1.  **Analyze and Define the Project:**
+    *   **Analyze the content:** Carefully review the provided 'atoms' to understand the core subject matter.
+    *   **Generate 'projectTitle', 'projectDescription', and 'categories':** Based on your analysis of the atoms, create a relevant and descriptive title, a concise one-sentence description, and one to three appropriate categories for the learning project.
+
+2.  **Create the Learning Plan Components:**
+    *   **learningPath:** Generate a structured array of *day objects*. Each day object contains the sessions for that day.
+        *   Start with a "Calibración" session on Day 1.
+        *   Distribute 'Incursión', 'Refuerzo', and 'Prueba de Dominio' sessions logically across the days.
+        *   **CRUCIAL RULE:** The 'session' numbers inside the session objects MUST remain sequential integers (1, 2, 3...).
+        *   **CRUCIAL RULE:** For each session object, you MUST populate the 'questions' field with the exact corresponding string value based on the 'sessionType' field.
+    *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy, *especially the daily distribution of sessions*.
+    *   **expectedProgress:** Write an encouraging paragraph about the expected learning progression.
+    *   **fullLearningPlanMarkdown:** Generate a complete learning plan using Markdown.
+
 
 **Knowledge Atoms:** {{{atoms}}}
 
@@ -89,21 +106,6 @@ A learner has provided their learning material. Based on this information, creat
         *   **Intention:** Certification. Test deep understanding.
         *   **Question Format ('questions' field):** "Pregunta Abierta y Casos Prácticos".
         *   **Content:** All atoms related to a sub-module.
-
-
-**Your Tasks:**
-
-1.  **Generate Project Details:**
-    *   **projectTitle, projectDescription, categories:** Create these based on the content.
-2.  **Create the Learning Plan Components:**
-    *   **learningPath:** Generate a structured array of *day objects*. Each day object contains the sessions for that day.
-        *   Start with a "Calibración" session on Day 1.
-        *   Distribute 'Incursión', 'Refuerzo', and 'Prueba de Dominio' sessions logically across the days.
-        *   **CRUCIAL RULE:** The 'session' numbers inside the session objects MUST remain sequential integers (1, 2, 3...).
-        *   **CRUCIAL RULE:** For each session object, you MUST populate the 'questions' field with the exact corresponding string value based on the 'sessionType' field.
-    *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy, *especially the daily distribution of sessions*.
-    *   **expectedProgress:** Write an encouraging paragraph about the expected learning progression.
-    *   **fullLearningPlanMarkdown:** Generate a complete learning plan using Markdown.
 
 Provide the response in the specified JSON format.
 `,
