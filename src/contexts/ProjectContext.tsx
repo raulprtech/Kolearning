@@ -656,6 +656,13 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       })
     );
   };
+
+  const resetSessionStats = useCallback(() => {
+    setSessionStreak(0);
+    setCognitiveCredits(0);
+    setMasteryPoints(0);
+    setSessionAnswers([]);
+  }, []);
   
  const completeSession = useCallback((projectId: string, sessionIndex: number) => {
     const today = new Date();
@@ -711,7 +718,11 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         setProjects(prev => prev.filter(p => p.id !== projectId));
         setCompletedProjects(prev => [...prev, completedProject]);
     }
-}, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak]);
+
+    // Reset session-specific stats AFTER project state has been updated
+    resetSessionStats();
+
+}, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak, resetSessionStats]);
 
 
   const archiveProject = (projectId: string): boolean => {
@@ -780,12 +791,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setTotalMasteryPoints(prev => prev + newMasteryPoints);
   }, []);
 
-  const resetSessionStats = useCallback(() => {
-    setSessionStreak(0);
-    setCognitiveCredits(0);
-    setMasteryPoints(0);
-    setSessionAnswers([]);
-  }, []);
   
   const exchangeCreditsForEnergy = (credits: number, energyAmount: number): boolean => {
       if (globalCognitiveCredits >= credits) {
