@@ -24,7 +24,6 @@ import { useToast } from "@/hooks/use-toast";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
 import { extractContentFromUrl } from "@/lib/actions";
-import { Textarea } from "@/components/ui/textarea";
 
 const initialSteps = [
     {
@@ -50,7 +49,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isSourcePopoverOpen, setIsSourcePopoverOpen, userObjective, setUserObjective }: any) => {
+const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
     
     const handleFileButtonClick = () => {
         fileInputRef.current?.click();
@@ -69,12 +68,6 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
 
     return (
          <div className="flex flex-col gap-4">
-            <Textarea
-                placeholder="Opcional: ¿Cuál es tu objetivo de aprendizaje? (ej. 'Entender los fundamentos de los diodos para mi clase de electrónica')"
-                value={userObjective}
-                onChange={(e) => setUserObjective(e.target.value)}
-                disabled={isLoading}
-            />
               {selectedFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                     {selectedFiles.map((file: File) => (
@@ -197,7 +190,6 @@ export default function NewProjectPage() {
   const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
   const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
-  const [userObjective, setUserObjective] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -269,7 +261,6 @@ export default function NewProjectPage() {
             
             const response = await generateAtoms({
                 studyMaterial: studyMaterialUri,
-                userObjective: userObjective, 
             });
             
             accumulatedAtoms = [...accumulatedAtoms, ...response.atoms];
@@ -295,7 +286,6 @@ export default function NewProjectPage() {
     try {
         const plan = await calibratePlanFromQuestionnaire({
             atoms: finalAtomsResult.atoms,
-            userObjective: userObjective,
         });
         handleFinalizeProject(plan, finalAtomsResult, sourceFiles);
     } catch(error) {
@@ -304,7 +294,7 @@ export default function NewProjectPage() {
         setIsLoading(false);
     }
 
-  }, [handleFinalizeProject, userObjective]);
+  }, [handleFinalizeProject]);
 
   useEffect(() => {
     const preloadedSourceParam = searchParams.get('source');
@@ -504,11 +494,11 @@ export default function NewProjectPage() {
                 onPasteText={() => setIsPasteTextOpen(true)}
                 isSourcePopoverOpen={isSourcePopoverOpen}
                 setIsSourcePopoverOpen={setIsSourcePopoverOpen}
-                userObjective={userObjective}
-                setUserObjective={setUserObjective}
             />
         </div>
         </main>
     </div>
     );
 }
+
+    

@@ -18,7 +18,6 @@ const GenerateAtomsInputSchema = z.object({
     .describe(
       'The study material to be atomized, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' 
     ),
-  userObjective: z.string().describe('The user\'s stated objective for learning the material.').optional()
 });
 export type GenerateAtomsInput = z.infer<typeof GenerateAtomsInputSchema>;
 
@@ -43,9 +42,6 @@ const orchestratorPrompt = ai.definePrompt({
 All your responses must be in Spanish.
 
 The user has uploaded study material.
-{{#if userObjective}}
-The user's learning objective is: {{{userObjective}}}
-{{/if}}
 
 **Your Mission:**
 
@@ -85,5 +81,7 @@ const generateAtomsFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
 
     

@@ -21,7 +21,6 @@ const AtomSchema = z.object({
 
 const CalibratePlanInputSchema = z.object({
   atoms: z.array(AtomSchema).describe('The complete list of knowledge atoms generated from the material.'),
-  userObjective: z.string().describe("The user's stated learning objective, which provides context for the project.").optional(),
 });
 
 export type CalibratePlanInput = z.infer<typeof CalibratePlanInputSchema>;
@@ -60,15 +59,12 @@ const calibratePlanPrompt = ai.definePrompt({
 Your response must be in Spanish.
 
 A learner has provided their learning material, which has been converted into the following "Knowledge Atoms".
-{{#if userObjective}}
-The user's stated learning objective is: **"{{{userObjective}}}"**. This is your primary source of context for the project's theme.
-{{/if}}
 
 **Your Tasks:**
 
 1.  **Analyze and Define the Project:**
-    *   **Analyze the content:** Carefully review the provided 'atoms' to understand the core subject matter.
-    *   **Generate 'projectTitle', 'projectDescription', and 'categories':** Based on your analysis of the atoms, create a relevant and descriptive title, a concise one-sentence description, and one to three appropriate categories for the learning project. **CRITICAL RULE: The title and description MUST be directly related to the user's objective (if provided) and the content of the atoms. Do not invent unrelated topics.**
+    *   **Analyze the content:** Carefully review the provided 'atoms' to understand the core subject matter. This is your primary source of context for the project's theme.
+    *   **Generate 'projectTitle', 'projectDescription', and 'categories':** Based on your analysis of the atoms, create a relevant and descriptive title, a concise one-sentence description, and one to three appropriate categories for the learning project. **CRITICAL RULE: The title and description MUST be directly related to the content of the atoms. Do not invent unrelated topics.**
 
 2.  **Create the Learning Plan Components:**
     *   **learningPath:** Generate a structured array of *day objects*. Each day object contains the sessions for that day.
@@ -126,3 +122,5 @@ const calibratePlanFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
