@@ -20,13 +20,14 @@ export default function SharedProjectPage() {
     const params = useParams();
     const router = useRouter();
     const { toast } = useToast();
-    const { addProject } = useProjects();
+    const { projects: userProjects, addProject } = useProjects();
     const [copied, setCopied] = useState(false);
 
     const projectId = params.id as string;
-    // In a real app, you'd fetch this from a database.
-    // For now, we'll check both user projects and public projects.
-    const project = publicProjects.find(p => p.id === projectId);
+    
+    // Check both public community projects and the user's own projects (in a real app, this would be a single DB query)
+    const project = publicProjects.find(p => p.id === projectId) || userProjects.find(p => p.id === projectId);
+
 
     if (!project) {
         return (
@@ -90,5 +91,3 @@ export default function SharedProjectPage() {
         </div>
     )
 }
-
-    

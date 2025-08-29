@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Book, Landmark, FlaskConical, Code, Music, Palette, Search, Filter } from "lucide-react";
-import { useProjects, publicProjects, Project } from "@/contexts/ProjectContext";
+import { useProjects, publicProjects as communityProjects, Project } from "@/contexts/ProjectContext";
 
 const projectIcons = {
   Book: Book,
@@ -32,15 +32,24 @@ const projectIcons = {
   Palette: Palette,
 };
 
-const categories = ["Todos", ...new Set(publicProjects.map(p => p.category))];
-const authors = ["Todos", ...new Set(publicProjects.map(p => p.author))];
-
 export default function ExplorePage() {
   const { toast } = useToast();
-  const { addProject } = useProjects();
+  const { projects: userProjects, addProject } = useProjects();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("Todos");
   const [authorFilter, setAuthorFilter] = useState("Todos");
+
+  // Combine community projects with user's public projects
+  const userPublicProjects = userProjects.filter(p => p.isPublic);
+  const allPublicProjects = [...communityProjects, ...userPublicProjects];
+  
+  // Deduplicate projects in case a user has a local copy of a community project
+  const uniquePublicProjects = allPublicProjects.filter((project, index, self) =>
+    index === self.findIndex((p) => (p.id === project.id))
+  );
+
+  const categories = ["Todos", ...new Set(uniquePublicProjects.map(p => p.category).filter(Boolean))];
+  const authors = ["Todos", ...new Set(uniquePublicProjects.map(p => p.author).filter(Boolean))];
 
   const handleAddProject = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
@@ -51,7 +60,7 @@ export default function ExplorePage() {
     });
   };
 
-  const filteredProjects = publicProjects.filter(project => {
+  const filteredProjects = uniquePublicProjects.filter(project => {
     return (
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (categoryFilter === "Todos" || project.category === categoryFilter) &&
@@ -81,7 +90,7 @@ export default function ExplorePage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                     {categories.map(cat => (
-                        <DropdownMenuItem key={cat} onClick={() => setCategoryFilter(cat)}>
+                        <DropdownMenuItem key={cat} onClick={() => setCategoryFilter(cat!)}>
                             {cat}
                         </DropdownMenuItem>
                     ))}
@@ -95,7 +104,7 @@ export default function ExplorePage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                     {authors.map(auth => (
-                         <DropdownMenuItem key={auth} onClick={() => setAuthorFilter(auth)}>
+                         <DropdownMenuItem key={auth} onClick={() => setAuthorFilter(auth!)}>
                             {auth}
                         </DropdownMenuItem>
                     ))}
