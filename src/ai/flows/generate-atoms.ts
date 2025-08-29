@@ -43,6 +43,9 @@ const orchestratorPrompt = ai.definePrompt({
 All your responses must be in Spanish.
 
 The user has uploaded study material.
+{{#if userObjective}}
+The user's learning objective is: {{{userObjective}}}
+{{/if}}
 
 **Your Mission:**
 
