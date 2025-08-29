@@ -332,22 +332,26 @@ export default function NewProjectPage() {
   const handleImportFromUrl = async (url: string) => {
     setIsUrlImportOpen(false);
     setIsLoading(true);
-    toast({ title: "Importando desde URL...", description: "Koli está extrayendo el contenido." });
+    toast({ title: "Importando desde URL...", description: "Koli está extrayendo el contenido. Esto puede tardar un momento." });
     try {
         const content = await extractContentFromUrl(url);
         if (content) {
-            const urlFileName = url.split('/').pop()?.split('?')[0] || 'imported-from-url';
-            const file = new File([content], urlFileName, { type: "text/plain" });
+            // Try to get a meaningful name from the URL path
+            const urlPath = new URL(url).pathname;
+            const lastSegment = urlPath.split('/').filter(Boolean).pop();
+            const urlFileName = lastSegment || 'contenido-importado';
+
+            const file = new File([content], `${urlFileName}.txt`, { type: "text/plain" });
             
             setSelectedFiles(prevFiles => [...prevFiles, file]);
 
-            toast({ title: "¡Contenido importado!", description: `Se ha extraído el contenido de la URL.` });
+            toast({ title: "¡Contenido importado!", description: `Se ha extraído el contenido de "${urlFileName}".` });
         } else {
-            toast({ title: "Error", description: "No se pudo extraer contenido de la URL.", variant: "destructive" });
+            toast({ title: "Error de importación", description: "No se pudo extraer contenido de la URL. El sitio puede ser incompatible o la URL incorrecta.", variant: "destructive" });
         }
     } catch (error) {
         console.error("Error importing from URL:", error);
-        toast({ title: "Error", description: "Ocurrió un error al importar desde la URL.", variant: "destructive" });
+        toast({ title: "Error", description: "Ocurrió un error al procesar la URL. Intenta con otro enlace.", variant: "destructive" });
     } finally {
         setIsLoading(false);
     }
@@ -495,5 +499,3 @@ export default function NewProjectPage() {
     </div>
     );
 }
-
-    
