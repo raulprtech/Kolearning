@@ -335,10 +335,18 @@ function ProjectDetails() {
   }
 
   const handleArchiveProject = () => {
-    archiveProject(project.id);
+    const success = archiveProject(project.id);
     setIsArchiveDialogOpen(false);
-    toast({ title: "Proyecto archivado", description: `"${project.title}" ha sido movido al archivo.` });
-    router.push('/new-project');
+    if (success) {
+      toast({ title: "Proyecto archivado", description: `"${project.title}" ha sido movido al archivo.` });
+      router.push('/new-project');
+    } else {
+      toast({
+        title: "Archivo lleno",
+        description: "Has alcanzado el límite de proyectos archivados. Elimina uno para continuar.",
+        variant: "destructive",
+      });
+    }
   }
   
   const handleAtomActionConfirm = (data?: Atom) => {

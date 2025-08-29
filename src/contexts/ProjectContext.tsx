@@ -79,7 +79,7 @@ type ProjectContextType = {
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
   deleteAtom: (projectId: string, atomIndex: number) => void;
   completeSession: (projectId: string, sessionIndex: number) => void;
-  archiveProject: (projectId: string) => void;
+  archiveProject: (projectId: string) => boolean;
   unarchiveProject: (projectId: string) => void;
   deleteProjectPermanently: (projectId: string) => void;
   toggleProjectPublic: (projectId: string, isPublic: boolean) => void;
@@ -363,6 +363,7 @@ const getLearnerRank = (totalMasteryPoints: number): LearnerRankInfo => {
 
 const MAX_NATURAL_ENERGY = 10;
 const ENERGY_REGEN_HOURS = 1;
+const MAX_ARCHIVED_PROJECTS = 5;
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
@@ -650,12 +651,16 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 }, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak]);
 
 
-  const archiveProject = (projectId: string) => {
+  const archiveProject = (projectId: string): boolean => {
+    if (archivedProjects.length >= MAX_ARCHIVED_PROJECTS) {
+        return false; // Limit reached
+    }
     const projectToArchive = projects.find(p => p.id === projectId);
     if (projectToArchive) {
         setProjects(prevProjects => prevProjects.filter(p => p.id !== projectId));
         setArchivedProjects(prevArchived => [...prevArchived, projectToArchive]);
     }
+    return true;
 };
 
   const unarchiveProject = (projectId: string) => {
