@@ -53,6 +53,12 @@ export type Project = {
   correctAnswers?: number;
 };
 
+type User = {
+    name: string;
+    email: string;
+    password?: string; // Should not be stored long-term in a real app
+}
+
 type ProjectContextType = {
   projects: Project[];
   completedProjects: Project[];
@@ -83,6 +89,11 @@ type ProjectContextType = {
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
   nextEnergyIn: number;
   sessionAnswers: boolean[];
+  isAuthenticated: boolean;
+  currentUser: User | null;
+  login: (email: string, password: string) => boolean;
+  signup: (name: string, email: string, password: string) => boolean;
+  logout: () => void;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -320,6 +331,65 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [nextEnergyTimestamp, setNextEnergyTimestamp] = useState<number | null>(null);
   const [nextEnergyIn, setNextEnergyIn] = useState(0);
   const [sessionAnswers, setSessionAnswers] = useState<boolean[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    try {
+      const user = localStorage.getItem('kolearning_user');
+      if (user) {
+        setCurrentUser(JSON.parse(user));
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error("Failed to parse user from localStorage", error);
+    }
+  }, []);
+
+  const login = (email: string, password: string): boolean => {
+    try {
+      const users: User[] = JSON.parse(localStorage.getItem('kolearning_users') || '[]');
+      const user = users.find(u => u.email === email && u.password === password);
+      if (user) {
+        const { password, ...userWithoutPassword } = user;
+        localStorage.setItem('kolearning_user', JSON.stringify(userWithoutPassword));
+        setCurrentUser(userWithoutPassword);
+        setIsAuthenticated(true);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Login failed", error);
+      return false;
+    }
+  };
+
+  const signup = (name: string, email: string, password: string): boolean => {
+    try {
+      const users: User[] = JSON.parse(localStorage.getItem('kolearning_users') || '[]');
+      if (users.some(u => u.email === email)) {
+        return false; // User already exists
+      }
+      const newUser: User = { name, email, password };
+      users.push(newUser);
+      localStorage.setItem('kolearning_users', JSON.stringify(users));
+      
+      const { password: _, ...userWithoutPassword } = newUser;
+      localStorage.setItem('kolearning_user', JSON.stringify(userWithoutPassword));
+      setCurrentUser(userWithoutPassword);
+      setIsAuthenticated(true);
+      return true;
+    } catch (error) {
+      console.error("Signup failed", error);
+      return false;
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('kolearning_user');
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -615,7 +685,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         projects, completedProjects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, updateProjectPlan, addSessionsToProject, 
         addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
-        updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers
+        updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers,
+        isAuthenticated, currentUser, login, signup, logout
     }}>
       {children}
     </ProjectContext.Provider>
@@ -629,3 +700,4 @@ export const useProjects = () => {
   }
   return context;
 };
+
