@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
+import { Progress } from "../ui/progress";
 
 export function Header() {
   const { 
@@ -25,7 +26,8 @@ export function Header() {
     nextEnergyIn, 
     isAuthenticated, 
     currentUser, 
-    logout 
+    logout,
+    learnerRankInfo 
   } = useProjects();
   const router = useRouter();
 
@@ -102,8 +104,24 @@ export function Header() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel>{currentUser?.name}</DropdownMenuLabel>
+                {learnerRankInfo && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <div className="p-2">
+                        <p className="text-sm text-muted-foreground">Rango de Aprendedor</p>
+                        <p className="text-2xl font-bold font-headline">{learnerRankInfo.rankName}</p>
+                        <Progress value={learnerRankInfo.progress} className="h-1.5 mt-1" />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
+                                ? `${learnerRankInfo.pointsToNext} pts para Rango ${learnerRankInfo.nextRankName}`
+                                : "¡Rango Máximo!"
+                            }
+                        </p>
+                    </div>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <Link href="/archive" passHref>
                   <DropdownMenuItem>

@@ -120,19 +120,7 @@ const SidebarContent = () => {
       </nav>
 
       <div className="mt-auto flex flex-col gap-2">
-       {isSidebarOpen && learnerRankInfo && (
-          <div className="bg-card/50 p-4 rounded-lg text-center">
-            <p className="text-5xl font-bold font-headline">{learnerRankInfo.rankName}</p>
-            <p className="text-sm text-muted-foreground">Rango de Aprendedor</p>
-            <Progress value={learnerRankInfo.progress} className="h-2 mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-                {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
-                    ? `${learnerRankInfo.pointsToNext} pts para Rango ${learnerRankInfo.nextRankName}`
-                    : "¡Rango Máximo!"
-                }
-            </p>
-          </div>
-       )}
+       {/* Learner rank display removed from here */}
       </div>
     </aside>
   );
