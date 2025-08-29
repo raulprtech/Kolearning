@@ -3,10 +3,16 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { CalibratePlanOutput } from '@/ai/flows/koli-calibrate-plan';
+import { differenceInDays, addDays } from 'date-fns';
+
 
 export type Atom = {
   question: string;
   answer: string;
+  // FSRS Metrics
+  difficulty?: number; // How hard is this to learn? (0-1)
+  stability?: number; // How long will you remember this? (in days)
+  lastReviewed?: string; // ISO date string
   retrievability?: number; // FSRS score from 1 to 4
   incorrectAnswers?: string[]; // For multiple choice questions
 }
@@ -14,7 +20,7 @@ export type Atom = {
 export type Source = {
     name: string;
     type: string;
-    content?: string; // Content is optional and should not be persisted
+    // content is removed to avoid localStorage quota issues
 }
 
 export type Session = {
@@ -127,21 +133,12 @@ const initialProjects: Project[] = [
         { 
             question: "¿Qué es la dualidad onda-partícula?", 
             answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas.",
-            incorrectAnswers: [
-                "Es el principio que dice que las partículas solo pueden existir en un estado a la vez.",
-                "Una teoría sobre la gravedad a nivel subatómico.",
-                "La idea de que las partículas se comunican más rápido que la luz."
-            ]
         },
         { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
     ],
     sessions: [
         { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "20 min", status: "Continue", atoms: [
-            { question: "¿Qué es la dualidad onda-partícula?", answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas.", incorrectAnswers: [
-                "Es el principio que dice que las partículas solo pueden existir en un estado a la vez.",
-                "Una teoría sobre la gravedad a nivel subatómico.",
-                "La idea de que las partículas se comunican más rápido que la luz."
-            ] },
+            { question: "¿Qué es la dualidad onda-partícula?", answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas." },
             { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
         ] },
         { session: 2, type: "Refuerzo de Dominio", questions: "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)", duration: "30 min", status: "Locked", atoms: [] },
@@ -366,16 +363,23 @@ const getLearnerRank = (totalMasteryPoints: number): LearnerRankInfo => {
     };
 }
 
+const calculateCurrentRetrievability = (stability: number, daysSinceLastReview: number): number => {
+    return Math.pow(0.9, daysSinceLastReview / stability);
+};
+
+
 const calculateMastery = (atoms: Atom[]): number => {
     if (atoms.length === 0) {
         return 0;
     }
 
     const totalRetrievability = atoms.reduce((sum, atom) => {
-        // Map FSRS rating (1-4) to a retrievability percentage (e.g., 25%, 50%, 75%, 90%)
-        // Atoms not yet studied (retrievability is undefined) will contribute 0.
-        const retrievabilityMap = [0, 25, 50, 75, 90];
-        return sum + (retrievabilityMap[atom.retrievability!] || 0);
+        if (atom.lastReviewed && atom.stability) {
+            const daysSince = differenceInDays(new Date(), new Date(atom.lastReviewed));
+            const retrievability = calculateCurrentRetrievability(atom.stability, daysSince);
+            return sum + (retrievability * 100);
+        }
+        return sum; // Atoms not yet studied contribute 0 to the average.
     }, 0);
 
     return Math.round(totalRetrievability / atoms.length);
@@ -385,6 +389,8 @@ const calculateMastery = (atoms: Atom[]): number => {
 const MAX_NATURAL_ENERGY = 10;
 const ENERGY_REGEN_HOURS = 1;
 const MAX_ARCHIVED_PROJECTS = 5;
+const FSRS_WEIGHTS = [0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61];
+
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -404,6 +410,49 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const checkForReviewSessions = useCallback(() => {
+    const today = new Date();
+    setCompletedProjects(prevCompleted => {
+        let hasChanged = false;
+        const updatedProjects = prevCompleted.map(p => {
+            const needsReview = p.atoms.some(atom => {
+                if (!atom.lastReviewed || !atom.stability) return false;
+                const daysSince = differenceInDays(today, new Date(atom.lastReviewed));
+                const retrievability = calculateCurrentRetrievability(atom.stability, daysSince);
+                return retrievability < 0.9;
+            });
+
+            const hasActiveReviewSession = p.sessions.some(s => s.status === 'Continue');
+
+            if (needsReview && !hasActiveReviewSession) {
+                hasChanged = true;
+                const atomsToReview = p.atoms.filter(atom => {
+                     if (!atom.lastReviewed || !atom.stability) return false;
+                     const daysSince = differenceInDays(today, new Date(atom.lastReviewed));
+                     const retrievability = calculateCurrentRetrievability(atom.stability, daysSince);
+                     return retrievability < 0.9;
+                }).slice(0, 10); // Limit review session size
+
+                const newSession: Session = {
+                    session: (p.sessions[p.sessions.length - 1]?.session || 0) + 1,
+                    type: "Refuerzo de Dominio",
+                    questions: "Formatos Mixtos",
+                    duration: "15 min",
+                    status: 'Continue',
+                    atoms: atomsToReview,
+                };
+                return { ...p, sessions: [...p.sessions, newSession] };
+            }
+            return p;
+        });
+        return hasChanged ? updatedProjects : prevCompleted;
+    });
+
+    // Also update mastery for all projects to reflect time decay
+    setProjects(prev => prev.map(p => ({ ...p, mastery: calculateMastery(p.atoms) })));
+    setCompletedProjects(prev => prev.map(p => ({ ...p, mastery: calculateMastery(p.atoms) })));
+  }, []);
 
   // Effect to load data from localStorage after initial render
   useEffect(() => {
@@ -429,6 +478,12 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+      if (!isLoading) {
+          checkForReviewSessions();
+      }
+  }, [isLoading, checkForReviewSessions]);
 
   // Effect to save data to localStorage whenever it changes
   useEffect(() => {
@@ -710,43 +765,51 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setGlobalCognitiveCredits(prev => prev + cognitiveCredits);
 
     let projectToUpdate: Project | undefined;
+    let isCompletedProject = false;
 
-    setProjects(prevProjects =>
-        prevProjects.map(p => {
-            if (p.id === projectId) {
-                const updatedSessions = [...p.sessions];
-                if (updatedSessions[sessionIndex]) {
-                    updatedSessions[sessionIndex].status = 'Completed';
-                }
-                if (updatedSessions[sessionIndex + 1]) {
-                    updatedSessions[sessionIndex + 1].status = 'Continue';
-                }
-                
-                const sessionCorrectAnswers = sessionAnswers.filter(a => a).length;
-                const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
-                const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
-                const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
-                const newMastery = calculateMastery(p.atoms);
-                
-                projectToUpdate = { 
-                    ...p, 
-                    sessions: updatedSessions,
-                    totalAnswers: newTotalAnswers,
-                    correctAnswers: newCorrectAnswers,
-                    bestStreak: newBestStreak,
-                    mastery: newMastery,
-                };
-                return projectToUpdate;
+    const updateLogic = (p: Project) => {
+        if (p.id === projectId) {
+            const updatedSessions = [...p.sessions];
+            if (updatedSessions[sessionIndex]) {
+                updatedSessions[sessionIndex].status = 'Completed';
             }
-            return p;
-        })
-    );
+            if (updatedSessions[sessionIndex + 1]) {
+                updatedSessions[sessionIndex + 1].status = 'Continue';
+            }
+            
+            const sessionCorrectAnswers = sessionAnswers.filter(a => a).length;
+            const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
+            const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
+            const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
+            const newMastery = calculateMastery(p.atoms);
+            
+            projectToUpdate = { 
+                ...p, 
+                sessions: updatedSessions,
+                totalAnswers: newTotalAnswers,
+                correctAnswers: newCorrectAnswers,
+                bestStreak: newBestStreak,
+                mastery: newMastery,
+            };
+            return projectToUpdate;
+        }
+        return p;
+    }
+
+    setProjects(prevProjects => prevProjects.map(updateLogic));
+    setCompletedProjects(prevCompleted => {
+        const updatedCompleted = prevCompleted.map(updateLogic);
+        if (updatedCompleted.some(p => p.id === projectId)) {
+            isCompletedProject = true;
+        }
+        return updatedCompleted;
+    });
+    
     
     // Check for project completion after state update is triggered
-    if (projectToUpdate && projectToUpdate.sessions.every(s => s.status === 'Completed')) {
-        const completedProject = { ...projectToUpdate, mastery: 100 };
+    if (projectToUpdate && !isCompletedProject && projectToUpdate.sessions.every(s => s.status === 'Completed' || s.type === "Refuerzo de Dominio")) {
         setProjects(prev => prev.filter(p => p.id !== projectId));
-        setCompletedProjects(prev => [...prev, completedProject]);
+        setCompletedProjects(prev => [...prev, projectToUpdate!]);
     }
 
     // Reset session-specific stats
@@ -795,21 +858,52 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean, isCorrect: boolean) => {
+  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrsRating: 1|2|3|4, aidsUsed: boolean, isCorrect: boolean) => {
     setSessionAnswers(prev => [...prev, isCorrect]);
     
-    setProjects(prevProjects => prevProjects.map(p => {
-        if (p.id === projectId) {
-            const newAtoms = [...p.atoms];
-            if (newAtoms[atomIndex]) {
-                newAtoms[atomIndex] = { ...newAtoms[atomIndex], retrievability: fsrs };
-            }
-            // We also update the project's mastery here to reflect the change immediately
-            const newMastery = calculateMastery(newAtoms);
-            return { ...p, atoms: newAtoms, mastery: newMastery };
+    const today = new Date().toISOString();
+
+    const updateAtomInProject = (project: Project): Project => {
+        if (project.id !== projectId) return project;
+
+        const atom = project.atoms[atomIndex];
+        if (!atom) return project;
+
+        const oldDifficulty = atom.difficulty || 0.3; // Default starting difficulty
+        const oldStability = atom.stability || 0; // 0 for new cards
+
+        // 1. Calculate retrievability for this review
+        const daysSinceLastReview = atom.lastReviewed ? differenceInDays(new Date(), new Date(atom.lastReviewed)) : 0;
+        const retrievability = calculateCurrentRetrievability(oldStability, daysSinceLastReview);
+
+        // 2. Update difficulty
+        const newDifficulty = oldDifficulty + FSRS_WEIGHTS[6] * (fsrsRating - 3);
+        const clampedDifficulty = Math.max(0, Math.min(1, newDifficulty));
+
+        // 3. Update stability
+        let newStability;
+        if (fsrsRating === 1) { // Again
+            newStability = FSRS_WEIGHTS[7] * Math.pow(oldStability, FSRS_WEIGHTS[8]) * Math.exp(FSRS_WEIGHTS[9] * (1 - retrievability));
+        } else { // Hard, Good, Easy
+            const difficultyFactor = Math.pow(FSRS_WEIGHTS[4], -clampedDifficulty);
+            newStability = oldStability * (1 + FSRS_WEIGHTS[2] * difficultyFactor * (1-retrievability) * Math.exp(FSRS_WEIGHTS[3] * (1 - retrievability)));
         }
-        return p;
-    }));
+        
+        const newAtoms = [...project.atoms];
+        newAtoms[atomIndex] = {
+            ...atom,
+            difficulty: clampedDifficulty,
+            stability: newStability,
+            lastReviewed: today,
+            retrievability: fsrsRating, // Store the user's direct rating
+        };
+
+        const newMastery = calculateMastery(newAtoms);
+        return { ...project, atoms: newAtoms, mastery: newMastery };
+    };
+
+    setProjects(prev => prev.map(updateAtomInProject));
+    setCompletedProjects(prev => prev.map(updateAtomInProject));
     
     if (isCorrect) {
       setSessionStreak(prev => prev + 1);
@@ -819,7 +913,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
     
     let newMasteryPoints = 0;
-    switch (fsrs) {
+    switch (fsrsRating) {
         case 1: newMasteryPoints = 5; break; // Muy Difícil
         case 2: newMasteryPoints = 10; break; // Difícil
         case 3: newMasteryPoints = 15; break; // Bien
