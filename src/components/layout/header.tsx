@@ -81,6 +81,10 @@ export function Header() {
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                 <div className="p-2 text-xs text-muted-foreground">
+                    <p>Gana créditos al estudiar y úsalos para obtener energía.</p>
+                 </div>
+                 <DropdownMenuSeparator />
                  <Link href="/store" passHref>
                     <DropdownMenuItem>
                       <Store className="mr-2 h-4 w-4" />
