@@ -21,12 +21,12 @@ const AtomSchema = z.object({
 
 const CalibratePlanInputSchema = z.object({
   atoms: z.array(AtomSchema).describe('The complete list of knowledge atoms generated from the material.'),
+  projectTitle: z.string().describe('The title for the learning project provided by the user.'),
 });
 
 export type CalibratePlanInput = z.infer<typeof CalibratePlanInputSchema>;
 
 const CalibratePlanOutputSchema = z.object({
-  projectTitle: z.string().describe('A creative and engaging title for the learning project.'),
   projectDescription: z.string().describe('A brief, one-sentence description of the project.'),
   categories: z.array(z.string()).describe('An array of one to three relevant categories for the project.'),
   learningPath: z.array(z.object({
@@ -58,13 +58,15 @@ const calibratePlanPrompt = ai.definePrompt({
   prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans based on a deep pedagogical framework.
 Your response must be in Spanish.
 
-A learner has provided their learning material, which has been converted into the following "Knowledge Atoms".
+A learner has provided their learning material, which has been converted into "Knowledge Atoms", and has given their project a title.
+
+**Project Title:** {{{projectTitle}}}
 
 **Your Tasks:**
 
 1.  **Analyze and Define the Project:**
-    *   **Analyze the content:** Carefully review the provided 'atoms' to understand the core subject matter. This is your primary source of context for the project's theme.
-    *   **Generate 'projectTitle', 'projectDescription', and 'categories':** Based on your analysis of the atoms, create a relevant and descriptive title, a concise one-sentence description, and one to three appropriate categories for the learning project. **CRITICAL RULE: The title and description MUST be directly related to the content of the atoms. Do not invent unrelated topics.**
+    *   **Analyze the content:** Carefully review the provided 'atoms' to understand the core subject matter.
+    *   **Generate 'projectDescription', and 'categories':** Based on your analysis of the atoms and respecting the user's chosen title, create a concise one-sentence description, and one to three appropriate categories for the learning project.
 
 2.  **Create the Learning Plan Components:**
     *   **learningPath:** Generate a structured array of *day objects*. Each day object contains the sessions for that day.
@@ -122,5 +124,3 @@ const calibratePlanFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

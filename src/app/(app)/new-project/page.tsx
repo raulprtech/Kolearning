@@ -23,7 +23,7 @@ import { Project, useProjects } from "@/contexts/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
-import { extractContentFromUrl } from "@/lib/actions";
+import { Input } from "@/components/ui/input";
 
 const initialSteps = [
     {
@@ -49,7 +49,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
+const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isSourcePopoverOpen, setIsSourcePopoverOpen, projectTitle, setProjectTitle }: any) => {
     
     const handleFileButtonClick = () => {
         fileInputRef.current?.click();
@@ -79,61 +79,70 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
                     ))}
                 </div>
               )}
-            <div className="flex items-center gap-2">
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
+            <div className="flex flex-col gap-2">
+                <Input 
+                    placeholder="Dale un nombre a tu proyecto..."
+                    value={projectTitle}
+                    onChange={(e) => setProjectTitle(e.target.value)}
                     disabled={isLoading}
-                    accept=".pdf,.doc,.docx,.txt,.md"
-                    multiple={true}
+                    className="h-12 text-lg"
                 />
-                <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" size="lg" disabled={isLoading} className="w-full">
-                            <Plus className="h-5 w-5 mr-2" />
-                            Añadir Fuente
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 mb-2">
-                        <div className="grid gap-4">
-                        <div className="space-y-2">
-                            <h4 className="font-medium leading-none">Añadir Fuente</h4>
-                            <p className="text-sm text-muted-foreground">
-                                Sube archivos o importa desde una URL.
-                            </p>
-                        </div>
-                            <div className="grid gap-2">
-                            <button onClick={handleFileButtonClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                <Paperclip className="h-5 w-5 text-primary" />
-                                <div>
-                                    <p className="font-semibold">Subir archivos</p>
-                                    <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
-                                </div>
-                            </button>
-                            <button onClick={handleUrlImportClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                <LinkIcon className="h-5 w-5 text-primary" />
-                                <div>
-                                    <p className="font-semibold">Importar desde enlace</p>
-                                    <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
-                                </div>
-                            </button>
-                            <button onClick={handlePasteTextClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                <ClipboardPaste className="h-5 w-5 text-primary" />
-                                <div>
-                                    <p className="font-semibold">Pegar texto</p>
-                                    <p className="text-sm text-muted-foreground">Importa texto de tu portapapeles</p>
-                                </div>
-                            </button>
-                        </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
+                <div className="flex items-center gap-2">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        disabled={isLoading}
+                        accept=".pdf,.doc,.docx,.txt,.md"
+                        multiple={true}
+                    />
+                    <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="lg" disabled={isLoading} className="w-full">
+                                <Plus className="h-5 w-5 mr-2" />
+                                Añadir Fuente
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 mb-2">
+                            <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <h4 className="font-medium leading-none">Añadir Fuente</h4>
+                                <p className="text-sm text-muted-foreground">
+                                    Sube archivos o importa desde una URL.
+                                </p>
+                            </div>
+                                <div className="grid gap-2">
+                                <button onClick={handleFileButtonClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                    <Paperclip className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Subir archivos</p>
+                                        <p className="text-sm text-muted-foreground">PDF, DOCX, TXT, MD</p>
+                                    </div>
+                                </button>
+                                <button onClick={handleUrlImportClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                    <LinkIcon className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Importar desde enlace</p>
+                                        <p className="text-sm text-muted-foreground">Pega una URL de un artículo</p>
+                                    </div>
+                                </button>
+                                <button onClick={handlePasteTextClick} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                    <ClipboardPaste className="h-5 w-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Pegar texto</p>
+                                        <p className="text-sm text-muted-foreground">Importa texto de tu portapapeles</p>
+                                    </div>
+                                </button>
+                            </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
 
-                <Button size="lg" onClick={() => handleSendMessage()} disabled={isLoading || selectedFiles.length === 0}>
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Empezar"}
-                </Button>
+                    <Button size="lg" onClick={() => handleSendMessage()} disabled={isLoading || selectedFiles.length === 0 || !projectTitle.trim()}>
+                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Empezar"}
+                    </Button>
+                </div>
             </div>
         </div>
     )
@@ -190,6 +199,7 @@ export default function NewProjectPage() {
   const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
   const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
+  const [projectTitle, setProjectTitle] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -204,13 +214,13 @@ export default function NewProjectPage() {
     return new Blob([ab], { type: mimeString });
   }
 
-  const handleFinalizeProject = useCallback((plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput, sourceFiles: {name: string, content: string, type: string}[]) => {
-      if (!atomsResult || sourceFiles.length === 0) {
+  const handleFinalizeProject = useCallback((plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput) => {
+      if (!atomsResult) {
           toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
           return;
       }
 
-      const slug = plan.projectTitle
+      const slug = projectTitle
         .toString()
         .normalize('NFD') // split an accented letter in the base letter and the acent
         .replace(/[\u0300-\u036f]/g, '') // remove all previously split accents
@@ -222,9 +232,9 @@ export default function NewProjectPage() {
       
       const newProjectId = `${slug}-${Date.now()}`;
 
-      const newProject: Omit<Project, 'sessions'> = {
+      const newProject: Omit<Project, 'sessions' | 'sources'> = {
           id: newProjectId,
-          title: plan.projectTitle,
+          title: projectTitle,
           description: plan.projectDescription,
           mastery: 0,
           categories: plan.categories,
@@ -232,15 +242,14 @@ export default function NewProjectPage() {
           atoms: atomsResult.atoms,
           learningPath: plan.learningPath.flatMap(day => day.sessions),
           fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
-          sources: sourceFiles
       };
       addProject(newProject as any);
       toast({
           title: "¡Proyecto Creado!",
-          description: `${plan.projectTitle} ha sido añadido a tu dashboard.`
+          description: `${projectTitle} ha sido añadido a tu dashboard.`
       })
       router.push(`/projects/${newProject.id}`);
-  }, [addProject, router, toast]);
+  }, [addProject, router, toast, projectTitle]);
 
   const processFiles = useCallback(async (filesToProcess: File[]) => {
     setIsLoading(true);
@@ -249,7 +258,6 @@ export default function NewProjectPage() {
     
     const totalFiles = filesToProcess.length;
     let accumulatedAtoms: GenerateAtomsOutput['atoms'] = [];
-    const sourceFiles: {name: string, content: string, type: string}[] = [];
 
     for (let i = 0; i < totalFiles; i++) {
         const file = filesToProcess[i];
@@ -257,7 +265,6 @@ export default function NewProjectPage() {
 
         try {
             const studyMaterialUri = await fileToDataUri(file);
-            sourceFiles.push({ name: file.name, content: studyMaterialUri, type: "Documento" });
             
             const response = await generateAtoms({
                 studyMaterial: studyMaterialUri,
@@ -286,15 +293,16 @@ export default function NewProjectPage() {
     try {
         const plan = await calibratePlanFromQuestionnaire({
             atoms: finalAtomsResult.atoms,
+            projectTitle: projectTitle,
         });
-        handleFinalizeProject(plan, finalAtomsResult, sourceFiles);
+        handleFinalizeProject(plan, finalAtomsResult);
     } catch(error) {
         console.error("Error generating learning plan:", error);
         setAtomizationError('Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.');
         setIsLoading(false);
     }
 
-  }, [handleFinalizeProject]);
+  }, [handleFinalizeProject, projectTitle]);
 
   useEffect(() => {
     const preloadedSourceParam = searchParams.get('source');
@@ -335,9 +343,11 @@ export default function NewProjectPage() {
     setIsLoading(true);
     toast({ title: "Importando desde URL...", description: "Koli está extrayendo el contenido. Esto puede tardar un momento." });
     try {
-        const content = await extractContentFromUrl(url);
+        const response = await fetch(`/api/extract?url=${encodeURIComponent(url)}`);
+        if (!response.ok) throw new Error("Failed to fetch");
+        const { content } = await response.json();
+
         if (content) {
-            // Try to get a meaningful name from the URL path
             const urlPath = new URL(url).pathname;
             const lastSegment = urlPath.split('/').filter(Boolean).pop();
             const urlFileName = lastSegment || 'contenido-importado';
@@ -377,15 +387,15 @@ export default function NewProjectPage() {
   };
 
   const handleSendMessage = async () => {
-    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0 || !projectTitle.trim()) return;
     const filesToProcess = [...selectedFiles];
-    setSelectedFiles([]);
+    // setSelectedFiles([]);
     processFiles(filesToProcess);
   }
   
   const handleResetProcess = () => {
     setIsProjectStarted(false);
-    setSelectedFiles([]);
+    // setSelectedFiles([]); // Don't clear files so user can retry
     setProcessingStatus({ name: '', status: '', index: 0, total: 0, atoms: 0});
     setAtomizationError(null);
     setIsLoading(false);
@@ -494,11 +504,11 @@ export default function NewProjectPage() {
                 onPasteText={() => setIsPasteTextOpen(true)}
                 isSourcePopoverOpen={isSourcePopoverOpen}
                 setIsSourcePopoverOpen={setIsSourcePopoverOpen}
+                projectTitle={projectTitle}
+                setProjectTitle={setProjectTitle}
             />
         </div>
         </main>
     </div>
     );
 }
-
-    
