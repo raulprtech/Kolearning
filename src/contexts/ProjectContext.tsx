@@ -367,18 +367,18 @@ const getLearnerRank = (totalMasteryPoints: number): LearnerRankInfo => {
 }
 
 const calculateMastery = (atoms: Atom[]): number => {
-    const studiedAtoms = atoms.filter(atom => atom.retrievability !== undefined);
-    if (studiedAtoms.length === 0) {
+    if (atoms.length === 0) {
         return 0;
     }
 
-    const totalRetrievability = studiedAtoms.reduce((sum, atom) => {
+    const totalRetrievability = atoms.reduce((sum, atom) => {
         // Map FSRS rating (1-4) to a retrievability percentage (e.g., 25%, 50%, 75%, 90%)
+        // Atoms not yet studied (retrievability is undefined) will contribute 0.
         const retrievabilityMap = [0, 25, 50, 75, 90];
         return sum + (retrievabilityMap[atom.retrievability!] || 0);
     }, 0);
 
-    return Math.round(totalRetrievability / studiedAtoms.length);
+    return Math.round(totalRetrievability / atoms.length);
 };
 
 
@@ -387,7 +387,7 @@ const ENERGY_REGEN_HOURS = 1;
 const MAX_ARCHIVED_PROJECTS = 5;
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
   const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
   const [energy, setEnergy] = useState(10);
@@ -413,7 +413,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       const storedArchived = localStorage.getItem('kolearning_archived_projects');
       const user = localStorage.getItem('kolearning_user');
 
-      if (storedProjects) setProjects(JSON.parse(storedProjects));
+      setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
       if (storedCompleted) setCompletedProjects(JSON.parse(storedCompleted));
       if (storedArchived) setArchivedProjects(JSON.parse(storedArchived));
       
@@ -856,3 +856,5 @@ export const useProjects = () => {
   }
   return context;
 };
+
+    
