@@ -180,7 +180,8 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
         setIsLoading(true);
         try {
             const plan = await calibratePlanFromQuestionnaire({
-                atoms: project.atoms 
+                atoms: project.atoms,
+                projectTitle: project.title,
             });
             onCreate(plan, project);
             onClose();
@@ -399,7 +400,8 @@ function ProjectDetails() {
   const handleRecalibratePlan = async (objective: string, deadline?: Date) => {
     try {
         const plan = await calibratePlanFromQuestionnaire({
-            atoms: project.atoms
+            atoms: project.atoms,
+            projectTitle: project.title,
         });
         updateProjectPlan(project.id, plan);
         setIsRecalibrateDialogOpen(false);
@@ -434,29 +436,11 @@ function ProjectDetails() {
   }
 
   const handleViewSource = (source: Source) => {
-    const [header, base64Data] = source.content.split(',');
-    if (!header || !base64Data) return;
-
-    const mimeType = header.split(':')[1].split(';')[0];
-    
-    try {
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: mimeType });
-        const blobUrl = URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
-    } catch (error) {
-        console.error("Error decoding or opening source:", error);
-        toast({
-            title: "Error al abrir la fuente",
-            description: "No se pudo decodificar o mostrar el archivo.",
-            variant: "destructive",
-        });
-    }
+    // This function is now disabled as we no longer store source content.
+    toast({
+        title: "Función no disponible",
+        description: "La visualización de la fuente original ya no es posible para ahorrar espacio de almacenamiento.",
+    });
   };
 
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
@@ -791,7 +775,7 @@ function ProjectDetails() {
                                 <p className="text-sm text-muted-foreground">{source.type}</p>
                             </TableCell>
                             <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => handleViewSource(source)}>
+                                <Button variant="ghost" size="sm" onClick={() => handleViewSource(source)} disabled>
                                     <Eye className="h-4 w-4 mr-2"/>
                                     Ver
                                 </Button>
