@@ -24,7 +24,6 @@ import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { useProjects } from "@/contexts/ProjectContext";
 import { Header } from "@/components/layout/header";
-import { ClientProvider } from "@/contexts/client-provider";
 
 const projectIcons: { [key: string]: React.ElementType } = {
     Book,
@@ -136,7 +135,11 @@ const SidebarContent = () => {
   );
 };
 
-const DashboardLayoutContent = ({ children }: { children: React.ReactNode }) => {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const isStudyPage = pathname.startsWith('/study');
 
@@ -148,17 +151,5 @@ const DashboardLayoutContent = ({ children }: { children: React.ReactNode }) => 
         {children}
       </div>
     </div>
-  );
-};
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <ClientProvider>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
-    </ClientProvider>
   );
 }
