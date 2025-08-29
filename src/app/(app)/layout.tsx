@@ -120,12 +120,6 @@ const SidebarContent = () => {
       </nav>
 
       <div className="mt-auto flex flex-col gap-2">
-        <Link href="/archive" passHref>
-          <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
-              <Archive className="h-4 w-4" />
-              {isSidebarOpen && <span className="ml-2">Archivo</span>}
-          </Button>
-        </Link>
         <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
           <Settings className="h-4 w-4" />
           {isSidebarOpen && <span className="ml-2">Configuración</span>}

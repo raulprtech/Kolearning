@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/logo";
 import { useProjects } from "@/contexts/ProjectContext";
-import { Zap, Brain, Flame, Store, User, LogOut } from "lucide-react";
+import { Zap, Brain, Flame, Store, User, LogOut, Archive } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,6 +100,13 @@ export function Header() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{currentUser?.name}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <Link href="/archive" passHref>
+                  <DropdownMenuItem>
+                    <Archive className="mr-2 h-4 w-4" />
+                    <span>Archivo</span>
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
