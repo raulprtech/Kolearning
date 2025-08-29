@@ -40,15 +40,27 @@ export default function SharedProjectPage() {
     }
     
     const handleCopyToMyProjects = () => {
-        // Here we just add the project, but in a real scenario
-        // it would first trigger the customization dialog.
-        addProject(project);
+        // Create a new ID for the copied project to avoid duplicates
+        const slug = project.title
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, '-')
+            .replace(/[^\w-]+/g, '')
+            .replace(/--+/g, '-');
+        const newProjectId = `${slug}-copy-${Date.now()}`;
+
+        const newProject = { ...project, id: newProjectId, isPublic: false }; // Cloned projects are private by default
+
+        addProject(newProject);
         setCopied(true);
         toast({
             title: "¡Proyecto copiado!",
             description: `"${project.title}" ha sido añadido a tus proyectos.`,
         });
-        setTimeout(() => router.push(`/projects/${project.id}`), 1000);
+        setTimeout(() => router.push(`/projects/${newProjectId}`), 1000);
     }
 
     return (

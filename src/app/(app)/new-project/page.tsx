@@ -211,12 +211,14 @@ export default function NewProjectPage() {
       }
 
       const slug = plan.projectTitle
+        .toString()
+        .normalize('NFD') // split an accented letter in the base letter and the acent
+        .replace(/[\u0300-\u036f]/g, '') // remove all previously split accents
         .toLowerCase()
-        .replace(/\s+/g, '-') 
-        .replace(/[^\w-]+/g, '') 
-        .replace(/--+/g, '-') 
-        .replace(/^-+/, '') 
-        .replace(/-+$/, ''); 
+        .trim()
+        .replace(/\s+/g, '-') // replace spaces with -
+        .replace(/[^\w-]+/g, '') // remove all non-word chars
+        .replace(/--+/g, '-'); // replace multiple - with single -
       
       const newProjectId = `${slug}-${Date.now()}`;
 
