@@ -16,51 +16,12 @@ import { Loader2, Star, Target, BrainCircuit, ChevronRight } from 'lucide-react'
 import { Progress } from '@/components/ui/progress';
 import { ProjectCompletionDialog } from '@/components/ui/project-completion-dialog';
 
-const ranks = [
-    { name: "G", minPoints: 0 },
-    { name: "F", minPoints: 100 },
-    { name: "E", minPoints: 250 },
-    { name: "D", minPoints: 500 },
-    { name: "C", minPoints: 1000 },
-    { name: "B", minPoints: 2000 },
-    { name: "A", minPoints: 5000 },
-    { name: "S", minPoints: 10000 },
-];
-
-const getLearnerRank = (totalMasteryPoints: number) => {
-    let currentRank = ranks[0];
-    let nextRank = ranks[1];
-
-    for (let i = 0; i < ranks.length; i++) {
-        if (totalMasteryPoints >= ranks[i].minPoints) {
-            currentRank = ranks[i];
-            if (i < ranks.length - 1) {
-                nextRank = ranks[i + 1];
-            } else {
-                nextRank = { name: "S", minPoints: Infinity }; // Max rank
-            }
-        }
-    }
-
-    const pointsInCurrentRank = totalMasteryPoints - currentRank.minPoints;
-    const pointsForNextRank = nextRank.minPoints - currentRank.minPoints;
-    const progressPercentage = pointsForNextRank === Infinity ? 100 : Math.round((pointsInCurrentRank / pointsForNextRank) * 100);
-    const pointsToNext = pointsForNextRank === Infinity ? 0 : pointsForNextRank - pointsInCurrentRank;
-    
-    return {
-        rankName: currentRank.name,
-        nextRankName: nextRank.name,
-        progress: progressPercentage,
-        pointsToNext: pointsToNext,
-    };
-}
-
 
 function SessionSummaryContent() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
-    const { projects, completeSession, masteryPoints, totalMasteryPoints, sessionAnswers, cognitiveCredits } = useProjects();
+    const { projects, completeSession, masteryPoints, sessionAnswers, cognitiveCredits, learnerRankInfo } = useProjects();
     const projectId = params.id as string;
     const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
     
@@ -92,13 +53,11 @@ function SessionSummaryContent() {
         router.push(`/projects/${projectId}?sessionCompleted=true`);
     };
 
-    const learnerRankInfo = getLearnerRank(totalMasteryPoints);
-
     const correctAnswers = sessionAnswers.filter(answer => answer === true).length;
     const totalAnswers = sessionAnswers.length;
     const accuracy = totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0;
     
-    if (!project) {
+    if (!project || !learnerRankInfo) {
       return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin"/></div>;
     }
 

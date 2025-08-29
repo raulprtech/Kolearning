@@ -59,6 +59,13 @@ type User = {
     password?: string; // Should not be stored long-term in a real app
 }
 
+type LearnerRankInfo = {
+    rankName: string;
+    nextRankName: string;
+    progress: number;
+    pointsToNext: number;
+}
+
 type ProjectContextType = {
   projects: Project[];
   completedProjects: Project[];
@@ -94,6 +101,7 @@ type ProjectContextType = {
   login: (email: string, password: string) => boolean;
   signup: (name: string, email: string, password: string) => boolean;
   logout: () => void;
+  learnerRankInfo: LearnerRankInfo | null;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -313,6 +321,46 @@ const isYesterday = (today: Date, otherDate: Date) => {
     return isSameDay(yesterday, otherDate);
 }
 
+const ranks = [
+    { name: "G", minPoints: 0 },
+    { name: "F", minPoints: 100 },
+    { name: "E", minPoints: 250 },
+    { name: "D", minPoints: 500 },
+    { name: "C", minPoints: 1000 },
+    { name: "B", minPoints: 2000 },
+    { name: "A", minPoints: 5000 },
+    { name: "S", minPoints: 10000 },
+];
+
+const getLearnerRank = (totalMasteryPoints: number): LearnerRankInfo => {
+    let currentRank = ranks[0];
+    let nextRank = ranks[1];
+
+    for (let i = 0; i < ranks.length; i++) {
+        if (totalMasteryPoints >= ranks[i].minPoints) {
+            currentRank = ranks[i];
+            if (i < ranks.length - 1) {
+                nextRank = ranks[i + 1];
+            } else {
+                nextRank = { name: "S", minPoints: Infinity }; // Max rank
+            }
+        }
+    }
+
+    const pointsInCurrentRank = totalMasteryPoints - currentRank.minPoints;
+    const pointsForNextRank = nextRank.minPoints - currentRank.minPoints;
+    const progressPercentage = pointsForNextRank === Infinity ? 100 : Math.round((pointsInCurrentRank / pointsForNextRank) * 100);
+    const pointsToNext = pointsForNextRank === Infinity ? 0 : pointsForNextRank - pointsInCurrentRank;
+    
+    return {
+        rankName: currentRank.name,
+        nextRankName: nextRank.name,
+        progress: progressPercentage,
+        pointsToNext: pointsToNext,
+    };
+}
+
+
 const MAX_NATURAL_ENERGY = 10;
 const ENERGY_REGEN_HOURS = 1;
 
@@ -326,7 +374,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [cognitiveCredits, setCognitiveCredits] = useState(0);
   const [globalCognitiveCredits, setGlobalCognitiveCredits] = useState(500);
   const [masteryPoints, setMasteryPoints] = useState(0);
-  const [totalMasteryPoints, setTotalMasteryPoints] = useState(0);
+  const [totalMasteryPoints, setTotalMasteryPoints] = useState(170); // Initial value for demonstration
   const [lastSessionCompletedDate, setLastSessionCompletedDate] = useState<Date | null>(null);
   const [nextEnergyTimestamp, setNextEnergyTimestamp] = useState<number | null>(null);
   const [nextEnergyIn, setNextEnergyIn] = useState(0);
@@ -679,6 +727,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       }
       return false;
   }
+  
+  const learnerRankInfo = getLearnerRank(totalMasteryPoints);
 
   return (
     <ProjectContext.Provider value={{ 
@@ -686,7 +736,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
         updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers,
-        isAuthenticated, currentUser, login, signup, logout
+        isAuthenticated, currentUser, login, signup, logout,
+        learnerRankInfo
     }}>
       {children}
     </ProjectContext.Provider>
@@ -700,4 +751,3 @@ export const useProjects = () => {
   }
   return context;
 };
-
