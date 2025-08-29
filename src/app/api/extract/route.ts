@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { extractContentFromUrl } from '@/lib/actions';
+import { extractContentFromUrl } from '@/ai/flows/extract-content-from-url';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -11,14 +11,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const content = await extractContentFromUrl(url);
-    if (content) {
-      return NextResponse.json({ content });
+    const result = await extractContentFromUrl({ url });
+    if (result && result.content) {
+      return NextResponse.json({ content: result.content });
     } else {
       return NextResponse.json({ error: 'Failed to extract content from the URL.' }, { status: 500 });
     }
   } catch (error) {
     console.error(`Error in /api/extract for URL: ${url}`, error);
-    return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An internal server error occurred.';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
