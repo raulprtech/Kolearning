@@ -14,7 +14,7 @@ export type Atom = {
 export type Source = {
     name: string;
     type: string;
-    content: string;
+    content?: string; // Content is optional and should not be persisted
 }
 
 export type Session = {
@@ -151,7 +151,7 @@ const initialProjects: Project[] = [
         { session: 2, topic: "Superposición y Entrelazamiento", sessionType: "Incursión", questions: "Pregunta Abierta" },
         { session: 3, topic: "Repaso de Fundamentos", sessionType: "Refuerzo de Dominio", questions: "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)" },
     ],
-    sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento", content: "data:application/pdf;base64,..."} ],
+    sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento"} ],
     isPublic: false,
   },
   {
@@ -177,7 +177,7 @@ const initialProjects: Project[] = [
     learningPath: [
         { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
-    sources: [ {name: "The_History_of_Rome.pdf", type: "Documento", content: "data:application/pdf;base64,..."} ],
+    sources: [ {name: "The_History_of_Rome.pdf", type: "Documento"} ],
     isPublic: false,
   },
   {
@@ -201,7 +201,7 @@ const initialProjects: Project[] = [
     learningPath: [
         { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración", questions: "Opción Múltiple" },
     ],
-    sources: [ {name: "Organic_Chemistry.pdf", type: "Documento", content: "data:application/pdf;base64,..."} ],
+    sources: [ {name: "Organic_Chemistry.pdf", type: "Documento"} ],
     isPublic: false,
   },
 ];
@@ -225,7 +225,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Variables y Tipos de Datos", sessionType: "Incursión", questions: "Pregunta Abierta" },
         { session: 2, topic: "Estructuras de Control", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
-    sources: [{ name: "python_intro.pdf", type: "Documento", content: "data:application/pdf;base64,..." }],
+    sources: [{ name: "python_intro.pdf", type: "Documento" }],
     isPublic: true,
   },
   {
@@ -246,7 +246,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Escalas y Tonalidades", sessionType: "Calibración", questions: "Opción Múltiple" },
         { session: 2, topic: "Intervalos y Acordes", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
-    sources: [{ name: "music_theory_basics.docx", type: "Documento", content: "data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,..." }],
+    sources: [{ name: "music_theory_basics.docx", type: "Documento" }],
     isPublic: true,
   },
   {
@@ -267,7 +267,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Renacimiento", sessionType: "Incursión", questions: "Pregunta Abierta" },
         { session: 2, topic: "Impresionismo y Postimpresionismo", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
-    sources: [{ name: "art_history_101.pdf", type: "Documento", content: "data:application/pdf;base64,..." }],
+    sources: [{ name: "art_history_101.pdf", type: "Documento" }],
     isPublic: true,
   },
   {
@@ -288,7 +288,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Componentes y Props", sessionType: "Incursión", questions: "Pregunta Abierta" },
         { session: 2, topic: "State y Ciclo de Vida", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
-    sources: [{ name: "react_docs_summary.txt", type: "Documento", content: "data:text/plain;base64,..." }],
+    sources: [{ name: "react_docs_summary.txt", type: "Documento" }],
     isPublic: true,
   },
   {
@@ -309,7 +309,7 @@ export const publicProjects: Project[] = [
         { session: 1, topic: "Filósofos Presocráticos", sessionType: "Calibración", questions: "Opción Múltiple" },
         { session: 2, topic: "Sócrates y Platón", sessionType: "Incursión", questions: "Pregunta Abierta" },
     ],
-    sources: [{ name: "greek_philosophy.pdf", type: "Documento", content: "data:application/pdf;base64,..." }],
+    sources: [{ name: "greek_philosophy.pdf", type: "Documento" }],
     isPublic: true,
   },
 ];
@@ -371,7 +371,7 @@ const ENERGY_REGEN_HOURS = 1;
 const MAX_ARCHIVED_PROJECTS = 5;
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
   const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
   const [energy, setEnergy] = useState(10);
@@ -396,7 +396,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       const storedArchived = localStorage.getItem('kolearning_archived_projects');
       const user = localStorage.getItem('kolearning_user');
 
-      if (storedProjects) setProjects(JSON.parse(storedProjects));
+      setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
       if (storedCompleted) setCompletedProjects(JSON.parse(storedCompleted));
       if (storedArchived) setArchivedProjects(JSON.parse(storedArchived));
       
@@ -406,6 +406,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
+      // Fallback to initial state if localStorage is corrupt
+      setProjects(initialProjects);
     }
   }, []);
 
@@ -461,9 +463,22 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    // Clear user-specific data from localStorage
     localStorage.removeItem('kolearning_user');
+    localStorage.removeItem('kolearning_projects');
+    localStorage.removeItem('kolearning_completed_projects');
+    localStorage.removeItem('kolearning_archived_projects');
+    
+    // Reset state
     setCurrentUser(null);
     setIsAuthenticated(false);
+    setProjects(initialProjects); // Reset to default projects
+    setCompletedProjects([]);
+    setArchivedProjects([]);
+    // Optionally reset other stats like energy, credits, etc.
+    setEnergy(10);
+    setGlobalCognitiveCredits(500);
+    setTotalMasteryPoints(170);
   };
   
   const updateUserProfile = (profileData: Partial<User>): boolean => {
@@ -674,7 +689,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProjects(prevProjects =>
         prevProjects.map(p => {
             if (p.id === projectId) {
-                projectToUpdate = p;
                 const updatedSessions = [...p.sessions];
                 if (updatedSessions[sessionIndex]) {
                     updatedSessions[sessionIndex].status = 'Completed';
@@ -688,8 +702,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
                 const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
                 const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
                 const newMastery = newTotalAnswers > 0 ? Math.round((newCorrectAnswers / newTotalAnswers) * 100) : 0;
-
-                return { 
+                
+                projectToUpdate = { 
                     ...p, 
                     sessions: updatedSessions,
                     totalAnswers: newTotalAnswers,
@@ -697,20 +711,20 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
                     bestStreak: newBestStreak,
                     mastery: newMastery,
                 };
+                return projectToUpdate;
             }
             return p;
         })
     );
-
-    if (projectToUpdate && sessionIndex === projectToUpdate.sessions.length - 1) {
+    
+    // Check for project completion after state update is triggered
+    if (projectToUpdate && projectToUpdate.sessions.every(s => s.status === 'Completed')) {
         const completedProject = { ...projectToUpdate, mastery: 100 };
-         // Update the project one last time before moving it
-        setProjects(prev => prev.map(p => p.id === projectId ? completedProject : p));
         setProjects(prev => prev.filter(p => p.id !== projectId));
         setCompletedProjects(prev => [...prev, completedProject]);
     }
 
-    // Reset session-specific stats AFTER project state has been updated
+    // Reset session-specific stats
     resetSessionStats();
 
 }, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak, resetSessionStats]);
