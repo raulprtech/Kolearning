@@ -818,7 +818,13 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       setSessionStreak(0);
     }
     
-    const newMasteryPoints = fsrs * 5;
+    let newMasteryPoints = 0;
+    switch (fsrs) {
+        case 1: newMasteryPoints = 5; break; // Muy Difícil
+        case 2: newMasteryPoints = 10; break; // Difícil
+        case 3: newMasteryPoints = 15; break; // Bien
+        case 4: newMasteryPoints = 20; break; // Fácil
+    }
     setMasteryPoints(prev => prev + newMasteryPoints);
     setTotalMasteryPoints(prev => prev + newMasteryPoints);
   }, []);
@@ -856,5 +862,3 @@ export const useProjects = () => {
   }
   return context;
 };
-
-    
