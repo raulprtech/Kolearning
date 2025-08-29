@@ -116,7 +116,7 @@ const initialProjects: Project[] = [
     id: "1",
     title: "Física Cuántica",
     description: "Un curso introductorio a los principios de la mecánica cuántica.",
-    mastery: 85,
+    mastery: 0,
     icon: "Book",
     categories: ["Ciencia", "Física"],
     bestStreak: 5,
@@ -158,7 +158,7 @@ const initialProjects: Project[] = [
     id: "2",
     title: "Historia de Roma",
     description: "Explora el ascenso y caída del Imperio Romano.",
-    mastery: 62,
+    mastery: 0,
     icon: "Landmark",
     bestStreak: 3,
     totalAnswers: 15,
@@ -184,7 +184,7 @@ const initialProjects: Project[] = [
     id: "3",
     title: "Química Orgánica",
     description: "Domina las bases de los compuestos basados en carbono.",
-    mastery: 45,
+    mastery: 0,
     icon: "FlaskConical",
     bestStreak: 2,
     totalAnswers: 10,
@@ -365,6 +365,21 @@ const getLearnerRank = (totalMasteryPoints: number): LearnerRankInfo => {
     };
 }
 
+const calculateMastery = (atoms: Atom[]): number => {
+    const studiedAtoms = atoms.filter(atom => atom.retrievability !== undefined);
+    if (studiedAtoms.length === 0) {
+        return 0;
+    }
+
+    const totalRetrievability = studiedAtoms.reduce((sum, atom) => {
+        // Map FSRS rating (1-4) to a retrievability percentage (e.g., 25%, 50%, 75%, 90%)
+        const retrievabilityMap = [0, 25, 50, 75, 90];
+        return sum + (retrievabilityMap[atom.retrievability!] || 0);
+    }, 0);
+
+    return Math.round(totalRetrievability / studiedAtoms.length);
+};
+
 
 const MAX_NATURAL_ENERGY = 10;
 const ENERGY_REGEN_HOURS = 1;
@@ -414,9 +429,12 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   // Effect to save data to localStorage whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem('kolearning_projects', JSON.stringify(projects));
-      localStorage.setItem('kolearning_completed_projects', JSON.stringify(completedProjects));
-      localStorage.setItem('kolearning_archived_projects', JSON.stringify(archivedProjects));
+      const storedProjectsData = projects.map(({ sources, ...rest }) => rest);
+      localStorage.setItem('kolearning_projects', JSON.stringify(storedProjectsData));
+      const storedCompletedData = completedProjects.map(({ sources, ...rest }) => rest);
+      localStorage.setItem('kolearning_completed_projects', JSON.stringify(storedCompletedData));
+       const storedArchivedData = archivedProjects.map(({ sources, ...rest }) => rest);
+      localStorage.setItem('kolearning_archived_projects', JSON.stringify(storedArchivedData));
     } catch (error) {
       console.error("Failed to save projects to localStorage", error);
     }
@@ -701,7 +719,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
                 const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
                 const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
                 const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
-                const newMastery = newTotalAnswers > 0 ? Math.round((newCorrectAnswers / newTotalAnswers) * 100) : 0;
+                const newMastery = calculateMastery(p.atoms);
                 
                 projectToUpdate = { 
                     ...p, 
@@ -779,7 +797,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             if (newAtoms[atomIndex]) {
                 newAtoms[atomIndex] = { ...newAtoms[atomIndex], retrievability: fsrs };
             }
-            return { ...p, atoms: newAtoms };
+            // We also update the project's mastery here to reflect the change immediately
+            const newMastery = calculateMastery(newAtoms);
+            return { ...p, atoms: newAtoms, mastery: newMastery };
         }
         return p;
     }));
