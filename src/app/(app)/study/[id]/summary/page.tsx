@@ -46,10 +46,17 @@ function SessionSummaryContent() {
     }, [project, sessionIndex]);
 
 
-    const handleFinish = () => {
+    const handleFinish = async () => {
         setIsLoading(true);
-        completeSession(projectId, sessionIndex);
-        router.push(`/projects/${projectId}?sessionCompleted=true`);
+        try {
+            await completeSession(projectId, sessionIndex);
+            router.push(`/projects/${projectId}?sessionCompleted=true`);
+        } catch (error) {
+            console.error("Error completing session:", error);
+            setIsLoading(false);
+            // Still navigate even if AI adjustment fails
+            router.push(`/projects/${projectId}?sessionCompleted=true`);
+        }
     };
 
     const correctAnswers = sessionAnswers.filter(answer => answer === true).length;

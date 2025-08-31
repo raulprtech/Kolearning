@@ -284,7 +284,7 @@ function ProjectDetails() {
   const router = useRouter();
   const { toast } = useToast();
   const slug = params.id as string;
-  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan } = useProjects();
+  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, deleteSource, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan } = useProjects();
   
   const project = projects.find(p => p.id === slug) || publicProjects.find(p => p.id === slug);
   const isUserProject = projects.some(p => p.id === slug);
@@ -299,6 +299,8 @@ function ProjectDetails() {
   const [showAllAtoms, setShowAllAtoms] = useState(false);
   const [showFullPlan, setShowFullPlan] = useState(false);
   const [atomAction, setAtomAction] = useState<{ mode: 'view' | 'edit' | 'delete' | null, atom: Atom | null, index: number | null }>({ mode: null, atom: null, index: null });
+  const [sourceToDelete, setSourceToDelete] = useState<{ source: Source, index: number } | null>(null);
+  const [sourceToView, setSourceToView] = useState<Source | null>(null);
   const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
   
   useEffect(() => {
@@ -360,7 +362,7 @@ function ProjectDetails() {
   }
 
   const handleCreateNewProject = (plan: CalibratePlanOutput, baseProject: Project) => {
-      const slug = plan.projectTitle.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
+      const slug = baseProject.title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
       const newProjectId = `${slug}-${Date.now()}`;
 
       // This is a bit of a hack. We should get the full learning path with questions from the AI.
@@ -374,7 +376,7 @@ function ProjectDetails() {
       const newProject: Project = {
           ...baseProject,
           id: newProjectId,
-          title: plan.projectTitle,
+          title: baseProject.title,
           description: plan.projectDescription,
           categories: plan.categories,
           learningPath: learningPathWithQuestions,
@@ -384,7 +386,7 @@ function ProjectDetails() {
       };
       
       addProject(newProject);
-      toast({ title: "¡Proyecto Creado!", description: `${plan.projectTitle} ha sido añadido a tu dashboard.` });
+      toast({ title: "¡Proyecto Creado!", description: `${baseProject.title} ha sido añadido a tu dashboard.` });
       router.push(`/projects/${newProjectId}`);
   };
 
@@ -436,11 +438,22 @@ function ProjectDetails() {
   }
 
   const handleViewSource = (source: Source) => {
-    // This function is now disabled as we no longer store source content.
-    toast({
-        title: "Función no disponible",
-        description: "La visualización de la fuente original ya no es posible para ahorrar espacio de almacenamiento.",
-    });
+    setSourceToView(source);
+  };
+
+  const handleDeleteSource = (source: Source, index: number) => {
+    setSourceToDelete({ source, index });
+  };
+
+  const confirmDeleteSource = () => {
+    if (sourceToDelete) {
+      deleteSource(project.id, sourceToDelete.index);
+      toast({
+        title: "Fuente eliminada",
+        description: `"${sourceToDelete.source.name}" ha sido eliminada del proyecto.`
+      });
+      setSourceToDelete(null);
+    }
   };
 
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
@@ -555,6 +568,73 @@ function ProjectDetails() {
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!sourceToDelete} onOpenChange={() => setSourceToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar fuente?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    ¿Estás seguro de que quieres eliminar "{sourceToDelete?.source.name}"? Esta acción no se puede deshacer.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDeleteSource} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Eliminar
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!sourceToView} onOpenChange={() => setSourceToView(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+            <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                    <BookCopy className="h-5 w-5" />
+                    {sourceToView?.name}
+                </DialogTitle>
+                <DialogDescription>
+                    Fuente original: {sourceToView?.type}
+                </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh] my-4 pr-4">
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                    {sourceToView?.content.split('\n').map((line, index) => {
+                        if (line.startsWith('# ')) {
+                            return <h1 key={index} className="text-2xl font-bold mb-4 mt-6 text-foreground">{line.slice(2)}</h1>;
+                        } else if (line.startsWith('## ')) {
+                            return <h2 key={index} className="text-xl font-semibold mb-3 mt-5 text-foreground">{line.slice(3)}</h2>;
+                        } else if (line.startsWith('### ')) {
+                            return <h3 key={index} className="text-lg font-medium mb-2 mt-4 text-foreground">{line.slice(4)}</h3>;
+                        } else if (line.startsWith('#### ')) {
+                            return <h4 key={index} className="text-base font-medium mb-2 mt-3 text-foreground">{line.slice(5)}</h4>;
+                        } else if (line.startsWith('- ')) {
+                            return <li key={index} className="ml-4 text-muted-foreground">{line.slice(2)}</li>;
+                        } else if (line.startsWith('```')) {
+                            const isClosing = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length % 2 === 1;
+                            return isClosing ? 
+                                <div key={index} className="block"></div> : 
+                                <div key={index} className="bg-muted p-3 rounded-md overflow-x-auto text-sm mt-2 mb-2 block"></div>;
+                        } else if (line.trim() === '') {
+                            return <br key={index} />;
+                        } else {
+                            // Check if we're inside a code block
+                            const codeBlocksBefore = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length || 0;
+                            const isInCodeBlock = codeBlocksBefore % 2 === 1;
+                            if (isInCodeBlock) {
+                                return <code key={index} className="block text-sm text-foreground">{line}</code>;
+                            } else {
+                                return <p key={index} className="mb-2 text-muted-foreground">{line}</p>;
+                            }
+                        }
+                    })}
+                </div>
+            </ScrollArea>
+            <DialogFooter>
+                <Button onClick={() => setSourceToView(null)}>Cerrar</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {showUpdateAlert && (
         <Alert className="mb-6 bg-primary/10 border-primary/20">
@@ -766,36 +846,42 @@ function ProjectDetails() {
                 <h2 className="text-xl font-semibold">Fuentes</h2>
             </div>
             <Card className="bg-card/50">
-                <Table>
-                    <TableBody>
-                    {project.sources?.map((source, index) => (
-                        <TableRow key={index}>
-                            <TableCell>
-                                <p className="font-medium">{source.name}</p>
-                                <p className="text-sm text-muted-foreground">{source.type}</p>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => handleViewSource(source)} disabled>
-                                    <Eye className="h-4 w-4 mr-2"/>
-                                    Ver
-                                </Button>
-                                {isUserProject && (
-                                    <>
-                                        {/* <Button variant="ghost" size="sm" onClick={() => router.push(`/new-project?source=${encodeURIComponent(source.content)}&sourceName=${encodeURIComponent(source.name)}`)}>
-                                            <RefreshCw className="h-4 w-4 mr-2" />
-                                            Reutilizar
-                                        </Button> */}
-                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10">
+                {project.sources && project.sources.length > 0 ? (
+                    <Table>
+                        <TableBody>
+                        {project.sources.map((source, index) => (
+                            <TableRow key={index}>
+                                <TableCell>
+                                    <p className="font-medium">{source.name}</p>
+                                    <p className="text-sm text-muted-foreground">{source.type}</p>
+                                    <Badge variant="secondary" className="mt-1 text-xs">
+                                        {source.content.length} caracteres disponibles
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="sm" onClick={() => handleViewSource(source)}>
+                                        <Eye className="h-4 w-4 mr-2"/>
+                                        Ver
+                                    </Button>
+                                    {isUserProject && (
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteSource(source, index)}>
                                             <Trash2 className="h-4 w-4 mr-2" />
                                             Eliminar
                                         </Button>
-                                    </>
-                                )}
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                    </TableBody>
-                </Table>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                ) : (
+                    <CardContent className="text-center py-8">
+                        <p className="text-muted-foreground mb-2">No hay fuentes disponibles</p>
+                        <p className="text-sm text-muted-foreground">
+                            Las fuentes se agregarán automáticamente cuando crees nuevos proyectos
+                        </p>
+                    </CardContent>
+                )}
             </Card>
         </div>
 

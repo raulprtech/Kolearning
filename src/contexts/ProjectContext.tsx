@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { CalibratePlanOutput } from '@/ai/flows/koli-calibrate-plan';
+import { dynamicLearningPathAdjustment } from '@/ai/flows/koli-strategic-tutor';
 import { differenceInDays, addDays } from 'date-fns';
 
 
@@ -20,7 +21,7 @@ export type Atom = {
 export type Source = {
     name: string;
     type: string;
-    // content is removed to avoid localStorage quota issues
+    content: string;
 }
 
 export type Session = {
@@ -84,11 +85,12 @@ type ProjectContextType = {
   updateProjectIcon: (projectId: string, icon: string) => void;
   updateProjectDetails: (projectId: string, title: string, description: string) => void;
   updateProjectPlan: (projectId: string, plan: CalibratePlanOutput) => void;
-  addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[]) => void;
+  addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[], insertAfterSession?: number) => void;
   addAtomsToProject: (projectId: string, newAtoms: Atom[]) => void;
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
   deleteAtom: (projectId: string, atomIndex: number) => void;
-  completeSession: (projectId: string, sessionIndex: number) => void;
+  deleteSource: (projectId: string, sourceIndex: number) => void;
+  completeSession: (projectId: string, sessionIndex: number) => Promise<void>;
   archiveProject: (projectId: string) => boolean;
   unarchiveProject: (projectId: string) => void;
   deleteProjectPermanently: (projectId: string) => void;
@@ -101,7 +103,7 @@ type ProjectContextType = {
   masteryPoints: number;
   totalMasteryPoints: number;
   updateEnergy: (amount: number) => void;
-  recordAnswer: (projectId: string, atomIndex: number, fsrs: number, aidsUsed: boolean, isCorrect: boolean) => void;
+  recordAnswer: (projectId: string, atomIndex: number, fsrs: 1|2|3|4, aidsUsed: boolean, isCorrect: boolean) => void;
   resetSessionStats: () => void;
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
   nextEnergyIn: number;
@@ -118,199 +120,9 @@ type ProjectContextType = {
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
-const initialProjects: Project[] = [
-  {
-    id: "1",
-    title: "Física Cuántica",
-    description: "Un curso introductorio a los principios de la mecánica cuántica.",
-    mastery: 0,
-    icon: "Book",
-    categories: ["Ciencia", "Física"],
-    bestStreak: 5,
-    totalAnswers: 20,
-    correctAnswers: 17,
-    atoms: [
-        { 
-            question: "¿Qué es la dualidad onda-partícula?", 
-            answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas.",
-        },
-        { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
-    ],
-    sessions: [
-        { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "20 min", status: "Continue", atoms: [
-            { question: "¿Qué es la dualidad onda-partícula?", answer: "Es el concepto de la mecánica cuántica según el cual cada partícula puede ser descrita en términos no solo de partículas, sino también de ondas." },
-            { question: "¿Qué es el principio de incertidumbre de Heisenberg?", answer: "Establece la imposibilidad de que determinados pares de magnitudes físicas observables y complementarias sean conocidas con precisión arbitraria." }
-        ] },
-        { session: 2, type: "Refuerzo de Dominio", questions: "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)", duration: "30 min", status: "Locked", atoms: [] },
-        { session: 3, type: "Prueba de Dominio", questions: "Pregunta Abierta y Casos Prácticos", duration: "25 min", status: "Locked", atoms: [] },
-    ],
-    learningPath: [
-        { session: 1, topic: "Fundamentos de la Mecánica Cuántica", sessionType: "Calibración", questions: "Opción Múltiple" },
-        { session: 2, topic: "Superposición y Entrelazamiento", sessionType: "Incursión", questions: "Pregunta Abierta" },
-        { session: 3, topic: "Repaso de Fundamentos", sessionType: "Refuerzo de Dominio", questions: "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)" },
-    ],
-    sources: [ {name: "Quantum_Physics_for_Dummies.pdf", type: "Documento"} ],
-    isPublic: false,
-  },
-  {
-    id: "2",
-    title: "Historia de Roma",
-    description: "Explora el ascenso y caída del Imperio Romano.",
-    mastery: 0,
-    icon: "Landmark",
-    bestStreak: 3,
-    totalAnswers: 15,
-    correctAnswers: 9,
-    categories: ["Humanidades", "Historia"],
-    atoms: [
-        { question: "¿Quién fue el primer emperador de Roma?", answer: "César Augusto (nacido como Cayo Octavio)." },
-        { question: "¿Qué fueron las Guerras Púnicas?", answer: "Una serie de tres guerras libradas entre Roma y Cartago desde el 264 a.C. hasta el 146 a.C." }
-    ],
-    sessions: [
-        { session: 1, type: "Incursión", questions: "Pregunta Abierta", duration: "25 min", status: "Continue", atoms: [
-            { question: "¿Quién fue el primer emperador de Roma?", answer: "César Augusto (nacido como Cayo Octavio)." },
-            { question: "¿Qué fueron las Guerras Púnicas?", answer: "Una serie de tres guerras libradas entre Roma y Cartago desde el 264 a.C. hasta el 146 a.C." }
-        ] },
-    ],
-    learningPath: [
-        { session: 1, topic: "La fundación de Roma y la República", sessionType: "Incursión", questions: "Pregunta Abierta" },
-    ],
-    sources: [ {name: "The_History_of_Rome.pdf", type: "Documento"} ],
-    isPublic: false,
-  },
-  {
-    id: "3",
-    title: "Química Orgánica",
-    description: "Domina las bases de los compuestos basados en carbono.",
-    mastery: 0,
-    icon: "FlaskConical",
-    bestStreak: 2,
-    totalAnswers: 10,
-    correctAnswers: 4,
-    categories: ["Ciencia", "Química"],
-    atoms: [
-        { question: "¿Qué es un alcano?", answer: "Un hidrocarburo acíclico saturado, lo que significa que consiste en átomos de hidrógeno y carbono dispuestos en una estructura de árbol en la que todos los enlaces carbono-carbono son simples." },
-    ],
-    sessions: [
-        { session: 1, type: "Calibración", questions: "Opción Múltiple", duration: "15 min", status: "Continue", atoms: [
-            { question: "¿Qué es un alcano?", answer: "Un hidrocarburo acíclico saturado, lo que significa que consiste en átomos de hidrógeno y carbono dispuestos en una estructura de árbol en la que todos los enlaces carbono-carbono son simples." },
-        ] },
-    ],
-    learningPath: [
-        { session: 1, topic: "Introducción a los hidrocarburos", sessionType: "Calibración", questions: "Opción Múltiple" },
-    ],
-    sources: [ {name: "Organic_Chemistry.pdf", type: "Documento"} ],
-    isPublic: false,
-  },
-];
+const initialProjects: Project[] = [];
 
-export const publicProjects: Project[] = [
-  {
-    id: "4",
-    title: "Programación en Python",
-    description: "Aprende los fundamentos de Python, uno de los lenguajes más populares.",
-    icon: "Code",
-    mastery: 0,
-    category: "Tecnología",
-    author: "Koli Academy",
-    categories: ["Tecnología"],
-    atoms: [
-        { question: "¿Qué es una variable en Python?", answer: "Un contenedor para almacenar valores de datos." },
-        { question: "Menciona 3 tipos de datos en Python", answer: "int (entero), str (cadena), bool (booleano)." }
-    ],
-    sessions: [],
-    learningPath: [
-        { session: 1, topic: "Variables y Tipos de Datos", sessionType: "Incursión", questions: "Pregunta Abierta" },
-        { session: 2, topic: "Estructuras de Control", sessionType: "Incursión", questions: "Pregunta Abierta" },
-    ],
-    sources: [{ name: "python_intro.pdf", type: "Documento" }],
-    isPublic: true,
-  },
-  {
-    id: "5",
-    title: "Teoría Musical",
-    description: "Desde escalas hasta acordes, domina la teoría detrás de la música.",
-    icon: "Music",
-    mastery: 0,
-    category: "Arte",
-    author: "Comunidad",
-    categories: ["Arte"],
-     atoms: [
-        { question: "¿Qué es una escala mayor?", answer: "Una escala diatónica con siete notas, caracterizada por su patrón de tonos y semitonos: T-T-S-T-T-T-S." },
-        { question: "¿Qué es un acorde?", answer: "Un conjunto de tres o más notas que suenan simultáneamente." }
-    ],
-    sessions: [],
-    learningPath: [
-        { session: 1, topic: "Escalas y Tonalidades", sessionType: "Calibración", questions: "Opción Múltiple" },
-        { session: 2, topic: "Intervalos y Acordes", sessionType: "Incursión", questions: "Pregunta Abierta" },
-    ],
-    sources: [{ name: "music_theory_basics.docx", type: "Documento" }],
-    isPublic: true,
-  },
-  {
-    id: "6",
-    title: "Historia del Arte",
-    description: "Un viaje a través de los movimientos artísticos más importantes.",
-    icon: "Palette",
-    mastery: 0,
-    category: "Humanidades",
-    author: "Koli Academy",
-    categories: ["Humanidades"],
-    atoms: [
-        { question: "¿Qué caracteriza al Impresionismo?", answer: "Pinceladas visibles, énfasis en la luz y el color, y la captura de un momento en el tiempo." },
-        { question: "¿Quién pintó 'La noche estrellada'?", answer: "Vincent van Gogh en 1889." }
-    ],
-    sessions: [],
-    learningPath: [
-        { session: 1, topic: "Renacimiento", sessionType: "Incursión", questions: "Pregunta Abierta" },
-        { session: 2, topic: "Impresionismo y Postimpresionismo", sessionType: "Incursión", questions: "Pregunta Abierta" },
-    ],
-    sources: [{ name: "art_history_101.pdf", type: "Documento" }],
-    isPublic: true,
-  },
-  {
-    id: "7",
-    title: "Introducción a React",
-    description: "Construye interfaces de usuario modernas y reactivas.",
-    icon: "Code",
-    mastery: 0,
-    category: "Tecnología",
-    author: "Comunidad",
-    categories: ["Tecnología"],
-    atoms: [
-        { question: "¿Qué es JSX?", answer: "Una extensión de sintaxis para JavaScript que permite escribir HTML directamente dentro de React." },
-        { question: "¿Qué es el 'state' en React?", answer: "Un objeto JavaScript que almacena los datos de un componente y determina cómo se renderiza y se comporta." }
-    ],
-    sessions: [],
-    learningPath: [
-        { session: 1, topic: "Componentes y Props", sessionType: "Incursión", questions: "Pregunta Abierta" },
-        { session: 2, topic: "State y Ciclo de Vida", sessionType: "Incursión", questions: "Pregunta Abierta" },
-    ],
-    sources: [{ name: "react_docs_summary.txt", type: "Documento" }],
-    isPublic: true,
-  },
-  {
-    id: "8",
-    title: "Filosofía Griega",
-    description: "Explora las ideas de Platón, Aristóteles y Sócrates.",
-    icon: "Landmark",
-    mastery: 0,
-    category: "Humanidades",
-    author: "Koli Academy",
-    categories: ["Humanidades"],
-    atoms: [
-        { question: "¿Qué es la 'Alegoría de la caverna' de Platón?", answer: "Una metáfora sobre la naturaleza de la realidad, el conocimiento y la educación filosófica." },
-        { question: "¿Cuál es el método socrático?", answer: "Un método de diálogo que utiliza preguntas para estimular el pensamiento crítico y exponer las contradicciones en las creencias de uno." }
-    ],
-    sessions: [],
-    learningPath: [
-        { session: 1, topic: "Filósofos Presocráticos", sessionType: "Calibración", questions: "Opción Múltiple" },
-        { session: 2, topic: "Sócrates y Platón", sessionType: "Incursión", questions: "Pregunta Abierta" },
-    ],
-    sources: [{ name: "greek_philosophy.pdf", type: "Documento" }],
-    isPublic: true,
-  },
-];
+export const publicProjects: Project[] = [];
 
 const isSameDay = (date1: Date, date2: Date) => {
     return date1.getFullYear() === date2.getFullYear() &&
@@ -373,16 +185,27 @@ const calculateMastery = (atoms: Atom[]): number => {
         return 0;
     }
 
-    const totalRetrievability = atoms.reduce((sum, atom) => {
-        if (atom.lastReviewed && atom.stability) {
-            const daysSince = differenceInDays(new Date(), new Date(atom.lastReviewed));
-            const retrievability = calculateCurrentRetrievability(atom.stability, daysSince);
-            return sum + (retrievability * 100);
-        }
-        return sum; // Atoms not yet studied contribute 0 to the average.
+    const studiedAtoms = atoms.filter(atom => atom.lastReviewed && atom.stability);
+    
+    // If no atoms have been studied yet, mastery is 0
+    if (studiedAtoms.length === 0) {
+        return 0;
+    }
+
+    // Calculate average retrievability for studied atoms only
+    const totalRetrievability = studiedAtoms.reduce((sum, atom) => {
+        const daysSince = differenceInDays(new Date(), new Date(atom.lastReviewed!));
+        const retrievability = calculateCurrentRetrievability(atom.stability!, daysSince);
+        return sum + retrievability;
     }, 0);
 
-    return Math.round(totalRetrievability / atoms.length);
+    const averageRetrievability = totalRetrievability / studiedAtoms.length;
+    
+    // Convert to percentage (0-100) and weight by coverage
+    const coverage = studiedAtoms.length / atoms.length;
+    const masteryScore = (averageRetrievability * coverage) * 100;
+    
+    return Math.round(masteryScore);
 };
 
 
@@ -671,11 +494,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             learningPath: newLearningPath,
             sessions: newSessions,
             fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
-            // Reset stats as it's a new plan
-            mastery: 0,
-            bestStreak: 0,
-            totalAnswers: 0,
-            correctAnswers: 0,
+            // Reset some stats as it's a new plan (keep bestStreak as it's a historical achievement)
+            mastery: calculateMastery(p.atoms),
           };
         }
         return p;
@@ -683,19 +503,52 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
-  const addSessionsToProject = (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[]) => {
+  const addSessionsToProject = (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[], insertAfterSession?: number) => {
       setProjects(prevProjects => {
           return prevProjects.map(p => {
               if (p.id === projectId) {
-                  const existingSessions = p.sessions;
-                  const nextSessionNumber = (existingSessions[existingSessions.length - 1]?.session || 0) + 1;
-                  const formattedNewSessions: Session[] = newSessions.map((s, i) => ({
-                      ...s,
-                      session: nextSessionNumber + i,
-                      status: 'Locked',
-                      atoms: [] // Atoms should be added separately if needed
-                  }));
-                  return { ...p, sessions: [...existingSessions, ...formattedNewSessions] };
+                  const existingSessions = [...p.sessions];
+                  
+                  if (insertAfterSession !== undefined && insertAfterSession >= 0) {
+                      // Insert sessions at specific position (for dynamic adjustment)
+                      const insertIndex = insertAfterSession + 1;
+                      
+                      // Create new sessions with fractional numbering for insertion
+                      const formattedNewSessions: Session[] = newSessions.map((s, i) => {
+                          const sessionNumber = insertAfterSession + 1 + (i * 0.1); // e.g., 3.1, 3.2, etc.
+                          return {
+                              ...s,
+                              session: Math.round(sessionNumber * 10) / 10, // Round to 1 decimal place
+                              status: 'Locked' as const,
+                              atoms: p.atoms.filter(atom => 
+                                  // Assign atoms that need reinforcement based on FSRS data
+                                  atom.difficulty && atom.difficulty > 0.7 || 
+                                  atom.retrievability && atom.retrievability <= 2
+                              ).slice(0, 10) // Limit to 10 atoms per session
+                          };
+                      });
+                      
+                      // Insert the new sessions and renumber subsequent sessions
+                      existingSessions.splice(insertIndex, 0, ...formattedNewSessions);
+                      
+                      // Renumber sessions after insertion to maintain sequence
+                      const renumberedSessions = existingSessions.map((session, index) => ({
+                          ...session,
+                          session: index + 1
+                      }));
+                      
+                      return { ...p, sessions: renumberedSessions };
+                  } else {
+                      // Default behavior: append to end
+                      const nextSessionNumber = (existingSessions[existingSessions.length - 1]?.session || 0) + 1;
+                      const formattedNewSessions: Session[] = newSessions.map((s, i) => ({
+                          ...s,
+                          session: nextSessionNumber + i,
+                          status: 'Locked' as const,
+                          atoms: []
+                      }));
+                      return { ...p, sessions: [...existingSessions, ...formattedNewSessions] };
+                  }
               }
               return p;
           });
@@ -742,6 +595,18 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       })
     );
   };
+
+  const deleteSource = (projectId: string, sourceIndex: number) => {
+    setProjects(prevProjects =>
+      prevProjects.map(p => {
+        if (p.id === projectId) {
+          const newSources = p.sources.filter((_, index) => index !== sourceIndex);
+          return { ...p, sources: newSources };
+        }
+        return p;
+      })
+    );
+  };
   
   const resetSessionStats = useCallback(() => {
     setSessionStreak(0);
@@ -750,7 +615,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setSessionAnswers([]);
   }, []);
   
- const completeSession = useCallback((projectId: string, sessionIndex: number) => {
+ const completeSession = useCallback(async (projectId: string, sessionIndex: number) => {
     const today = new Date();
     
     if (!lastSessionCompletedDate || !isSameDay(today, lastSessionCompletedDate)) {
@@ -805,6 +670,83 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         return updatedCompleted;
     });
     
+    // 🆕 FSRS-based dynamic learning path adjustment
+    if (projectToUpdate && sessionAnswers.length > 0) {
+        try {
+            // Prepare FSRS data for LLM analysis
+            const fsrsData = JSON.stringify({
+                atoms: projectToUpdate.atoms.map((atom, index) => ({
+                    index,
+                    question: atom.question.substring(0, 100), // Truncate for token efficiency
+                    difficulty: atom.difficulty || 0.3,
+                    stability: atom.stability || 0,
+                    retrievability: atom.retrievability || 1,
+                    lastReviewed: atom.lastReviewed,
+                    daysSinceLastReview: atom.lastReviewed 
+                        ? differenceInDays(new Date(), new Date(atom.lastReviewed))
+                        : 0
+                })),
+                currentSessionPerformance: {
+                    correctAnswers: sessionAnswers.filter(a => a).length,
+                    totalAnswers: sessionAnswers.length,
+                    accuracy: sessionAnswers.length > 0 
+                        ? (sessionAnswers.filter(a => a).length / sessionAnswers.length) * 100 
+                        : 0,
+                    sessionStreak
+                }
+            });
+
+            const performanceHistory = JSON.stringify({
+                totalAnswers: projectToUpdate.totalAnswers || 0,
+                correctAnswers: projectToUpdate.correctAnswers || 0,
+                bestStreak: projectToUpdate.bestStreak || 0,
+                mastery: projectToUpdate.mastery || 0,
+                lastSessionAccuracy: sessionAnswers.length > 0 
+                    ? (sessionAnswers.filter(a => a).length / sessionAnswers.length) * 100 
+                    : 0
+            });
+
+            const currentLearningPlan = JSON.stringify({
+                sessions: projectToUpdate.sessions.map(s => ({
+                    session: s.session,
+                    type: s.type,
+                    questions: s.questions,
+                    status: s.status,
+                    atomCount: s.atoms.length
+                })),
+                learningPath: projectToUpdate.learningPath
+            });
+
+            // Call AI Strategic Tutor for plan adjustment
+            const adjustment = await dynamicLearningPathAdjustment({
+                fsrsData,
+                performanceHistory,
+                currentLearningPlan
+            });
+
+            // Apply new sessions if recommended by the AI
+            if (adjustment.newSessions.length > 0) {
+                console.log(`AI Strategic Tutor recommended ${adjustment.newSessions.length} additional sessions:`, adjustment.feedback);
+                
+                // Insert new sessions after current session
+                const newSessionsToAdd = adjustment.newSessions.map((newSession, index) => {
+                    const insertAfterSession = sessionIndex + 1 + index;
+                    return {
+                        type: newSession.type,
+                        questions: newSession.questions,
+                        duration: newSession.duration
+                    };
+                });
+
+                addSessionsToProject(projectId, newSessionsToAdd, sessionIndex);
+            } else {
+                console.log(`AI Strategic Tutor feedback: ${adjustment.feedback}`);
+            }
+        } catch (error) {
+            console.error("Error during dynamic learning path adjustment:", error);
+            // Continue normally if AI adjustment fails
+        }
+    }
     
     // Check for project completion after state update is triggered
     if (projectToUpdate && !isCompletedProject && projectToUpdate.sessions.every(s => s.status === 'Completed' || s.type === "Refuerzo de Dominio")) {
@@ -815,7 +757,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     // Reset session-specific stats
     resetSessionStats();
 
-}, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak, resetSessionStats]);
+}, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak, resetSessionStats, addSessionsToProject]);
 
 
   const archiveProject = (projectId: string): boolean => {
@@ -882,7 +824,11 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
         // 3. Update stability
         let newStability;
-        if (fsrsRating === 1) { // Again
+        if (oldStability === 0) {
+            // Initial stability for new cards based on FSRS algorithm
+            const initialStabilityMap = {1: 0.4, 2: 1.0, 3: 2.5, 4: 4.0}; // Days
+            newStability = initialStabilityMap[fsrsRating as keyof typeof initialStabilityMap];
+        } else if (fsrsRating === 1) { // Again
             newStability = FSRS_WEIGHTS[7] * Math.pow(oldStability, FSRS_WEIGHTS[8]) * Math.exp(FSRS_WEIGHTS[9] * (1 - retrievability));
         } else { // Hard, Good, Easy
             const difficultyFactor = Math.pow(FSRS_WEIGHTS[4], -clampedDifficulty);
@@ -938,7 +884,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ProjectContext.Provider value={{ 
         projects, completedProjects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, updateProjectPlan, addSessionsToProject, 
-        addAtomsToProject, updateAtom, deleteAtom, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
+        addAtomsToProject, updateAtom, deleteAtom, deleteSource, completeSession, archiveProject, unarchiveProject, deleteProjectPermanently, toggleProjectPublic,
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
         updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers,
         isAuthenticated, currentUser, login, signup, logout, updateUserProfile,

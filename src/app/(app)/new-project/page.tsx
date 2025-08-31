@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
+import { inferProjectMetadata, type InferProjectMetadataOutput } from "@/ai/flows/infer-project-metadata";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project, useProjects } from "@/contexts/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
@@ -31,12 +32,12 @@ const initialSteps = [
         description: "Usa el icono '+' para subir tus apuntes, PDFs, o enlaces."
     },
     {
-        title: "Koli Procesa y Atomiza",
-        description: "Nuestra IA analiza tu contenido, lo descompone en conceptos clave y prepara tu plan de estudios."
+        title: "Koli Procesa Automáticamente",
+        description: "Nuestra IA analiza tu contenido, infiere el título y descripción del proyecto, y descompone el material en conceptos clave."
     },
     {
         title: "¡A Estudiar!",
-        description: "Tu proyecto se creará automáticamente y serás redirigido para que comiences a aprender de inmediato."
+        description: "Tu proyecto se creará automáticamente con un título y plan personalizados. Serás redirigido para comenzar a aprender de inmediato."
     }
 ];
 
@@ -49,7 +50,7 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 };
 
-const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isSourcePopoverOpen, setIsSourcePopoverOpen, projectTitle, setProjectTitle }: any) => {
+const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, handleFileChange, fileInputRef, getFileIcon, onImportFromUrl, onPasteText, isSourcePopoverOpen, setIsSourcePopoverOpen }: any) => {
     
     const handleFileButtonClick = () => {
         fileInputRef.current?.click();
@@ -80,13 +81,6 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
                 </div>
               )}
             <div className="flex flex-col gap-2">
-                <Input 
-                    placeholder="Dale un nombre a tu proyecto..."
-                    value={projectTitle}
-                    onChange={(e) => setProjectTitle(e.target.value)}
-                    disabled={isLoading}
-                    className="h-12 text-lg"
-                />
                 <div className="flex items-center gap-2">
                     <input
                         type="file"
@@ -139,7 +133,7 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
                         </PopoverContent>
                     </Popover>
 
-                    <Button size="lg" onClick={() => handleSendMessage()} disabled={isLoading || selectedFiles.length === 0 || !projectTitle.trim()}>
+                    <Button size="lg" onClick={() => handleSendMessage()} disabled={isLoading || selectedFiles.length === 0}>
                         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Empezar"}
                     </Button>
                 </div>
@@ -199,7 +193,7 @@ export default function NewProjectPage() {
   const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
   const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
-  const [projectTitle, setProjectTitle] = useState("");
+  const [inferredMetadata, setInferredMetadata] = useState<InferProjectMetadataOutput | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -214,13 +208,13 @@ export default function NewProjectPage() {
     return new Blob([ab], { type: mimeString });
   }
 
-  const handleFinalizeProject = useCallback((plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput) => {
-      if (!atomsResult) {
+  const handleFinalizeProject = useCallback(async (plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput, metadata: InferProjectMetadataOutput, processedFiles: File[] = selectedFiles) => {
+      if (!atomsResult || !metadata) {
           toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
           return;
       }
 
-      const slug = projectTitle
+      const slug = metadata.title
         .toString()
         .normalize('NFD') // split an accented letter in the base letter and the acent
         .replace(/[\u0300-\u036f]/g, '') // remove all previously split accents
@@ -232,24 +226,62 @@ export default function NewProjectPage() {
       
       const newProjectId = `${slug}-${Date.now()}`;
 
-      const newProject: Omit<Project, 'sessions' | 'sources'> = {
+      // Convert processed files to sources with content
+      const sources = await Promise.all(processedFiles.map(async (file) => {
+          try {
+              let content = '';
+              const fileType = file.type.includes('pdf') ? 'PDF' : 
+                              file.type.includes('doc') ? 'Documento' : 
+                              file.type.includes('text') ? 'Texto' :
+                              'Documento';
+              
+              if (file.type.includes('pdf')) {
+                  // For PDFs, we store the data URI as we can't easily extract text content here
+                  const dataUri = await fileToDataUri(file);
+                  content = `Documento PDF: ${file.name}\n\nContenido procesado automáticamente por Koli AI para generar los átomos de conocimiento.\n\nTamaño: ${Math.round(file.size / 1024)}KB`;
+              } else {
+                  // For text files, we can read the content directly
+                  content = await file.text();
+                  // If content is empty or very short, add some context
+                  if (content.length < 50) {
+                      content = `Documento: ${file.name}\n\n${content}\n\nContenido procesado por Koli AI.`;
+                  }
+              }
+              
+              return {
+                  name: file.name,
+                  type: fileType,
+                  content: content
+              };
+          } catch (error) {
+              console.error(`Error reading file ${file.name}:`, error);
+              return {
+                  name: file.name,
+                  type: 'Documento',
+                  content: `Documento: ${file.name}\n\nArchivo procesado automáticamente por Koli AI para extraer conocimiento y generar átomos de aprendizaje.\n\nTamaño: ${Math.round(file.size / 1024)}KB\nTipo: ${file.type || 'Desconocido'}`
+              };
+          }
+      }));
+
+      const newProject: Omit<Project, 'sessions'> = {
           id: newProjectId,
-          title: projectTitle,
-          description: plan.projectDescription,
+          title: metadata.title,
+          description: metadata.description,
           mastery: 0,
-          categories: plan.categories,
+          categories: metadata.categories,
           icon: "Book", 
           atoms: atomsResult.atoms,
           learningPath: plan.learningPath.flatMap(day => day.sessions),
           fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
+          sources: sources,
       };
       addProject(newProject as any);
       toast({
           title: "¡Proyecto Creado!",
-          description: `${projectTitle} ha sido añadido a tu dashboard.`
+          description: `${metadata.title} ha sido añadido a tu dashboard.`
       })
       router.push(`/projects/${newProject.id}`);
-  }, [addProject, router, toast, projectTitle]);
+  }, [addProject, router, toast, selectedFiles]);
 
   const processFiles = useCallback(async (filesToProcess: File[]) => {
     setIsLoading(true);
@@ -288,21 +320,35 @@ export default function NewProjectPage() {
         atoms: accumulatedAtoms
     };
 
-    setProcessingStatus(prev => ({ ...prev, status: `Generando plan de aprendizaje...`, index: totalFiles + 1 }));
+    setProcessingStatus(prev => ({ ...prev, status: `Infiriendo título y descripción...`, index: totalFiles + 1 }));
 
     try {
+        // Create content summary for metadata inference
+        const contentSummary = accumulatedAtoms.map(atom => `${atom.question}: ${atom.answer}`).join('\n');
+        const fileNames = filesToProcess.map(f => f.name);
+        
+        // Infer project metadata
+        const metadata = await inferProjectMetadata({
+            contentSummary,
+            fileNames
+        });
+        setInferredMetadata(metadata);
+
+        setProcessingStatus(prev => ({ ...prev, status: `Generando plan de aprendizaje...`, index: totalFiles + 2 }));
+        
         const plan = await calibratePlanFromQuestionnaire({
             atoms: finalAtomsResult.atoms,
-            projectTitle: projectTitle,
+            projectTitle: metadata.title,
         });
-        handleFinalizeProject(plan, finalAtomsResult);
+        
+        handleFinalizeProject(plan, finalAtomsResult, metadata, filesToProcess);
     } catch(error) {
-        console.error("Error generating learning plan:", error);
-        setAtomizationError('Lo siento, ha ocurrido un error al generar tu plan de aprendizaje.');
+        console.error("Error generating project:", error);
+        setAtomizationError('Lo siento, ha ocurrido un error al generar tu proyecto.');
         setIsLoading(false);
     }
 
-  }, [handleFinalizeProject, projectTitle]);
+  }, [handleFinalizeProject]);
 
   useEffect(() => {
     const preloadedSourceParam = searchParams.get('source');
@@ -387,7 +433,7 @@ export default function NewProjectPage() {
   };
 
   const handleSendMessage = async () => {
-    if (selectedFiles.length === 0 || !projectTitle.trim()) return;
+    if (selectedFiles.length === 0) return;
     const filesToProcess = [...selectedFiles];
     // setSelectedFiles([]);
     processFiles(filesToProcess);
@@ -504,8 +550,6 @@ export default function NewProjectPage() {
                 onPasteText={() => setIsPasteTextOpen(true)}
                 isSourcePopoverOpen={isSourcePopoverOpen}
                 setIsSourcePopoverOpen={setIsSourcePopoverOpen}
-                projectTitle={projectTitle}
-                setProjectTitle={setProjectTitle}
             />
         </div>
         </main>

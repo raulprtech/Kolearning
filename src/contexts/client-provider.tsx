@@ -2,11 +2,14 @@
 "use client";
 
 import { ProjectProvider } from "./ProjectContext";
+import { AuthProvider } from "./AuthContext";
 
 export function ClientProvider({ children }: { children: React.ReactNode }) {
     return (
-        <ProjectProvider>
-            {children}
-        </ProjectProvider>
+        <AuthProvider>
+            <ProjectProvider>
+                {children}
+            </ProjectProvider>
+        </AuthProvider>
     )
 }

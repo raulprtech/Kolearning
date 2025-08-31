@@ -38,7 +38,7 @@ const ratings = [
     { label: "Fácil", variant: "default", description: "Revisar en una semana", fsrs: 4 },
 ] as const;
 
-const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: { atom: any, onRate: (fsrs: number) => void, isRevealed: boolean, onAnswerSelect: (answer: string) => void }) => {
+const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: { atom: any, onRate: (fsrs: 1|2|3|4) => void, isRevealed: boolean, onAnswerSelect: (answer: string) => void }) => {
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
     const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
@@ -318,7 +318,7 @@ export default function StudySessionPage() {
 
   const isMultipleChoice = useMemo(() => session?.questions === "Opción Múltiple", [session]);
   
-  const handleRate = useCallback((fsrs: number) => {
+  const handleRate = useCallback((fsrs: 1|2|3|4) => {
     const isCorrect = isMultipleChoice || isConvertedToMc
       ? userAnswer === currentAtom.answer
       : verificationResult?.isCorrect ?? false;
