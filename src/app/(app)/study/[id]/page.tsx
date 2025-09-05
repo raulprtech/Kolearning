@@ -1,8 +1,7 @@
-
 "use client"
 
-import { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,17 +17,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, ListChecks, Send, RefreshCw, X, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useProjects } from "@/contexts/ProjectContext";
+import { useProjects, Atom as ProjectAtom } from "@/contexts/ProjectContext";
 import { explainCorrectAnswer, ExplainCorrectAnswerOutput } from "@/ai/flows/koli-explain-answer";
 import { getStudyAid } from "@/ai/flows/koli-study-aids";
 import { koliTutorChat } from "@/ai/flows/koli-tutor-chat";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { generateDistractors } from "@/ai/flows/generate-distractors";
 import { verifyAnswer, VerifyAnswerOutput } from "@/ai/flows/koli-verify-answer";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { cn } from "@/lib/utils";
+import { VariantProps } from "class-variance-authority";
 
 
 const ratings = [
@@ -38,46 +41,168 @@ const ratings = [
     { label: "Fácil", variant: "default", description: "Revisar en una semana", fsrs: 4 },
 ] as const;
 
-const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: { atom: any, onRate: (fsrs: 1|2|3|4) => void, isRevealed: boolean, onAnswerSelect: (answer: string) => void }) => {
+// Correctly typed SortableItem
+type SortableItemProps = {
+  id: string;
+  children: React.ReactNode;
+  isAnswered: boolean;
+  isCorrect: boolean;
+}
+
+function SortableItem({ id, children, isAnswered, isCorrect }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({id});
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const getVariantClass = () => {
+      if (!isAnswered) return "bg-muted";
+      return isCorrect ? "bg-green-200 dark:bg-green-900" : "bg-red-200 dark:bg-red-900";
+  }
+  
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("p-4 rounded-md shadow-sm cursor-grab active:cursor-grabbing", getVariantClass())}>
+      {children}
+    </div>
+  );
+}
+
+// Correctly typed OrderingQuestion
+type OrderingQuestionProps = {
+    atom: ProjectAtom;
+    onRate: (fsrs: 1 | 2 | 3 | 4) => void;
+    onAnswerSelect: (answer: string[]) => void;
+};
+
+const OrderingQuestion = ({ atom, onRate, onAnswerSelect }: OrderingQuestionProps) => {
+    const [items, setItems] = useState(() => atom.orderingItems ? [...atom.orderingItems].sort(() => Math.random() - 0.5) : []);
+    const [isAnswered, setIsAnswered] = useState(false);
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    useEffect(() => {
+        const newItems = atom.orderingItems ? [...atom.orderingItems].sort(() => Math.random() - 0.5) : [];
+        setItems(newItems);
+        onAnswerSelect(newItems);
+        setIsAnswered(false);
+    }, [atom, onAnswerSelect]);
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const {active, over} = event;
+        if (over && active.id !== over.id) {
+            setItems((currentItems) => {
+                const oldIndex = currentItems.indexOf(active.id as string);
+                const newIndex = currentItems.indexOf(over.id as string);
+                const newOrder = arrayMove(currentItems, oldIndex, newIndex);
+                onAnswerSelect(newOrder);
+                return newOrder;
+            });
+        }
+    };
+
+    const checkAnswer = () => {
+        setIsAnswered(true);
+    };
+
+    if (!atom.orderingItems || atom.orderingItems.length === 0) {
+        return <p>Esta pregunta de ordenamiento no está configurada correctamente.</p>;
+    }
+
+    return (
+        <div className="mt-6">
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={items} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-3">
+                        {items.map((item, index) => (
+                            <SortableItem 
+                                key={item} 
+                                id={item}
+                                isAnswered={isAnswered}
+                                isCorrect={atom.correctOrder ? item === atom.correctOrder[index] : false}
+                            >
+                                {item}
+                            </SortableItem>
+                        ))}
+                    </div>
+                </SortableContext>
+            </DndContext>
+
+            {!isAnswered ? (
+                <div className="mt-6 flex justify-center">
+                    <Button size="lg" onClick={checkAnswer}>Comprobar Orden</Button>
+                </div>
+            ) : (
+                <div className="mt-8 pt-6 border-t">
+                    <h3 className="font-headline text-muted-foreground mb-4 text-center">
+                        Califica tu rendimiento de recuerdo:
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {ratings.map(rating => (
+                            <Button key={rating.label} variant={rating.variant} className="h-auto py-3 flex-col w-full" onClick={() => onRate(rating.fsrs)}>
+                                <span className="text-lg font-bold">{rating.label}</span>
+                                <span className="text-xs opacity-80">{rating.description}</span>
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Correctly typed MultipleChoiceQuestion
+type MultipleChoiceQuestionProps = {
+    atom: ProjectAtom;
+    onRate: (fsrs: 1 | 2 | 3 | 4) => void;
+    isRevealed: boolean;
+    onAnswerSelect: (answer: string) => void;
+};
+
+const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: MultipleChoiceQuestionProps) => {
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
     const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
-    const [isLoadingOptions, setIsLoadingOptions] = useState(true);
 
     useEffect(() => {
-        const getOptions = async () => {
-            if (!atom.question || !atom.answer) return;
+        if (!atom.question || !atom.answer) return;
 
-            setIsLoadingOptions(true);
-            try {
-                const response = await generateDistractors({
-                    question: atom.question,
-                    answer: atom.answer,
-                    count: 3, // Genera 3 opciones incorrectas
-                });
-                const options = [atom.answer, ...response.distractors];
+        // Generate distractors on-demand if they don't exist for multiple choice
+        const generateDistractorsOnDemand = async () => {
+            if (atom.incorrectAnswers && atom.incorrectAnswers.length > 0) {
+                const options = [atom.answer, ...atom.incorrectAnswers];
                 setShuffledOptions(options.sort(() => Math.random() - 0.5));
-            } catch (error) {
-                console.error("Error generating distractors:", error);
-                // Opciones de respaldo en caso de error
-                const incorrectOptions = [
-                    "Opción incorrecta genérica 1",
-                    "Opción incorrecta genérica 2",
-                    "Opción incorrecta genérica 3"
-                ];
-                const options = [atom.answer, ...incorrectOptions];
-                setShuffledOptions(options.sort(() => Math.random() - 0.5));
-            } finally {
-                setIsLoadingOptions(false);
+            } else {
+                console.log("No distractors found, generating on-demand for:", atom.question);
+                try {
+                    const { generateDistractors } = await import('@/ai/flows/generate-distractors');
+                    const result = await generateDistractors({ question: atom.question, answer: atom.answer, count: 3 });
+                    const options = [atom.answer, ...result.distractors];
+                    setShuffledOptions(options.sort(() => Math.random() - 0.5));
+                } catch (error) {
+                    console.error("Failed to generate distractors on-demand:", error);
+                    // Use fallback options
+                    const options = [atom.answer, "Opción A", "Opción B", "Opción C"];
+                    setShuffledOptions(options.sort(() => Math.random() - 0.5));
+                }
             }
         };
 
-        getOptions();
-        
+        generateDistractorsOnDemand();
         setIsAnswered(false);
         setSelectedOption(null);
-
-    }, [atom.answer, atom.question]);
+    }, [atom]);
 
     useEffect(() => {
         if(isRevealed) {
@@ -85,26 +210,14 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: { 
         }
     }, [isRevealed]);
 
-    if (isLoadingOptions) {
-        return (
-            <div className="mt-6 flex flex-col gap-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-            </div>
-        );
-    }
-
     const handleSelectOption = (option: string) => {
         if (isAnswered) return;
         setSelectedOption(option);
         onAnswerSelect(option);
         setIsAnswered(true);
-        // Don't auto-advance. Wait for FSRS rating.
     };
 
-    const getButtonVariant = (option: string) => {
+    const getButtonVariant = (option: string): VariantProps<typeof buttonVariants>["variant"] => {
         if (!isAnswered) return "outline";
         if (option === atom.answer) return "success";
         if (option === selectedOption && option !== atom.answer) return "destructive";
@@ -116,13 +229,13 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: { 
             {shuffledOptions.map((option, index) => (
                 <Button
                     key={index}
-                    variant={getButtonVariant(option) as any}
+                    variant={getButtonVariant(option)}
                     size="lg"
                     className="h-auto py-3 justify-start text-left whitespace-normal"
                     onClick={() => handleSelectOption(option)}
-                    disabled={isAnswered}
+                    disabled={isAnswered && selectedOption !== null}
                 >
-                    <div className="text-left">{option}</div>
+                    {option}
                 </Button>
             ))}
             {isAnswered && (
@@ -149,7 +262,16 @@ type ChatMessage = {
     content: string;
 };
 
-const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: { isOpen: boolean, onClose: () => void, question: string, answer: string, onUseEnergy: (cost: number) => boolean }) => {
+// Correctly typed KoliTutorPanel
+type KoliTutorPanelProps = {
+    isOpen: boolean;
+    onClose: () => void;
+    question: string;
+    answer: string;
+    onUseEnergy: (cost: number) => boolean;
+};
+
+const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: KoliTutorPanelProps) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -164,16 +286,17 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: { is
     }, [isOpen, question]);
     
     useEffect(() => {
-        if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+        const scrollArea = scrollAreaRef.current;
+        if (scrollArea) {
+            scrollArea.scrollTop = scrollArea.scrollHeight;
         }
     }, [messages]);
 
     const handleSendMessage = async () => {
         if (!input.trim()) return;
 
-        const newMessages: ChatMessage[] = [...messages, { role: 'user', content: input }];
-        setMessages(newMessages);
+        const userMessage: ChatMessage = { role: 'user', content: input };
+        setMessages(prev => [...prev, userMessage]);
         setInput("");
         setIsLoading(true);
 
@@ -181,7 +304,7 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: { is
             const response = await koliTutorChat({
                 questionContext: question,
                 answerContext: answer,
-                chatHistory: newMessages,
+                chatHistory: [...messages, userMessage],
             });
             setMessages(prev => [...prev, { role: 'model', content: response.response }]);
         } catch (error) {
@@ -203,7 +326,7 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: { is
                 </SheetHeader>
                 <div className="flex-1 overflow-hidden flex flex-col">
                     <ScrollArea className="flex-1 pr-4 -mr-4">
-                        <div ref={scrollAreaRef} className="space-y-4">
+                        <div className="space-y-4" ref={scrollAreaRef}>
                             {messages.map((msg, index) => (
                                 <div key={index} className={`flex gap-3 ${msg.role === 'model' ? '' : 'justify-end'}`}>
                                     {msg.role === 'model' && <KoliAvatar className="h-8 w-8 flex-shrink-0" />}
@@ -255,6 +378,7 @@ export default function StudySessionPage() {
   const router = useRouter();
   const { 
       projects, 
+      completeSession,
       energy, 
       sessionStreak, 
       cognitiveCredits, 
@@ -268,18 +392,20 @@ export default function StudySessionPage() {
   const projectId = params.id as string;
   const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
   
-  const project = projects.find(p => p.id === projectId);
-  const session = project?.sessions[sessionIndex];
+  const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
+  const session = useMemo(() => project?.sessions[sessionIndex], [project, sessionIndex]);
 
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [sessionAtoms, setSessionAtoms] = useState(session?.atoms || []);
   const [viewState, setViewState] = useState<'question' | 'answer'>('question');
   const [userAnswer, setUserAnswer] = useState("");
-  const [aidsUsed, setAidsUsed] = useState(false);
+  const [userOrderingAnswer, setUserOrderingAnswer] = useState<string[]>([]);
+  const [aidsUsed, setAidsUsed] = useState<string[]>([]);
   const [isConvertedToMc, setIsConvertedToMc] = useState(false);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<VerifyAnswerOutput | null>(null);
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   
   const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
   const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
@@ -299,46 +425,61 @@ export default function StudySessionPage() {
   useEffect(() => {
     if (session) {
       setSessionAtoms(session.atoms);
+      resetSessionStats();
+      setQuestionStartTime(Date.now());
     }
-     // Reset streak and other session stats at the beginning of a session
-    resetSessionStats();
-  }, [session, sessionIndex, resetSessionStats]);
+  }, [session, resetSessionStats]);
 
-  const currentAtom = useMemo(() => {
-    if (!sessionAtoms || sessionAtoms.length === 0) {
-      return { question: "No hay preguntas disponibles.", answer: "" };
+  const currentAtom: ProjectAtom = useMemo(() => {
+    if (!sessionAtoms || sessionAtoms.length === 0 || currentCardIndex >= sessionAtoms.length) {
+      return { question: "Cargando pregunta...", answer: "" };
     }
     return sessionAtoms[currentCardIndex];
   }, [sessionAtoms, currentCardIndex]);
   
   const currentAtomProjectIndex = useMemo(() => {
-    if (!project || !currentAtom) return -1;
+    if (!project || !currentAtom?.question) return -1;
     return project.atoms.findIndex(atom => atom.question === currentAtom.question);
   }, [project, currentAtom]);
 
   const isMultipleChoice = useMemo(() => session?.questions === "Opción Múltiple", [session]);
+  const isOrdering = useMemo(() => session?.questions === "Ordenamiento", [session]);
+  
   
   const handleRate = useCallback((fsrs: 1|2|3|4) => {
-    const isCorrect = isMultipleChoice || isConvertedToMc
-      ? userAnswer === currentAtom.answer
-      : verificationResult?.isCorrect ?? false;
+    let isCorrect = false;
+    if (isOrdering) {
+        isCorrect = currentAtom.correctOrder ? JSON.stringify(userOrderingAnswer) === JSON.stringify(currentAtom.correctOrder) : false;
+    } else if (isMultipleChoice || isConvertedToMc) {
+        isCorrect = userAnswer === currentAtom.answer;
+    } else {
+        isCorrect = verificationResult?.isCorrect ?? false;
+    }
+    
+    const responseTime = Date.now() - questionStartTime;
       
-    recordAnswer(projectId, currentAtomProjectIndex, fsrs, aidsUsed, isCorrect);
+    if (projectId && currentAtomProjectIndex !== -1) {
+        recordAnswer(projectId, currentAtomProjectIndex, fsrs, isCorrect, responseTime, aidsUsed);
+    }
     
     if (currentCardIndex < sessionAtoms.length - 1) {
       setCurrentCardIndex(prev => prev + 1);
       setViewState('question');
       setUserAnswer("");
+      setUserOrderingAnswer([]);
       setVerificationResult(null);
-      setAidsUsed(false);
+      setAidsUsed([]);
       setIsConvertedToMc(false);
       setIsAnswerRevealed(false);
       setHint(null);
       setRephrasedQuestion(null);
+      setQuestionStartTime(Date.now());
     } else {
-      router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}`);
+      completeSession(projectId, sessionIndex).then(() => {
+        router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}`);
+      });
     }
-  }, [isMultipleChoice, isConvertedToMc, userAnswer, currentAtom.answer, verificationResult, recordAnswer, projectId, currentAtomProjectIndex, aidsUsed, currentCardIndex, sessionAtoms.length, router, sessionIndex]);
+  }, [isOrdering, userOrderingAnswer, currentAtom, isMultipleChoice, isConvertedToMc, userAnswer, verificationResult, recordAnswer, projectId, currentAtomProjectIndex, aidsUsed, currentCardIndex, sessionAtoms.length, router, sessionIndex, completeSession, questionStartTime]);
 
 
   if (!isAuthenticated) {
@@ -354,16 +495,16 @@ export default function StudySessionPage() {
     return (
         <div className="flex flex-col flex-1 items-center justify-center">
             <h1 className="text-2xl">Sesión no encontrada</h1>
-            <Button onClick={() => router.push('/')} className="mt-4">Volver al Dashboard</Button>
+            <Button onClick={() => router.push('/app/projects')} className="mt-4">Volver a Proyectos</Button>
         </div>
     )
   }
 
-  const handleUseEnergy = (cost: number, isConsideredAid: boolean = true) => {
+  const handleUseEnergy = (cost: number, aidType?: string) => {
       if (energy >= cost) {
           updateEnergy(-cost);
-          if (isConsideredAid) {
-            setAidsUsed(true);
+          if (aidType) {
+            setAidsUsed(prev => [...prev, aidType]);
           }
           return true;
       }
@@ -384,7 +525,6 @@ const handleCheckAnswer = async () => {
         setVerificationResult(result);
     } catch (error) {
         console.error("Error verifying answer:", error);
-        // Manejo de error: si la IA falla, consideramos la respuesta como incorrecta
         setVerificationResult({ isCorrect: false, feedback: "Hubo un problema al verificar tu respuesta. Inténtalo de nuevo." });
     } finally {
         setIsVerifying(false);
@@ -393,7 +533,7 @@ const handleCheckAnswer = async () => {
   }
 
   const handleExplainAnswer = async () => {
-      if (!handleUseEnergy(1)) return;
+      if (!handleUseEnergy(1, 'explain')) return;
       setIsExplanationDialogOpen(true);
       setIsExplanationLoading(true);
       try {
@@ -406,7 +546,7 @@ const handleCheckAnswer = async () => {
           setExplanation(result);
       } catch (error) {
           console.error("Error explaining answer:", error);
-          setExplanation({ explanation: "Lo siento, no pude generar una explicación en este momento." });
+          setExplanation({ explanation: "Lo siento, no pude generar una explicación en este momento.", examples: [] });
       } finally {
           setIsExplanationLoading(false);
       }
@@ -414,7 +554,7 @@ const handleCheckAnswer = async () => {
 
   const handleGetStudyAid = async (aidType: 'hint' | 'rephrase') => {
       const cost = aidType === 'hint' ? 1 : 1;
-      if (!handleUseEnergy(cost)) return;
+      if (!handleUseEnergy(cost, aidType)) return;
 
       setIsAidLoading(aidType);
       try {
@@ -431,14 +571,13 @@ const handleCheckAnswer = async () => {
           }
       } catch (error) {
           console.error(`Error getting ${aidType}:`, error);
-          // Optionally show a toast or message
       } finally {
           setIsAidLoading(null);
       }
   }
 
   const handleSeeAnswer = () => {
-    if (handleUseEnergy(5)) {
+    if (handleUseEnergy(5, 'seeAnswer')) {
       setViewState('answer');
       setIsAnswerRevealed(true);
     }
@@ -446,19 +585,29 @@ const handleCheckAnswer = async () => {
 
 
   const handleConvertToMc = () => {
-    if (handleUseEnergy(2)) {
+    if (handleUseEnergy(2, 'convertToMc')) {
         setIsConvertedToMc(true);
     }
   }
 
   const handleOpenTutorChat = () => {
-    if (handleUseEnergy(3)) {
+    if (handleUseEnergy(3, 'tutorChat')) {
         setIsTutorPanelOpen(true);
     }
   }
 
   const progress = (currentCardIndex / sessionAtoms.length) * 100;
-  const TacticalButton = ({ icon, label, cost, action, disabled = false, isLoading = false }: { icon: React.ReactNode, label: string, cost: number, action: () => void, disabled?: boolean, isLoading?: boolean }) => (
+
+  type TacticalButtonProps = {
+      icon: React.ReactNode;
+      label: string;
+      cost: number;
+      action: () => void;
+      disabled?: boolean;
+      isLoading?: boolean;
+  };
+
+  const TacticalButton = ({ icon, label, cost, action, disabled = false, isLoading = false }: TacticalButtonProps) => (
     <TooltipProvider>
         <Tooltip>
             <TooltipTrigger asChild>
@@ -477,7 +626,9 @@ const handleCheckAnswer = async () => {
     if (isMultipleChoice || isConvertedToMc) {
         return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} isRevealed={isAnswerRevealed} onAnswerSelect={setUserAnswer} />;
     }
-    // Default to open question
+    if (isOrdering) {
+        return <OrderingQuestion atom={currentAtom} onRate={handleRate} onAnswerSelect={setUserOrderingAnswer} />;
+    }
     return (
         <>
             <Textarea
@@ -489,7 +640,7 @@ const handleCheckAnswer = async () => {
                 readOnly={viewState === 'answer'}
             />
             <div className="mt-6 flex justify-center">
-                <Button size="lg" className="w-full max-w-xs" onClick={handleCheckAnswer} disabled={isVerifying}>
+                <Button size="lg" className="w-full max-w-xs" onClick={handleCheckAnswer} disabled={isVerifying || !userAnswer.trim()}>
                     {isVerifying ? <Loader2 className="animate-spin" /> : "Comprobar"}
                 </Button>
             </div>
@@ -509,12 +660,12 @@ const handleCheckAnswer = async () => {
                  <Badge variant="secondary" className="mb-2">{session.type}</Badge>
                 <div className="w-full max-w-md">
                   <Progress value={progress} />
-                  <p className="text-xs text-muted-foreground mt-1 text-center">Preguntas restantes: {sessionAtoms.length - currentCardIndex}/{sessionAtoms.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1 text-center">{currentCardIndex + 1} de {sessionAtoms.length}</p>
                 </div>
             </div>
             <div className="w-1/4 flex justify-end">
                 <div className="flex items-center gap-6 bg-card/50 px-4 py-1.5 rounded-md">
-                    <div className="flex items-center gap-2" title="Créditos Cognitivos">
+                    <div className="flex items-center gap-2" title="Créditos Cognitivos de Sesión">
                         <Brain className="h-5 w-5 text-blue-400" />
                         <span className="font-bold text-lg">{cognitiveCredits}</span>
                     </div>
@@ -546,7 +697,7 @@ const handleCheckAnswer = async () => {
                     )}
                     </CardTitle>
                     <CardDescription className="text-center">
-                      {isMultipleChoice || isConvertedToMc ? "Selecciona la respuesta correcta." : "Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio."}
+                      {isOrdering ? "Arrastra y suelta los elementos para ordenarlos correctamente." : isMultipleChoice || isConvertedToMc ? "Selecciona la respuesta correcta." : "Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio."}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -564,28 +715,13 @@ const handleCheckAnswer = async () => {
                     
                     {viewState === 'question' && renderQuestionInterface()}
                     
-                    {viewState === 'answer' && (isMultipleChoice || isConvertedToMc) && renderQuestionInterface()}
+                    {viewState === 'answer' && (isMultipleChoice || isConvertedToMc || isOrdering) && renderQuestionInterface()}
 
-                    <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
-                    <h3 className="font-headline text-muted-foreground mb-4">
-                        Usar ayuda
-                    </h3>
-                    <div className="flex items-center justify-center gap-4">
-                        <TacticalButton icon={<Eye/>} label="Ver respuesta" cost={5} action={handleSeeAnswer} disabled={viewState === 'answer'} />
-                        <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} isLoading={isAidLoading === 'hint'} />
-                        {!isMultipleChoice && !isConvertedToMc && <TacticalButton icon={<ListChecks/>} label="Convertir a Opción Múltiple" cost={2} action={handleConvertToMc} disabled={viewState === 'answer'} />}
-                        <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
-                        <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleGetStudyAid('rephrase')} disabled={viewState === 'answer' || !!rephrasedQuestion} isLoading={isAidLoading === 'rephrase'} />
-                        <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={handleOpenTutorChat} />
-                    </div>
-                    </div>
-                    
-                    {viewState === 'answer' && !isMultipleChoice && !isConvertedToMc && (
+                    {viewState === 'answer' && !isMultipleChoice && !isConvertedToMc && !isOrdering && (
                         <div className="mt-8 pt-6 border-t">
                             {verificationResult && (
-                                <Alert className={`mb-4 ${verificationResult.isCorrect ? 'border-green-500/50 text-green-300' : 'border-destructive/50 text-destructive'}`}>
+                                <Alert className={cn('mb-4', verificationResult.isCorrect ? 'border-green-500/50 text-green-300' : 'border-destructive/50 text-destructive')}>
                                     <AlertTitle>{verificationResult.isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</AlertTitle>
-
                                     <AlertDescription>{verificationResult.feedback}</AlertDescription>
                                 </Alert>
                             )}
@@ -609,43 +745,65 @@ const handleCheckAnswer = async () => {
                             </div>
                         </div>
                     )}
+
+                    <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
+                        <h3 className="font-headline text-muted-foreground mb-4">
+                            Usar ayuda
+                        </h3>
+                        <div className="flex items-center justify-center gap-4">
+                            <TacticalButton icon={<Eye/>} label="Ver respuesta" cost={5} action={handleSeeAnswer} disabled={viewState === 'answer'} />
+                            <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} isLoading={isAidLoading === 'hint'} />
+                            {!isMultipleChoice && !isConvertedToMc && !isOrdering && <TacticalButton icon={<ListChecks/>} label="Convertir a Opción Múltiple" cost={2} action={handleConvertToMc} disabled={viewState === 'answer'} />}
+                            <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
+                            <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleGetStudyAid('rephrase')} disabled={viewState === 'answer' || !!rephrasedQuestion} isLoading={isAidLoading === 'rephrase'} />
+                            <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={handleOpenTutorChat} />
+                        </div>
+                    </div>
+                    
                 </CardContent>
                 </Card>
             </div>
             
             <Dialog open={isExplanationDialogOpen} onOpenChange={setIsExplanationDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Explicación de Koli</DialogTitle>
+                        <DialogTitle>Explicación de la Respuesta</DialogTitle>
                         <DialogDescription>
-                            Aquí tienes un análisis más detallado de la respuesta.
+                            Koli ha generado una explicación para ayudarte a entender mejor.
                         </DialogDescription>
                     </DialogHeader>
-                     <div className="py-4">
+                    <div className="py-4 max-h-[60vh] overflow-y-auto">
                         {isExplanationLoading ? (
-                            <div className="space-y-3">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-4/5" />
+                            <div className="flex items-center justify-center">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             </div>
                         ) : (
-                            <p className="text-sm text-muted-foreground">{explanation?.explanation}</p>
+                            <div className="prose dark:prose-invert max-w-none">
+                                <p>{explanation?.explanation}</p>
+                                {explanation?.examples && explanation.examples.length > 0 && (
+                                    <>
+                                        <h4 className="font-bold mt-4">Ejemplos:</h4>
+                                        <ul className="list-disc pl-5">
+                                            {explanation.examples.map((ex, i) => <li key={i}>{ex}</li>)}
+                                        </ul>
+                                    </>
+                                )}
+                            </div>
                         )}
                     </div>
                     <DialogFooter>
-                        <Button onClick={() => setIsExplanationDialogOpen(false)}>Entendido</Button>
+                        <Button onClick={() => setIsExplanationDialogOpen(false)}>Cerrar</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            <KoliTutorPanel
+            <KoliTutorPanel 
                 isOpen={isTutorPanelOpen}
                 onClose={() => setIsTutorPanelOpen(false)}
                 question={currentAtom.question}
                 answer={currentAtom.answer}
                 onUseEnergy={handleUseEnergy}
             />
-
         </main>
     </div>
   );

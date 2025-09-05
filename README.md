@@ -1,183 +1,141 @@
-# 🧠 Kolearning - Plataforma de Aprendizaje Adaptativo
+# 🧠 Kolearning: Tu Tutor Personal Impulsado por IA
 
-Una plataforma de aprendizaje inteligente que utiliza algoritmos FSRS (Free Spaced Repetition System) para optimizar la retención del conocimiento.
+**Kolearning** es una plataforma de aprendizaje adaptativo de vanguardia diseñada para revolucionar la forma en que estudias y retienes el conocimiento. Utilizando un motor de IA basado en el algoritmo FSRS (Free Spaced Repetition System) y modelos de lenguaje avanzados, Kolearning personaliza tu experiencia de aprendizaje para maximizar la eficiencia y el dominio del material.
 
-## ✨ Características
+## ✨ Características Principales
 
-- **🔬 Atomización Inteligente**: Descompone automáticamente el contenido en conceptos clave
-- **🧪 Algoritmo FSRS**: Sistema de repetición espaciada científicamente probado
-- **🤖 IA Adaptativa**: Ajusta el plan de estudios basándose en tu rendimiento
-- **📱 Sincronización en la Nube**: Accede a tus proyectos desde cualquier dispositivo
-- **🔒 Autenticación Segura**: Sistema de usuarios con Supabase
-- **📊 Métricas Avanzadas**: Seguimiento detallado del progreso y dominio
+- **🧠 Atomización de Contenido Inteligente**: Descompone automáticamente cualquier material de estudio (PDF, URLs, o texto plano) en "átomos" de conocimiento digeribles.
+- **📈 Plan de Estudios Adaptativo**: Nuestro tutor estratégico de IA (Koli) analiza tu rendimiento, métricas de comportamiento (tiempo de respuesta, ayudas utilizadas) y el algoritmo FSRS para crear planes de estudio dinámicos y optimizados.
+- **❓ Generación de Preguntas Diversas**: Crea automáticamente una variedad de tipos de preguntas para mantener las sesiones de estudio atractivas y efectivas:
+  - Preguntas Abiertas
+  - Opción Múltiple (con distractores generados por IA)
+  - Preguntas de Ordenamiento
+- **🕹️ Gamificación Motivacional**:
+  - **Energía**: Limita las sesiones para promover el estudio espaciado y evitar el agotamiento.
+  - **Créditos Cognitivos**: Gana recompensas por estudiar que puedes canjear en la tienda.
+  - **Rangos de Aprendiz**: Progresa a través de diferentes niveles a medida que demuestras tu dominio.
+- **☁️ Sincronización en la Nube con Supabase**: Accede a tus proyectos y progreso desde cualquier dispositivo, en cualquier momento.
+- **📱 Diseño Responsivo**: Una experiencia de usuario fluida y consistente en dispositivos de escritorio y móviles.
+- **🔒 Autenticación Segura**: Gestión de usuarios robusta y segura a través de Supabase Auth, incluyendo inicio de sesión con Google.
 
-## 🚀 Instalación y Configuración
+## 🛠️ Stack Tecnológico
 
-### 1. Clonar el repositorio
+- **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
+- **Lenguaje**: [TypeScript](https://www.typescriptlang.org/)
+- **Estilos**: [Tailwind CSS](https://tailwindcss.com/) con [Shadcn/UI](https://ui.shadcn.com/) para componentes.
+- **Backend y Base de Datos**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Storage)
+- **Inteligencia Artificial**: [Google Gemini](https://gemini.google.com/) a través del framework [Genkit](https://firebase.google.com/docs/genkit).
+- **Algoritmo de Repetición Espaciada**: FSRS (Free Spaced Repetition System)
+
+## 🚀 Guía de Inicio Rápido
+
+Sigue estos pasos para tener una instancia de Kolearning funcionando en tu máquina local.
+
+### 1. Prerrequisitos
+
+- Node.js (v18 o superior)
+- npm o yarn
+
+### 2. Clonar el Repositorio
+
 ```bash
-git clone <repo-url>
+git clone https://github.com/tu-usuario/kolearningMVP.git
 cd kolearningMVP
+```
+
+### 3. Instalar Dependencias
+
+```bash
 npm install
 ```
 
-### 2. Configurar Supabase
+### 4. Configurar Variables de Entorno
 
-#### Opción A: Script automático (Recomendado)
+Crea un archivo `.env.local` en la raíz del proyecto copiando el ejemplo:
+
 ```bash
-node scripts/setup-supabase.js
+cp .env.example .env.local
 ```
 
-#### Opción B: Configuración manual
-1. Crea un proyecto en [supabase.com](https://supabase.com)
-2. Copia `.env.example` a `.env` y completa las variables:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=tu-project-url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
-   SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
-   ```
-3. Ejecuta el esquema SQL en Supabase:
-   - Ve al SQL Editor en tu proyecto
-   - Copia y ejecuta el contenido de `database/schema.sql`
+Ahora, edita `.env.local` con tus propias claves:
 
-### 3. Configurar IA (Gemini)
 ```env
-GEMINI_API_KEY=tu-gemini-api-key
+# Claves de tu proyecto en Supabase
+NEXT_PUBLIC_SUPABASE_URL="https://<project_ref>.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="tu_anon_key"
+SUPABASE_SERVICE_ROLE_KEY="tu_service_role_key"
+
+# Clave de API para Google Gemini
+GEMINI_API_KEY="tu_gemini_api_key"
 ```
 
-### 4. Iniciar el servidor
+### 5. Configurar la Base de Datos
+
+1.  Ve a tu proyecto en [Supabase](https://supabase.com).
+2.  Navega al **SQL Editor**.
+3.  Abre el archivo `database/schema.sql` de este repositorio, copia todo su contenido y pégalo en el editor de Supabase.
+4.  Haz clic en **"RUN"** para ejecutar el script y crear todas las tablas y políticas de seguridad necesarias.
+
+### 6. Ejecutar el Proyecto
+
 ```bash
 npm run dev
 ```
 
-¡Accede a `http://localhost:9002` y comienza a aprender!
+¡Listo! Abre [http://localhost:3000](http://localhost:3000) en tu navegador y comienza a aprender.
 
-## 📖 Guía de Uso
+## 🏗️ Arquitectura y Flujo de Datos
 
-### Primeros Pasos
-1. **Crear cuenta**: Ve a `/signup` y regístrate
-2. **Subir material**: Sube PDFs, documentos o texto en `/new-project`
-3. **Estudiar**: Koli creará automáticamente un plan personalizado
-4. **Seguir progreso**: Revisa tu dominio y métricas en cada proyecto
+1.  **Registro**: El usuario crea una cuenta, aceptando los Términos y Condiciones. Sus preferencias (ej. newsletter) se guardan en los metadatos.
+2.  **Creación de Proyecto**: El usuario proporciona material de estudio (URL, PDF, texto).
+3.  **Procesamiento con IA (Genkit)**:
+    - Un flujo de Genkit extrae el contenido.
+    - Otro flujo "atomiza" el contenido en unidades de conocimiento.
+    - Se generan preguntas y se almacena todo en Supabase.
+4.  **Plan de Estudio**: El "Tutor Estratégico" de IA analiza el estado actual del proyecto y decide el tipo de sesión más adecuada (ej. "Introducción", "Refuerzo").
+5.  **Sesión de Estudio**:
+    - El usuario responde a las preguntas.
+    - Se registran el rendimiento (correcto/incorrecto), el tiempo de respuesta y las ayudas utilizadas (`performanceLog`).
+6.  **Adaptación**: Con cada respuesta, el sistema actualiza los parámetros FSRS del átomo y el `performanceLog` se envía al tutor de IA, quien puede recalibrar el plan de estudio en tiempo real.
 
-### Migración de Datos Locales
-Si usaste Kolearning antes de la integración con Supabase:
-1. Inicia sesión en tu cuenta
-2. Ve a `/migrate`
-3. La plataforma detectará automáticamente tus datos locales
-4. Haz clic en "Migrar datos" para sincronizarlos en la nube
+## � Estructura del Proyecto
 
-## 🏗️ Arquitectura Técnica
-
-### Stack Tecnológico
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL + Auth + Storage)
-- **IA**: Google Gemini API con Genkit
-- **Algoritmos**: FSRS para repetición espaciada
-
-### Base de Datos
-```sql
-profiles          -- Usuarios y estadísticas
-projects          -- Proyectos de aprendizaje
-atoms             -- Átomos de conocimiento con métricas FSRS
-sources           -- Materiales fuente (PDFs, documentos)
-sessions          -- Sesiones de estudio
-learning_path_items -- Planes de aprendizaje
 ```
-
-### Flujo de Datos
-1. **Upload** → Procesamiento IA → Atomización
-2. **Estudio** → Métricas FSRS → Ajuste adaptativo
-3. **Sincronización** → Supabase → Multi-dispositivo
-
-## 🔧 Desarrollo
-
-### Comandos Útiles
-```bash
-npm run dev          # Servidor de desarrollo
-npm run build        # Build de producción
-npm run typecheck    # Verificar tipos TypeScript
-npm run lint         # Linter
-```
-
-### Estructura del Proyecto
-```
-src/
-├── app/                 # Rutas y páginas
-├── components/          # Componentes UI reutilizables
-├── contexts/            # Contextos React (Auth, Projects)
-├── lib/                 # Utilidades y configuración
-│   ├── supabase/       # Configuración Supabase
-│   └── database.types.ts # Tipos TypeScript para DB
-├── ai/                  # Flujos de IA con Genkit
-└── middleware.ts        # Middleware de autenticación
-
-database/
-└── schema.sql          # Esquema completo de la base de datos
-
-scripts/
-└── setup-supabase.js   # Script de configuración automática
+.
+├── src/
+│   ├── app/                # Rutas (App Router)
+│   │   ├── (app)/          # Rutas protegidas (dashboard, proyectos, estudio)
+│   │   ├── (auth)/         # Rutas de autenticación (login, signup)
+│   │   └── api/            # Rutas de API
+│   ├── ai/                 # Flujos de IA con Genkit (flows)
+│   ├── components/         # Componentes de UI reutilizables (shadcn)
+│   ├── contexts/           # Contextos de React (Auth, Project)
+│   ├── lib/                # Librerías auxiliares y clientes (Supabase, utils)
+│   └── middleware.ts       # Middleware de Next.js para sesiones de Supabase
+├── database/
+│   └── schema.sql          # Esquema SQL para la configuración inicial de la BD
+└── ...
 ```
 
 ## 🚀 Despliegue
 
-### Vercel (Recomendado)
-1. Fork del repositorio
-2. Conecta con Vercel
-3. Configura las variables de entorno
-4. Deploy automático
+La forma más sencilla de desplegar Kolearning es usando **Vercel**.
 
-### Variables de Entorno para Producción
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-GEMINI_API_KEY=
-```
+1.  Haz un fork de este repositorio.
+2.  Crea un nuevo proyecto en Vercel e impórtalo desde tu cuenta de GitHub.
+3.  Configura las mismas variables de entorno que usaste en `.env.local` en la configuración del proyecto de Vercel.
+4.  ¡Despliega! Vercel se encargará del resto.
 
-## 🔒 Seguridad y Privacidad
+## 🤝 Contribuciones
 
-- **Row Level Security (RLS)**: Los usuarios solo acceden a sus datos
-- **Encriptación**: Todas las comunicaciones están encriptadas
-- **Validación**: Input sanitization y validación tanto client como server-side
-- **Auth**: Autenticación robusta con Supabase Auth
+¡Las contribuciones son bienvenidas! Si quieres mejorar Kolearning, por favor sigue estos pasos:
 
-## 🤝 Contribuir
+1.  Haz un Fork del proyecto.
+2.  Crea una nueva rama (`git checkout -b feature/AmazingFeature`).
+3.  Realiza tus cambios y haz commit (`git commit -m 'Add some AmazingFeature'`).
+4.  Haz push a la rama (`git push origin feature/AmazingFeature`).
+5.  Abre un Pull Request.
 
-1. Fork del proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/amazing-feature`)
-3. Commit tus cambios (`git commit -m 'Add amazing feature'`)
-4. Push a la rama (`git push origin feature/amazing-feature`)
-5. Abre un Pull Request
+## � Licencia
 
-## 📚 Algoritmo FSRS
-
-Kolearning utiliza el algoritmo FSRS (Free Spaced Repetition System) para optimizar el aprendizaje:
-
-- **Difficulty**: Qué tan difícil es el concepto (0-1)
-- **Stability**: Cuánto tiempo recordarás (en días)
-- **Retrievability**: Facilidad de recordar actual (0-1)
-
-El sistema ajusta automáticamente los intervalos de repaso basándose en tu rendimiento.
-
-## 🎯 Roadmap
-
-- [ ] **Colaboración**: Proyectos compartidos entre usuarios
-- [ ] **Gamificación**: Sistema de logros y rankings
-- [ ] **Análisis Avanzado**: Dashboards de progreso detallados
-- [ ] **Integración LMS**: Conectores para Moodle, Canvas, etc.
-- [ ] **Móvil**: App nativa React Native
-- [ ] **Offline**: Modo offline con sincronización
-
-## 📄 Licencia
-
-Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
-
-## 🆘 Soporte
-
-- **Documentación**: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
-- **Issues**: GitHub Issues para reportar problemas
-- **Discusiones**: GitHub Discussions para preguntas
-
----
-
-**Hecho con ❤️ para revolucionar el aprendizaje personalizado**
+Este proyecto está distribuido bajo la Licencia MIT. Consulta el archivo `LICENSE` para más información.

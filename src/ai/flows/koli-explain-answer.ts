@@ -21,6 +21,7 @@ export type ExplainCorrectAnswerInput = z.infer<typeof ExplainCorrectAnswerInput
 
 const ExplainCorrectAnswerOutputSchema = z.object({
   explanation: z.string().describe('The explanation of why the provided answer is correct.'),
+  examples: z.array(z.string()).optional().describe('Examples that illustrate the concept.'),
 });
 export type ExplainCorrectAnswerOutput = z.infer<typeof ExplainCorrectAnswerOutputSchema>;
 

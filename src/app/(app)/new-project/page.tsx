@@ -168,7 +168,7 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, t
                            <span>Progreso General</span>
                            <span>{currentFileIndex > totalFiles ? totalFiles : currentFileIndex}/{totalFiles} Archivos</span>
                         </div>
-                        <div className="w-full bg-muted rounded-full h-2.5">
+                        <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
                             <div className="bg-primary h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
                         </div>
                          <p className="text-xs text-center text-muted-foreground mt-2">{totalAtoms} átomos generados hasta ahora...</p>
@@ -182,7 +182,7 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, t
 export default function NewProjectPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { addProject } = useProjects();
+  const { addProject, setPendingProject, isAuthenticated } = useProjects();
   const { toast } = useToast();
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -275,13 +275,24 @@ export default function NewProjectPage() {
           fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
           sources: sources,
       };
-      addProject(newProject as any);
-      toast({
-          title: "¡Proyecto Creado!",
-          description: `${metadata.title} ha sido añadido a tu dashboard.`
-      })
-      router.push(`/projects/${newProject.id}`);
-  }, [addProject, router, toast, selectedFiles]);
+
+      if (isAuthenticated) {
+        addProject(newProject as any);
+        toast({
+            title: "¡Proyecto Creado!",
+            description: `${metadata.title} ha sido añadido a tu dashboard.`
+        })
+        router.push(`/projects/${newProject.id}`);
+      } else {
+        // User is not authenticated, save project and redirect to project details
+        setPendingProject(newProject as any);
+        toast({
+            title: "¡Proyecto Listo!",
+            description: `${metadata.title} está listo. Puedes explorarlo sin iniciar sesión.`
+        });
+        router.push(`/projects/${newProject.id}`);
+      }
+  }, [addProject, router, toast, selectedFiles, isAuthenticated, setPendingProject]);
 
   const processFiles = useCallback(async (filesToProcess: File[]) => {
     setIsLoading(true);
@@ -293,7 +304,7 @@ export default function NewProjectPage() {
 
     for (let i = 0; i < totalFiles; i++) {
         const file = filesToProcess[i];
-        setProcessingStatus({ name: file.name, status: `Procesando archivo ${i + 1} de ${totalFiles}...`, index: i + 1, total: totalFiles, atoms: accumulatedAtoms.length });
+        setProcessingStatus({ name: file.name, status: `Atomizando: Extrayendo conceptos clave...`, index: i + 1, total: totalFiles, atoms: accumulatedAtoms.length });
 
         try {
             const studyMaterialUri = await fileToDataUri(file);
@@ -320,31 +331,44 @@ export default function NewProjectPage() {
         atoms: accumulatedAtoms
     };
 
-    setProcessingStatus(prev => ({ ...prev, status: `Infiriendo título y descripción...`, index: totalFiles + 1 }));
+    setProcessingStatus(prev => ({ ...prev, name: "Resumiendo contenido...", status: `Infiriendo título y descripción...`, index: totalFiles + 1 }));
 
     try {
-        // Create content summary for metadata inference
         const contentSummary = accumulatedAtoms.map(atom => `${atom.question}: ${atom.answer}`).join('\n');
         const fileNames = filesToProcess.map(f => f.name);
         
-        // Infer project metadata
-        const metadata = await inferProjectMetadata({
+        const metadataPromise = inferProjectMetadata({
             contentSummary,
             fileNames
         });
+
+        const metadata = await Promise.race([
+            metadataPromise,
+            new Promise<InferProjectMetadataOutput>((_, reject) => setTimeout(() => reject(new Error("Timeout inferring metadata")), 180000))
+        ]);
+        
         setInferredMetadata(metadata);
 
-        setProcessingStatus(prev => ({ ...prev, status: `Generando plan de aprendizaje...`, index: totalFiles + 2 }));
+        setProcessingStatus(prev => ({ ...prev, name: "Diseñando tu ruta...", status: `Generando plan de aprendizaje personalizado... Esto puede tardar unos minutos.`, index: totalFiles + 2 }));
         
-        const plan = await calibratePlanFromQuestionnaire({
+        const planPromise = calibratePlanFromQuestionnaire({
             atoms: finalAtomsResult.atoms,
             projectTitle: metadata.title,
         });
+
+        const plan = await Promise.race([
+            planPromise,
+            new Promise<CalibratePlanOutput>((_, reject) => setTimeout(() => reject(new Error("Timeout generating plan")), 180000))
+        ]);
         
         handleFinalizeProject(plan, finalAtomsResult, metadata, filesToProcess);
-    } catch(error) {
+    } catch(error: any) {
         console.error("Error generating project:", error);
-        setAtomizationError('Lo siento, ha ocurrido un error al generar tu proyecto.');
+        let errorMessage = 'Lo siento, ha ocurrido un error inesperado al generar tu proyecto.';
+        if (error.message.includes("Timeout")) {
+            errorMessage = "La IA está tardando más de lo esperado en responder. Por favor, intenta de nuevo en unos momentos.";
+        }
+        setAtomizationError(errorMessage);
         setIsLoading(false);
     }
 

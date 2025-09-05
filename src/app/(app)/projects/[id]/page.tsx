@@ -58,6 +58,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2 } from "lucide-react";
 import { useProjects, publicProjects } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
@@ -284,10 +285,12 @@ function ProjectDetails() {
   const router = useRouter();
   const { toast } = useToast();
   const slug = params.id as string;
-  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, deleteSource, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan } = useProjects();
+  const { projects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, deleteSource, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan, pendingProject } = useProjects();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
   
-  const project = projects.find(p => p.id === slug) || publicProjects.find(p => p.id === slug);
-  const isUserProject = projects.some(p => p.id === slug);
+  const project = projects.find(p => p.id === slug) || publicProjects.find(p => p.id === slug) || (pendingProject && pendingProject.id === slug ? pendingProject : null);
+  const isUserProject = projects.some(p => p.id === slug) || (pendingProject && pendingProject.id === slug);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
@@ -458,6 +461,17 @@ function ProjectDetails() {
 
   const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
   const activeSessionIndex = isUserProject && project.sessions ? project.sessions.findIndex(s => s.status === 'Continue') : -1;
+
+  // Function to handle session click with authentication check
+  const handleSessionClick = (sessionIndex: number) => {
+    if (isAuthenticated) {
+      router.push(`/study/${project.id}?sessionIndex=${sessionIndex}`);
+    } else {
+      // Redirect to login with the study session as return URL
+      const studyUrl = `/study/${project.id}?sessionIndex=${sessionIndex}`;
+      router.push(`/login?redirect=${encodeURIComponent(studyUrl)}`);
+    }
+  };
   
   const accuracy = (project.totalAnswers && project.correctAnswers && project.totalAnswers > 0) ? Math.round((project.correctAnswers / project.totalAnswers) * 100) : 0;
 
@@ -465,12 +479,13 @@ function ProjectDetails() {
       if (isUserProject) {
            return (
              <div className="flex items-center gap-2">
-                <Link href={`/study/${project.id}?sessionIndex=${activeSessionIndex}`}>
-                    <Button disabled={activeSessionIndex < 0}>
-                        <Play className="mr-2 h-4 w-4" />
-                        Estudiar
-                    </Button>
-                </Link>
+                <Button 
+                    disabled={activeSessionIndex < 0} 
+                    onClick={() => activeSessionIndex >= 0 && handleSessionClick(activeSessionIndex)}
+                >
+                    <Play className="mr-2 h-4 w-4" />
+                    Estudiar
+                </Button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="icon">
@@ -737,9 +752,9 @@ function ProjectDetails() {
                                      break;
                                  case 'Continue':
                                      statusComponent = (
-                                       <Link href={`/study/${project.id}?sessionIndex=${index}`}>
-                                           <Button size="sm">Continuar</Button>
-                                       </Link>
+                                       <Button size="sm" onClick={() => handleSessionClick(index)}>
+                                           Continuar
+                                       </Button>
                                      );
                                      break;
                                  case 'Locked':

@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
+import { getRedirectUrl } from '@/lib/auth-redirect'
 import Link from 'next/link'
 import { Loader2, Brain } from 'lucide-react'
 
@@ -17,8 +18,11 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const supabase = createClient()
+  
+  const redirectUrl = getRedirectUrl(searchParams)
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,7 +69,7 @@ export default function SignUpPage() {
           title: '¡Cuenta creada!',
           description: 'Revisa tu email para confirmar tu cuenta.',
         })
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`)
       }
     } catch (error) {
       toast({
@@ -83,7 +87,7 @@ export default function SignUpPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/new-project`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectUrl)}`,
         },
       })
 
@@ -210,7 +214,7 @@ export default function SignUpPage() {
           
           <p className="mt-4 text-center text-sm text-muted-foreground">
             ¿Ya tienes una cuenta?{' '}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link href={`/login?redirect=${encodeURIComponent(redirectUrl)}`} className="text-primary hover:underline">
               Inicia sesión
             </Link>
           </p>

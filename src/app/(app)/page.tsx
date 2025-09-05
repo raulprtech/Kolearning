@@ -25,57 +25,76 @@ const projectIcons: { [key: string]: React.ElementType } = {
 };
 
 export default function DashboardPage() {
-    const { projects } = useProjects();
+    const { projects, isLoading } = useProjects();
 
   return (
-    <div className="flex flex-col flex-1 p-6">
-      <main className="flex-1 flex flex-col">
-        <Card className="bg-card/50 mb-6">
-            <CardHeader className="flex flex-row items-center gap-4">
-                <KoliAvatar className="h-16 w-16"/>
-                <div>
-                    <CardTitle className="font-headline">Reporte Diario de Koli</CardTitle>
-                    <CardDescription>
-                        Koli sugiere tu próxima sesión de estudio para maximizar tu retención.
-                    </CardDescription>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <p className="mb-4">
-                    Basado en tu progreso en <strong>Física Cuántica</strong>, te recomiendo una sesión de <Link href="/study/1" className="text-primary hover:underline font-bold">Refuerzo</Link> para consolidar los conceptos clave.
-                </p>
-                <Link href="/study/1">
-                    <Button>Comenzar Sesión de Refuerzo</Button>
-                </Link>
-            </CardContent>
-        </Card>
-        
-        <div>
-            <h2 className="text-xl font-semibold mb-4">Mis Proyectos</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.map(project => {
-                    const Icon = projectIcons[project.icon]
-                    return (
-                        <Link href={`/projects/${project.id}`} key={project.id}>
-                            <Card className="bg-card/50 hover:border-primary transition-colors h-full flex flex-col">
-                                <CardHeader className="flex-row items-center gap-4">
-                                    {Icon && <Icon className="w-8 h-8 text-primary" />}
-                                    <CardTitle>{project.title}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex-1">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-sm text-muted-foreground">Dominio</span>
-                                        <span className="text-sm font-bold">{project.mastery}%</span>
-                                    </div>
-                                    <Progress value={project.mastery} className="h-2" />
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    )
-                })}
-            </div>
-        </div>
-      </main>
+    <div className="space-y-8">
+      <Card className="bg-card/50">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <KoliAvatar className="h-12 w-12 sm:h-16 sm:w-16"/>
+              <div>
+                  <CardTitle className="font-headline text-xl sm:text-2xl">Reporte Diario de Koli</CardTitle>
+                  <CardDescription>
+                      Koli sugiere tu próxima sesión de estudio para maximizar tu retención.
+                  </CardDescription>
+              </div>
+          </CardHeader>
+          <CardContent>
+              <p className="mb-4">
+                  Basado en tu progreso en <strong>Física Cuántica</strong>, te recomiendo una sesión de <Link href="/study/1" className="text-primary hover:underline font-bold">Refuerzo</Link> para consolidar los conceptos clave.
+              </p>
+              <Link href="/study/1">
+                  <Button>Comenzar Sesión de Refuerzo</Button>
+              </Link>
+          </CardContent>
+      </Card>
+      
+      <div>
+          <h2 className="text-2xl text-center sm:text-left font-semibold mb-4">Proyectos</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {isLoading ? (
+                  [...Array(3)].map((_, i) => (
+                    <Card key={i} className="bg-card/50 h-40 animate-pulse">
+                      <CardHeader><div className="bg-muted rounded-md h-8 w-3/4"></div></CardHeader>
+                      <CardContent><div className="bg-muted rounded-md h-4 w-full mt-2"></div></CardContent>
+                    </Card>
+                  ))
+              ) : projects.length > 0 ? (
+                  projects.map(project => {
+                      const Icon = projectIcons[project.icon] || Book;
+                      return (
+                          <Link href={`/projects/${project.id}`} key={project.id}>
+                              <Card className="bg-card/50 hover:border-primary transition-colors h-full flex flex-col">
+                                  <CardHeader className="flex-row items-center gap-4">
+                                      {Icon && <Icon className="w-8 h-8 text-primary" />}
+                                      <CardTitle>{project.title}</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="flex-1 flex flex-col justify-end">
+                                      <div className="flex justify-between items-center mb-1">
+                                          <span className="text-sm text-muted-foreground">Dominio</span>
+                                          <span className="text-sm font-bold">{project.mastery}%</span>
+                                      </div>
+                                      <Progress value={project.mastery} className="h-2" />
+                                  </CardContent>
+                              </Card>
+                          </Link>
+                      )
+                  })
+              ) : (
+                  <Card className="md:col-span-2 lg:col-span-3 bg-card/50">
+                      <CardHeader>
+                          <CardTitle>¡Bienvenido a Kolearning!</CardTitle>
+                          <CardDescription>Parece que aún no tienes ningún proyecto. ¡Crea uno para empezar a aprender!</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                          <Link href="/new-project">
+                              <Button>Crear Nuevo Proyecto</Button>
+                          </Link>
+                      </CardContent>
+                  </Card>
+              )}
+          </div>
+      </div>
     </div>
   );
 }

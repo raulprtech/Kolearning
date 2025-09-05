@@ -54,7 +54,9 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  // This is not necessary as the session is automatically refreshed by the
+  // Supabase client.
+  // await supabase.auth.getUser()
 
   return response
 }

@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
+import { getRedirectUrl } from '@/lib/auth-redirect'
 import Link from 'next/link'
 import { Loader2, Brain } from 'lucide-react'
 
@@ -15,8 +17,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
+  const { user, loading } = useAuth()
   const supabase = createClient()
+
+  const redirectUrl = getRedirectUrl(searchParams)
+
+  useEffect(() => {
+    // Redirect if user is already logged in and not loading
+    if (!loading && user) {
+      router.push(redirectUrl)
+    }
+  }, [user, loading, router, redirectUrl])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,13 +47,13 @@ export default function LoginPage() {
           description: error.message,
           variant: 'destructive',
         })
+        setIsLoading(false)
       } else {
         toast({
           title: '¡Bienvenido de vuelta!',
-          description: 'Has iniciado sesión correctamente.',
+          description: 'Has iniciado sesión correctamente. Redirigiendo...',
         })
-        router.push('/new-project')
-        router.refresh()
+        // The useEffect will handle the redirection once the user state is updated.
       }
     } catch (error) {
       toast({
@@ -48,34 +61,52 @@ export default function LoginPage() {
         description: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
         variant: 'destructive',
       })
-    } finally {
       setIsLoading(false)
     }
   }
 
   const handleGoogleLogin = async () => {
+    setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectUrl)}`;
+      console.log('OAuth redirect URL:', redirectTo);
+      console.log('Redirect URL:', redirectUrl);
+      
+      const { error, data } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/new-project`,
+          redirectTo: redirectTo,
         },
       })
 
+      console.log('OAuth response:', { error, data });
+
       if (error) {
+        console.error('OAuth error:', error);
         toast({
           title: 'Error',
           description: error.message,
           variant: 'destructive',
         })
+        setIsLoading(false);
       }
     } catch (error) {
+      console.error('OAuth catch error:', error);
       toast({
         title: 'Error',
         description: 'Ocurrió un error al iniciar sesión con Google.',
         variant: 'destructive',
       })
+      setIsLoading(false);
     }
+  }
+
+  if (loading || user) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      )
   }
 
   return (
@@ -155,7 +186,7 @@ export default function LoginPage() {
           
           <p className="mt-4 text-center text-sm text-muted-foreground">
             ¿No tienes una cuenta?{' '}
-            <Link href="/signup" className="text-primary hover:underline">
+            <Link href={`/signup?redirect=${encodeURIComponent(redirectUrl)}`} className="text-primary hover:underline">
               Regístrate
             </Link>
           </p>

@@ -17,7 +17,7 @@ export default function LandingPage() {
           <Link href="#" className="text-sm font-medium hover:text-primary transition-colors">
             Blog
           </Link>
-          <Link href="/login" className="text-sm font-medium hover:text-primary transition-colors">
+          <Link href="/login?redirect=%2Fnew-project" className="text-sm font-medium hover:text-primary transition-colors">
             Iniciar Sesión
           </Link>
           <Link href="/new-project" passHref>
@@ -48,7 +48,7 @@ export default function LandingPage() {
         </div>
       </main>
       <footer className="p-4 md:px-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Kolearning. Todos los derechos reservados.
+        © {new Date().getFullYear()} Kolearning. Hecho con ❤️ para los aprendedores. Todos los derechos reservados.
       </footer>
     </div>
   );

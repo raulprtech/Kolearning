@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/lib/database.types'
@@ -25,38 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    })
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -66,28 +35,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error)
+        setProfile(null)
       } else {
         setProfile(data)
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
+      setProfile(null)
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase]);
 
-  const signOut = async () => {
-    setLoading(true)
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
-    setSession(null)
-    setLoading(false)
-  }
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      const currentUser = session?.user
+      setUser(currentUser ?? null)
+      
+      if (currentUser) {
+        fetchProfile(currentUser.id)
+      } else {
+        setProfile(null)
+        setLoading(false)
+      }
+    })
 
-  const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id)
+      setSession(session)
+      const currentUser = session?.user
+      setUser(currentUser ?? null)
+      
+      if (currentUser) {
+        await fetchProfile(currentUser.id)
+      } else {
+        setProfile(null)
+        setLoading(false)
+      }
+    })
 
+    return () => subscription.unsubscribe()
+  }, [supabase, fetchProfile])
+
+  const signOut = useCallback(async () => {
+    try {
+      await supabase.auth.signOut()
+      // Force clear local state immediately
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+      setLoading(false)
+    } catch (error) {
+      console.error('Error signing out:', error)
+      // Even if signOut fails, clear local state
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+      setLoading(false)
+    }
+  }, [supabase])
+
+  const updateProfile = useCallback(async (updates: Partial<Profile>) => {
+    if (!user) return;
+
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -99,22 +114,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         throw error
       }
-
-      setProfile(data)
+      setProfile(data);
     } catch (error) {
       console.error('Error updating profile:', error)
-      throw error
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [user, supabase]);
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     profile,
     session,
     loading,
     signOut,
     updateProfile,
-  }
+  }), [user, profile, session, loading, signOut, updateProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

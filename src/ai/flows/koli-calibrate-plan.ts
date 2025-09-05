@@ -36,7 +36,8 @@ const CalibratePlanOutputSchema = z.object({
         topic: z.string().describe('What the user will learn in this session.'),
         sessionType: z.string().describe('The type of the session (e.g., Calibración, Incursión).'),
         questions: z.string().describe('The format of the questions for this session (e.g., "Opción Múltiple", "Preguntas Abiertas").'),
-        atoms: z.array(AtomSchema).describe('The specific atoms assigned to this session.')
+        atoms: z.array(AtomSchema).describe('The specific atoms assigned to this session.'),
+        numAtoms: z.number().describe('The optimal number of knowledge atoms for this session, based on the topic complexity and pedagogical goals. Should be between 5 and 20.')
       })).describe("An array of sessions for this specific day.")
   })).describe('The structured learning path with sessions grouped by day.'),
   koliJustification: z.string().describe('The justification from Koli about the plan, explaining the daily structure if applicable.'),
@@ -85,7 +86,7 @@ A learner has provided their learning material, which has been converted into "K
 
 1.  **Structure:** You MUST structure the learning plan logically. Group the sessions into a reasonable number of days (e.g., 3-7 days for moderately sized topics). Your 'learningPath' output should be an array of day objects. Explain in your 'koliJustification' why you've grouped certain sessions on the same day (e.g., "Para el Día 1, he combinado una sesión de Incursión para introducir nuevos conceptos con una de Refuerzo para consolidar lo aprendido, optimizando tu tiempo.").
 2.  **Session Numbering:** The 'session' field for each learning path item MUST be a simple, sequential integer (1, 2, 3, 4, ...), even when grouped by day. This is a critical rule.
-3.  **Session Size:** Each session MUST contain a MAXIMUM of 10 knowledge atoms (flashcards).
+3.  **Session Size:** You MUST decide the optimal number of knowledge atoms ('numAtoms') for each session. This should be based on the session's purpose and the topic's complexity (e.g., a 'Calibración' might have 5-7 atoms, while an 'Incursión' into a dense topic could have 15-20). The number should be between 5 and 20. You must then select that number of atoms from the general pool and assign them to the 'atoms' field for that session.
 4.  **Sub-modules:** If the material is extensive, you MUST divide it into logical sub-modules or topics. Reflect these topics in the 'topic' field.
 5.  **Session Types & Question Formats:** You MUST assign the correct question format to each session type as defined below. This is a critical rule.
 

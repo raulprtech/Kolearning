@@ -1,11 +1,22 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { useAuth } from './AuthContext';
 import { CalibratePlanOutput } from '@/ai/flows/koli-calibrate-plan';
 import { dynamicLearningPathAdjustment } from '@/ai/flows/koli-strategic-tutor';
 import { differenceInDays, addDays } from 'date-fns';
+import { generateDistractors } from '@/ai/flows/generate-distractors';
+import { generateOrderingQuestion } from "@/ai/flows/generate-ordering-question";
 
+
+export type PerformanceRecord = {
+  question: string;
+  timestamp: string;
+  responseTime: number; // in ms
+  rating: 1 | 2 | 3 | 4;
+  isCorrect: boolean;
+  aidsUsed: string[]; // e.g., ['hint', 'rephrase']
+};
 
 export type Atom = {
   question: string;
@@ -16,6 +27,9 @@ export type Atom = {
   lastReviewed?: string; // ISO date string
   retrievability?: number; // FSRS score from 1 to 4
   incorrectAnswers?: string[]; // For multiple choice questions
+  // For ordering questions
+  orderingItems?: string[];
+  correctOrder?: string[];
 }
 
 export type Source = {
@@ -31,6 +45,7 @@ export type Session = {
   duration: string;
   status: 'Completed' | 'Continue' | 'Locked';
   atoms: Atom[];
+  numAtoms: number;
 }
 
 export type LearningPathItem = {
@@ -38,6 +53,7 @@ export type LearningPathItem = {
     topic: string;
     sessionType: string;
     questions: string; // Added from CalibratePlanOutput
+    numAtoms: number;
 }
 
 export type Project = {
@@ -58,6 +74,8 @@ export type Project = {
   bestStreak?: number;
   totalAnswers?: number;
   correctAnswers?: number;
+  tutorLog?: any[];
+  performanceLog?: PerformanceRecord[];
 };
 
 export type User = {
@@ -103,7 +121,7 @@ type ProjectContextType = {
   masteryPoints: number;
   totalMasteryPoints: number;
   updateEnergy: (amount: number) => void;
-  recordAnswer: (projectId: string, atomIndex: number, fsrs: 1|2|3|4, aidsUsed: boolean, isCorrect: boolean) => void;
+  recordAnswer: (projectId: string, atomIndex: number, fsrs: 1|2|3|4, isCorrect: boolean, responseTime: number, aidsUsed: string[]) => void;
   resetSessionStats: () => void;
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
   nextEnergyIn: number;
@@ -116,6 +134,8 @@ type ProjectContextType = {
   updateUserProfile: (profileData: Partial<User>) => boolean;
   learnerRankInfo: LearnerRankInfo | null;
   isLoading: boolean;
+  setPendingProject: (project: Project) => void;
+  pendingProject: Project | null;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -216,6 +236,7 @@ const FSRS_WEIGHTS = [0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.
 
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
+  const { user, profile, loading: authLoading } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
   const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
@@ -230,16 +251,28 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [nextEnergyTimestamp, setNextEnergyTimestamp] = useState<number | null>(null);
   const [nextEnergyIn, setNextEnergyIn] = useState(0);
   const [sessionAnswers, setSessionAnswers] = useState<boolean[]>([]);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingProject, setPendingProject] = useState<Project | null>(null);
+  
+  // Derived values from Supabase auth
+  const isAuthenticated = !!user;
+  const currentUser: User | null = user ? {
+    name: profile?.name || user.email || '',
+    email: user.email || '',
+    profession: profile?.profession || undefined,
+    company: profile?.company || undefined,
+    age: profile?.age || undefined,
+    additionalInfo: profile?.additional_info || undefined,
+  } : null;
+
+  const learnerRankInfo = getLearnerRank(totalMasteryPoints);
 
   const checkForReviewSessions = useCallback(() => {
     const today = new Date();
     setCompletedProjects(prevCompleted => {
         let hasChanged = false;
         const updatedProjects = prevCompleted.map(p => {
-            const needsReview = p.atoms.some(atom => {
+            const atomsToReview = p.atoms.filter(atom => {
                 if (!atom.lastReviewed || !atom.stability) return false;
                 const daysSince = differenceInDays(today, new Date(atom.lastReviewed));
                 const retrievability = calculateCurrentRetrievability(atom.stability, daysSince);
@@ -248,23 +281,84 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
             const hasActiveReviewSession = p.sessions.some(s => s.status === 'Continue');
 
-            if (needsReview && !hasActiveReviewSession) {
+            if (atomsToReview.length > 0 && !hasActiveReviewSession) {
                 hasChanged = true;
-                const atomsToReview = p.atoms.filter(atom => {
-                     if (!atom.lastReviewed || !atom.stability) return false;
-                     const daysSince = differenceInDays(today, new Date(atom.lastReviewed));
-                     const retrievability = calculateCurrentRetrievability(atom.stability, daysSince);
-                     return retrievability < 0.9;
-                }).slice(0, 10); // Limit review session size
+                
+                const sessionType = "Refuerzo de Dominio";
+                let questionsFormat: "Opción Múltiple" | "Ordenamiento";
+
+                // Randomly select a question format (excluding open questions for reinforcement)
+                const rand = Math.random();
+                if (rand < 0.5) {
+                    questionsFormat = "Opción Múltiple";
+                } else {
+                    questionsFormat = "Ordenamiento";
+                }
+
+                const atomsForSession = atomsToReview.slice(0, 10);
 
                 const newSession: Session = {
                     session: (p.sessions[p.sessions.length - 1]?.session || 0) + 1,
-                    type: "Refuerzo de Dominio",
-                    questions: "Formatos Mixtos",
+                    type: sessionType,
+                    questions: questionsFormat,
                     duration: "15 min",
                     status: 'Continue',
-                    atoms: atomsToReview,
+                    atoms: atomsForSession,
+                    numAtoms: atomsForSession.length,
                 };
+
+                // Generate content asynchronously after session creation
+                if (questionsFormat === "Opción Múltiple") {
+                    (async () => {
+                        const atomsWithDistractors = await Promise.all(newSession.atoms.map(async (atom) => {
+                            if (!atom.incorrectAnswers || atom.incorrectAnswers.length === 0) {
+                                try {
+                                    const result = await generateDistractors({ question: atom.question, answer: atom.answer, count: 3 });
+                                    return { ...atom, incorrectAnswers: result.distractors };
+                                } catch (error) {
+                                    console.error("Failed to generate distractors for atom:", atom.question, error);
+                                    return atom;
+                                }
+                            }
+                            return atom;
+                        }));
+                        
+                        setCompletedProjects(currentProjects => 
+                            currentProjects.map(cp => 
+                                cp.id === p.id 
+                                    ? { ...cp, sessions: cp.sessions.map(s => s.session === newSession.session ? { ...s, atoms: atomsWithDistractors } : s) } 
+                                    : cp
+                            )
+                        );
+                    })();
+                } else if (questionsFormat === "Ordenamiento") {
+                    (async () => {
+                        const atomsWithOrderingData = await Promise.all(newSession.atoms.map(async (atom) => {
+                            if (!atom.orderingItems || atom.orderingItems.length === 0) {
+                                try {
+                                    const result = await generateOrderingQuestion({ context: atom.answer });
+                                    if (result) {
+                                        return { ...atom, orderingItems: result.items, correctOrder: result.correctOrder };
+                                    }
+                                    return atom;
+                                } catch (error) {
+                                    console.error("Failed to generate ordering question for atom:", atom.question, error);
+                                    return atom;
+                                }
+                            }
+                            return atom;
+                        }));
+                        
+                        setCompletedProjects(currentProjects => 
+                            currentProjects.map(cp => 
+                                cp.id === p.id 
+                                    ? { ...cp, sessions: cp.sessions.map(s => s.session === newSession.session ? { ...s, atoms: atomsWithOrderingData } : s) } 
+                                    : cp
+                            )
+                        );
+                    })();
+                }
+
                 return { ...p, sessions: [...p.sessions, newSession] };
             }
             return p;
@@ -277,30 +371,36 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setCompletedProjects(prev => prev.map(p => ({ ...p, mastery: calculateMastery(p.atoms) })));
   }, []);
 
-  // Effect to load data from localStorage after initial render
+  // Effect to load data based on authentication state
   useEffect(() => {
+    if (authLoading) return; // Wait for auth to load
+    
     try {
-      const storedProjects = localStorage.getItem('kolearning_projects');
-      const storedCompleted = localStorage.getItem('kolearning_completed_projects');
-      const storedArchived = localStorage.getItem('kolearning_archived_projects');
-      const user = localStorage.getItem('kolearning_user');
-
-      setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
-      if (storedCompleted) setCompletedProjects(JSON.parse(storedCompleted));
-      if (storedArchived) setArchivedProjects(JSON.parse(storedArchived));
-      
       if (user) {
-        setCurrentUser(JSON.parse(user));
-        setIsAuthenticated(true);
+        // User is authenticated, load their data
+        const storedProjects = localStorage.getItem(`kolearning_projects_${user.id}`);
+        const storedCompleted = localStorage.getItem(`kolearning_completed_projects_${user.id}`);
+        const storedArchived = localStorage.getItem(`kolearning_archived_projects_${user.id}`);
+
+        setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
+        if (storedCompleted) setCompletedProjects(JSON.parse(storedCompleted));
+        if (storedArchived) setArchivedProjects(JSON.parse(storedArchived));
+      } else {
+        // User not authenticated, reset to initial state
+        setProjects(initialProjects);
+        setCompletedProjects([]);
+        setArchivedProjects([]);
       }
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
-      // Fallback to initial state if localStorage is corrupt
       setProjects(initialProjects);
+      setCompletedProjects([]);
+      setArchivedProjects([]);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-  }, []);
+  }, [authLoading, user?.id]);
+
 
   useEffect(() => {
       if (!isLoading) {
@@ -310,103 +410,46 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   // Effect to save data to localStorage whenever it changes
   useEffect(() => {
-    if (isLoading) return; // Don't save initial state until it's loaded
+    if (isLoading || !user) return; // Don't save if loading or not authenticated
     try {
-      localStorage.setItem('kolearning_projects', JSON.stringify(projects));
-      localStorage.setItem('kolearning_completed_projects', JSON.stringify(completedProjects));
-      localStorage.setItem('kolearning_archived_projects', JSON.stringify(archivedProjects));
+      localStorage.setItem(`kolearning_projects_${user.id}`, JSON.stringify(projects));
+      localStorage.setItem(`kolearning_completed_projects_${user.id}`, JSON.stringify(completedProjects));
+      localStorage.setItem(`kolearning_archived_projects_${user.id}`, JSON.stringify(archivedProjects));
     } catch (error) {
         if (error instanceof DOMException && error.name === 'QuotaExceededError') {
             console.error("LocalStorage quota exceeded. Cannot save projects.");
-            // Here you could implement a user notification
         } else {
             console.error("Failed to save projects to localStorage", error);
         }
     }
-  }, [projects, completedProjects, archivedProjects, isLoading]);
+  }, [projects, completedProjects, archivedProjects, isLoading, user]);
 
 
+  // Legacy auth methods - now handled by Supabase AuthContext
   const login = (email: string, password: string): boolean => {
-    try {
-      const users: User[] = JSON.parse(localStorage.getItem('kolearning_users') || '[]');
-      const user = users.find(u => u.email === email && u.password === password);
-      if (user) {
-        const { password, ...userWithoutPassword } = user;
-        localStorage.setItem('kolearning_user', JSON.stringify(userWithoutPassword));
-        setCurrentUser(userWithoutPassword);
-        setIsAuthenticated(true);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Login failed", error);
-      return false;
-    }
+    console.warn('ProjectContext.login is deprecated. Use Supabase AuthContext instead.');
+    return false;
   };
 
   const signup = (name: string, email: string, password: string): boolean => {
-    try {
-      const users: User[] = JSON.parse(localStorage.getItem('kolearning_users') || '[]');
-      if (users.some(u => u.email === email)) {
-        return false; // User already exists
-      }
-      const newUser: User = { name, email, password };
-      users.push(newUser);
-      localStorage.setItem('kolearning_users', JSON.stringify(users));
-      
-      const { password: _, ...userWithoutPassword } = newUser;
-      localStorage.setItem('kolearning_user', JSON.stringify(userWithoutPassword));
-      setCurrentUser(userWithoutPassword);
-      setIsAuthenticated(true);
-      return true;
-    } catch (error) {
-      console.error("Signup failed", error);
-      return false;
-    }
+    console.warn('ProjectContext.signup is deprecated. Use Supabase AuthContext instead.');
+    return false;
   };
 
   const logout = () => {
-    // Clear user-specific data from localStorage
-    localStorage.removeItem('kolearning_user');
-    localStorage.removeItem('kolearning_projects');
-    localStorage.removeItem('kolearning_completed_projects');
-    localStorage.removeItem('kolearning_archived_projects');
-    
-    // Reset state
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-    setProjects(initialProjects); // Reset to default projects
+    console.warn('ProjectContext.logout is deprecated. Use Supabase AuthContext.signOut instead.');
+    // Just clear project data, auth is handled by Supabase
+    setProjects(initialProjects);
     setCompletedProjects([]);
     setArchivedProjects([]);
-    // Optionally reset other stats like energy, credits, etc.
     setEnergy(10);
     setGlobalCognitiveCredits(500);
     setTotalMasteryPoints(170);
   };
   
   const updateUserProfile = (profileData: Partial<User>): boolean => {
-    if (!currentUser) return false;
-    try {
-      // Update state
-      const updatedUser = { ...currentUser, ...profileData };
-      setCurrentUser(updatedUser);
-
-      // Update localStorage for persistence
-      localStorage.setItem('kolearning_user', JSON.stringify(updatedUser));
-      
-      // Also update the full user list in localStorage if they change credentials
-      const users: User[] = JSON.parse(localStorage.getItem('kolearning_users') || '[]');
-      const userIndex = users.findIndex(u => u.email === currentUser.email);
-      if (userIndex > -1) {
-          const originalUser = users[userIndex];
-          users[userIndex] = { ...originalUser, ...updatedUser };
-          localStorage.setItem('kolearning_users', JSON.stringify(users));
-      }
-      return true;
-    } catch (error) {
-      console.error("Failed to update user profile:", error);
-      return false;
-    }
+    console.warn('ProjectContext.updateUserProfile is deprecated. Use Supabase AuthContext.updateProfile instead.');
+    return false;
   };
 
   useEffect(() => {
@@ -437,8 +480,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     if (!projects.find(p => p.id === projectToAdd.id)) {
         const atoms = [...projectToAdd.atoms];
         const sessions: Session[] = projectToAdd.learningPath.map((item, index) => {
-            const sessionSize = 10;
-            const sessionAtoms = atoms.slice(index * sessionSize, (index + 1) * sessionSize);
+            const sessionAtoms = atoms.slice(index * item.numAtoms, (index + 1) * item.numAtoms);
 
             return {
                 session: item.session,
@@ -447,6 +489,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
                 duration: '20 min',
                 status: index === 0 ? 'Continue' : 'Locked',
                 atoms: sessionAtoms,
+                numAtoms: item.numAtoms,
             };
         });
 
@@ -458,6 +501,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
 }, [projects]);
 
+  // Effect to save pendingProject when user authenticates
+  useEffect(() => {
+    if (user && pendingProject && !authLoading) {
+      // User just authenticated and there's a pending project
+      addProject(pendingProject);
+      setPendingProject(null); // Clear pending project after saving
+    }
+  }, [user, pendingProject, authLoading, addProject]);
 
   const updateProjectIcon = (projectId: string, icon: string) => {
     setProjects(prevProjects =>
@@ -486,7 +537,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             questions: item.questions,
             duration: '20 min', // Default duration
             status: index === 0 ? 'Continue' : 'Locked',
-            atoms: p.atoms.slice(index * 10, (index + 1) * 10),
+            atoms: p.atoms.slice(index * item.numAtoms, (index + 1) * item.numAtoms),
+            numAtoms: item.numAtoms,
           }));
 
           return {
@@ -632,7 +684,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     let projectToUpdate: Project | undefined;
     let isCompletedProject = false;
 
-    const updateLogic = (p: Project) => {
+    const findAndPrepareUpdate = (p: Project) => {
         if (p.id === projectId) {
             const updatedSessions = [...p.sessions];
             if (updatedSessions[sessionIndex]) {
@@ -648,7 +700,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
             const newMastery = calculateMastery(p.atoms);
             
-            projectToUpdate = { 
+            return { 
                 ...p, 
                 sessions: updatedSessions,
                 totalAnswers: newTotalAnswers,
@@ -656,26 +708,32 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
                 bestStreak: newBestStreak,
                 mastery: newMastery,
             };
-            return projectToUpdate;
         }
         return p;
     }
 
-    setProjects(prevProjects => prevProjects.map(updateLogic));
+    setProjects(prevProjects => {
+        const newProjects = prevProjects.map(findAndPrepareUpdate);
+        projectToUpdate = newProjects.find(p => p.id === projectId);
+        return newProjects;
+    });
+
     setCompletedProjects(prevCompleted => {
-        const updatedCompleted = prevCompleted.map(updateLogic);
-        if (updatedCompleted.some(p => p.id === projectId)) {
-            isCompletedProject = true;
+        const newCompleted = prevCompleted.map(findAndPrepareUpdate);
+        if (!projectToUpdate) {
+            projectToUpdate = newCompleted.find(p => p.id === projectId);
+            if (projectToUpdate) isCompletedProject = true;
         }
-        return updatedCompleted;
+        return newCompleted;
     });
     
-    // 🆕 FSRS-based dynamic learning path adjustment
+    // FSRS-based dynamic learning path adjustment
     if (projectToUpdate && sessionAnswers.length > 0) {
         try {
+            const projectForAI = projectToUpdate;
             // Prepare FSRS data for LLM analysis
             const fsrsData = JSON.stringify({
-                atoms: projectToUpdate.atoms.map((atom, index) => ({
+                atoms: projectForAI.atoms.map((atom, index) => ({
                     index,
                     question: atom.question.substring(0, 100), // Truncate for token efficiency
                     difficulty: atom.difficulty || 0.3,
@@ -697,67 +755,174 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             });
 
             const performanceHistory = JSON.stringify({
-                totalAnswers: projectToUpdate.totalAnswers || 0,
-                correctAnswers: projectToUpdate.correctAnswers || 0,
-                bestStreak: projectToUpdate.bestStreak || 0,
-                mastery: projectToUpdate.mastery || 0,
+                totalAnswers: projectForAI.totalAnswers || 0,
+                correctAnswers: projectForAI.correctAnswers || 0,
+                bestStreak: projectForAI.bestStreak || 0,
+                mastery: projectForAI.mastery || 0,
                 lastSessionAccuracy: sessionAnswers.length > 0 
                     ? (sessionAnswers.filter(a => a).length / sessionAnswers.length) * 100 
-                    : 0
+                    : 0,
+                performanceLog: (projectForAI.performanceLog || []).slice(-20), // Include last 20 performance records
             });
 
             const currentLearningPlan = JSON.stringify({
-                sessions: projectToUpdate.sessions.map(s => ({
+                sessions: projectForAI.sessions.map((s: Session) => ({
                     session: s.session,
                     type: s.type,
                     questions: s.questions,
                     status: s.status,
                     atomCount: s.atoms.length
                 })),
-                learningPath: projectToUpdate.learningPath
+                learningPath: projectForAI.learningPath
             });
+
+            const tutorLog = JSON.stringify(projectForAI.tutorLog || []);
 
             // Call AI Strategic Tutor for plan adjustment
             const adjustment = await dynamicLearningPathAdjustment({
                 fsrsData,
                 performanceHistory,
-                currentLearningPlan
+                currentLearningPlan,
+                tutorLog,
             });
 
-            // Apply new sessions if recommended by the AI
-            if (adjustment.newSessions.length > 0) {
-                console.log(`AI Strategic Tutor recommended ${adjustment.newSessions.length} additional sessions:`, adjustment.feedback);
-                
-                // Insert new sessions after current session
-                const newSessionsToAdd = adjustment.newSessions.map((newSession, index) => {
-                    const insertAfterSession = sessionIndex + 1 + index;
-                    return {
-                        type: newSession.type,
-                        questions: newSession.questions,
-                        duration: newSession.duration
-                    };
-                });
+            // Apply adjustments from the AI
+            if (adjustment && projectToUpdate) {
+                let newSessions = [...projectToUpdate.sessions];
+                let projectAtoms = [...projectToUpdate.atoms];
 
-                addSessionsToProject(projectId, newSessionsToAdd, sessionIndex);
-            } else {
-                console.log(`AI Strategic Tutor feedback: ${adjustment.feedback}`);
+                // 1. Remove sessions
+                if (adjustment.adjustments.remove && adjustment.adjustments.remove.length > 0) {
+                    const sessionsToRemove = new Set(adjustment.adjustments.remove);
+                    newSessions = newSessions.filter(s => !sessionsToRemove.has(s.session));
+                }
+
+                // 2. Update sessions
+                if (adjustment.adjustments.update && adjustment.adjustments.update.length > 0) {
+                    adjustment.adjustments.update.forEach(update => {
+                        const sessionIdx = newSessions.findIndex(s => s.session === update.session);
+                        if (sessionIdx !== -1) {
+                            newSessions[sessionIdx] = {
+                                ...newSessions[sessionIdx],
+                                type: update.type,
+                                questions: update.questions,
+                                duration: update.duration,
+                            };
+                        }
+                    });
+                }
+
+                // 3. Add new sessions
+                if (adjustment.adjustments.add && adjustment.adjustments.add.length > 0) {
+                    const sessionsToAddPromises = adjustment.adjustments.add.map(async (add) => {
+                        const weakAtoms = projectForAI.atoms
+                            .filter(a => (a.retrievability || 4) <= 2 || (a.difficulty || 0) > 0.6)
+                            .slice(0, add.numAtoms);
+
+                        let atomsForSession = weakAtoms;
+                        if (add.questions === "Opción Múltiple") {
+                            atomsForSession = await Promise.all(weakAtoms.map(async (atom) => {
+                                try {
+                                    const result = await generateDistractors({ question: atom.question, answer: atom.answer, count: 3 });
+                                    const projectAtomIndex = projectAtoms.findIndex(pAtom => pAtom.question === atom.question);
+                                    if (projectAtomIndex !== -1) {
+                                        projectAtoms[projectAtomIndex] = { ...projectAtoms[projectAtomIndex], incorrectAnswers: result.distractors };
+                                    }
+                                    return { ...atom, incorrectAnswers: result.distractors };
+                                } catch (error) {
+                                    console.error("Failed to generate distractors for new session atom:", atom.question, error);
+                                    return atom;
+                                }
+                            }));
+                        } else if (add.questions === "Ordenamiento") {
+                            atomsForSession = await Promise.all(weakAtoms.map(async (atom) => {
+                                try {
+                                    const result = await generateOrderingQuestion({ context: atom.answer });
+                                    if (result) {
+                                        const projectAtomIndex = projectAtoms.findIndex(pAtom => pAtom.question === atom.question);
+                                        if (projectAtomIndex !== -1) {
+                                            projectAtoms[projectAtomIndex] = { ...projectAtoms[projectAtomIndex], orderingItems: result.items, correctOrder: result.correctOrder };
+                                        }
+                                        return { ...atom, orderingItems: result.items, correctOrder: result.correctOrder };
+                                    }
+                                    return atom;
+                                } catch (error) {
+                                    console.error("Failed to generate ordering question for new session atom:", atom.question, error);
+                                    return atom;
+                                }
+                            }));
+                        }
+
+                        return {
+                            session: 0, // Temporary
+                            type: add.type,
+                            questions: add.questions,
+                            duration: add.duration,
+                            status: 'Locked',
+                            atoms: atomsForSession,
+                            numAtoms: add.numAtoms,
+                        } as Session;
+                    });
+
+                    const sessionsToAdd = await Promise.all(sessionsToAddPromises);
+
+                    const insertIndex = newSessions.findIndex(s => s.session > sessionIndex);
+                    if (insertIndex !== -1) {
+                        newSessions.splice(insertIndex, 0, ...sessionsToAdd);
+                    } else {
+                        newSessions.push(...sessionsToAdd);
+                    }
+                }
+                
+                newSessions = newSessions.map((session, index) => ({
+                    ...session,
+                    session: index + 1,
+                }));
+
+                const finalProjectUpdate = {
+                    ...projectToUpdate,
+                    atoms: projectAtoms,
+                    sessions: newSessions,
+                    tutorLog: [
+                        ...(projectToUpdate.tutorLog || []),
+                        {
+                            date: new Date().toISOString(),
+                            sessionCompleted: sessionIndex + 1,
+                            feedback: adjustment.feedback,
+                            reasoning: adjustment.reasoning,
+                            adjustments: adjustment.adjustments,
+                        }
+                    ]
+                };
+
+                if (isCompletedProject) {
+                    setCompletedProjects(prev => prev.map(p => p.id === projectId ? finalProjectUpdate : p));
+                } else {
+                    setProjects(prev => prev.map(p => p.id === projectId ? finalProjectUpdate : p));
+                }
+                projectToUpdate = finalProjectUpdate;
             }
         } catch (error) {
             console.error("Error during dynamic learning path adjustment:", error);
-            // Continue normally if AI adjustment fails
         }
     }
     
-    // Check for project completion after state update is triggered
-    if (projectToUpdate && !isCompletedProject && projectToUpdate.sessions.every(s => s.status === 'Completed' || s.type === "Refuerzo de Dominio")) {
+    // Only complete project if mastery >= 95 AND all sessions are actually completed
+    // Do not allow completion if there are pending reinforcement sessions
+    const allSessionsCompleted = projectToUpdate?.sessions.every(s => s.status === 'Completed') || false;
+    const hasHighMastery = (projectToUpdate?.mastery || 0) >= 95;
+    
+    if (projectToUpdate && !isCompletedProject && hasHighMastery && allSessionsCompleted) {
+        console.log(`Project ${projectId} completed with ${projectToUpdate.mastery}% mastery`);
         setProjects(prev => prev.filter(p => p.id !== projectId));
         setCompletedProjects(prev => [...prev, projectToUpdate!]);
+    } else if (projectToUpdate && !isCompletedProject) {
+        console.log(`Project ${projectId} not ready for completion: mastery=${projectToUpdate.mastery}%, allSessionsCompleted=${allSessionsCompleted}`);
     }
 
-    // Reset session-specific stats
     resetSessionStats();
 
-}, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak, resetSessionStats, addSessionsToProject]);
+}, [lastSessionCompletedDate, cognitiveCredits, sessionAnswers, sessionStreak, resetSessionStats, setProjects, setCompletedProjects, setDailyStreak, setGlobalCognitiveCredits, setLastSessionCompletedDate]);
 
 
   const archiveProject = (projectId: string): boolean => {
@@ -800,7 +965,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrsRating: 1|2|3|4, aidsUsed: boolean, isCorrect: boolean) => {
+  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrsRating: 1|2|3|4, isCorrect: boolean, responseTime: number, aidsUsed: string[]) => {
     setSessionAnswers(prev => [...prev, isCorrect]);
     
     const today = new Date().toISOString();
@@ -810,6 +975,17 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
         const atom = project.atoms[atomIndex];
         if (!atom) return project;
+
+        // Add to performance log
+        const newPerformanceRecord: PerformanceRecord = {
+            question: atom.question,
+            timestamp: today,
+            responseTime,
+            rating: fsrsRating,
+            isCorrect,
+            aidsUsed,
+        };
+        const updatedPerformanceLog = [...(project.performanceLog || []), newPerformanceRecord];
 
         const oldDifficulty = atom.difficulty || 0.3; // Default starting difficulty
         const oldStability = atom.stability || 0; // 0 for new cards
@@ -845,7 +1021,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         };
 
         const newMastery = calculateMastery(newAtoms);
-        return { ...project, atoms: newAtoms, mastery: newMastery };
+        return { ...project, atoms: newAtoms, mastery: newMastery, performanceLog: updatedPerformanceLog };
     };
 
     setProjects(prev => prev.map(updateAtomInProject));
@@ -853,7 +1029,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     
     if (isCorrect) {
       setSessionStreak(prev => prev + 1);
-      setCognitiveCredits(prev => prev + (aidsUsed ? 1 : 2));
+      setCognitiveCredits(prev => prev + (aidsUsed.length > 0 ? 1 : 2));
     } else {
       setSessionStreak(0);
     }
@@ -878,9 +1054,31 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       }
       return false;
   }
-  
-  const learnerRankInfo = getLearnerRank(totalMasteryPoints);
 
+  const handleSetPendingProject = useCallback((project: Project) => {
+      // Create sessions for the pending project similar to addProject
+      const atoms = [...project.atoms];
+      const sessions: Session[] = project.learningPath.map((item, index) => {
+          const sessionAtoms = atoms.slice(index * item.numAtoms, (index + 1) * item.numAtoms);
+          return {
+              session: item.session,
+              type: item.sessionType,
+              questions: item.questions,
+              duration: '20 min',
+              status: index === 0 ? 'Continue' : 'Locked',
+              atoms: sessionAtoms,
+              numAtoms: item.numAtoms,
+          };
+      });
+
+      const projectWithSessions: Project = {
+          ...project,
+          sessions: sessions,
+      };
+      
+      setPendingProject(projectWithSessions);
+  }, []);
+  
   return (
     <ProjectContext.Provider value={{ 
         projects, completedProjects, archivedProjects, addProject, updateProjectIcon, updateProjectDetails, updateProjectPlan, addSessionsToProject, 
@@ -888,7 +1086,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         energy, sessionStreak, dailyStreak, cognitiveCredits, globalCognitiveCredits, masteryPoints, totalMasteryPoints,
         updateEnergy, recordAnswer, resetSessionStats, exchangeCreditsForEnergy, nextEnergyIn, sessionAnswers,
         isAuthenticated, currentUser, login, signup, logout, updateUserProfile,
-        learnerRankInfo, isLoading
+        learnerRankInfo, isLoading, setPendingProject: handleSetPendingProject, pendingProject
     }}>
       {children}
     </ProjectContext.Provider>
