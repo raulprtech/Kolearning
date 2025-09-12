@@ -22,7 +22,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Progress } from "../ui/progress";
 
 export function Header() {
@@ -34,7 +34,6 @@ export function Header() {
   } = useProjects();
   const { user, profile, signOut } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const formatTime = (seconds: number) => {
@@ -44,26 +43,7 @@ export function Header() {
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut();
-      // Only redirect to login if we're on a protected page
-      const publicPaths = ['/new-project', '/login', '/signup', '/', '/terms', '/privacy'];
-      const isOnPublicPage = publicPaths.some(path => pathname === path || pathname.startsWith(path));
-      
-      if (!isOnPublicPage) {
-        router.push('/login');
-      }
-      // If on a public page, just stay there after logout
-    } catch (error) {
-      console.error('Error during logout:', error);
-      // Fallback: still redirect if not on public page
-      const publicPaths = ['/new-project', '/login', '/signup', '/', '/terms', '/privacy'];
-      const isOnPublicPage = publicPaths.some(path => pathname === path || pathname.startsWith(path));
-      
-      if (!isOnPublicPage) {
-        router.push('/login');
-      }
-    }
+    await signOut();
   };
 
   const handleLinkClick = (href: string) => {

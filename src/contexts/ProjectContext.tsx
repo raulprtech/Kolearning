@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import { useAuth } from './AuthContext';
 import { CalibratePlanOutput } from '@/ai/flows/koli-calibrate-plan';
 import { dynamicLearningPathAdjustment } from '@/ai/flows/koli-strategic-tutor';
-import { differenceInDays, addDays } from 'date-fns';
+import { differenceInDays } from 'date-fns';
 import { generateDistractors } from '@/ai/flows/generate-distractors';
 import { generateOrderingQuestion } from "@/ai/flows/generate-ordering-question";
 
@@ -307,58 +307,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
                     numAtoms: atomsForSession.length,
                 };
 
-                // Generate content asynchronously after session creation
-                if (questionsFormat === "Opción Múltiple") {
-                    (async () => {
-                        const atomsWithDistractors = await Promise.all(newSession.atoms.map(async (atom) => {
-                            if (!atom.incorrectAnswers || atom.incorrectAnswers.length === 0) {
-                                try {
-                                    const result = await generateDistractors({ question: atom.question, answer: atom.answer, count: 3 });
-                                    return { ...atom, incorrectAnswers: result.distractors };
-                                } catch (error) {
-                                    console.error("Failed to generate distractors for atom:", atom.question, error);
-                                    return atom;
-                                }
-                            }
-                            return atom;
-                        }));
-                        
-                        setCompletedProjects(currentProjects => 
-                            currentProjects.map(cp => 
-                                cp.id === p.id 
-                                    ? { ...cp, sessions: cp.sessions.map(s => s.session === newSession.session ? { ...s, atoms: atomsWithDistractors } : s) } 
-                                    : cp
-                            )
-                        );
-                    })();
-                } else if (questionsFormat === "Ordenamiento") {
-                    (async () => {
-                        const atomsWithOrderingData = await Promise.all(newSession.atoms.map(async (atom) => {
-                            if (!atom.orderingItems || atom.orderingItems.length === 0) {
-                                try {
-                                    const result = await generateOrderingQuestion({ context: atom.answer });
-                                    if (result) {
-                                        return { ...atom, orderingItems: result.items, correctOrder: result.correctOrder };
-                                    }
-                                    return atom;
-                                } catch (error) {
-                                    console.error("Failed to generate ordering question for atom:", atom.question, error);
-                                    return atom;
-                                }
-                            }
-                            return atom;
-                        }));
-                        
-                        setCompletedProjects(currentProjects => 
-                            currentProjects.map(cp => 
-                                cp.id === p.id 
-                                    ? { ...cp, sessions: cp.sessions.map(s => s.session === newSession.session ? { ...s, atoms: atomsWithOrderingData } : s) } 
-                                    : cp
-                            )
-                        );
-                    })();
-                }
-
                 return { ...p, sessions: [...p.sessions, newSession] };
             }
             return p;
@@ -371,13 +319,95 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setCompletedProjects(prev => prev.map(p => ({ ...p, mastery: calculateMastery(p.atoms) })));
   }, []);
 
+  // Generate content for newly created sessions
+  useEffect(() => {
+    const generateSessionContent = async () => {
+      const sessionsNeedingContent = completedProjects.flatMap(project => 
+        project.sessions.filter(session => {
+          if (session.status !== 'Continue') return false;
+          
+          const needsDistractors = session.questions === "Opción Múltiple" && 
+            session.atoms.some(atom => !atom.incorrectAnswers || atom.incorrectAnswers.length === 0);
+          
+          const needsOrdering = session.questions === "Ordenamiento" && 
+            session.atoms.some(atom => !atom.orderingItems || atom.orderingItems.length === 0);
+          
+          return needsDistractors || needsOrdering;
+        }).map(session => ({ project, session }))
+      );
+
+      if (sessionsNeedingContent.length === 0) return;
+
+      for (const { project, session } of sessionsNeedingContent) {
+        try {
+          if (session.questions === "Opción Múltiple") {
+            const atomsWithDistractors = await Promise.all(session.atoms.map(async (atom) => {
+              if (!atom.incorrectAnswers || atom.incorrectAnswers.length === 0) {
+                try {
+                  const result = await generateDistractors({ question: atom.question, answer: atom.answer, count: 3 });
+                  return { ...atom, incorrectAnswers: result.distractors };
+                } catch (error) {
+                  console.error("Failed to generate distractors for atom:", atom.question, error);
+                  return atom;
+                }
+              }
+              return atom;
+            }));
+            
+            setCompletedProjects(currentProjects => 
+              currentProjects.map(cp => 
+                cp.id === project.id 
+                  ? { ...cp, sessions: cp.sessions.map(s => s.session === session.session ? { ...s, atoms: atomsWithDistractors } : s) } 
+                  : cp
+              )
+            );
+          } else if (session.questions === "Ordenamiento") {
+            const atomsWithOrderingData = await Promise.all(session.atoms.map(async (atom) => {
+              if (!atom.orderingItems || atom.orderingItems.length === 0) {
+                try {
+                  const result = await generateOrderingQuestion({ context: atom.answer });
+                  if (result) {
+                    return { ...atom, orderingItems: result.items, correctOrder: result.correctOrder };
+                  }
+                  return atom;
+                } catch (error) {
+                  console.error("Failed to generate ordering question for atom:", atom.question, error);
+                  return atom;
+                }
+              }
+              return atom;
+            }));
+            
+            setCompletedProjects(currentProjects => 
+              currentProjects.map(cp => 
+                cp.id === project.id 
+                  ? { ...cp, sessions: cp.sessions.map(s => s.session === session.session ? { ...s, atoms: atomsWithOrderingData } : s) } 
+                  : cp
+              )
+            );
+          }
+        } catch (error) {
+          console.error("Error generating session content:", error);
+        }
+      }
+    };
+
+    if (!isLoading) {
+      generateSessionContent();
+    }
+  }, [completedProjects, isLoading]);
+
   // Effect to load data based on authentication state
   useEffect(() => {
-    if (authLoading) return; // Wait for auth to load
+    if (authLoading) {
+      setIsLoading(true);
+      return;
+    }
     
     try {
-      if (user) {
+      if (user && user.id) {
         // User is authenticated, load their data
+        setIsLoading(true);
         const storedProjects = localStorage.getItem(`kolearning_projects_${user.id}`);
         const storedCompleted = localStorage.getItem(`kolearning_completed_projects_${user.id}`);
         const storedArchived = localStorage.getItem(`kolearning_archived_projects_${user.id}`);

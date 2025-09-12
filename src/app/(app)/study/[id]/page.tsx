@@ -407,6 +407,7 @@ export default function StudySessionPage() {
   const [verificationResult, setVerificationResult] = useState<VerifyAnswerOutput | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   
+  const [isSessionFinished, setIsSessionFinished] = useState(false);
   const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
   const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
   const [isExplanationLoading, setIsExplanationLoading] = useState(false);
@@ -415,6 +416,15 @@ export default function StudySessionPage() {
   const [hint, setHint] = useState<string | null>(null);
   const [rephrasedQuestion, setRephrasedQuestion] = useState<string | null>(null);
   const [isTutorPanelOpen, setIsTutorPanelOpen] = useState(false);
+
+  useEffect(() => {
+    if (isSessionFinished) {
+      // Use a timeout to allow state updates to propagate before navigating.
+      setTimeout(() => {
+        router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}`);
+      }, 100);
+    }
+  }, [isSessionFinished, router, projectId, sessionIndex]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -475,11 +485,9 @@ export default function StudySessionPage() {
       setRephrasedQuestion(null);
       setQuestionStartTime(Date.now());
     } else {
-      completeSession(projectId, sessionIndex).then(() => {
-        router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}`);
-      });
+      setIsSessionFinished(true);
     }
-  }, [isOrdering, userOrderingAnswer, currentAtom, isMultipleChoice, isConvertedToMc, userAnswer, verificationResult, recordAnswer, projectId, currentAtomProjectIndex, aidsUsed, currentCardIndex, sessionAtoms.length, router, sessionIndex, completeSession, questionStartTime]);
+  }, [isOrdering, userOrderingAnswer, currentAtom, isMultipleChoice, isConvertedToMc, userAnswer, verificationResult, recordAnswer, projectId, currentAtomProjectIndex, aidsUsed, currentCardIndex, sessionAtoms.length, router, sessionIndex, questionStartTime]);
 
 
   if (!isAuthenticated) {

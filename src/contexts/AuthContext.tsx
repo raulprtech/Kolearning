@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useMemo, useCallback } 
 import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/lib/database.types'
+import { useRouter } from 'next/navigation'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  const router = useRouter()
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -48,24 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      const currentUser = session?.user
-      setUser(currentUser ?? null)
-      
-      if (currentUser) {
-        fetchProfile(currentUser.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.id)
       setSession(session)
       const currentUser = session?.user
       setUser(currentUser ?? null)
@@ -82,22 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, fetchProfile])
 
   const signOut = useCallback(async () => {
-    try {
-      await supabase.auth.signOut()
-      // Force clear local state immediately
-      setSession(null)
-      setUser(null)
-      setProfile(null)
-      setLoading(false)
-    } catch (error) {
-      console.error('Error signing out:', error)
-      // Even if signOut fails, clear local state
-      setSession(null)
-      setUser(null)
-      setProfile(null)
-      setLoading(false)
-    }
-  }, [supabase])
+    await supabase.auth.signOut()
+    router.push('/')
+  }, [supabase, router])
 
   const updateProfile = useCallback(async (updates: Partial<Profile>) => {
     if (!user) return;
