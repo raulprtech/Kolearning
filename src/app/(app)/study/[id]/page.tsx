@@ -174,35 +174,44 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: Mu
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
     const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
     useEffect(() => {
-        if (!atom.question || !atom.answer) return;
+        const getOptions = async () => {
+            setIsLoadingOptions(true);
+            let options: string[] = [];
 
-        // Generate distractors on-demand if they don't exist for multiple choice
-        const generateDistractorsOnDemand = async () => {
             if (atom.incorrectAnswers && atom.incorrectAnswers.length > 0) {
-                const options = [atom.answer, ...atom.incorrectAnswers];
-                setShuffledOptions(options.sort(() => Math.random() - 0.5));
+                // Usa los distractores pre-generados
+                options = [atom.answer, ...atom.incorrectAnswers];
             } else {
-                console.log("No distractors found, generating on-demand for:", atom.question);
+                // Fallback: si no hay distractores, genéralos ahora
+                console.warn(`No pre-generated distractors for: "${atom.question}". Generating them now.`);
                 try {
                     const { generateDistractors } = await import('@/ai/flows/generate-distractors');
-                    const result = await generateDistractors({ question: atom.question, answer: atom.answer, count: 3 });
-                    const options = [atom.answer, ...result.distractors];
-                    setShuffledOptions(options.sort(() => Math.random() - 0.5));
+                    const response = await generateDistractors({
+                        question: atom.question,
+                        answer: atom.answer,
+                        count: 3,
+                    });
+                    options = [atom.answer, ...response.distractors];
                 } catch (error) {
-                    console.error("Failed to generate distractors on-demand:", error);
-                    // Use fallback options
-                    const options = [atom.answer, "Opción A", "Opción B", "Opción C"];
-                    setShuffledOptions(options.sort(() => Math.random() - 0.5));
+                    console.error("Error generating fallback distractors:", error);
+                    // Opciones de respaldo en caso de error
+                    options = [atom.answer, "Opción A", "Opción B", "Opción C"];
                 }
             }
+
+            setShuffledOptions(options.sort(() => Math.random() - 0.5));
+            setIsLoadingOptions(false);
         };
 
-        generateDistractorsOnDemand();
+        getOptions();
+
         setIsAnswered(false);
         setSelectedOption(null);
-    }, [atom]);
+
+    }, [atom.answer, atom.question, atom.incorrectAnswers]);
 
     useEffect(() => {
         if(isRevealed) {
@@ -223,6 +232,17 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: Mu
         if (option === selectedOption && option !== atom.answer) return "destructive";
         return "outline";
     };
+
+    if (isLoadingOptions) {
+        return (
+            <div className="mt-6 flex flex-col gap-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+            </div>
+        );
+    }
 
     return (
         <div className="mt-6 flex flex-col gap-4">

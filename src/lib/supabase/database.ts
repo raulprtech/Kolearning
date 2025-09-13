@@ -64,6 +64,7 @@ export const convertProjectFromDB = async (
             duration: sessionData.duration,
             status: sessionData.status as 'Completed' | 'Continue' | 'Locked',
             atoms: sessionAtoms,
+            numAtoms: sessionAtoms.length,
           }
         })
       )
@@ -208,7 +209,7 @@ export class ProjectDatabase {
             stability: atom.stability || 0,
             last_reviewed: atom.lastReviewed,
             retrievability: atom.retrievability,
-            incorrect_answers: atom.incorrectAnswers || [],
+            incorrect_answers: atom.incorrectAnswers || [], // <-- VERIFICA Y ASEGURA QUE ESTA LÍNEA ESTÉ ASÍ
           }))
         )
 

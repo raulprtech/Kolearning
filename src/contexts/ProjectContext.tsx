@@ -45,7 +45,7 @@ export type Session = {
   duration: string;
   status: 'Completed' | 'Continue' | 'Locked';
   atoms: Atom[];
-  numAtoms: number;
+  numAtoms?: number;
 }
 
 export type LearningPathItem = {
@@ -53,7 +53,7 @@ export type LearningPathItem = {
     topic: string;
     sessionType: string;
     questions: string; // Added from CalibratePlanOutput
-    numAtoms: number;
+    numAtoms?: number;
 }
 
 export type Project = {
@@ -510,7 +510,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     if (!projects.find(p => p.id === projectToAdd.id)) {
         const atoms = [...projectToAdd.atoms];
         const sessions: Session[] = projectToAdd.learningPath.map((item, index) => {
-            const sessionAtoms = atoms.slice(index * item.numAtoms, (index + 1) * item.numAtoms);
+            const numAtoms = item.numAtoms || 10; // Default to 10 if undefined
+            const sessionAtoms = atoms.slice(index * numAtoms, (index + 1) * numAtoms);
 
             return {
                 session: item.session,
@@ -519,7 +520,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
                 duration: '20 min',
                 status: index === 0 ? 'Continue' : 'Locked',
                 atoms: sessionAtoms,
-                numAtoms: item.numAtoms,
+                numAtoms: numAtoms,
             };
         });
 
@@ -561,15 +562,18 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       prevProjects.map(p => {
         if (p.id === projectId) {
           const newLearningPath = plan.learningPath.flatMap(day => day.sessions);
-          const newSessions: Session[] = newLearningPath.map((item, index) => ({
-            session: item.session,
-            type: item.sessionType,
-            questions: item.questions,
-            duration: '20 min', // Default duration
-            status: index === 0 ? 'Continue' : 'Locked',
-            atoms: p.atoms.slice(index * item.numAtoms, (index + 1) * item.numAtoms),
-            numAtoms: item.numAtoms,
-          }));
+          const newSessions: Session[] = newLearningPath.map((item, index) => {
+            const numAtoms = item.numAtoms || 10; // Default to 10 if undefined
+            return {
+              session: item.session,
+              type: item.sessionType,
+              questions: item.questions,
+              duration: '20 min', // Default duration
+              status: index === 0 ? 'Continue' : 'Locked',
+              atoms: p.atoms.slice(index * numAtoms, (index + 1) * numAtoms),
+              numAtoms: numAtoms,
+            };
+          });
 
           return {
             ...p,
@@ -1089,7 +1093,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       // Create sessions for the pending project similar to addProject
       const atoms = [...project.atoms];
       const sessions: Session[] = project.learningPath.map((item, index) => {
-          const sessionAtoms = atoms.slice(index * item.numAtoms, (index + 1) * item.numAtoms);
+          const numAtoms = item.numAtoms || 10; // Default to 10 if undefined
+          const sessionAtoms = atoms.slice(index * numAtoms, (index + 1) * numAtoms);
           return {
               session: item.session,
               type: item.sessionType,
@@ -1097,7 +1102,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
               duration: '20 min',
               status: index === 0 ? 'Continue' : 'Locked',
               atoms: sessionAtoms,
-              numAtoms: item.numAtoms,
+              numAtoms: numAtoms,
           };
       });
 

@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -11,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { generateDistractors } from './generate-distractors';
 
 const GenerateAtomsInputSchema = z.object({
   studyMaterial: z
@@ -26,6 +26,7 @@ const GenerateAtomsOutputSchema = z.object({
   atoms: z.array(z.object({
     question: z.string().describe('The question generated from the study material.'),
     answer: z.string().describe('The answer to the question.'),
+    incorrectAnswers: z.array(z.string()).optional().describe('An array of plausible incorrect answers (distractors).')
   })).describe('An array of question/answer pairs generated from the study material.'),
 });
 export type GenerateAtomsOutput = z.infer<typeof GenerateAtomsOutputSchema>;
@@ -70,14 +71,58 @@ Generate the "initialResponse" and the "atoms" array. Return the result in the s
   },
 });
 
+// Helper function for retries with exponential backoff
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+  try {
+    return await fn();
+  } catch (e: any) {
+    if (retries > 0 && e.message.includes('503 Service Unavailable')) {
+      console.warn(`Service unavailable, retrying in ${delay / 1000}s... (${retries} retries left)`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return withRetry(fn, retries - 1, delay * 2); // Exponential backoff
+    }
+    throw e;
+  }
+}
+
 const generateAtomsFlow = ai.defineFlow(
   {
     name: 'generateAtomsFlow',
     inputSchema: GenerateAtomsInputSchema,
     outputSchema: GenerateAtomsOutputSchema,
   },
-  async input => {
-    const {output} = await orchestratorPrompt(input);
-    return output!;
+  async (input) => {
+    const { output } = await orchestratorPrompt(input);
+    if (!output) {
+      throw new Error('Failed to generate initial atoms.');
+    }
+
+    // Generate distractors for each atom in parallel with retry logic
+    const atomsWithDistractors = await Promise.all(
+      output.atoms.map(async (atom) => {
+        try {
+          const distractorsResponse = await withRetry(() => 
+            generateDistractors({
+              question: atom.question,
+              answer: atom.answer,
+              count: 3,
+            })
+          );
+          return {
+            ...atom,
+            incorrectAnswers: distractorsResponse.distractors,
+          };
+        } catch (e) {
+          console.error(`Failed to generate distractors for: "${atom.question}" after multiple retries.`, e);
+          // Return the atom without distractors if generation fails
+          return atom;
+        }
+      })
+    );
+
+    return {
+      ...output,
+      atoms: atomsWithDistractors,
+    };
   }
 );
