@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { Suspense, useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
@@ -179,7 +178,7 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, t
     );
 };
 
-export default function NewProjectPage() {
+function NewProjectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addProject } = useProjects();
@@ -508,51 +507,57 @@ export default function NewProjectPage() {
             onClose={() => setIsPasteTextOpen(false)}
             onImport={handleImportFromText}
         />
-        <main className="flex-1 flex flex-col items-center p-4">
-        <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="flex flex-col items-center text-center max-w-md">
-                <KoliAvatar className="h-24 w-24 mb-6" />
-                <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-                Hola, soy Koli
-                </h1>
-                <p className="mt-4 text-lg text-muted-foreground">
-                Tu asistente de IA personal. ¿En qué te puedo ayudar a aprender hoy?
-                </p>
+        <main className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
+            <div className="text-center mb-12">
+                <h1 className="text-4xl font-bold font-headline mb-2">Crea un Nuevo Proyecto de Aprendizaje</h1>
+                <p className="text-lg text-muted-foreground">Transforma cualquier material de estudio en un plan de aprendizaje interactivo.</p>
             </div>
-            <div className="mt-12 max-w-4xl w-full text-left">
-                <h2 className="text-xl font-headline text-center mb-6">Crea tu primer proyecto de estudio personalizado</h2>
+
+            <div className="w-full max-w-3xl">
+                <Card className="bg-card/50">
+                    <CardContent className="p-6">
+                        <InputBar 
+                            handleSendMessage={handleSendMessage}
+                            isLoading={isLoading}
+                            selectedFiles={selectedFiles}
+                            removeFile={removeFile}
+                            handleFileChange={handleFileChange}
+                            fileInputRef={fileInputRef}
+                            getFileIcon={getFileIcon}
+                            onImportFromUrl={() => setIsUrlImportOpen(true)}
+                            onPasteText={() => setIsPasteTextOpen(true)}
+                            isSourcePopoverOpen={isSourcePopoverOpen}
+                            setIsSourcePopoverOpen={setIsSourcePopoverOpen}
+                        />
+                    </CardContent>
+                </Card>
+            </div>
+            
+            <div className="mt-16 w-full max-w-5xl">
+                <h3 className="text-center text-xl font-semibold mb-8">¿Cómo funciona?</h3>
                 <div className="grid md:grid-cols-3 gap-8">
                     {initialSteps.map((step, index) => (
-                        <div key={index} className="flex gap-4">
-                            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
-                                {index + 1}
+                        <div key={index} className="text-center">
+                            <div className="flex items-center justify-center mb-4">
+                                <div className="bg-primary/10 text-primary rounded-full h-12 w-12 flex items-center justify-center font-bold text-xl">
+                                    {index + 1}
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="font-semibold mb-1">{step.title}</h3>
-                                <p className="text-sm text-muted-foreground">{step.description}</p>
-                            </div>
+                            <h4 className="font-semibold text-lg mb-2">{step.title}</h4>
+                            <p className="text-muted-foreground text-sm">{step.description}</p>
                         </div>
                     ))}
                 </div>
             </div>
-        </div>
-
-        <div className="w-full max-w-lg mt-auto p-4">
-            <InputBar 
-                handleSendMessage={handleSendMessage}
-                isLoading={isLoading}
-                selectedFiles={selectedFiles}
-                removeFile={removeFile}
-                handleFileChange={handleFileChange}
-                fileInputRef={fileInputRef}
-                getFileIcon={getFileIcon}
-                onImportFromUrl={() => setIsUrlImportOpen(true)}
-                onPasteText={() => setIsPasteTextOpen(true)}
-                isSourcePopoverOpen={isSourcePopoverOpen}
-                setIsSourcePopoverOpen={setIsSourcePopoverOpen}
-            />
-        </div>
         </main>
     </div>
-    );
+  );
+}
+
+export default function NewProjectPage() {
+    return (
+        <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <NewProjectContent />
+        </Suspense>
+    )
 }
