@@ -35,41 +35,6 @@ export async function generateAtoms(input: GenerateAtomsInput): Promise<Generate
   return generateAtomsFlow(input);
 }
 
-const orchestratorPrompt = ai.definePrompt({
-  name: 'atomizationOrchestratorPrompt',
-  input: {schema: GenerateAtomsInputSchema},
-  output: {schema: GenerateAtomsOutputSchema},
-  prompt: `You are Koli, an AI-powered tutor specializing in knowledge extraction and atomization.
-All your responses must be in Spanish.
-
-The user has uploaded study material.
-
-**Your Mission:**
-
-Your one and only mission is to read the study material provided and extract EVERY concept, definition, key date, formula, or any other relevant piece of information, and convert it into a "Knowledge Atom" (a question/answer pair).
-
-**CRITICAL RULES:**
-1.  **CONTENT FILTERING:** Before atomization, you MUST identify and completely ignore sections that are not core learning material. This includes, but is not limited to: bibliographies, lists of references, tables of contents, indices, acknowledgements, and title pages. Your focus should be exclusively on the main body of text that contains the knowledge to be learned.
-2.  **BE EXHAUSTIVE:** Do not summarize the content. Your goal is to be thorough and generate as many atoms as necessary to cover the entire material. Do not omit details or important concepts, even if they seem minor. The user needs a comprehensive set of atoms to master the topic.
-3.  **QUALITY ATOMS:** Each atom must be clear, concise, and pedagogically sound. The question should be a real question, and the answer should be the direct and correct response.
-4.  **NO EMPTY ANSWERS:** If you identify a potential question but cannot find or infer a clear answer from the text, you MUST discard that atom. Do not create atoms with empty or missing answers under any circumstances.
-
-**Your Tasks:**
-
-1.  **Generate 'initialResponse':** Craft a brief, friendly, and conversational "initialResponse". This response should acknowledge their uploaded material, confirming that you are beginning the analysis.
-2.  **Generate 'atoms':** Perform your mission. Read the user's material and generate a comprehensive array of question-and-answer pairs. There is no limit.
-
-**User Input:**
-Study Material: {{media url=studyMaterial}}
-
-IMPORTANT: If the provided study material has an unsupported MIME type (like 'application/octet-stream'), you must treat it as a 'text/plain' file and process its content accordingly.
-
-Generate the "initialResponse" and the "atoms" array. Return the result in the specified JSON format.
-  `,
-  config: {
-    temperature: 0,
-  },
-});
 
 // Helper function for retries with exponential backoff
 async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
@@ -92,9 +57,51 @@ const generateAtomsFlow = ai.defineFlow(
     outputSchema: GenerateAtomsOutputSchema,
   },
   async (input) => {
-    const { output } = await orchestratorPrompt(input);
-    if (!output) {
+    const response = await ai.generate({
+      prompt: `You are Koli, an AI-powered tutor specializing in knowledge extraction and atomization.
+All your responses must be in Spanish.
+
+The user has uploaded study material: ${input.studyMaterial}
+
+Your mission: Extract EVERY concept, definition, key date, formula, or relevant information and convert it into question/answer pairs.
+
+CRITICAL RULES:
+1. CONTENT FILTERING: Ignore bibliographies, references, tables of contents, indices, acknowledgements, and title pages.
+2. BE EXHAUSTIVE: Generate as many atoms as necessary to cover the entire material.
+3. QUALITY ATOMS: Each atom must be clear, concise, and pedagogically sound.
+4. NO EMPTY ANSWERS: If you can't find a clear answer, discard that atom.
+
+RESPOND WITH VALID JSON ONLY:
+{
+  "initialResponse": "¡Hola! He recibido tu material de estudio y comenzaré con el análisis...",
+  "atoms": [
+    {
+      "question": "¿Qué es...?",
+      "answer": "Es..."
+    }
+  ]
+}`,
+      model: 'googleai/gemini-2.5-flash-lite',
+      output: { 
+        schema: GenerateAtomsOutputSchema,
+        format: 'json'
+      },
+      config: { 
+        temperature: 0.1,
+        maxOutputTokens: 8192
+      },
+    });
+
+    if (!response?.output) {
       throw new Error('Failed to generate initial atoms.');
+    }
+
+    const output = response.output;
+
+    // Validate that atoms array exists
+    if (!output.atoms || !Array.isArray(output.atoms)) {
+      console.error('Invalid response from AI model:', output);
+      throw new Error('AI model response missing required atoms array');
     }
 
     // Generate distractors for each atom in parallel with retry logic
