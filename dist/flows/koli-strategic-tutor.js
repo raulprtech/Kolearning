@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Implements the AI Strategic Tutor fl4.  **Define Adjustments:**
@@ -13,18 +12,14 @@
  * - DynamicLearningPathAdjustmentInput - The input type for the dynamicLearningPathAdjustment function.
  * - DynamicLearningPathAdjustmentOutput - The return type for the dynamicLearningPathAdjustment function.
  */
-
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 const DynamicLearningPathAdjustmentInputSchema = z.object({
-  fsrsData: z.string().describe('A JSON string representing FSRS data (Difficulty, Stability, Retrievability) for each knowledge atom.'),
-  performanceHistory: z.string().describe('A JSON string detailing the learner\'s performance history over multiple sessions, including accuracy, streaks, and topics covered.'),
-  currentLearningPlan: z.string().describe('The current learning plan of the learner as a JSON string, including all scheduled sessions.'),
-  tutorLog: z.string().describe('A log of past tutor decisions and reasoning, providing long-term memory. Can be empty.'),
+    fsrsData: z.string().describe('A JSON string representing FSRS data (Difficulty, Stability, Retrievability) for each knowledge atom.'),
+    performanceHistory: z.string().describe('A JSON string detailing the learner\'s performance history over multiple sessions, including accuracy, streaks, and topics covered.'),
+    currentLearningPlan: z.string().describe('The current learning plan of the learner as a JSON string, including all scheduled sessions.'),
+    tutorLog: z.string().describe('A log of past tutor decisions and reasoning, providing long-term memory. Can be empty.'),
 });
-export type DynamicLearningPathAdjustmentInput = z.infer<typeof DynamicLearningPathAdjustmentInputSchema>;
-
 const SessionAdjustmentSchema = z.object({
     type: z.string().describe('The type of the session (e.g., Refuerzo, Dominio, Introducción).'),
     questions: z.string().describe('A brief description of the questions format (e.g., Opción múltiple, Preguntas abiertas).'),
@@ -32,36 +27,32 @@ const SessionAdjustmentSchema = z.object({
     topic: z.string().describe('A specific, concise topic for the session (e.g., "Ecuaciones de primer grado", "Fotosíntesis").'),
     numAtoms: z.number().describe('The optimal number of knowledge atoms for this session, based on the topic complexity and user performance. Should be between 5 and 20.'),
 });
-
 const DynamicLearningPathAdjustmentOutputSchema = z.object({
-  feedback: z.string().describe('A brief, encouraging, and insightful feedback message for the user based on their performance and progress.'),
-  reasoning: z.string().describe('A detailed explanation of the reasoning behind the proposed adjustments, analyzing trends from performanceHistory and consulting the tutorLog to justify the changes.'),
-  adjustments: z.object({
-      add: z.array(SessionAdjustmentSchema.extend({
-          afterSession: z.number().describe('The session number after which this new session should be inserted.')
-      })).optional().describe('An array of new sessions to be added to the learning plan.'),
-      update: z.array(SessionAdjustmentSchema.extend({
-          session: z.number().describe('The session number of the existing session to update.')
-      })).optional().describe('An array of existing sessions to be updated with new content or focus.'),
-      remove: z.array(z.number()).optional().describe('An array of session numbers to be removed from the learning plan if they are deemed unnecessary or redundant.'),
-  }).describe('The proposed adjustments to the learning plan. The tutor can add, update, or remove sessions.'),
+    feedback: z.string().describe('A brief, encouraging, and insightful feedback message for the user based on their performance and progress.'),
+    reasoning: z.string().describe('A detailed explanation of the reasoning behind the proposed adjustments, analyzing trends from performanceHistory and consulting the tutorLog to justify the changes.'),
+    adjustments: z.object({
+        add: z.array(SessionAdjustmentSchema.extend({
+            afterSession: z.number().describe('The session number after which this new session should be inserted.')
+        })).optional().describe('An array of new sessions to be added to the learning plan.'),
+        update: z.array(SessionAdjustmentSchema.extend({
+            session: z.number().describe('The session number of the existing session to update.')
+        })).optional().describe('An array of existing sessions to be updated with new content or focus.'),
+        remove: z.array(z.number()).optional().describe('An array of session numbers to be removed from the learning plan if they are deemed unnecessary or redundant.'),
+    }).describe('The proposed adjustments to the learning plan. The tutor can add, update, or remove sessions.'),
 });
-export type DynamicLearningPathAdjustmentOutput = z.infer<typeof DynamicLearningPathAdjustmentOutputSchema>;
-
-export async function dynamicLearningPathAdjustment(input: DynamicLearningPathAdjustmentInput): Promise<DynamicLearningPathAdjustmentOutput> {
-  return dynamicLearningPathAdjustmentFlow(input);
+export async function dynamicLearningPathAdjustment(input) {
+    return dynamicLearningPathAdjustmentFlow(input);
 }
-
 const prompt = ai.definePrompt({
-  name: 'dynamicLearningPathAdjustmentPrompt',
-  input: {schema: DynamicLearningPathAdjustmentInputSchema},
-  output: {schema: DynamicLearningPathAdjustmentOutputSchema},
-  model: 'googleai/gemini-2.5-flash-lite',
-  config: {
-    temperature: 0.1,
-    maxOutputTokens: 8192
-  },
-  prompt: `You are Koli, an expert AI Strategic Tutor. Your primary role is to analyze a learner's performance after a study session and dynamically adapt their learning plan for optimal long-term retention.
+    name: 'dynamicLearningPathAdjustmentPrompt',
+    input: { schema: DynamicLearningPathAdjustmentInputSchema },
+    output: { schema: DynamicLearningPathAdjustmentOutputSchema },
+    model: 'googleai/gemini-2.5-flash-lite',
+    config: {
+        temperature: 0.1,
+        maxOutputTokens: 8192
+    },
+    prompt: `You are Koli, an expert AI Strategic Tutor. Your primary role is to analyze a learner's performance after a study session and dynamically adapt their learning plan for optimal long-term retention.
 Your response must be in Spanish.
 
 The user has just finished a study session. You must analyze their detailed performance history, their FSRS data, their current plan, and your own past decisions (the tutor log) to make strategic adjustments.
@@ -102,15 +93,11 @@ The user has just finished a study session. You must analyze their detailed perf
 Provide your response in the specified JSON format. Be thoughtful and strategic. Your goal is to create the most efficient and effective learning path possible.
   `,
 });
-
-const dynamicLearningPathAdjustmentFlow = ai.defineFlow(
-  {
+const dynamicLearningPathAdjustmentFlow = ai.defineFlow({
     name: 'dynamicLearningPathAdjustmentFlow',
     inputSchema: DynamicLearningPathAdjustmentInputSchema,
     outputSchema: DynamicLearningPathAdjustmentOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
+}, async (input) => {
+    const { output } = await prompt(input);
+    return output;
+});

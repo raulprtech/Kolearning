@@ -32,9 +32,10 @@ export function Header() {
     nextEnergyIn, 
     learnerRankInfo 
   } = useProjects();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, loading } = useAuth();
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -43,7 +44,18 @@ export function Header() {
   };
 
   const handleLogout = async () => {
-    await signOut();
+    if (isSigningOut) return; // Prevent multiple clicks
+
+    try {
+      setIsSigningOut(true);
+      setIsSheetOpen(false); // Close mobile menu if open
+      await signOut();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Optionally show a toast or error message here
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   const handleLinkClick = (href: string) => {
@@ -100,9 +112,14 @@ export function Header() {
         <span>Tienda</span>
       </Button>
       <DropdownMenuSeparator />
-      <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600" onClick={handleLogout}>
+      <Button
+        variant="ghost"
+        className="w-full justify-start text-red-500 hover:text-red-600"
+        onClick={handleLogout}
+        disabled={isSigningOut || loading}
+      >
         <LogOut className="mr-2 h-4 w-4" />
-        <span>Cerrar Sesión</span>
+        <span>{isSigningOut ? "Cerrando..." : "Cerrar Sesión"}</span>
       </Button>
     </div>
   );
@@ -203,9 +220,13 @@ export function Header() {
                   </DropdownMenuItem>
                 </Link>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  disabled={isSigningOut || loading}
+                  className="text-red-500 hover:text-red-600"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Cerrar Sesión</span>
+                  <span>{isSigningOut ? "Cerrando..." : "Cerrar Sesión"}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

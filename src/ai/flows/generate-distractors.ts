@@ -67,6 +67,11 @@ const prompt = ai.definePrompt({
   name: 'generateDistractorsPrompt',
   input: {schema: GenerateDistractorsInputSchema},
   output: {schema: GenerateDistractorsOutputSchema},
+  model: 'googleai/gemini-2.5-flash-lite',
+  config: {
+    temperature: 0.1,
+    maxOutputTokens: 8192
+  },
   prompt: `You are an expert in creating educational content. Given a question and its correct answer, your task is to generate a specified number of incorrect but plausible answer options (distractors) for a multiple-choice question. These distractors should be common misconceptions or related concepts that might confuse a learner.
 
 Your response must be in Spanish.

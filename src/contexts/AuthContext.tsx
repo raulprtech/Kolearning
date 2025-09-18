@@ -69,8 +69,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, fetchProfile])
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut()
-    router.push('/')
+    try {
+      setLoading(true)
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Error during sign out:', error)
+        throw error
+      }
+      // Clear local state
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      // Redirect to home page
+      router.push('/')
+    } catch (error) {
+      console.error('Failed to sign out:', error)
+      // Even if there's an error, try to clear local state and redirect
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      router.push('/')
+    } finally {
+      setLoading(false)
+    }
   }, [supabase, router])
 
   const updateProfile = useCallback(async (updates: Partial<Profile>) => {

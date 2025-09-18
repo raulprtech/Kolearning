@@ -1,5 +1,4 @@
 'use server';
-
 /**
  * @fileOverview Extracts the main content from a given URL using an LLM.
  *
@@ -7,54 +6,42 @@
  * - ExtractContentInput - The input type for the extractContentFromUrl function.
  * - ExtractContentOutput - The return type for the extractContentFromUrl function.
  */
-
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-
 const ExtractContentInputSchema = z.object({
-  url: z.string().describe('The URL from which to extract content.'),
+    url: z.string().describe('The URL from which to extract content.'),
 });
-export type ExtractContentInput = z.infer<typeof ExtractContentInputSchema>;
-
 const ExtractContentOutputSchema = z.object({
-  content: z
-    .string()
-    .describe('The main textual content extracted from the URL.'),
+    content: z
+        .string()
+        .describe('The main textual content extracted from the URL.'),
 });
-export type ExtractContentOutput = z.infer<
-  typeof ExtractContentOutputSchema
->;
-
-async function fetchHtmlFromUrl(url: string): Promise<string> {
+async function fetchHtmlFromUrl(url) {
     try {
         const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
         if (!response.ok) {
             throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
         }
         return await response.text();
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Error fetching URL content:', error);
         throw new Error('Could not retrieve content from the provided URL.');
     }
 }
-
-
-export async function extractContentFromUrl(
-  input: ExtractContentInput
-): Promise<ExtractContentOutput> {
-  return extractContentFlow(input);
+export async function extractContentFromUrl(input) {
+    return extractContentFlow(input);
 }
-
 const extractContentPrompt = ai.definePrompt({
-  name: 'extractContentPrompt',
-  input: { schema: z.object({ htmlContent: z.string() }) },
-  output: { schema: ExtractContentOutputSchema },
-  model: 'googleai/gemini-2.5-flash-lite',
-  config: {
-    temperature: 0.1,
-    maxOutputTokens: 8192
-  },
-  prompt: `You are an expert web content extractor. Your task is to analyze the provided HTML content and extract only the main article or the primary text content.
+    name: 'extractContentPrompt',
+    input: { schema: z.object({ htmlContent: z.string() }) },
+    output: { schema: ExtractContentOutputSchema },
+    model: 'googleai/gemini-2.5-flash-lite',
+    config: {
+        temperature: 0.1,
+        maxOutputTokens: 8192
+    },
+    prompt: `You are an expert web content extractor. Your task is to analyze the provided HTML content and extract only the main article or the primary text content.
 
 You MUST ignore all surrounding boilerplate, including but not limited to:
 - Navigation bars, headers, and footers
@@ -69,21 +56,15 @@ HTML Content:
 {{{htmlContent}}}
 `,
 });
-
-const extractContentFlow = ai.defineFlow(
-  {
+const extractContentFlow = ai.defineFlow({
     name: 'extractContentFlow',
     inputSchema: ExtractContentInputSchema,
     outputSchema: ExtractContentOutputSchema,
-  },
-  async ({ url }) => {
+}, async ({ url }) => {
     const htmlContent = await fetchHtmlFromUrl(url);
-
     const { output } = await extractContentPrompt({ htmlContent });
     if (!output) {
         throw new Error("The AI model failed to extract content from the HTML.");
     }
-
     return output;
-  }
-);
+});

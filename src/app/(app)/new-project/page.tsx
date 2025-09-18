@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
-import { inferProjectMetadata, type InferProjectMetadataOutput } from "@/ai/flows/infer-project-metadata";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project, useProjects } from "@/contexts/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
@@ -142,35 +141,93 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
 }
 
 const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, totalAtoms }: { fileName: string, status: string, totalFiles: number, currentFileIndex: number, totalAtoms: number }) => {
-    
+
     const progress = totalFiles > 0 ? (currentFileIndex / (totalFiles + 1)) * 100 : 0;
-    
+
+    // Extract detailed info from status if available
+    const isDetailedStatus = status.includes('📄') || status.includes('🧠') || status.includes('✨') || status.includes('🔄');
+    const statusEmoji = isDetailedStatus ? status.match(/[📄🧠✨🔄⚠️📚🎯]/)?.[0] || '⚙️' : '⚙️';
+    const statusText = isDetailedStatus ? status.replace(/[📄🧠✨🔄⚠️📚🎯]/g, '').trim() : status;
+
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-            <Card className="w-full max-w-3xl bg-card/50">
-                <CardHeader>
-                    <CardTitle className="text-center text-2xl font-headline">Creando tu Proyecto</CardTitle>
+            <Card className="w-full max-w-4xl bg-card/50">
+                <CardHeader className="text-center">
+                    <CardTitle className="text-3xl font-headline mb-2">Creando tu Proyecto</CardTitle>
+                    <p className="text-muted-foreground">Koli está procesando tu material para crear átomos de conocimiento</p>
                 </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-4 mb-6 p-4 border border-border rounded-lg">
-                         <FileText className="h-8 w-8 text-primary" />
-                         <div>
-                            <p className="font-semibold">{fileName || "Preparando..."}</p>
-                            <p className="text-sm text-muted-foreground">
-                                {status}
-                            </p>
-                         </div>
+                <CardContent className="space-y-6">
+                    {/* Current File Processing */}
+                    <div className="bg-background/50 rounded-xl p-6 border">
+                        <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center text-2xl">
+                                {statusEmoji}
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-lg">{fileName || "Preparando..."}</h3>
+                                <p className="text-muted-foreground">{statusText}</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="mb-4">
-                        <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                           <span>Progreso General</span>
-                           <span>{currentFileIndex > totalFiles ? totalFiles : currentFileIndex}/{totalFiles} Archivos</span>
+                    {/* Progress Bars */}
+                    <div className="space-y-4">
+                        {/* File Progress */}
+                        <div>
+                            <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                                <span>Archivos Procesados</span>
+                                <span>{Math.min(currentFileIndex, totalFiles)}/{totalFiles}</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                                <div
+                                    className="bg-primary h-3 rounded-full transition-all duration-500 ease-out"
+                                    style={{ width: `${progress}%` }}
+                                />
+                            </div>
                         </div>
-                        <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
-                            <div className="bg-primary h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
+
+                        {/* Atoms Generated */}
+                        <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    <span className="font-medium text-green-700 dark:text-green-300">
+                                        Átomos Generados
+                                    </span>
+                                </div>
+                                <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                    {totalAtoms}
+                                </span>
+                            </div>
+                            <p className="text-xs text-green-600/70 dark:text-green-400/70 mt-1">
+                                Conceptos extraídos del material de estudio
+                            </p>
                         </div>
-                         <p className="text-xs text-center text-muted-foreground mt-2">{totalAtoms} átomos generados hasta ahora...</p>
+                    </div>
+
+                    {/* Processing Stages Indicator */}
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className={`text-center p-2 rounded ${currentFileIndex > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                            <div className="font-medium">1. Análisis</div>
+                            <div>Extrayendo contenido</div>
+                        </div>
+                        <div className={`text-center p-2 rounded ${currentFileIndex > totalFiles ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                            <div className="font-medium">2. Metadatos</div>
+                            <div>Infiriendo título</div>
+                        </div>
+                        <div className={`text-center p-2 rounded ${currentFileIndex > totalFiles + 1 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                            <div className="font-medium">3. Plan</div>
+                            <div>Creando estrategia</div>
+                        </div>
+                    </div>
+
+                    {/* Loading Animation */}
+                    <div className="flex justify-center">
+                        <div className="flex space-x-1">
+                            <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                            <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                            <div className="h-2 w-2 bg-primary rounded-full animate-bounce"></div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -192,7 +249,7 @@ function NewProjectContent() {
   const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
   const [atomizationError, setAtomizationError] = useState<string | null>(null);
   const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
-  const [inferredMetadata, setInferredMetadata] = useState<InferProjectMetadataOutput | null>(null);
+  const [inferredMetadata, setInferredMetadata] = useState<{title: string; description: string; categories: string[]} | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -207,7 +264,7 @@ function NewProjectContent() {
     return new Blob([ab], { type: mimeString });
   }
 
-  const handleFinalizeProject = useCallback(async (plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput, metadata: InferProjectMetadataOutput, processedFiles: File[] = selectedFiles) => {
+  const handleFinalizeProject = useCallback(async (plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput, metadata: {title: string; description: string; categories: string[]}, processedFiles: File[] = selectedFiles) => {
       if (!atomsResult || !metadata) {
           toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
           return;
@@ -289,6 +346,7 @@ function NewProjectContent() {
     
     const totalFiles = filesToProcess.length;
     let accumulatedAtoms: GenerateAtomsOutput['atoms'] = [];
+    let results: GenerateAtomsOutput[] = [];
 
     for (let i = 0; i < totalFiles; i++) {
         const file = filesToProcess[i];
@@ -296,14 +354,95 @@ function NewProjectContent() {
 
         try {
             const studyMaterialUri = await fileToDataUri(file);
-            
-            const response = await generateAtoms({
-                studyMaterial: studyMaterialUri,
-            });
-            
-            accumulatedAtoms = [...accumulatedAtoms, ...response.atoms];
-            setProcessingStatus(prev => ({ ...prev, atoms: accumulatedAtoms.length }));
 
+            // Use the new streaming endpoint for detailed progress
+            const response = await fetch('/api/ai/generate-atoms-stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studyMaterial: studyMaterialUri })
+            });
+
+            if (!response.body) {
+                throw new Error('No response body received');
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let finalResult: any = null;
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                // decode with streaming flag to avoid breaking multibyte chars
+                buffer += decoder.decode(value, { stream: true } as any);
+                // Normalize CRLF to LF
+                buffer = buffer.replace(/\r\n/g, '\n');
+
+                // Process all complete SSE events (terminated by blank line) in buffer
+                let sepIndex;
+                while ((sepIndex = buffer.indexOf('\n\n')) !== -1) {
+                    const rawEvent = buffer.slice(0, sepIndex);
+                    buffer = buffer.slice(sepIndex + 2);
+
+                    // Extract `data:` lines and join them
+                    const dataLines = rawEvent
+                        .split('\n')
+                        .filter(l => l.startsWith('data:'))
+                        .map(l => l.slice(5).trimStart());
+
+                    if (dataLines.length === 0) continue;
+
+                    const payloadStr = dataLines.join('\n');
+                    try {
+                        const data = JSON.parse(payloadStr);
+                        if (data.type === 'progress') {
+                            setProcessingStatus(prev => ({
+                                ...prev,
+                                status: `📄 ${file.name}: ${data.message}`,
+                                atoms: accumulatedAtoms.length
+                            }));
+                        } else if (data.type === 'complete') {
+                            console.log('=== RECEIVED COMPLETE DATA ===');
+                            console.log('Complete data:', data.data);
+                            console.log('Has pipeline?', !!data.data?.pipeline);
+                            finalResult = data.data;
+                        } else if (data.type === 'error') {
+                            throw new Error(data.error);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse SSE event payload:', e, payloadStr);
+                    }
+                }
+            }
+
+            // Try to parse any trailing event data left in buffer
+            if (!finalResult && buffer.includes('data:')) {
+                const trailing = buffer
+                  .split('\n')
+                  .filter(l => l.startsWith('data:'))
+                  .map(l => l.slice(5).trimStart())
+                  .join('\n');
+                try {
+                    const data = JSON.parse(trailing);
+                    if (data.type === 'complete') {
+                        finalResult = data.data;
+                    }
+                } catch {
+                    // ignore
+                }
+            }
+
+            if (finalResult) {
+                accumulatedAtoms = [...accumulatedAtoms, ...finalResult.atoms];
+                results.push(finalResult);
+                setProcessingStatus(prev => ({
+                    ...prev,
+                    atoms: accumulatedAtoms.length,
+                    status: `✅ ${file.name} completado - ${finalResult.atoms.length} átomos generados`
+                }));
+            }
 
         } catch (error) {
             console.error(`Error processing file ${file.name}:`, error);
@@ -316,30 +455,54 @@ function NewProjectContent() {
     
     const finalAtomsResult: GenerateAtomsOutput = {
         initialResponse: "Proceso completado.",
+        pipeline: results[0]?.pipeline || {},
         atoms: accumulatedAtoms
     };
 
     setProcessingStatus(prev => ({ ...prev, status: `Infiriendo título y descripción...`, index: totalFiles + 1 }));
 
     try {
-        // Create content summary for metadata inference
-        const contentSummary = accumulatedAtoms.map(atom => `${atom.question}: ${atom.answer}`).join('\n');
-        const fileNames = filesToProcess.map(f => f.name);
-        
-        // Infer project metadata
-        const metadata = await inferProjectMetadata({
-            contentSummary,
-            fileNames
-        });
-        setInferredMetadata(metadata);
+        console.log('=== DEBUGGING METADATA EXTRACTION ===');
+        console.log('Results array length:', results.length);
+        console.log('Results array:', results);
 
+        // Extract metadata from the first file's pipeline results (unified context)
+        const firstResult = results[0];
+        let metadata;
+
+        if (!firstResult || !firstResult.pipeline || !firstResult.pipeline.documentContext) {
+            console.log('Using fallback metadata because:', {
+                hasResult: !!firstResult,
+                hasPipeline: !!firstResult?.pipeline,
+                hasDocumentContext: !!firstResult?.pipeline?.documentContext,
+                firstResult: firstResult
+            });
+
+            // Fallback to using file names and accumulated atoms
+            metadata = {
+                title: filesToProcess[0]?.name.replace(/\.[^/.]+$/, "") || 'Proyecto de Estudio',
+                description: `Proyecto generado a partir de ${filesToProcess.length} archivo(s) con ${accumulatedAtoms.length} átomos de conocimiento.`,
+                categories: ['Educación', 'Estudio']
+            };
+        } else {
+            const documentContext = firstResult.pipeline.documentContext;
+            console.log('Document context:', documentContext);
+
+            metadata = {
+                title: documentContext.inferredTitle,
+                description: documentContext.inferredDescription,
+                categories: documentContext.categories
+            };
+        }
+
+        setInferredMetadata(metadata);
         setProcessingStatus(prev => ({ ...prev, status: `Generando plan de aprendizaje...`, index: totalFiles + 2 }));
-        
+
         const plan = await calibratePlanFromQuestionnaire({
             atoms: finalAtomsResult.atoms,
             projectTitle: metadata.title,
         });
-        
+
         handleFinalizeProject(plan, finalAtomsResult, metadata, filesToProcess);
     } catch(error) {
         console.error("Error generating project:", error);

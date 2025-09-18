@@ -588,13 +588,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         const adjustment = await dynamicLearningPathAdjustment({
           fsrsData,
           performanceHistory,
-          currentLearningPlan
+          currentLearningPlan,
+          tutorLog: ''
         });
 
-        if (adjustment.newSessions.length > 0) {
-          console.log(`AI Strategic Tutor recommended ${adjustment.newSessions.length} additional sessions:`, adjustment.feedback);
+        if (adjustment.adjustments.add && adjustment.adjustments.add.length > 0) {
+          console.log(`AI Strategic Tutor recommended ${adjustment.adjustments.add.length} additional sessions:`, adjustment.feedback);
           
-          const newSessionsToAdd = adjustment.newSessions.map((newSession) => ({
+          const newSessionsToAdd = adjustment.adjustments.add.map((newSession) => ({
             type: newSession.type,
             questions: newSession.questions,
             duration: newSession.duration
