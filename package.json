@@ -6,7 +6,8 @@
     "dev": "run-p dev:*",
     "dev:next": "next dev --turbopack -p 9002",
     "dev:genkit": "cross-env GENKIT_ENV=dev tsx --watch src/ai/server.ts",
-    "build": "next build && npm run build:genkit",
+    "build": "next build",
+    "build:with-genkit": "next build && npm run build:genkit",
     "build:genkit": "tsc -p tsconfig.ai.json",
     "start": "cross-env NODE_ENV=production run-p start:*",
     "start:next": "next start -p 9002",
@@ -75,6 +76,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "genkit-cli": "^1.19.2",
+    "ignore-loader": "^0.1.2",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
