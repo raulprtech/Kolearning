@@ -5,6 +5,31 @@ export const maxDuration = 300; // 5 minutes for large documents
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/**
+ * Directly calls the Genkit flow function instead of using HTTP.
+ * This avoids the HTTP server routing issues and is more reliable.
+ */
+async function generateAtomsWithStreaming(
+  payload: { studyMaterial: string; userPreferences: any },
+  onProgress: (progress: any) => void
+): Promise<any> {
+  console.log('=== CALLING GENERATE ATOMS DIRECTLY ===');
+  console.log('Payload studyMaterial length:', payload.studyMaterial.length);
+  console.log('Payload userPreferences:', payload.userPreferences);
+
+  try {
+    const result = await generateAtomsFromLargeContentWithProgress(payload, onProgress);
+    console.log('=== DIRECT CALL SUCCESSFUL ===');
+    console.log('Result atoms count:', result?.atoms?.length || 0);
+    return result;
+  } catch (error) {
+    console.error('=== DIRECT CALL FAILED ===');
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
 
@@ -21,7 +46,7 @@ export async function POST(request: NextRequest) {
           difficultyPreference: 'gradual' as const
         };
 
-        // Progress callback to send real-time updates
+        // Progress callback to send real-time updates to the client
         const onProgress = (progress: any) => {
           const chunk = encoder.encode(`data: ${JSON.stringify({
             type: 'progress',
@@ -30,8 +55,8 @@ export async function POST(request: NextRequest) {
           controller.enqueue(chunk);
         };
 
-        // Generate atoms using the new 6-stage pipeline with progress updates
-        const result = await generateAtomsFromLargeContentWithProgress(
+        // Generate atoms by calling our streaming helper
+        const result = await generateAtomsWithStreaming(
           {
             studyMaterial,
             userPreferences: userPreferences || defaultPreferences
@@ -55,7 +80,7 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error('Streaming error:', error);
         const message = error instanceof Error ? (error.message || 'Generation failed') : 'Generation failed';
-        // Avoid sending huge payloads (e.g., embedded base64) in error strings
+        // Avoid sending huge payloads in error strings
         const concise = message.length > 500 ? message.slice(0, 500) + '…' : message;
         const errorChunk = encoder.encode(`data: ${JSON.stringify({
           type: 'error',

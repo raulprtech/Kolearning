@@ -127,6 +127,7 @@ export class ProjectDatabase {
   private supabase = createClient()
 
   async getProjects(userId: string): Promise<Project[]> {
+    console.log('[DB] Getting projects for user:', userId);
     const { data, error } = await this.supabase
       .from('projects')
       .select('*')
@@ -135,11 +136,17 @@ export class ProjectDatabase {
       .eq('is_completed', false)
       .order('updated_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('[DB] ❌ Failed to get projects:', error);
+      throw error;
+    }
 
-    return Promise.all(
+    console.log(`[DB] ✅ Found ${data.length} projects in database`);
+    const projects = await Promise.all(
       data.map(project => convertProjectFromDB(project, true))
-    )
+    );
+    console.log(`[DB] ✅ Converted ${projects.length} projects`);
+    return projects;
   }
 
   async getCompletedProjects(userId: string): Promise<Project[]> {
@@ -173,6 +180,14 @@ export class ProjectDatabase {
   }
 
   async createProject(userId: string, project: Omit<Project, 'id'>): Promise<string> {
+    console.log('[DB] Creating project:', {
+      userId,
+      title: project.title,
+      atoms: project.atoms?.length || 0,
+      sessions: project.sessions?.length || 0,
+      sources: project.sources?.length || 0,
+    });
+
     // Create the project
     const { data: projectData, error: projectError } = await this.supabase
       .from('projects')
@@ -192,12 +207,17 @@ export class ProjectDatabase {
       .select('id')
       .single()
 
-    if (projectError) throw projectError
+    if (projectError) {
+      console.error('[DB] ❌ Failed to create project:', projectError);
+      throw projectError;
+    }
 
     const projectId = projectData.id
+    console.log('[DB] ✅ Project created with ID:', projectId);
 
     // Create atoms
     if (project.atoms.length > 0) {
+      console.log(`[DB] Inserting ${project.atoms.length} atoms...`);
       const { error: atomsError } = await this.supabase
         .from('atoms')
         .insert(
@@ -209,15 +229,20 @@ export class ProjectDatabase {
             stability: atom.stability || 0,
             last_reviewed: atom.lastReviewed,
             retrievability: atom.retrievability,
-            incorrect_answers: atom.incorrectAnswers || [], // <-- VERIFICA Y ASEGURA QUE ESTA LÍNEA ESTÉ ASÍ
+            incorrect_answers: atom.incorrectAnswers || [],
           }))
         )
 
-      if (atomsError) throw atomsError
+      if (atomsError) {
+        console.error('[DB] ❌ Failed to insert atoms:', atomsError);
+        throw atomsError;
+      }
+      console.log('[DB] ✅ Atoms inserted');
     }
 
     // Create sources
     if (project.sources.length > 0) {
+      console.log(`[DB] Inserting ${project.sources.length} sources...`);
       const { error: sourcesError } = await this.supabase
         .from('sources')
         .insert(
@@ -229,11 +254,16 @@ export class ProjectDatabase {
           }))
         )
 
-      if (sourcesError) throw sourcesError
+      if (sourcesError) {
+        console.error('[DB] ❌ Failed to insert sources:', sourcesError);
+        throw sourcesError;
+      }
+      console.log('[DB] ✅ Sources inserted');
     }
 
     // Create learning path
     if (project.learningPath.length > 0) {
+      console.log(`[DB] Inserting ${project.learningPath.length} learning path items...`);
       const { error: learningPathError } = await this.supabase
         .from('learning_path_items')
         .insert(
@@ -246,11 +276,16 @@ export class ProjectDatabase {
           }))
         )
 
-      if (learningPathError) throw learningPathError
+      if (learningPathError) {
+        console.error('[DB] ❌ Failed to insert learning path:', learningPathError);
+        throw learningPathError;
+      }
+      console.log('[DB] ✅ Learning path inserted');
     }
 
     // Create sessions
     if (project.sessions.length > 0) {
+      console.log(`[DB] Inserting ${project.sessions.length} sessions...`);
       const { data: sessionsData, error: sessionsError } = await this.supabase
         .from('sessions')
         .insert(
@@ -265,7 +300,11 @@ export class ProjectDatabase {
         )
         .select('id, session_number')
 
-      if (sessionsError) throw sessionsError
+      if (sessionsError) {
+        console.error('[DB] ❌ Failed to insert sessions:', sessionsError);
+        throw sessionsError;
+      }
+      console.log('[DB] ✅ Sessions inserted');
 
       // Create session-atom relationships
       const sessionAtomInserts: any[] = []
@@ -284,6 +323,7 @@ export class ProjectDatabase {
       })
     }
 
+    console.log('[DB] ✅✅✅ Project creation COMPLETE. ID:', projectId);
     return projectId
   }
 
@@ -305,6 +345,43 @@ export class ProjectDatabase {
       .eq('id', projectId)
 
     if (error) throw error
+  }
+
+  async updateLearningPathAndSessions(projectId: string, learningPath: LearningPathItem[], sessions: Session[]): Promise<void> {
+    // This is a transactional operation: delete old, insert new
+    const { error: deleteLpError } = await this.supabase
+      .from('learning_path_items')
+      .delete()
+      .eq('project_id', projectId);
+    if (deleteLpError) throw new Error(`Failed to delete old learning path: ${deleteLpError.message}`);
+
+    const { error: deleteSessionsError } = await this.supabase
+      .from('sessions')
+      .delete()
+      .eq('project_id', projectId);
+    if (deleteSessionsError) throw new Error(`Failed to delete old sessions: ${deleteSessionsError.message}`);
+
+    // Insert new learning path items
+    const lpToInsert = learningPath.map(item => ({
+      project_id: projectId,
+      session_number: item.session,
+      topic: item.topic,
+      session_type: item.sessionType,
+      questions: item.questions,
+    }));
+    const { error: insertLpError } = await this.supabase.from('learning_path_items').insert(lpToInsert);
+    if (insertLpError) throw new Error(`Failed to insert new learning path: ${insertLpError.message}`);
+
+    // Insert new sessions
+    const sessionsToInsert = sessions.map(session => ({
+      project_id: projectId,
+      session_number: session.session,
+      type: session.type,
+      duration: session.duration,
+      status: session.status,
+    }));
+    const { error: insertSessionsError } = await this.supabase.from('sessions').insert(sessionsToInsert);
+    if (insertSessionsError) throw new Error(`Failed to insert new sessions: ${insertSessionsError.message}`);
   }
 
   async deleteProject(projectId: string): Promise<void> {
@@ -377,5 +454,45 @@ export class ProjectDatabase {
 
       if (error) throw error
     }
+  }
+
+  async addAtoms(projectId: string, atoms: Atom[]): Promise<void> {
+    if (atoms.length === 0) return;
+
+    const { error } = await this.supabase
+      .from('atoms')
+      .insert(
+        atoms.map(atom => ({
+          project_id: projectId,
+          question: atom.question,
+          answer: atom.answer,
+          difficulty: atom.difficulty || 0.3,
+          stability: atom.stability || 0,
+          last_reviewed: atom.lastReviewed,
+          retrievability: atom.retrievability,
+          incorrect_answers: atom.incorrectAnswers || [],
+        }))
+      )
+
+    if (error) throw error
+  }
+
+  async addSessions(projectId: string, sessions: Session[]): Promise<void> {
+    if (sessions.length === 0) return;
+
+    const { error } = await this.supabase
+      .from('sessions')
+      .insert(
+        sessions.map(session => ({
+          project_id: projectId,
+          session_number: session.session,
+          type: session.type,
+          questions: session.questions,
+          duration: session.duration,
+          status: session.status,
+        }))
+      )
+
+    if (error) throw error
   }
 }

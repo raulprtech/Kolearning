@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * @fileOverview Direct atom generation from document content with proper debugging.
  */
@@ -43,9 +41,15 @@ export type GenerateAtomsOutput = z.infer<typeof GenerateAtomsOutputSchema>;
 
 export const generateAtomsFlow = ai.defineFlow(
   {
-    name: 'generate-atoms',
+    name: 'generateAtomsFromLargeContentWithProgress',
     inputSchema: GenerateAtomsInputSchema,
     outputSchema: GenerateAtomsOutputSchema,
+    streamSchema: z.object({
+      stage: z.string(),
+      message: z.string(),
+      details: z.string().optional(),
+      progress: z.number()
+    }).optional()
   },
   async (input: GenerateAtomsInput) => {
     return generateAtomsFromLargeContentWithProgress(input, () => {});
@@ -528,38 +532,49 @@ FORMATO DE RESPUESTA (JSON):
   console.log('Output exists?', !!response?.output);
   console.log('Atoms count:', response?.output?.atoms?.length || 0);
 
-  if (!response?.output) {
-    throw new Error('Failed to generate atoms with context');
+  // Robust validation of the AI model's response
+  if (!response?.output || !Array.isArray(response.output.atoms)) {
+    console.error('CRITICAL: AI response is missing or `atoms` is not an array.', response);
+    throw new Error('El modelo no devolvió una estructura de átomos válida.');
   }
 
-  // Filtrar átomos válidos
-  const validAtoms = (response.output.atoms as { question: string; answer: string }[]).filter((atom) => {
+  // Filter for valid and non-empty atoms
+  const validAtoms = (response.output.atoms as { question: string; answer: string }[]).filter((atom, index) => {
+    if (!atom) {
+      console.warn(`Skipping null or undefined atom at index ${index}.`);
+      return false;
+    }
     const isValid = atom.question && atom.answer &&
-           atom.question.trim().length > 5 &&
-           atom.answer.trim().length > 5;
+           atom.question.trim().length > 10 &&
+           atom.answer.trim().length > 1;
 
     if (!isValid) {
-      console.log('Invalid atom filtered:', atom);
+      console.warn('Invalid atom filtered out:', {
+        question: atom.question,
+        answer: atom.answer,
+        reason: `Question length: ${atom.question?.trim().length}, Answer length: ${atom.answer?.trim().length}`
+      });
     }
     return isValid;
   });
 
   console.log(`=== ATOMS FILTERING COMPLETE ===`);
-  console.log(`Original atoms: ${response.output.atoms.length}`);
-  console.log(`Valid atoms: ${validAtoms.length}`);
-  console.log('Sample valid atoms:', validAtoms.slice(0, 3));
+  console.log(`Original atoms count from model: ${response.output.atoms.length}`);
+  console.log(`Valid atoms after filtering: ${validAtoms.length}`);
+  console.log('Sample of valid atoms:', validAtoms.slice(0, 3));
 
   onProgress({
     stage: 'atoms_complete',
-    message: '✅ Átomos generados con contexto!',
+    message: '✅ Átomos generados y validados!',
     details: `${validAtoms.length} preguntas sobre ${documentContext.subject}`,
     progress: 80
   });
 
+  // Final check: if no valid atoms were generated, throw a clear error
   if (validAtoms.length === 0) {
     console.error('=== NO VALID ATOMS GENERATED ===');
-    console.error('Original response:', response.output);
-    throw new Error('No se generaron átomos válidos del documento con contexto');
+    console.error('This happened after filtering. The original, unfiltered response from the AI was:', response.output);
+    throw new Error('No se generaron átomos válidos del documento. El contenido podría no ser adecuado o el modelo falló en la extracción.');
   }
 
   return { atoms: validAtoms };

@@ -53,10 +53,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Auth] State change:', event, session ? 'has session' : 'no session')
+
+      // Handle TOKEN_REFRESHED event failures
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        console.warn('[Auth] Token refresh failed, signing out')
+        await supabase.auth.signOut()
+        setSession(null)
+        setUser(null)
+        setProfile(null)
+        setLoading(false)
+        router.push('/login')
+        return
+      }
+
+      // Handle SIGNED_OUT event
+      if (event === 'SIGNED_OUT') {
+        console.log('[Auth] User signed out')
+        setSession(null)
+        setUser(null)
+        setProfile(null)
+        setLoading(false)
+        return
+      }
+
       setSession(session)
       const currentUser = session?.user
       setUser(currentUser ?? null)
-      
+
       if (currentUser) {
         await fetchProfile(currentUser.id)
       } else {
@@ -65,8 +89,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
+    // Initial session check with error handling
+    ;(async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+
+        if (error) {
+          console.error('[Auth] Session check error:', error)
+          // If error contains refresh token issues, sign out
+          if (error.message?.includes('refresh') || error.message?.includes('token')) {
+            await supabase.auth.signOut()
+          }
+        }
+
+        if (session) {
+          setSession(session)
+          setUser(session.user)
+          await fetchProfile(session.user.id)
+        } else {
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('[Auth] Initial session check failed:', error)
+        setLoading(false)
+      }
+    })()
+
     return () => subscription.unsubscribe()
-  }, [supabase, fetchProfile])
+  }, [supabase, fetchProfile, router])
 
   const signOut = useCallback(async () => {
     try {

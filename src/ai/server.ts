@@ -3,6 +3,9 @@ import { googleAI } from '@genkit-ai/googleai';
 import { startFlowsServer } from '@genkit-ai/flow';
 import * as flows from './flows'; // Import all flows
 
+console.log('=== STARTING GENKIT SERVER ===');
+console.log('Available flows:', Object.keys(flows));
+
 genkit({
   plugins: [
     googleAI({
@@ -11,5 +14,6 @@ genkit({
   ],
 });
 
+console.log('=== STARTING FLOWS SERVER ===');
 startFlowsServer();
-// Force restart to register new flows
+console.log('=== FLOWS SERVER STARTED ===');

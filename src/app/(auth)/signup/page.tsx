@@ -4,11 +4,12 @@ import { Suspense } from 'react'
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-function SignUpPage({ searchParams }: Props) {
-  const redirect = searchParams?.redirect;
+async function SignUpPage({ searchParams }: Props) {
+  const resolvedParams = await searchParams;
+  const redirect = resolvedParams?.redirect;
   const redirectUrl = Array.isArray(redirect) ? redirect[0] : redirect || '/new-project';
 
   return (

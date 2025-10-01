@@ -7,6 +7,8 @@ import { differenceInDays, addDays } from 'date-fns';
 import { useAuth } from './AuthContext';
 import { ProjectDatabase } from '@/lib/supabase/database';
 import { migrateLocalStorageToSupabase, hasLocalStorageData } from '@/lib/migrate-localStorage';
+import { useToast } from '@/hooks/use-toast';
+import { createClient } from '@/lib/supabase/client';
 
 // Type definitions
 export type Atom = {
@@ -87,15 +89,15 @@ type ProjectContextType = {
   updateProjectIcon: (projectId: string, icon: string) => Promise<void>;
   updateProjectDetails: (projectId: string, title: string, description: string) => Promise<void>;
   updateProjectPlan: (projectId: string, plan: CalibratePlanOutput) => void;
-  addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[], insertAfterSession?: number) => void;
-  addAtomsToProject: (projectId: string, newAtoms: Atom[]) => void;
+  addSessionsToProject: (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[], insertAfterSession?: number) => Promise<void>;
+  addAtomsToProject: (projectId: string, newAtoms: Atom[]) => Promise<void>;
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
   deleteAtom: (projectId: string, atomIndex: number) => void;
   deleteSource: (projectId: string, sourceIndex: number) => void;
   completeSession: (projectId: string, sessionIndex: number) => Promise<void>;
-  archiveProject: (projectId: string) => boolean;
-  unarchiveProject: (projectId: string) => void;
-  deleteProjectPermanently: (projectId: string) => void;
+  archiveProject: (projectId: string) => Promise<boolean>;
+  unarchiveProject: (projectId: string) => Promise<void>;
+  deleteProjectPermanently: (projectId: string) => Promise<void>;
   toggleProjectPublic: (projectId: string, isPublic: boolean) => void;
   energy: number;
   sessionStreak: number;
@@ -217,6 +219,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   // Auth context
   const { user, profile, loading: authLoading } = useAuth();
   const projectDb = new ProjectDatabase();
+  const { toast } = useToast();
 
   // Check for localStorage data on mount
   useEffect(() => {
@@ -226,7 +229,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   // Load data when user changes
   useEffect(() => {
     if (authLoading) return;
-    
+
     if (user) {
       loadUserData();
     } else {
@@ -234,9 +237,73 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, authLoading]);
 
-  const loadUserData = async () => {
+  // Sync data when window regains focus (for multi-browser/tab sync)
+  useEffect(() => {
     if (!user) return;
-    
+
+    const handleFocus = () => {
+      console.log('[Sync] Window focused, reloading data from Supabase');
+      loadUserData();
+    };
+
+    // Reload when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        console.log('[Sync] Tab visible, reloading data from Supabase');
+        loadUserData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user]);
+
+  // Realtime subscription for instant sync across browsers/tabs
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('[Realtime] Setting up Supabase Realtime subscriptions');
+    const supabase = createClient();
+
+    // Subscribe to changes in projects table
+    const channel = supabase
+      .channel('projects-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events: INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'projects',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Projects table change detected:', payload);
+          // Reload all data when any project changes
+          loadUserData();
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] Subscription status:', status);
+      });
+
+    return () => {
+      console.log('[Realtime] Cleaning up subscriptions');
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const loadUserData = async () => {
+    if (!user) {
+      console.warn('[LoadData] No user found, skipping load');
+      return;
+    }
+
+    console.log('[LoadData] Loading data for user:', user.id);
     setIsLoading(true);
     try {
       const [userProjects, userCompletedProjects, userArchivedProjects] = await Promise.all([
@@ -244,6 +311,12 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         projectDb.getCompletedProjects(user.id),
         projectDb.getArchivedProjects(user.id),
       ]);
+
+      console.log('[LoadData] Loaded from Supabase:', {
+        projects: userProjects.length,
+        completed: userCompletedProjects.length,
+        archived: userArchivedProjects.length,
+      });
 
       setProjects(userProjects);
       setCompletedProjects(userCompletedProjects);
@@ -256,7 +329,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       }
 
     } catch (error) {
-      console.error('Error loading user data from Supabase:', error);
+      console.error('[LoadData] Error loading user data from Supabase:', error);
       loadFallbackData();
     } finally {
       setIsLoading(false);
@@ -305,15 +378,29 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addProject = useCallback(async (projectToAdd: Project) => {
+    console.log('[AddProject] Adding project:', {
+      title: projectToAdd.title,
+      hasUser: !!user,
+      userId: user?.id,
+      atomsCount: projectToAdd.atoms.length,
+      sessionsCount: projectToAdd.sessions?.length || 0,
+    });
+
     if (user) {
       try {
-        await projectDb.createProject(user.id, projectToAdd);
+        console.log('[AddProject] Creating project in Supabase for user:', user.id);
+        const projectId = await projectDb.createProject(user.id, projectToAdd);
+        console.log('[AddProject] ✅ Project created with ID:', projectId);
+
+        console.log('[AddProject] Reloading user data...');
         await loadUserData();
+        console.log('[AddProject] ✅ User data reloaded');
       } catch (error) {
-        console.error('Failed to create project in Supabase:', error);
+        console.error('[AddProject] ❌ Failed to create project in Supabase:', error);
         setProjects(prev => [...prev, { ...projectToAdd, id: `temp-${Date.now()}` }]);
       }
     } else {
+      console.log('[AddProject] No user, saving to localStorage only');
       if (!projects.find(p => p.id === projectToAdd.id)) {
         const atoms = [...projectToAdd.atoms];
         const sessions: Session[] = projectToAdd.learningPath.map((item, index) => {
@@ -366,12 +453,22 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, projectDb]);
 
-  const updateProjectPlan = useCallback((projectId: string, plan: CalibratePlanOutput) => {
-    setProjects(prevProjects =>
-      prevProjects.map(p => {
+  const updateProjectPlan = useCallback(async (projectId: string, plan: CalibratePlanOutput) => {
+    const updatedProjectFields = {
+      learningPath: plan.learningPath.flatMap(day => day.sessions),
+      fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
+      // We need to calculate sessions and mastery based on existing project data
+    };
+
+    let sessions: Session[] = [];
+    let mastery = 0;
+
+    // First, update the local state to get the new sessions and mastery
+    setProjects(prevProjects => {
+      const newProjects = prevProjects.map(p => {
         if (p.id === projectId) {
           const newLearningPath = plan.learningPath.flatMap(day => day.sessions);
-          const newSessions: Session[] = newLearningPath.map((item, index) => ({
+          sessions = newLearningPath.map((item, index) => ({
             session: item.session,
             type: item.sessionType,
             questions: item.questions,
@@ -379,48 +476,77 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             status: index === 0 ? 'Continue' : 'Locked',
             atoms: p.atoms.slice(index * 10, (index + 1) * 10),
           }));
+          mastery = calculateMastery(p.atoms);
           return {
             ...p,
             learningPath: newLearningPath,
-            sessions: newSessions,
+            sessions: sessions,
             fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
-            mastery: calculateMastery(p.atoms),
+            mastery: mastery,
           };
         }
         return p;
-      })
-    );
-  }, []);
+      });
+      return newProjects;
+    });
 
-  const addSessionsToProject = useCallback((projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[], insertAfterSession?: number) => {
+    // Persist to Supabase (if user is logged in)
+    if (user && projectDb) {
+      try {
+        await projectDb.updateProject(projectId, {
+          fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
+          mastery: mastery,
+        } as any);
+
+        const newLearningPath = plan.learningPath.flatMap(day => day.sessions);
+        await projectDb.updateLearningPathAndSessions(projectId, newLearningPath, sessions);
+        console.log('✅ Project plan synchronized to Supabase');
+
+        console.log(`Project plan for ${projectId} successfully updated in Supabase.`);
+      } catch (error) {
+        console.error('Failed to update project plan in Supabase:', error);
+        // Optionally, revert local state changes here if the DB update fails
+        toast({
+          title: "Error de Sincronización",
+          description: "No se pudo guardar el nuevo plan en la nube. Los cambios son locales.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [user, projectDb, toast]);
+
+  const addSessionsToProject = useCallback(async (projectId: string, newSessions: Omit<Session, 'status' | 'session' | 'atoms'>[], insertAfterSession?: number) => {
+    let allSessions: Session[] = [];
+
     setProjects(prevProjects => {
       return prevProjects.map(p => {
         if (p.id === projectId) {
           const existingSessions = [...p.sessions];
-          
+
           if (insertAfterSession !== undefined && insertAfterSession >= 0) {
             const insertIndex = insertAfterSession + 1;
-            
+
             const formattedNewSessions: Session[] = newSessions.map((s, i) => {
               const sessionNumber = insertAfterSession + 1 + (i * 0.1);
               return {
                 ...s,
                 session: Math.round(sessionNumber * 10) / 10,
                 status: 'Locked' as const,
-                atoms: p.atoms.filter(atom => 
-                  (atom.difficulty && atom.difficulty > 0.7) || 
+                atoms: p.atoms.filter(atom =>
+                  (atom.difficulty && atom.difficulty > 0.7) ||
                   (atom.retrievability && atom.retrievability <= 2)
                 ).slice(0, 10)
               };
             });
-            
+
             existingSessions.splice(insertIndex, 0, ...formattedNewSessions);
-            
+
             const renumberedSessions = existingSessions.map((session, index) => ({
               ...session,
               session: index + 1
             }));
-            
+
+            allSessions = renumberedSessions;
             return { ...p, sessions: renumberedSessions };
           } else {
             const nextSessionNumber = (existingSessions[existingSessions.length - 1]?.session || 0) + 1;
@@ -430,19 +556,46 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
               status: 'Locked' as const,
               atoms: []
             }));
-            return { ...p, sessions: [...existingSessions, ...formattedNewSessions] };
+            allSessions = [...existingSessions, ...formattedNewSessions];
+            return { ...p, sessions: allSessions };
           }
         }
         return p;
       });
     });
-  }, []);
 
-  const addAtomsToProject = useCallback((projectId: string, newAtoms: Atom[]) => {
+    // Sync to Supabase - need to replace all sessions
+    if (user && projectDb && allSessions.length > 0) {
+      try {
+        // For simplicity, we'll use updateLearningPathAndSessions which replaces all sessions
+        // In a production app, you might want a more granular approach
+        const learningPath = allSessions.map(s => ({
+          session: s.session,
+          topic: '', // These would need to be preserved or reconstructed
+          sessionType: s.type,
+          questions: s.questions
+        }));
+        await projectDb.updateLearningPathAndSessions(projectId, learningPath, allSessions);
+        console.log(`✅ Added sessions to Supabase`);
+      } catch (error) {
+        console.error('❌ Failed to add sessions to Supabase:', error);
+        toast({
+          title: "Error de Sincronización",
+          description: "No se pudieron guardar las nuevas sesiones en la nube.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [user, projectDb, toast]);
+
+  const addAtomsToProject = useCallback(async (projectId: string, newAtoms: Atom[]) => {
+    // Filter unique atoms first
+    let uniqueNewAtoms: Atom[] = [];
+
     setProjects(prevProjects =>
       prevProjects.map(p => {
         if (p.id === projectId) {
-          const uniqueNewAtoms = newAtoms.filter(newAtom => 
+          uniqueNewAtoms = newAtoms.filter(newAtom =>
             !p.atoms.some(existingAtom => existingAtom.question === newAtom.question)
           );
           return { ...p, atoms: [...p.atoms, ...uniqueNewAtoms] };
@@ -450,7 +603,22 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         return p;
       })
     );
-  }, []);
+
+    // Sync to Supabase
+    if (user && projectDb && uniqueNewAtoms.length > 0) {
+      try {
+        await projectDb.addAtoms(projectId, uniqueNewAtoms);
+        console.log(`✅ Added ${uniqueNewAtoms.length} atoms to Supabase`);
+      } catch (error) {
+        console.error('❌ Failed to add atoms to Supabase:', error);
+        toast({
+          title: "Error de Sincronización",
+          description: "No se pudieron guardar los nuevos átomos en la nube.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [user, projectDb, toast]);
 
   const updateAtom = useCallback((projectId: string, atomIndex: number, updatedAtom: Atom) => {
     setProjects(prevProjects =>
@@ -611,12 +779,44 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     if (projectToUpdate && !isCompletedProject && projectToUpdate.sessions.every(s => s.status === 'Completed' || s.type === "Refuerzo de Dominio")) {
       setProjects(prev => prev.filter(p => p.id !== projectId));
       setCompletedProjects(prev => [...prev, projectToUpdate!]);
+
+      // Mark as completed in Supabase
+      if (user && projectDb) {
+        try {
+          await projectDb.completeProject(projectId);
+          console.log(`✅ Project ${projectId} marked as completed in Supabase`);
+        } catch (error) {
+          console.error('❌ Failed to mark project as completed in Supabase:', error);
+        }
+      }
+    }
+
+    // Sync session completion and project stats to Supabase
+    if (user && projectDb && projectToUpdate) {
+      try {
+        await projectDb.updateProject(projectId, {
+          totalAnswers: projectToUpdate.totalAnswers,
+          correctAnswers: projectToUpdate.correctAnswers,
+          bestStreak: projectToUpdate.bestStreak,
+          mastery: projectToUpdate.mastery,
+        } as any);
+
+        // Update sessions status
+        await projectDb.updateLearningPathAndSessions(
+          projectId,
+          projectToUpdate.learningPath,
+          projectToUpdate.sessions
+        );
+        console.log(`✅ Session ${sessionIndex} completion synchronized to Supabase`);
+      } catch (error) {
+        console.error('❌ Failed to sync session completion to Supabase:', error);
+      }
     }
 
     resetSessionStats();
-  }, [cognitiveCredits, sessionAnswers, sessionStreak, addSessionsToProject, resetSessionStats]);
+  }, [cognitiveCredits, sessionAnswers, sessionStreak, addSessionsToProject, resetSessionStats, user, projectDb]);
 
-  const archiveProject = useCallback((projectId: string): boolean => {
+  const archiveProject = useCallback(async (projectId: string): Promise<boolean> => {
     const MAX_ARCHIVED_PROJECTS = 5;
     if (archivedProjects.length >= MAX_ARCHIVED_PROJECTS) {
       return false;
@@ -625,21 +825,66 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     if (projectToArchive) {
       setProjects(prevProjects => prevProjects.filter(p => p.id !== projectId));
       setArchivedProjects(prevArchived => [...prevArchived, projectToArchive]);
+
+      // Sync to Supabase
+      if (user && projectDb) {
+        try {
+          await projectDb.archiveProject(projectId);
+          console.log(`✅ Project ${projectId} archived in Supabase`);
+        } catch (error) {
+          console.error('❌ Failed to archive project in Supabase:', error);
+          toast({
+            title: "Error de Sincronización",
+            description: "No se pudo archivar el proyecto en la nube.",
+            variant: "destructive",
+          });
+        }
+      }
     }
     return true;
-  }, [projects, archivedProjects]);
+  }, [projects, archivedProjects, user, projectDb, toast]);
 
-  const unarchiveProject = useCallback((projectId: string) => {
+  const unarchiveProject = useCallback(async (projectId: string) => {
     const projectToUnarchive = archivedProjects.find(p => p.id === projectId);
     if (projectToUnarchive) {
       setArchivedProjects(prev => prev.filter(p => p.id !== projectId));
       setProjects(prev => [...prev, projectToUnarchive]);
-    }
-  }, [archivedProjects]);
 
-  const deleteProjectPermanently = useCallback((projectId: string) => {
+      // Sync to Supabase
+      if (user && projectDb) {
+        try {
+          await projectDb.unarchiveProject(projectId);
+          console.log(`✅ Project ${projectId} unarchived in Supabase`);
+        } catch (error) {
+          console.error('❌ Failed to unarchive project in Supabase:', error);
+          toast({
+            title: "Error de Sincronización",
+            description: "No se pudo desarchivar el proyecto en la nube.",
+            variant: "destructive",
+          });
+        }
+      }
+    }
+  }, [archivedProjects, user, projectDb, toast]);
+
+  const deleteProjectPermanently = useCallback(async (projectId: string) => {
     setArchivedProjects(prev => prev.filter(p => p.id !== projectId));
-  }, []);
+
+    // Sync to Supabase
+    if (user && projectDb) {
+      try {
+        await projectDb.deleteProject(projectId);
+        console.log(`✅ Project ${projectId} permanently deleted from Supabase`);
+      } catch (error) {
+        console.error('❌ Failed to delete project from Supabase:', error);
+        toast({
+          title: "Error de Sincronización",
+          description: "No se pudo eliminar el proyecto de la nube.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [user, projectDb, toast]);
 
   const toggleProjectPublic = useCallback((projectId: string, isPublic: boolean) => {
     setProjects(prev =>

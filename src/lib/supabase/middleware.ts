@@ -54,9 +54,48 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // This is not necessary as the session is automatically refreshed by the
-  // Supabase client.
-  // await supabase.auth.getUser()
+  try {
+    // Check if the session is valid
+    const { data: { session }, error } = await supabase.auth.getSession()
+
+    // If there's a refresh token error, clean up cookies
+    if (error) {
+      const errorMessage = error.message || String(error)
+
+      // Check for refresh token errors
+      if (
+        errorMessage.includes('Invalid Refresh Token') ||
+        errorMessage.includes('Refresh Token Not Found') ||
+        errorMessage.includes('refresh_token')
+      ) {
+        console.warn('[Middleware] Invalid refresh token detected, cleaning up cookies')
+
+        // Clear all Supabase auth cookies
+        const cookiesToClear = [
+          'sb-access-token',
+          'sb-refresh-token',
+          ...Array.from(request.cookies.getAll())
+            .filter((cookie) => cookie.name.startsWith('sb-'))
+            .map((cookie) => cookie.name),
+        ]
+
+        cookiesToClear.forEach((name) => {
+          response.cookies.delete(name)
+        })
+
+        // Don't redirect here, let the client handle it
+        // This prevents redirect loops
+      }
+    }
+
+    // Optional: Log session status for debugging in development
+    if (process.env.NODE_ENV === 'development' && session) {
+      console.log('[Middleware] Valid session for user:', session.user.id)
+    }
+  } catch (error) {
+    console.error('[Middleware] Error checking session:', error)
+    // Don't throw, just log and continue
+  }
 
   return response
 }
