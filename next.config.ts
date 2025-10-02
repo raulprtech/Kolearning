@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '50mb',
     },
   },
+  output: 'standalone',
+  outputFileTracingRoot: process.cwd(),
   images: {
     remotePatterns: [
       {
