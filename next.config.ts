@@ -37,7 +37,13 @@ const nextConfig: NextConfig = {
       // Mark these packages as external for server bundle
       config.externals = config.externals || [];
       config.externals.push('pdf-parse');
-      console.log('✅ pdf-parse added to externals');
+      
+      // Also externalize Supabase realtime to avoid Edge Runtime issues
+      config.externals.push({
+        '@supabase/realtime-js': 'commonjs @supabase/realtime-js',
+      });
+      
+      console.log('✅ pdf-parse and Supabase dependencies added to externals');
     }
 
     console.log('🔧 Webpack config completed');
