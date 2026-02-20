@@ -27,22 +27,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const router = useRouter()
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (currentUser: User) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', currentUser.id)
         .single()
 
       if (error) {
-        console.error('Error fetching profile:', error)
-        setProfile(null)
+        // Check for specific error code "PGRST116" which means "No rows returned"
+        // This happens if the trigger failed or the user was created before the trigger existed
+        if (error.code === 'PGRST116') {
+          console.warn('[Auth] Profile not found, attempting to create default profile for:', currentUser.id);
+
+          const newProfile = {
+            id: currentUser.id,
+            name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Estudiante',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            daily_streak: 0,
+            global_cognitive_credits: 500, // Default starting credits
+            total_mastery_points: 0,
+            learner_rank: 'G'
+          };
+
+          const { data: createdProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert(newProfile)
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('[Auth] Failed to create default profile:', createError.message);
+            setProfile(null);
+          } else {
+            console.log('[Auth] Default profile created successfully');
+            setProfile(createdProfile);
+          }
+        } else {
+          console.error('[Auth] Error fetching profile:', error.message || error);
+          setProfile(null);
+        }
       } else {
         setProfile(data)
       }
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      console.error('[Auth] Unexpected error fetching profile:', error)
       setProfile(null)
     } finally {
       setLoading(false)
@@ -82,41 +113,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(currentUser ?? null)
 
       if (currentUser) {
-        await fetchProfile(currentUser.id)
+        await fetchProfile(currentUser)
       } else {
         setProfile(null)
         setLoading(false)
       }
     })
 
-    // Initial session check with error handling
-    ;(async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+      // Initial session check with error handling
+      ; (async () => {
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession()
 
-        if (error) {
-          console.error('[Auth] Session check error:', error)
-          // If error contains refresh token issues, sign out
-          if (error.message?.includes('refresh') || error.message?.includes('token')) {
-            await supabase.auth.signOut()
+          if (error) {
+            console.error('[Auth] Session check error:', error)
+            // If error contains refresh token issues, sign out
+            if (error.message?.includes('refresh') || error.message?.includes('token')) {
+              await supabase.auth.signOut()
+            }
           }
-        }
 
-        if (session) {
-          setSession(session)
-          setUser(session.user)
-          await fetchProfile(session.user.id)
-        } else {
+          if (session) {
+            setSession(session)
+            setUser(session.user)
+            await fetchProfile(session.user)
+          } else {
+            setLoading(false)
+          }
+        } catch (error) {
+          console.error('[Auth] Initial session check failed:', error)
           setLoading(false)
         }
-      } catch (error) {
-        console.error('[Auth] Initial session check failed:', error)
-        setLoading(false)
-      }
-    })()
+      })()
 
     return () => subscription.unsubscribe()
   }, [supabase, fetchProfile, router])
+
+  // Safety timeout: if loading takes more than 5 seconds, force it to false
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('[Auth] Safety timeout: forcing loading to false after 5s');
+        setLoading(false);
+      }
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const signOut = useCallback(async () => {
     try {

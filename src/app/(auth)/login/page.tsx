@@ -53,7 +53,9 @@ function LoginContent() {
           title: '¡Bienvenido de vuelta!',
           description: 'Has iniciado sesión correctamente. Redirigiendo...',
         })
-        // The useEffect will handle the redirection once the user state is updated.
+        // Force navigation immediately
+        router.push(redirectUrl)
+        router.refresh()
       }
     } catch (error) {
       toast({
@@ -71,7 +73,7 @@ function LoginContent() {
       const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectUrl)}`;
       console.log('OAuth redirect URL:', redirectTo);
       console.log('Redirect URL:', redirectUrl);
-      
+
       const { error, data } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -101,12 +103,13 @@ function LoginContent() {
     }
   }
 
-  if (loading || user) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-background p-4">
-            <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      )
+  // Only show spinner briefly if we already know there's a user (prevents flash of login form)
+  if (user && !isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -162,7 +165,7 @@ function LoginContent() {
               )}
             </Button>
           </form>
-          
+
           <div className="mt-4">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -183,7 +186,7 @@ function LoginContent() {
               Continuar con Google
             </Button>
           </div>
-          
+
           <p className="mt-4 text-center text-sm text-muted-foreground">
             ¿No tienes una cuenta?{' '}
             <Link href={`/signup?redirect=${encodeURIComponent(redirectUrl)}`} className="text-primary hover:underline">

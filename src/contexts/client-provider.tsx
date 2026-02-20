@@ -1,6 +1,6 @@
-
 "use client";
 
+// Switch to the Supabase-enabled context
 import { ProjectProvider } from "./ProjectContext";
 import { AuthProvider } from "./AuthContext";
 

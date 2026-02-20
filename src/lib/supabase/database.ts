@@ -15,7 +15,7 @@ export const convertProjectFromDB = async (
   includeRelated: boolean = true
 ): Promise<Project> => {
   const supabase = createClient()
-  
+
   let atoms: Atom[] = []
   let sources: Source[] = []
   let sessions: Session[] = []
@@ -40,34 +40,29 @@ export const convertProjectFromDB = async (
 
     sources = sourcesData?.map(convertSourceFromDB) || []
 
-    // Fetch sessions with their atoms
+    // Fetch sessions
     const { data: sessionsData } = await supabase
       .from('sessions')
-      .select(`
-        *,
-        session_atoms(atom_id)
-      `)
+      .select('*')
       .eq('project_id', projectRow.id)
       .order('session_number', { ascending: true })
 
     if (sessionsData) {
-      sessions = await Promise.all(
-        sessionsData.map(async (sessionData: any) => {
-          const sessionAtoms = sessionData.session_atoms?.map((sa: any) => 
-            atoms.find(atom => atom.question === atoms.find(a => a.question)?.question) // This needs to be improved
-          ).filter(Boolean) || []
+      const sessionSize = 10;
+      sessions = sessionsData.map((sessionData: any, index: number) => {
+        // Distribute atoms across sessions (same logic as during creation)
+        const sessionAtoms = atoms.slice(index * sessionSize, (index + 1) * sessionSize);
 
-          return {
-            session: sessionData.session_number,
-            type: sessionData.type,
-            questions: sessionData.questions || '',
-            duration: sessionData.duration,
-            status: sessionData.status as 'Completed' | 'Continue' | 'Locked',
-            atoms: sessionAtoms,
-            numAtoms: sessionAtoms.length,
-          }
-        })
-      )
+        return {
+          session: sessionData.session_number,
+          type: sessionData.type,
+          questions: sessionData.questions || '',
+          duration: sessionData.duration,
+          status: sessionData.status as 'Completed' | 'Continue' | 'Locked',
+          atoms: sessionAtoms,
+          numAtoms: sessionAtoms.length,
+        }
+      })
     }
 
     // Fetch learning path
@@ -284,7 +279,7 @@ export class ProjectDatabase {
     }
 
     // Create sessions
-    if (project.sessions.length > 0) {
+    if (project.sessions && project.sessions.length > 0) {
       console.log(`[DB] Inserting ${project.sessions.length} sessions...`);
       const { data: sessionsData, error: sessionsError } = await this.supabase
         .from('sessions')

@@ -11,8 +11,8 @@
  * - CalibratePlanOutput - The return type for the calibratePlanFromQuestionnaire function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const AtomSchema = z.object({
   question: z.string(),
@@ -30,19 +30,19 @@ const CalibratePlanOutputSchema = z.object({
   projectDescription: z.string().describe('A brief, one-sentence description of the project.'),
   categories: z.array(z.string()).describe('An array of one to three relevant categories for the project.'),
   learningPath: z.array(z.object({
-      day: z.number().describe("The day number, starting from 1."),
-      sessions: z.array(z.object({
-        session: z.number().describe('The overall session number (1, 2, 3...).'),
-        topic: z.string().describe('What the user will learn in this session.'),
-        sessionType: z.string().describe('The type of the session (e.g., Calibración, Incursión).'),
-        questions: z.string().describe('The format of the questions for this session (e.g., "Opción Múltiple", "Preguntas Abiertas").'),
-        atoms: z.array(AtomSchema).describe('The specific atoms assigned to this session.'),
-        numAtoms: z.number().describe('The optimal number of knowledge atoms for this session, based on the topic complexity and pedagogical goals. Should be between 5 and 20.')
-      })).describe("An array of sessions for this specific day.")
+    day: z.number().describe("The day number, starting from 1."),
+    sessions: z.array(z.object({
+      session: z.number().describe('The overall session number (1, 2, 3...).'),
+      topic: z.string().describe('What the user will learn in this session.'),
+      sessionType: z.string().describe('The type of the session (e.g., Calibración, Incursión).'),
+      questions: z.string().describe('The format of the questions for this session (e.g., "Opción Múltiple", "Preguntas Abiertas").'),
+      atoms: z.array(AtomSchema).describe('The specific atoms assigned to this session.'),
+      numAtoms: z.number().describe('The optimal number of knowledge atoms for this session, based on the topic complexity and pedagogical goals. Should be between 5 and 20.')
+    })).describe("An array of sessions for this specific day.")
   })).describe('The structured learning path with sessions grouped by day.'),
-  koliJustification: z.string().describe('The justification from Koli about the plan, explaining the daily structure if applicable.'),
-  expectedProgress: z.string().describe('The expected progress for the user.'),
-  fullLearningPlanMarkdown: z.string().describe('The original full learning plan in Markdown format for storage.'),
+  koliJustification: z.string().optional().describe('The justification from Koli about the plan, explaining the daily structure if applicable.'),
+  expectedProgress: z.string().optional().describe('The expected progress for the user.'),
+  fullLearningPlanMarkdown: z.string().optional().describe('The original full learning plan in Markdown format for storage.'),
 });
 
 
@@ -55,7 +55,7 @@ export async function calibratePlanFromQuestionnaire(input: CalibratePlanInput):
 const calibratePlanPrompt = ai.definePrompt({
   name: 'calibratePlanPrompt',
   input: { schema: CalibratePlanInputSchema },
-  output: {schema: CalibratePlanOutputSchema},
+  output: { schema: CalibratePlanOutputSchema },
   model: 'googleai/gemini-2.5-flash-lite',
   config: {
     temperature: 0.1,
@@ -117,6 +117,8 @@ A learner has provided their learning material, which has been converted into "K
 
 **CRITICAL REQUIREMENT:** You MUST use ONLY the atoms provided in the {{{atoms}}} list. Do NOT create new questions or modify existing ones. Each session's 'atoms' field must contain EXACT copies of atoms from the provided list. Do not generate new content.
 
+**CRITICAL REQUIREMENT:** You MUST include ALL of these fields in your JSON output: projectDescription, categories, learningPath, koliJustification, expectedProgress, fullLearningPlanMarkdown. Do NOT omit any of them.
+
 Provide the response in the specified JSON format.
 `,
 });
@@ -139,6 +141,14 @@ const calibratePlanFlow = ai.defineFlow(
     console.log('Learning path sessions:', output?.learningPath?.flatMap(day => day.sessions).length || 0);
     console.log('Sample session atoms:', output?.learningPath?.[0]?.sessions?.[0]?.atoms?.length || 0);
 
-    return output!;
+    // Ensure required fields have defaults if the AI omitted them
+    const result: CalibratePlanOutput = {
+      ...output!,
+      koliJustification: output?.koliJustification || 'Plan generado automáticamente por Koli.',
+      expectedProgress: output?.expectedProgress || 'Progreso esperado según el plan de estudio.',
+      fullLearningPlanMarkdown: output?.fullLearningPlanMarkdown || '',
+    };
+
+    return result;
   }
 );

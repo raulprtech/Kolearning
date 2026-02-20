@@ -5,13 +5,13 @@ import { useState } from 'react';
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
 } from "@/components/ui/card";
-import { publicProjects, useProjects } from '@/contexts/ProjectContext';
+import { useProjects } from '@/contexts/ProjectContext';
 import { Logo } from '@/components/icons/logo';
 import { BookCopy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -24,9 +24,9 @@ export default function SharedProjectPage() {
     const [copied, setCopied] = useState(false);
 
     const projectId = params.id as string;
-    
+
     // Check both public community projects and the user's own projects (in a real app, this would be a single DB query)
-    const project = publicProjects.find(p => p.id === projectId) || userProjects.find(p => p.id === projectId);
+    const project = userProjects.find(p => p.id === projectId);
 
 
     if (!project) {
@@ -38,7 +38,7 @@ export default function SharedProjectPage() {
             </div>
         );
     }
-    
+
     const handleCopyToMyProjects = () => {
         // Create a new ID for the copied project to avoid duplicates
         const slug = project.title
@@ -92,7 +92,7 @@ export default function SharedProjectPage() {
                                 </>
                             ) : (
                                 <>
-                                    <BookCopy className="mr-2 h-5 w-5"/>
+                                    <BookCopy className="mr-2 h-5 w-5" />
                                     Copiar a mis Proyectos
                                 </>
                             )}

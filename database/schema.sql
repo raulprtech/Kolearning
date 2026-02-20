@@ -5,7 +5,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Users table (extends Supabase auth.users)
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE,
   name TEXT NOT NULL,
   profession TEXT,
@@ -23,7 +23,7 @@ CREATE TABLE profiles (
 );
 
 -- Projects table
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE projects (
 );
 
 -- Sources table (for project materials)
-CREATE TABLE sources (
+CREATE TABLE IF NOT EXISTS sources (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE sources (
 );
 
 -- Atoms table (knowledge atoms for each project)
-CREATE TABLE atoms (
+CREATE TABLE IF NOT EXISTS atoms (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
   question TEXT NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE atoms (
 );
 
 -- Learning path items
-CREATE TABLE learning_path_items (
+CREATE TABLE IF NOT EXISTS learning_path_items (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
   session_number INTEGER NOT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE learning_path_items (
 );
 
 -- Sessions table
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
   session_number INTEGER NOT NULL,
@@ -93,14 +93,27 @@ CREATE TABLE sessions (
 );
 
 -- Session atoms (many-to-many relationship between sessions and atoms)
-CREATE TABLE session_atoms (
+CREATE TABLE IF NOT EXISTS session_atoms (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   session_id UUID REFERENCES sessions(id) ON DELETE CASCADE NOT NULL,
   atom_id UUID REFERENCES atoms(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- Indexes for better performance
+-- Indexes for better performance (Drop first to avoid errors if they exist)
+DROP INDEX IF EXISTS idx_projects_user_id;
+DROP INDEX IF EXISTS idx_projects_is_archived;
+DROP INDEX IF EXISTS idx_projects_is_completed;
+DROP INDEX IF EXISTS idx_projects_is_public;
+DROP INDEX IF EXISTS idx_sources_project_id;
+DROP INDEX IF EXISTS idx_atoms_project_id;
+DROP INDEX IF EXISTS idx_atoms_last_reviewed;
+DROP INDEX IF EXISTS idx_learning_path_items_project_id;
+DROP INDEX IF EXISTS idx_sessions_project_id;
+DROP INDEX IF EXISTS idx_sessions_status;
+DROP INDEX IF EXISTS idx_session_atoms_session_id;
+DROP INDEX IF EXISTS idx_session_atoms_atom_id;
+
 CREATE INDEX idx_projects_user_id ON projects(user_id);
 CREATE INDEX idx_projects_is_archived ON projects(is_archived);
 CREATE INDEX idx_projects_is_completed ON projects(is_completed);
@@ -122,6 +135,21 @@ ALTER TABLE atoms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE learning_path_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_atoms ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies to avoid conflicts
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can view own projects" ON projects;
+DROP POLICY IF EXISTS "Users can view public projects" ON projects;
+DROP POLICY IF EXISTS "Users can insert own projects" ON projects;
+DROP POLICY IF EXISTS "Users can update own projects" ON projects;
+DROP POLICY IF EXISTS "Users can delete own projects" ON projects;
+DROP POLICY IF EXISTS "Users can manage sources of own projects" ON sources;
+DROP POLICY IF EXISTS "Users can manage atoms of own projects" ON atoms;
+DROP POLICY IF EXISTS "Users can manage learning path of own projects" ON learning_path_items;
+DROP POLICY IF EXISTS "Users can manage sessions of own projects" ON sessions;
+DROP POLICY IF EXISTS "Users can manage session atoms of own projects" ON session_atoms;
 
 -- Profiles policies
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -173,7 +201,12 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Triggers for updated_at
+-- Triggers for updated_at (Drop first)
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
+DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
+DROP TRIGGER IF EXISTS update_atoms_updated_at ON atoms;
+DROP TRIGGER IF EXISTS update_sessions_updated_at ON sessions;
+
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON projects FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_atoms_updated_at BEFORE UPDATE ON atoms FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
@@ -184,18 +217,21 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.profiles (id, name)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'name', NEW.email));
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'name', NEW.email))
+  ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to create profile on user signup
+-- Trigger to create profile on user signup (Drop first)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- Views for easier querying
-CREATE VIEW project_details AS
+CREATE OR REPLACE VIEW project_details AS
 SELECT 
   p.*,
   COALESCE(atom_count.count, 0) as atom_count,

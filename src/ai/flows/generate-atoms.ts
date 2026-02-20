@@ -2,8 +2,8 @@
  * @fileOverview Direct atom generation from document content with proper debugging.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import pdfParse from 'pdf-parse';
 
 const GenerateAtomsInputSchema = z.object({
@@ -52,16 +52,16 @@ export const generateAtomsFlow = ai.defineFlow(
     }).optional()
   },
   async (input: GenerateAtomsInput) => {
-    return generateAtomsFromLargeContentWithProgress(input, () => {});
+    return generateAtomsFromLargeContentWithProgress(input, () => { });
   }
 );
 
 export async function generateAtoms(input: GenerateAtomsInput): Promise<GenerateAtomsOutput> {
-  return generateAtomsFromLargeContentWithProgress(input, () => {});
+  return generateAtomsFromLargeContentWithProgress(input, () => { });
 }
 
 export async function generateAtomsFromLargeContent(input: GenerateAtomsInput): Promise<GenerateAtomsOutput> {
-  return generateAtomsFromLargeContentWithProgress(input, () => {});
+  return generateAtomsFromLargeContentWithProgress(input, () => { });
 }
 
 export async function generateAtomsFromLargeContentWithProgress(
@@ -141,6 +141,63 @@ export async function generateAtomsFromLargeContentWithProgress(
     const atomsResult = await generateAtomsWithContext(content, isPDF, documentContext, onProgress);
     console.log('=== ATOMS GENERATION COMPLETE ===');
     console.log('Atoms result:', atomsResult.atoms.length, 'atoms');
+
+    // Etapa 5: Generate distractors for atoms that are missing them
+    const atomsMissingDistractors = atomsResult.atoms.filter(
+      a => !a.incorrectAnswers || a.incorrectAnswers.length === 0
+    );
+
+    if (atomsMissingDistractors.length > 0) {
+      onProgress({
+        stage: 'generating_distractors',
+        message: '🎯 Generando opciones de respuesta...',
+        details: `Creando distractores para ${atomsMissingDistractors.length} átomos`,
+        progress: 75
+      });
+
+      console.log(`=== GENERATING DISTRACTORS FOR ${atomsMissingDistractors.length} ATOMS ===`);
+
+      // Generate distractors in batch via a single AI call for efficiency
+      try {
+        const batchDistractors = await generateDistractorsBatch(
+          atomsMissingDistractors.map(a => ({ question: a.question, answer: a.answer })),
+          documentContext.subject
+        );
+
+        // Merge distractors back into atoms
+        let distractorIndex = 0;
+        for (const atom of atomsResult.atoms) {
+          if (!atom.incorrectAnswers || atom.incorrectAnswers.length === 0) {
+            atom.incorrectAnswers = batchDistractors[distractorIndex] || [
+              'Opción incorrecta A',
+              'Opción incorrecta B',
+              'Opción incorrecta C'
+            ];
+            distractorIndex++;
+          }
+        }
+        console.log('=== DISTRACTORS GENERATED SUCCESSFULLY ===');
+      } catch (error) {
+        console.warn('Batch distractor generation failed, using simple fallbacks:', error);
+        // Fallback: create simple distractors for atoms that don't have them
+        for (const atom of atomsResult.atoms) {
+          if (!atom.incorrectAnswers || atom.incorrectAnswers.length === 0) {
+            atom.incorrectAnswers = [
+              `No es correcto: variación de "${atom.answer.substring(0, 30)}..."`,
+              'Esta opción es incorrecta',
+              'Ninguna de las anteriores aplica'
+            ];
+          }
+        }
+      }
+    }
+
+    onProgress({
+      stage: 'finalizing',
+      message: '✅ Finalizando átomos de conocimiento...',
+      details: `${atomsResult.atoms.length} átomos con opciones de respuesta`,
+      progress: 90
+    });
 
     const result = {
       initialResponse: `¡Hola! He procesado tu documento de ${documentContext.subject} y extraído ${atomsResult.atoms.length} átomos de conocimiento relevantes del contenido específico que subiste.`,
@@ -384,6 +441,83 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
 }
 */
 
+// Batch distractor generation - generates distractors for multiple atoms in one AI call
+async function generateDistractorsBatch(
+  atoms: { question: string; answer: string }[],
+  subject: string
+): Promise<string[][]> {
+  console.log(`=== BATCH DISTRACTOR GENERATION: ${atoms.length} atoms ===`);
+
+  // Process in chunks of 15 to avoid token limits
+  const chunkSize = 15;
+  const allDistractors: string[][] = [];
+
+  for (let i = 0; i < atoms.length; i += chunkSize) {
+    const chunk = atoms.slice(i, i + chunkSize);
+    const atomsList = chunk.map((a, idx) =>
+      `${idx + 1}. Pregunta: "${a.question}"\n   Respuesta correcta: "${a.answer}"`
+    ).join('\n\n');
+
+    const batchPrompt = `Eres un experto en ${subject} creando contenido educativo.
+Para cada pregunta y respuesta correcta a continuación, genera EXACTAMENTE 3 opciones de respuesta incorrectas pero plausibles (distractores).
+Los distractores deben ser conceptos relacionados que un estudiante podría confundir con la respuesta correcta.
+
+${atomsList}
+
+FORMATO DE RESPUESTA (JSON):
+{
+  "distractors": [
+    ["distractor1_para_pregunta1", "distractor2_para_pregunta1", "distractor3_para_pregunta1"],
+    ["distractor1_para_pregunta2", "distractor2_para_pregunta2", "distractor3_para_pregunta2"]
+  ]
+}
+
+IMPORTANTE: El array "distractors" debe tener EXACTAMENTE ${chunk.length} sub-arrays, uno por cada pregunta, en el MISMO orden.`;
+
+    try {
+      const response = await ai.generate({
+        prompt: batchPrompt,
+        model: 'googleai/gemini-2.5-flash-lite',
+        output: {
+          schema: z.object({
+            distractors: z.array(z.array(z.string()))
+          }),
+          format: 'json'
+        },
+        config: {
+          temperature: 0.3,
+          maxOutputTokens: 8192
+        },
+      });
+
+      if (response?.output?.distractors) {
+        // Ensure each entry has exactly 3 distractors
+        for (const d of response.output.distractors) {
+          while (d.length < 3) d.push('Opción incorrecta');
+          allDistractors.push(d.slice(0, 3));
+        }
+        // Fill in any missing entries
+        while (allDistractors.length < i + chunk.length) {
+          allDistractors.push(['Opción A incorrecta', 'Opción B incorrecta', 'Opción C incorrecta']);
+        }
+      } else {
+        // Fill with defaults for this chunk
+        for (let j = 0; j < chunk.length; j++) {
+          allDistractors.push(['Opción A incorrecta', 'Opción B incorrecta', 'Opción C incorrecta']);
+        }
+      }
+    } catch (error) {
+      console.warn(`Batch distractor generation failed for chunk ${i / chunkSize + 1}:`, error);
+      for (let j = 0; j < chunk.length; j++) {
+        allDistractors.push(['Opción A incorrecta', 'Opción B incorrecta', 'Opción C incorrecta']);
+      }
+    }
+  }
+
+  console.log(`=== BATCH DISTRACTORS COMPLETE: ${allDistractors.length} sets ===`);
+  return allDistractors;
+}
+
 // Análisis de contexto unificado que incluye título, descripción y metadatos
 async function analyzeDocumentContextUnified(content: string, isPDF: boolean, onProgress: (progress: any) => void) {
   console.log('=== ANALYZING UNIFIED DOCUMENT CONTEXT ===');
@@ -539,14 +673,14 @@ FORMATO DE RESPUESTA (JSON):
   }
 
   // Filter for valid and non-empty atoms
-  const validAtoms = (response.output.atoms as { question: string; answer: string }[]).filter((atom, index) => {
+  const validAtoms = (response.output.atoms as { question: string; answer: string; incorrectAnswers?: string[] }[]).filter((atom, index) => {
     if (!atom) {
       console.warn(`Skipping null or undefined atom at index ${index}.`);
       return false;
     }
     const isValid = atom.question && atom.answer &&
-           atom.question.trim().length > 10 &&
-           atom.answer.trim().length > 1;
+      atom.question.trim().length > 10 &&
+      atom.answer.trim().length > 1;
 
     if (!isValid) {
       console.warn('Invalid atom filtered out:', {
