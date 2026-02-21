@@ -287,7 +287,7 @@ function ProjectDetails() {
     const router = useRouter();
     const { toast } = useToast();
     const slug = params.id as string;
-    const { projects, completedProjects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, deleteSource, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan } = useProjects();
+    const { projects, completedProjects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, deleteSource, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan, getSourceContent } = useProjects();
     const { user } = useAuth();
     const isAuthenticated = !!user;
 
@@ -307,6 +307,7 @@ function ProjectDetails() {
     const [sourceToDelete, setSourceToDelete] = useState<{ source: Source, index: number } | null>(null);
     const [sourceToView, setSourceToView] = useState<Source | null>(null);
     const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
+    const [isFetchingSource, setIsFetchingSource] = useState(false);
 
     useEffect(() => {
         if (searchParams.get('planUpdated') === 'true' || searchParams.get('sessionCompleted') === 'true') {
@@ -444,10 +445,27 @@ function ProjectDetails() {
         }
     }
 
-    const handleViewSource = (source: Source) => {
-        setSourceToView(source);
+    const handleViewSource = async (source: Source) => {
+        if (source.content === 'FETCH_REQUIRED') {
+            if (!source.id) {
+                toast({ title: "Error", description: "El archivo no se encontró en la nube." });
+                return;
+            }
+            try {
+                setIsFetchingSource(true);
+                toast({ title: "Descargando PDF...", description: "Cargando el documento desde la base de datos." });
+                const content = await getSourceContent(source.id);
+                setSourceToView({ ...source, content });
+            } catch (err) {
+                console.error(err);
+                toast({ title: "Error", description: "No se pudo descargar el archivo original.", variant: "destructive" });
+            } finally {
+                setIsFetchingSource(false);
+            }
+        } else {
+            setSourceToView(source);
+        }
     };
-
     const handleDeleteSource = (source: Source, index: number) => {
         setSourceToDelete({ source, index });
     };
@@ -617,37 +635,45 @@ function ProjectDetails() {
                             </DialogDescription>
                         </DialogHeader>
                         <ScrollArea className="max-h-[60vh] my-4 pr-4">
-                            <div className="prose prose-sm max-w-none dark:prose-invert">
-                                {sourceToView?.content.split('\n').map((line, index) => {
-                                    if (line.startsWith('# ')) {
-                                        return <h1 key={index} className="text-2xl font-bold mb-4 mt-6 text-foreground">{line.slice(2)}</h1>;
-                                    } else if (line.startsWith('## ')) {
-                                        return <h2 key={index} className="text-xl font-semibold mb-3 mt-5 text-foreground">{line.slice(3)}</h2>;
-                                    } else if (line.startsWith('### ')) {
-                                        return <h3 key={index} className="text-lg font-medium mb-2 mt-4 text-foreground">{line.slice(4)}</h3>;
-                                    } else if (line.startsWith('#### ')) {
-                                        return <h4 key={index} className="text-base font-medium mb-2 mt-3 text-foreground">{line.slice(5)}</h4>;
-                                    } else if (line.startsWith('- ')) {
-                                        return <li key={index} className="ml-4 text-muted-foreground">{line.slice(2)}</li>;
-                                    } else if (line.startsWith('```')) {
-                                        const isClosing = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length % 2 === 1;
-                                        return isClosing ?
-                                            <div key={index} className="block"></div> :
-                                            <div key={index} className="bg-muted p-3 rounded-md overflow-x-auto text-sm mt-2 mb-2 block"></div>;
-                                    } else if (line.trim() === '') {
-                                        return <br key={index} />;
-                                    } else {
-                                        // Check if we're inside a code block
-                                        const codeBlocksBefore = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length || 0;
-                                        const isInCodeBlock = codeBlocksBefore % 2 === 1;
-                                        if (isInCodeBlock) {
-                                            return <code key={index} className="block text-sm text-foreground">{line}</code>;
+                            {sourceToView?.content.startsWith('data:application/pdf') ? (
+                                <iframe
+                                    src={sourceToView.content}
+                                    className="w-full min-h-[60vh] rounded-md border-0"
+                                    title={`PDF View - ${sourceToView.name}`}
+                                />
+                            ) : (
+                                <div className="prose prose-sm max-w-none dark:prose-invert">
+                                    {sourceToView?.content.split('\n').map((line, index) => {
+                                        if (line.startsWith('# ')) {
+                                            return <h1 key={index} className="text-2xl font-bold mb-4 mt-6 text-foreground">{line.slice(2)}</h1>;
+                                        } else if (line.startsWith('## ')) {
+                                            return <h2 key={index} className="text-xl font-semibold mb-3 mt-5 text-foreground">{line.slice(3)}</h2>;
+                                        } else if (line.startsWith('### ')) {
+                                            return <h3 key={index} className="text-lg font-medium mb-2 mt-4 text-foreground">{line.slice(4)}</h3>;
+                                        } else if (line.startsWith('#### ')) {
+                                            return <h4 key={index} className="text-base font-medium mb-2 mt-3 text-foreground">{line.slice(5)}</h4>;
+                                        } else if (line.startsWith('- ')) {
+                                            return <li key={index} className="ml-4 text-muted-foreground">{line.slice(2)}</li>;
+                                        } else if (line.startsWith('```')) {
+                                            const isClosing = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length % 2 === 1;
+                                            return isClosing ?
+                                                <div key={index} className="block"></div> :
+                                                <div key={index} className="bg-muted p-3 rounded-md overflow-x-auto text-sm mt-2 mb-2 block"></div>;
+                                        } else if (line.trim() === '') {
+                                            return <br key={index} />;
                                         } else {
-                                            return <p key={index} className="mb-2 text-muted-foreground">{line}</p>;
+                                            // Check if we're inside a code block
+                                            const codeBlocksBefore = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length || 0;
+                                            const isInCodeBlock = codeBlocksBefore % 2 === 1;
+                                            if (isInCodeBlock) {
+                                                return <code key={index} className="block text-sm text-foreground">{line}</code>;
+                                            } else {
+                                                return <p key={index} className="mb-2 text-muted-foreground">{line}</p>;
+                                            }
                                         }
-                                    }
-                                })}
-                            </div>
+                                    })}
+                                </div>
+                            )}
                         </ScrollArea>
                         <DialogFooter>
                             <Button onClick={() => setSourceToView(null)}>Cerrar</Button>

@@ -163,9 +163,10 @@ export const convertAtomFromDB = (atomRow: AtomRow): Atom & { id?: string } => (
 })
 
 export const convertSourceFromDB = (sourceRow: SourceRow): Source => ({
+  id: sourceRow.id,
   name: sourceRow.name,
   type: sourceRow.type,
-  content: sourceRow.content,
+  content: (sourceRow as any).content || 'FETCH_REQUIRED', // content is excluded from main query to prevent memory crash
 })
 
 export const convertLearningPathItemFromDB = (lpRow: LearningPathRow): LearningPathItem => ({
@@ -185,7 +186,7 @@ export class ProjectDatabase {
     console.log('[DB] Getting projects for user:', userId);
     const { data, error } = await this.supabase
       .from('projects')
-      .select('*, atoms(*), sources(*), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
+      .select('*, atoms(*), sources(id, name, type), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
       .eq('user_id', userId)
       .eq('is_archived', false)
       .eq('is_completed', false)
@@ -205,7 +206,7 @@ export class ProjectDatabase {
   async getCompletedProjects(userId: string): Promise<Project[]> {
     const { data, error } = await this.supabase
       .from('projects')
-      .select('*, atoms(*), sources(*), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
+      .select('*, atoms(*), sources(id, name, type), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
       .eq('user_id', userId)
       .eq('is_completed', true)
       .order('updated_at', { ascending: false })
@@ -218,7 +219,7 @@ export class ProjectDatabase {
   async getArchivedProjects(userId: string): Promise<Project[]> {
     const { data, error } = await this.supabase
       .from('projects')
-      .select('*, atoms(*), sources(*), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
+      .select('*, atoms(*), sources(id, name, type), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
       .eq('user_id', userId)
       .eq('is_archived', true)
       .order('updated_at', { ascending: false })
@@ -228,14 +229,24 @@ export class ProjectDatabase {
     return (data || []).map(project => convertProjectFromDBSync(project));
   }
 
-  async createProject(userId: string, project: Omit<Project, 'id'>): Promise<string> {
-    console.log('[DB] Creating project:', {
-      userId,
-      title: project.title,
-      atoms: project.atoms?.length || 0,
-      sessions: project.sessions?.length || 0,
-      sources: project.sources?.length || 0,
-    });
+  async getSourceContent(sourceId: string): Promise<string> {
+    const { data, error } = await this.supabase
+      .from('sources')
+      .select('content')
+      .eq('id', sourceId)
+      .single()
+
+    if (error) throw error
+    return data.content || '';
+  }
+
+  async createProject(userId: string, project: Omit<Project, 'id'>, log?: (msg: string) => void): Promise<string> {
+    const logDb = (msg: string) => {
+      console.log(`[DB] ${msg}`);
+      if (log) log(`> ${msg}`);
+    };
+
+    logDb('Creating project...');
 
     // Create the project
     const { data: projectData, error: projectError } = await this.supabase
@@ -257,16 +268,16 @@ export class ProjectDatabase {
       .single()
 
     if (projectError) {
-      console.error('[DB] ❌ Failed to create project:', projectError);
+      logDb(`❌ Failed to create project: ${projectError.message}`);
       throw projectError;
     }
 
     const projectId = projectData.id
-    console.log('[DB] ✅ Project created with ID:', projectId);
+    logDb(`✅ Project created with ID: ${projectId}`);
 
     // Create atoms
     if (project.atoms.length > 0) {
-      console.log(`[DB] Inserting ${project.atoms.length} atoms...`);
+      logDb(`Inserting ${project.atoms.length} atoms...`);
       const { data: createdAtoms, error: atomsError } = await this.supabase
         .from('atoms')
         .insert(
@@ -289,10 +300,10 @@ export class ProjectDatabase {
         .select('id, question');
 
       if (atomsError) {
-        console.error('[DB] ❌ Failed to insert atoms:', atomsError);
+        logDb(`❌ Failed to insert atoms: ${atomsError.message}`);
         throw atomsError;
       }
-      console.log(`[DB] ✅ ${createdAtoms?.length} atoms inserted`);
+      logDb(`✅ ${createdAtoms?.length} atoms inserted`);
 
       // Store created atoms for mapping to sessions
       const atomMap = new Map();
@@ -302,7 +313,7 @@ export class ProjectDatabase {
 
       // Create sessions
       if (project.sessions && project.sessions.length > 0) {
-        console.log(`[DB] Inserting ${project.sessions.length} sessions...`);
+        logDb(`Inserting ${project.sessions.length} sessions...`);
         const { data: sessionsData, error: sessionsError } = await this.supabase
           .from('sessions')
           .insert(
@@ -320,10 +331,10 @@ export class ProjectDatabase {
           .select('id, session_number');
 
         if (sessionsError) {
-          console.error('[DB] ❌ Failed to insert sessions:', sessionsError);
+          logDb(`❌ Failed to insert sessions: ${sessionsError.message}`);
           throw sessionsError;
         }
-        console.log('[DB] ✅ Sessions inserted');
+        logDb(`✅ Sessions inserted`);
 
         // Create session-atom relationships
         const sessionAtomInserts: any[] = [];
@@ -343,14 +354,14 @@ export class ProjectDatabase {
         });
 
         if (sessionAtomInserts.length > 0) {
-          console.log(`[DB] Linking ${sessionAtomInserts.length} atoms to sessions...`);
+          logDb(`Linking ${sessionAtomInserts.length} atoms to sessions...`);
           const { error: linkError } = await this.supabase
             .from('session_atoms')
             .insert(sessionAtomInserts);
           if (linkError) {
-            console.warn('[DB] ⚠️ Failed to link atoms to sessions:', linkError);
+            logDb(`⚠️ Failed to link atoms to sessions: ${linkError.message}`);
           } else {
-            console.log('[DB] ✅ Atoms linked to sessions');
+            logDb(`✅ Atoms linked to sessions`);
           }
         }
       }
@@ -358,7 +369,7 @@ export class ProjectDatabase {
 
     // Create sources
     if (project.sources.length > 0) {
-      console.log(`[DB] Inserting ${project.sources.length} sources...`);
+      logDb(`Inserting ${project.sources.length} sources...`);
       const { error: sourcesError } = await this.supabase
         .from('sources')
         .insert(
@@ -371,15 +382,15 @@ export class ProjectDatabase {
         )
 
       if (sourcesError) {
-        console.error('[DB] ❌ Failed to insert sources:', sourcesError);
+        logDb(`❌ Failed to insert sources: ${sourcesError.message}`);
         throw sourcesError;
       }
-      console.log('[DB] ✅ Sources inserted');
+      logDb(`✅ Sources inserted`);
     }
 
     // Create learning path
     if (project.learningPath.length > 0) {
-      console.log(`[DB] Inserting ${project.learningPath.length} learning path items...`);
+      logDb(`Inserting ${project.learningPath.length} learning path items...`);
       const { error: learningPathError } = await this.supabase
         .from('learning_path_items')
         .insert(
@@ -395,12 +406,12 @@ export class ProjectDatabase {
         )
 
       if (learningPathError) {
-        console.error('[DB] ❌ Failed to insert learning path:', learningPathError);
+        logDb(`❌ Failed to insert learning path: ${learningPathError.message}`);
         throw learningPathError;
       }
-      console.log('[DB] ✅ Learning path inserted');
+      logDb(`✅ Learning path inserted`);
     }
-    console.log('[DB] ✅✅✅ Project creation COMPLETE. ID:', projectId);
+    logDb(`✅✅✅ Project creation COMPLETE. ID: ${projectId}`);
     return projectId;
   }
 

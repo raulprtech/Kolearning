@@ -31,6 +31,7 @@ export type Atom = {
 }
 
 export type Source = {
+  id?: string;
   name: string;
   type: string;
   content: string;
@@ -97,7 +98,7 @@ type ProjectContextType = {
   projects: Project[];
   completedProjects: Project[];
   archivedProjects: Project[];
-  addProject: (project: Project) => Promise<string>;
+  addProject: (project: Project, logCallback?: (msg: string) => void) => Promise<string>;
   updateProjectIcon: (projectId: string, icon: string) => Promise<void>;
   updateProjectDetails: (projectId: string, title: string, description: string) => Promise<void>;
   updateProjectPlan: (projectId: string, plan: CalibratePlanOutput) => void;
@@ -135,6 +136,7 @@ type ProjectContextType = {
   // New Supabase-specific methods
   migrateFromLocalStorage: () => Promise<{ success: boolean; migratedProjects: number; errors: string[]; }>;
   hasLocalData: boolean;
+  getSourceContent: (sourceId: string) => Promise<string>;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -423,7 +425,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addProject = useCallback(async (projectToAdd: Project): Promise<string> => {
+  const addProject = useCallback(async (projectToAdd: Project, logCallback?: (msg: string) => void): Promise<string> => {
     // Ensure project always has at least a calibration session
     const ensureCalibrationSession = (project: Project): Project => {
       if (project.sessions && project.sessions.length > 0) {
@@ -477,12 +479,18 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
     if (user) {
       try {
+        if (logCallback) logCallback('Saving to Supabase (from Context)...');
         console.log('[ProjectContext] Saving to Supabase...');
-        const projectId = await projectDb.createProject(user.id, projectWithSessions);
+        const projectId = await projectDb.createProject(user.id, projectWithSessions, logCallback);
         console.log('[ProjectContext] ✅ Project saved in Supabase:', projectId);
 
-        // Optimistic update: add the project with its real ID to the state immediately
-        const projectWithRealId = { ...projectWithSessions, id: projectId };
+        // Optimistic update: add the project with its real ID to the state immediately.
+        // Strip massive base64 contents from state to avoid freezing the browser.
+        const strippedSources = projectWithSessions.sources.map(s => ({
+          ...s,
+          content: s.content.length > 50000 ? 'FETCH_REQUIRED' : s.content
+        }));
+        const projectWithRealId = { ...projectWithSessions, id: projectId, sources: strippedSources };
         setProjects(prev => [projectWithRealId, ...prev]);
 
         console.log('[ProjectContext] ✅ Returning ID for immediate redirection');
@@ -1132,6 +1140,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     isLoading,
     migrateFromLocalStorage,
     hasLocalData,
+    getSourceContent: async (sourceId: string) => await projectDb.getSourceContent(sourceId),
   };
 
   return (

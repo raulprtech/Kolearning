@@ -38,7 +38,7 @@ export const generateOrderingQuestion = ai.defineFlow({
     `;
     const llmResponse = await ai.generate({
         prompt,
-        model: 'gemini-1.5-flash',
+        model: 'googleai/gemini-2.5-flash',
         output: { schema: GenerateOrderingOutputSchema },
         config: { temperature: 0.3 },
     });

@@ -226,7 +226,7 @@ El plan debe ser práctico, personalizado y pedagógicamente sólido, maximizand
                 ]
             }
         ],
-        model: 'googleai/gemini-2.5-flash-lite',
+        model: 'googleai/gemini-2.5-flash',
         output: {
             schema: GenerateKolearningPlanOutputSchema,
             format: 'json'

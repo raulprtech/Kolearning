@@ -199,10 +199,62 @@ const calibratePlanFlow = ai.defineFlow(
       })),
     };
 
-    const { output } = await calibratePlanPrompt(numberedInput);
+    let output;
+    try {
+      const result = await calibratePlanPrompt(numberedInput);
+      output = result.output;
 
-    if (!output) {
-      throw new Error('AI failed to generate a learning plan.');
+      if (!output) {
+        throw new Error('AI output was empty.');
+      }
+    } catch (e: any) {
+      console.warn('⚠️ [PlanFlow] AI Genkit schema generation threw an error, using fallback learning plan:', e.message);
+
+      // Fallback generator for large documents where Genkit times out or produces incomplete JSON
+      const fallbackSessions = [];
+      const sessionSize = 10;
+      let sessionCounter = 1;
+
+      // Calibracion uses first 10 atoms
+      const maxCalibracion = Math.min(10, input.atoms.length);
+      fallbackSessions.push({
+        session: sessionCounter++,
+        topic: "Diagnóstico Inicial",
+        sessionType: "Calibración",
+        questions: "Opción Múltiple",
+        atomIndices: Array.from({ length: maxCalibracion }, (_, i) => i),
+        numAtoms: maxCalibracion,
+        phase: "calibracion",
+        questionFormats: "Opción Múltiple"
+      });
+
+      // Split remaining atoms into Incursion sessions
+      for (let i = 0; i < input.atoms.length; i += sessionSize) {
+        const chunkLength = Math.min(sessionSize, input.atoms.length - i);
+        const chunkIndices = Array.from({ length: chunkLength }, (_, j) => i + j);
+        fallbackSessions.push({
+          session: sessionCounter++,
+          topic: `Módulo de Incursión ${Math.floor(i / sessionSize) + 1}`,
+          sessionType: "Incursión",
+          questions: "Asociación, Pregunta Abierta",
+          atomIndices: chunkIndices,
+          numAtoms: chunkLength,
+          phase: "incursion",
+          questionFormats: "Asociación, Pregunta Abierta"
+        });
+      }
+
+      output = {
+        projectDescription: `Plan de estudio estructurado para: ${input.projectTitle}`,
+        categories: ["Estudio", "General"],
+        learningPath: [{
+          day: 1,
+          sessions: fallbackSessions
+        }],
+        koliJustification: "Plan organizado de manera secuencial para asegurar la asimilación paulatina de cada átomo extraído del material extenso.",
+        expectedProgress: "Avanzando sesión por sesión lograrás dominar todos los conceptos fundamentales.",
+        fullLearningPlanMarkdown: `# Plan de Estudio: ${input.projectTitle}\n\nUn plan generado con ${fallbackSessions.length} sesiones.`
+      };
     }
 
     // Process learning path: resolve indices to actual atoms

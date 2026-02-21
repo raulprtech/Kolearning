@@ -153,9 +153,17 @@ const InputBar = ({ handleSendMessage, isLoading, selectedFiles, removeFile, han
     )
 }
 
-const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, totalAtoms }: { fileName: string, status: string, totalFiles: number, currentFileIndex: number, totalAtoms: number }) => {
+const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, totalAtoms, aiLogs }: { fileName: string, status: string, totalFiles: number, currentFileIndex: number, totalAtoms: number, aiLogs: string[] }) => {
 
     const progress = totalFiles > 0 ? (currentFileIndex / (totalFiles + 1)) * 100 : 0;
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll the terminal
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [aiLogs]);
 
     // Extract detailed info from status if available
     const isDetailedStatus = status.includes('📄') || status.includes('🧠') || status.includes('✨') || status.includes('🔄');
@@ -251,6 +259,42 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, t
                             </div>
                         </div>
                     )}
+
+                    {/* Animated AI Terminal */}
+                    <div className="bg-zinc-950 rounded-lg p-4 font-mono text-sm border border-zinc-800 shadow-inner relative overflow-hidden flex flex-col h-48 mt-4">
+                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-zinc-800">
+                            <div className="flex gap-1.5">
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+                                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                                <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+                            </div>
+                            <span className="text-zinc-500 text-xs ml-2">koli-ai-processor ~ /sys/context</span>
+                        </div>
+
+                        <div
+                            ref={scrollRef}
+                            className="flex-1 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent pr-2 pb-4"
+                        >
+                            {aiLogs.length === 0 ? (
+                                <div className="text-zinc-500 italic">Esperando datos del documento...</div>
+                            ) : (
+                                aiLogs.map((log, i) => (
+                                    <div key={i} className="text-zinc-300 flex">
+                                        <span className="text-green-500 mr-2">›</span>
+                                        <span className="flex-1 opacity-90">{log}</span>
+                                    </div>
+                                ))
+                            )}
+                            {/* Blinking Cursor */}
+                            {progress < 100 && (
+                                <div className="flex items-center">
+                                    <span className="text-green-500 mr-2">›</span>
+                                    <div className="w-2 h-4 bg-zinc-400 animate-pulse"></div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                 </CardContent>
             </Card>
         </div>
@@ -267,6 +311,7 @@ function NewProjectContent() {
     const [isLoading, setIsLoading] = useState(false);
     const [isProjectStarted, setIsProjectStarted] = useState(false);
     const [processingStatus, setProcessingStatus] = useState({ name: '', status: '', index: 0, total: 0, atoms: 0 });
+    const [aiLogs, setAiLogs] = useState<string[]>([]);
     const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
     const [isPasteTextOpen, setIsPasteTextOpen] = useState(false);
     const [atomizationError, setAtomizationError] = useState<string | null>(null);
@@ -296,6 +341,7 @@ function NewProjectContent() {
             }
 
             setProcessingStatus(prev => ({ ...prev, status: `🚀 Finalizando y guardando proyecto...` }));
+            setAiLogs(prev => [...prev].slice(-50).concat(['> Iniciando guardado final...']));
 
             const slug = metadata.title
                 .toString()
@@ -308,20 +354,23 @@ function NewProjectContent() {
                 .replace(/--+/g, '-'); // replace multiple - with single -
 
             const newProjectId = `${slug}-${Date.now()}`;
+            setAiLogs(prev => [...prev].slice(-50).concat([`> ID de Proyecto generado: ${newProjectId}`]));
 
             // Convert processed files to sources with content
             const sources = await Promise.all(processedFiles.map(async (file) => {
                 try {
                     let content = '';
-                    const fileType = file.type.includes('pdf') ? 'PDF' :
-                        file.type.includes('doc') ? 'Documento' :
+                    const fileType = file.name.toLowerCase().endsWith('.pdf') || file.type.includes('pdf') ? 'PDF' :
+                        file.name.toLowerCase().endsWith('.doc') || file.type.includes('doc') ? 'Documento' :
                             file.type.includes('text') ? 'Texto' :
                                 'Documento';
 
-                    if (file.type.includes('pdf')) {
-                        // For PDFs, we store the data URI as we can't easily extract text content here
-                        const dataUri = await fileToDataUri(file);
-                        content = `Documento PDF: ${file.name}\n\nContenido procesado automáticamente por Koli AI para generar los átomos de conocimiento.\n\nTamaño: ${Math.round(file.size / 1024)}KB`;
+                    if (fileType === 'PDF') {
+                        // For PDFs, the user explicitly requested to save the original PDF document
+                        // so they can view it. We need to convert it to a DataURI base64.
+                        const buffer = await file.arrayBuffer();
+                        const base64 = Buffer.from(buffer).toString('base64');
+                        content = `data:application/pdf;base64,${base64}`;
                     } else {
                         // For text files, we can read the content directly
                         content = await file.text();
@@ -341,10 +390,12 @@ function NewProjectContent() {
                     return {
                         name: file.name,
                         type: 'Documento',
-                        content: `Documento: ${file.name}\n\nArchivo procesado automáticamente por Koli AI para extraer conocimiento y generar átomos de aprendizaje.\n\nTamaño: ${Math.round(file.size / 1024)}KB\nTipo: ${file.type || 'Desconocido'}`
+                        content: `Documento: ${file.name}\n\nArchivo procesado automáticamente por Koli AI.\n\nTamaño: ${Math.round(file.size / 1024)}KB`
                     };
                 }
             }));
+
+            setAiLogs(prev => [...prev].slice(-50).concat(['> Fuentes procesadas para guardado.']));
 
             const newProject: Omit<Project, 'sessions'> = {
                 id: newProjectId,
@@ -359,22 +410,15 @@ function NewProjectContent() {
                 sources: sources,
             };
 
-            console.log('[NewProject] Calling addProject with:', {
-                id: newProject.id,
-                title: newProject.title,
-                atomsCount: newProject.atoms?.length,
-                learningPathCount: newProject.learningPath?.length,
-                sourcesCount: newProject.sources?.length,
-                learningPathSample: newProject.learningPath?.slice(0, 2).map((s: any) => ({
-                    session: s.session,
-                    topic: s.topic,
-                    atomsCount: s.atoms?.length,
-                    phase: s.phase,
-                })),
+            setAiLogs(prev => [...prev].slice(-50).concat(['> Llamando a Supabase para insertar registros...', `> Subiendo ${atomsResult.atoms.length} átomos y plan.`]));
+
+            console.log('[NewProject] Calling addProject with:', { id: newProject.id });
+            const realProjectId = await addProject(newProject as any, (msg: string) => {
+                setAiLogs(prev => [...prev].slice(-50).concat([msg]));
             });
-            const realProjectId = await addProject(newProject as any);
             console.log('[NewProject] ✅ Project created successfully! ID:', realProjectId);
 
+            setAiLogs(prev => [...prev].slice(-50).concat(['> ¡Insertado con éxito!', `> ID final: ${realProjectId}`, '> Redirigiendo a Dashboard...']));
             setIsLoading(false);
 
             toast({
@@ -382,20 +426,33 @@ function NewProjectContent() {
                 description: `${metadata.title} ha sido añadido a tu dashboard.`
             })
 
-            // Use window.location as a fallback if router.push doesn't navigate
-            router.push(`/projects/${realProjectId}`);
+            console.log('[NewProject] Pre-router.push to', `/projects/${realProjectId}`);
 
-            // Safeguard: If router.push doesn't trigger navigation within 1s, force it
-            // Reduced from 2s to 1s for better responsiveness
+            // Execute the routing synchronously to make sure it runs, and wrap it
+            try {
+                router.push(`/projects/${realProjectId}`);
+                console.log('[NewProject] router.push executed smoothly');
+            } catch (rErr) {
+                console.error('[NewProject] router.push threw:', rErr);
+                window.location.href = `/projects/${realProjectId}`;
+            }
+
+            // Safeguard
             setTimeout(() => {
-                if (window.location.pathname.includes('new-project')) {
-                    console.warn('[NewProject] Router.push did not navigate, forcing redirect...');
-                    window.location.href = `/projects/${realProjectId}`;
+                try {
+                    if (window.location.pathname.includes('new-project')) {
+                        console.warn('[NewProject] Router.push did not navigate, forcing redirect...');
+                        window.location.href = `/projects/${realProjectId}`;
+                    }
+                } catch (e) {
+                    console.error('Safeguard error:', e);
                 }
             }, 1000);
-        } catch (error) {
+        } catch (error: any) {
             console.error('[NewProject] Error during finalization:', error);
-            setAtomizationError('Ocurrió un error al guardar el proyecto. Por favor, intenta de nuevo.');
+            alert(`Error crítico al guardar: ${error.message || 'Error desconocido'}`); // Immediate fallback alert
+            setAiLogs(prev => [...prev].slice(-50).concat([`[ERROR]: ${error.message || 'Error desconocido al guardar'}`]));
+            setAtomizationError(`Ocurrió un error al guardar el proyecto: ${error.message || 'Error desconocido'}. Revisa la consola.`);
             setIsLoading(false);
         }
     }, [addProject, router, toast, selectedFiles, setProcessingStatus, setAtomizationError, setIsLoading]);
@@ -404,6 +461,7 @@ function NewProjectContent() {
         setIsLoading(true);
         setIsProjectStarted(true);
         setAtomizationError(null);
+        setAiLogs([]);
 
         const totalFiles = filesToProcess.length;
         let accumulatedAtoms: GenerateAtomsOutput['atoms'] = [];
@@ -464,6 +522,15 @@ function NewProjectContent() {
                                     status: `📄 ${file.name}: ${data.message}`,
                                     atoms: accumulatedAtoms.length
                                 }));
+
+                                // Add to AI logs for the terminal visualization
+                                if (data.details) {
+                                    setAiLogs(prev => {
+                                        // Keep last 50 logs to avoid memory issues
+                                        const newLogs = [...prev, data.details];
+                                        return newLogs.length > 50 ? newLogs.slice(newLogs.length - 50) : newLogs;
+                                    });
+                                }
                             } else if (data.type === 'complete') {
                                 console.log('=== RECEIVED COMPLETE DATA ===');
                                 console.log('Complete data:', data.data);
@@ -532,7 +599,7 @@ function NewProjectContent() {
             console.log('Results array length:', results.length);
             console.log('Results array:', results);
 
-            // Extract metadata from the first file's pipeline results (unified context)
+            // The context is now deferred and inferred from the atoms in the final result object
             const firstResult = results[0];
             let metadata;
 
@@ -552,12 +619,12 @@ function NewProjectContent() {
                 };
             } else {
                 const documentContext = firstResult.pipeline.documentContext;
-                console.log('Document context:', documentContext);
+                console.log('Document context from final response:', documentContext);
 
                 metadata = {
-                    title: documentContext.inferredTitle,
-                    description: documentContext.inferredDescription,
-                    categories: documentContext.categories
+                    title: documentContext.inferredTitle || filesToProcess[0]?.name.replace(/\.[^/.]+$/, ""),
+                    description: documentContext.inferredDescription || `Proyecto de ${documentContext.subject || 'Estudio'}`,
+                    categories: documentContext.categories || ['Estudio']
                 };
             }
 
@@ -702,6 +769,7 @@ function NewProjectContent() {
         setIsProjectStarted(false);
         // setSelectedFiles([]); // Don't clear files so user can retry
         setProcessingStatus({ name: '', status: '', index: 0, total: 0, atoms: 0 });
+        setAiLogs([]);
         setAtomizationError(null);
         setIsLoading(false);
     };
@@ -761,6 +829,7 @@ function NewProjectContent() {
                             totalFiles={processingStatus.total}
                             currentFileIndex={processingStatus.index}
                             totalAtoms={processingStatus.atoms}
+                            aiLogs={aiLogs}
                         />
                     </>
                 )}

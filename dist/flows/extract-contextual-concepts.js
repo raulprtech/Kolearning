@@ -75,7 +75,7 @@ Para cada concepto, determina:
                 ]
             }
         ],
-        model: 'googleai/gemini-2.5-flash-lite',
+        model: 'googleai/gemini-2.5-flash',
         output: {
             schema: ExtractContextualConceptsOutputSchema,
             format: 'json'

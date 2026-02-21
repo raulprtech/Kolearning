@@ -62,7 +62,7 @@ const prompt = ai.definePrompt({
     name: 'generateDistractorsPrompt',
     input: { schema: GenerateDistractorsInputSchema },
     output: { schema: GenerateDistractorsOutputSchema },
-    model: 'googleai/gemini-2.5-flash-lite',
+    model: 'googleai/gemini-2.5-flash',
     config: {
         temperature: 0.1,
         maxOutputTokens: 8192

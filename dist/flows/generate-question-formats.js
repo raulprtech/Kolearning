@@ -75,7 +75,7 @@ Genera un ID único para cada pregunta (ej: "concept-1-mc", "concept-2-tf")`
                 ]
             }
         ],
-        model: 'googleai/gemini-2.5-flash-lite',
+        model: 'googleai/gemini-2.5-flash',
         output: {
             schema: GenerateQuestionFormatsOutputSchema,
             format: 'json'

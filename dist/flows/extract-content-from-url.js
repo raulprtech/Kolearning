@@ -36,7 +36,7 @@ const extractContentPrompt = ai.definePrompt({
     name: 'extractContentPrompt',
     input: { schema: z.object({ htmlContent: z.string() }) },
     output: { schema: ExtractContentOutputSchema },
-    model: 'googleai/gemini-2.5-flash-lite',
+    model: 'googleai/gemini-2.5-flash',
     config: {
         temperature: 0.1,
         maxOutputTokens: 8192

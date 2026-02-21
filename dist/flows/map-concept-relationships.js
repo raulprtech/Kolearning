@@ -165,7 +165,7 @@ CRITERIOS DE CALIDAD:
                 ]
             }
         ],
-        model: 'googleai/gemini-2.5-flash-lite',
+        model: 'googleai/gemini-2.5-flash',
         output: {
             schema: MapConceptRelationshipsOutputSchema,
             format: 'json'

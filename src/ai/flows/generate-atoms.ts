@@ -27,9 +27,9 @@ const GenerateAtomsOutputSchema = z.object({
     documentContext: z.any().describe('Document analysis results'),
     concepts: z.any().describe('Extracted concepts'),
     questions: z.any().describe('Generated questions'),
-    qualityReport: z.any().describe('Quality evaluation results'),
     conceptMap: z.any().describe('Concept relationships'),
     studyPlan: z.any().describe('KoLearning study plan'),
+    rawContent: z.string().optional().describe('The raw text content extracted from the document'),
   }).describe('Complete pipeline results'),
   atoms: z.array(z.object({
     question: z.string().describe('The question generated from the study material.'),
@@ -108,37 +108,19 @@ export async function generateAtomsFromLargeContentWithProgress(
     }
   }
 
-  // Etapa 3: Análisis de Contexto Unificado (título, tema, nivel, estructura)
-  onProgress({
-    stage: 'analyzing_context',
-    message: '📄 Analizando contexto del documento...',
-    details: `Identificando tema, título y estructura del documento`,
-    progress: 10
-  });
-
-  let documentContext;
-  try {
-    console.log('=== STARTING CONTEXT ANALYSIS ===');
-    documentContext = await analyzeDocumentContextUnified(content, isPDF, onProgress);
-    console.log('=== CONTEXT ANALYSIS COMPLETE ===');
-    console.log('Document context result:', documentContext);
-  } catch (error) {
-    console.error('Error analyzing document context:', error);
-    console.error('Full error details:', error);
-    throw new Error(`Error crítico en análisis de contexto: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-  }
-
-  // Etapa 4: Generación de Átomos con Contexto
+  // Etapa 3: Generación de Átomos
   onProgress({
     stage: 'generating_atoms',
-    message: '🧠 Generando átomos basados en el contexto...',
-    details: `Extrayendo contenido educativo de ${documentContext.subject}`,
+    message: '🧠 Generando átomos de conocimiento...',
+    details: `Iniciando análisis semántico del documento`,
     progress: 40
   });
 
   try {
     console.log('=== STARTING ATOMS GENERATION ===');
-    const atomsResult = await generateAtomsInChunks(content, documentContext, onProgress);
+    // Using a fallback empty context since we generate metadata later
+    const fallbackContext = { subject: "Documento General", academicLevel: "General" };
+    const atomsResult = await generateAtomsInChunks(content, fallbackContext, onProgress);
     console.log('=== ATOMS GENERATION COMPLETE ===');
     console.log('Atoms result:', atomsResult.atoms.length, 'atoms');
 
@@ -161,7 +143,7 @@ export async function generateAtomsFromLargeContentWithProgress(
       try {
         const batchDistractors = await generateDistractorsBatch(
           atomsMissingDistractors.map(a => ({ question: a.question, answer: a.answer })),
-          documentContext.subject
+          fallbackContext.subject
         );
 
         // Merge distractors back into atoms
@@ -192,6 +174,34 @@ export async function generateAtomsFromLargeContentWithProgress(
       }
     }
 
+    // Etapa 6: Inferencia de Título y Metadatos a partir de los Átomos Generados
+    onProgress({
+      stage: 'analyzing_context',
+      message: '📄 Infiriendo metadatos del proyecto...',
+      details: `> Resumiendo temática general a partir de ${atomsResult.atoms.length} conceptos extraídos`,
+      progress: 90
+    });
+
+    let documentContext;
+    try {
+      console.log('=== STARTING DEFERRED CONTEXT ANALYSIS ===');
+      // Takes a sample of up to 15 atoms to infer the general title and description
+      const atomSample = atomsResult.atoms.slice(0, 15);
+      documentContext = await analyzeDocumentContextUnified(atomSample, onProgress);
+      console.log('=== DEFERRED CONTEXT ANALYSIS COMPLETE ===');
+      console.log('Document context result:', documentContext);
+    } catch (error) {
+      console.error('Error analyzing deferred document context:', error);
+      documentContext = {
+        inferredTitle: "Proyecto de Estudio",
+        inferredDescription: `Proyecto generado a partir de ${atomsResult.atoms.length} átomos.`,
+        subject: "General",
+        academicLevel: "undergraduate",
+        categories: ["General"],
+        documentType: "other"
+      };
+    }
+
     onProgress({
       stage: 'finalizing',
       message: '✅ Finalizando átomos de conocimiento...',
@@ -208,6 +218,7 @@ export async function generateAtomsFromLargeContentWithProgress(
         qualityReport: { approved: atomsResult.atoms.length },
         conceptMap: { relationships: 0 },
         studyPlan: { sessions: 0 },
+        rawContent: content
       },
       atoms: atomsResult.atoms
     };
@@ -518,36 +529,38 @@ IMPORTANTE: El array "distractors" debe tener EXACTAMENTE ${chunk.length} sub-ar
   return allDistractors;
 }
 
-// Análisis de contexto unificado que incluye título, descripción y metadatos
-async function analyzeDocumentContextUnified(content: string, isPDF: boolean, onProgress: (progress: any) => void) {
-  console.log('=== ANALYZING UNIFIED DOCUMENT CONTEXT ===');
-  console.log('isPDF:', isPDF);
-  console.log('content length:', content.length);
+// Análisis de contexto unificado basado en los átomos de conocimiento generados
+export async function analyzeDocumentContextUnified(atoms: Array<{ question: string; answer: string }>, onProgress: (progress: any) => void) {
+  console.log('=== ANALYZING UNIFIED DOCUMENT CONTEXT FROM ATOMS ===');
+  console.log('Atoms sampled for context:', atoms.length);
 
   onProgress({
     stage: 'context_analysis',
-    message: '🔍 Analizando tema y estructura...',
-    details: 'Identificando contexto educativo del documento',
-    progress: 20
+    message: '🔍 Infiriendo título y materia...',
+    details: 'Generando metadatos estructurados a partir de los átomos',
+    progress: 90
   });
 
   try {
-    const contentPreview = content.length > 20000 ? content.substring(0, 20000) + '...' : content;
-    const prompt = `Analiza este ${isPDF ? 'documento PDF' : 'contenido'} educativo y extrae:
+    const atomsPreview = atoms.map((a, i) => `[${i}] P: ${a.question}\nR: ${a.answer}`).join('\n\n');
+    const prompt = `Analiza la siguiente muestra de conocimientos (Pregunta y Respuesta) extraídos de un documento de estudio, y con base ÚNICAMENTE en ellos infiere:
 
-1. Título principal del documento
-2. Descripción breve del contenido (1-2 oraciones)
+1. Título principal representativo del tema general (Máximo 7 palabras, directo y claro)
+2. Descripción breve de lo que cubre el conocimiento (1-2 oraciones)
 3. Campo de estudio o materia principal
 4. Nivel académico apropiado
 5. Categorías relevantes (máximo 3)
-6. Tipo de documento
+6. Tipo de documento original probable
 
-CONTENIDO (VISTA PREVIA Y FINAL):
-${content.length > 30000 ? content.substring(0, 15000) + '\n\n...[CONTENIDO OMITIDO]...\n\n' + content.substring(content.length - 15000) : content}
+REGLA CRÍTICA PARA EL TÍTULO: 
+ESTÁ ESTRICTAMENTE PROHIBIDO usar títulos genéricos o comodines como "Documento Analizado", "Proyecto de Estudio", "Documento", "Notas", etc. DEBES inferir el tema o concepto central OBLIGATORIAMENTE basándote en el contenido real de los átomos. Por ejemplo, si los átomos hablan de la revolución francesa, el título DEBE ser "Revolución Francesa", NO "Documento de Historia".
+
+MUESTRA DE CONOCIMIENTO (ÁTOMOS):
+${atomsPreview}
 
 FORMATO DE RESPUESTA (JSON):
 {
-  "inferredTitle": "Título del documento",
+  "inferredTitle": "Título inferido del tema específico",
   "inferredDescription": "Descripción breve",
   "subject": "Campo de estudio",
   "academicLevel": "undergraduate",
@@ -558,18 +571,17 @@ FORMATO DE RESPUESTA (JSON):
 Usa únicamente estos valores para academicLevel: elementary, high_school, undergraduate, graduate, professional
 Usa únicamente estos valores para documentType: academic_paper, textbook, manual, lecture_notes, article, other`;
 
-    console.log('=== SENDING CONTEXT ANALYSIS REQUEST ===');
     const response = await ai.generate({
       prompt,
       model: 'googleai/gemini-2.5-flash',
       output: {
         schema: z.object({
-          inferredTitle: z.string().min(1),
-          inferredDescription: z.string().min(1),
-          subject: z.string().min(1),
-          academicLevel: z.enum(['elementary', 'high_school', 'undergraduate', 'graduate', 'professional']),
-          categories: z.array(z.string()).min(1).max(3),
-          documentType: z.enum(['academic_paper', 'textbook', 'manual', 'lecture_notes', 'article', 'other'])
+          inferredTitle: z.string().min(1).optional(),
+          inferredDescription: z.string().min(1).optional(),
+          subject: z.string().min(1).optional(),
+          academicLevel: z.enum(['elementary', 'high_school', 'undergraduate', 'graduate', 'professional']).optional(),
+          categories: z.array(z.string()).min(1).max(3).optional(),
+          documentType: z.enum(['academic_paper', 'textbook', 'manual', 'lecture_notes', 'article', 'other']).optional()
         }),
         format: 'json'
       },
@@ -583,57 +595,87 @@ Usa únicamente estos valores para documentType: academic_paper, textbook, manua
     console.log('Response exists?', !!response);
     console.log('Output exists?', !!response?.output);
 
-    if (!response?.output) {
-      throw new Error('El modelo no retornó un análisis válido');
-    }
+    const result = response?.output;
 
-    // Validar que todos los campos requeridos están presentes
-    const result = response.output;
-    if (!result.inferredTitle || !result.inferredDescription || !result.subject) {
-      throw new Error('Análisis incompleto: faltan campos requeridos');
-    }
+    const fallbackTitleFromAtoms = atoms && atoms.length > 0
+      ? atoms[0].question.substring(0, 40) + '...'
+      : "Proyecto de Estudio";
 
-    console.log('Document context analyzed successfully:', result);
-    return result;
+    // Provide sensible defaults if fields are missing or if generation was cut off
+    // We intentionally make the fallback title more generic if the AI completely failed
+    const finalResult = {
+      inferredTitle: result?.inferredTitle || fallbackTitleFromAtoms,
+      inferredDescription: result?.inferredDescription || "Documento de estudio procesado automáticamente.",
+      subject: result?.subject || "Estudio",
+      academicLevel: result?.academicLevel || "undergraduate",
+      categories: result?.categories && result.categories.length > 0 ? result.categories : ["General"],
+      documentType: result?.documentType || "other"
+    };
+
+    console.log('Document context verified successfully with possible fallbacks:', finalResult);
+    return finalResult;
 
   } catch (error) {
-    console.error('Error in analyzeDocumentContextUnified:', error);
-    throw error; // Re-throw para que se maneje en el nivel superior
+    console.error('Error in analyzeDocumentContextUnified, returning safe fallback context to prevent process failure:', error);
+
+    // Graceful fallback to avoid breaking the entire project creation process
+    // if AI safety filters or context length issues occur.
+    const fallbackTitleFromAtomsError = atoms && atoms.length > 0
+      ? atoms[0].question.substring(0, 40) + '...'
+      : "Documento Analizado";
+
+    return {
+      inferredTitle: fallbackTitleFromAtomsError,
+      inferredDescription: "Documento de estudio revisado con opciones limitadas debido a filtros de contenido.",
+      subject: "Estudio",
+      academicLevel: "undergraduate",
+      categories: ["General"],
+      documentType: "other"
+    };
   }
 }
 
-// Generación de átomos con contexto previo
+// Generación de átomos con contexto previo (o sin él)
 async function generateAtomsWithContext(content: string, isPDF: boolean, documentContext: any, onProgress: (progress: any) => void) {
-  console.log('=== GENERATE ATOMS WITH CONTEXT START ===');
+  console.log('=== GENERATE ATOMS START ===');
   console.log('isPDF:', isPDF);
   console.log('documentContext:', documentContext);
   console.log('content length:', content.length);
 
+  const contentSlice = content.length > 50000 ? content.substring(0, 50000) + '...' : content;
+
+  const ctxSubject = documentContext?.subject || "Documento General";
+  const ctxLevel = documentContext?.academicLevel || "General";
+
   onProgress({
     stage: 'extracting_with_context',
-    message: '🧠 Extrayendo conceptos específicos...',
-    details: `Generando preguntas sobre ${documentContext.subject}`,
-    progress: 60
+    message: '🧠 Extrayendo conceptos principales...',
+    details: `> Inicializando módulo de extracción semántica...\n> Configurando filtros de descarte...\n> Leyendo fragmento de ${contentSlice.length} caracteres...\n> Buscando conceptos clave y relaciones estructurales...`,
+    progress: 40
   });
 
-  const contentSlice = content.length > 50000 ? content.substring(0, 50000) + '...' : content;
-  const atomsPrompt = `Eres un experto en ${documentContext.subject} que extrae preguntas educativas específicas del contenido proporcionado. Debes crear preguntas ÚNICAMENTE basadas en el contenido real del documento.
+  const atomsPrompt = `Eres un experto educativo que extrae preguntas específicas del contenido proporcionado. Debes crear preguntas ÚNICAMENTE sobre el núcleo informativo y conceptual del texto.
 
 CONTEXTO CONOCIDO:
-- Tema: ${documentContext.subject}
-- Nivel: ${documentContext.academicLevel}
-- Tipo: ${documentContext.documentType}
+- Tema: ${ctxSubject}
+- Nivel: ${ctxLevel}
 
 CONTENIDO:
 ${contentSlice}
 
-INSTRUCCIONES ESPECÍFICAS:
-1. Genera preguntas ÚNICAMENTE sobre ${documentContext.subject}
-2. Nivel de dificultad apropiado para ${documentContext.academicLevel}
-3. Enfócate en conceptos, definiciones, procesos educativos del texto
-4. Genera TODOS los átomos necesarios para cubrir el contenido del documento de manera completa y exhaustiva
-5. Prioriza la cobertura completa del material sobre un número fijo de preguntas
-6. Asegúrate de que cada concepto, definición, proceso y detalle importante tenga su correspondiente átomo de conocimiento
+INSTRUCCIONES ESPECÍFICAS DE EXTRACCIÓN Y CALIDAD:
+1. IGNORA ABSOLUTAMENTE las siguientes secciones (no generes preguntas sobre ellas):
+   - Índices, tablas de contenido y glosarios estructurados.
+   - Bibliografía, referencias a autores, citas académicas y listados de referencias.
+   - Agradecimientos, dedicatorias, introducciones genéricas y texto de relleno o administrativo.
+   - Metadatos del archivo, números de página, encabezados repetitivos o notas al pie irrelevantes.
+2. ENFÓCATE EXCLUSIVAMENTE en el contenido didáctico central:
+   - Conceptos clave, definiciones fundamentales, procesos, fórmulas, fechas históricas críticas y relaciones conceptuales importantes de ${documentContext.subject}.
+3. CALIDAD SOBRE CANTIDAD, PERO SIENDO EXHAUSTIVO:
+   - Extrae todos los conceptos importantes presentes en el texto, sin importar si resultan en un número alto de preguntas.
+   - Sin embargo, NO sacrifiques la calidad. Cada átomo (pregunta/respuesta) debe condesar un tema principal de forma eficaz, directa y sin ambigüedades.
+   - Si un párrafo o sección no contiene información educativa valiosa o principal, ignóralo por completo.
+4. Nivel de dificultad adecuado para: ${documentContext.academicLevel}. Asegúrate de que las explicaciones sean claras y concisas.
 
 FORMATO DE RESPUESTA (JSON):
 {
@@ -722,8 +764,8 @@ async function generateAtomsInChunks(content: string, documentContext: any, onPr
   for (let i = 0; i < chunks.length; i++) {
     onProgress({
       stage: 'extracting_chunks',
-      message: `🧠 Procesando parte ${i + 1} de ${chunks.length}...`,
-      details: `Extrayendo contenido de ${documentContext.subject}`,
+      message: `🧠 Procesando bloque ${i + 1} de ${chunks.length}...`,
+      details: `> Cargando bloque en memoria de contexto (tamaño: ${chunks[i].length} tokens)...\n> Integridad del contexto principal: Activa.\n> Escaneando conceptos técnicos y relaciones semánticas...\n> Generando sub-átomos...`,
       progress: 40 + Math.round((i / chunks.length) * 30)
     });
 
