@@ -4,8 +4,8 @@
  * @fileOverview Maps relationships between concepts for better understanding.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const MapConceptRelationshipsInputSchema = z.object({
   concepts: z.array(z.object({
@@ -130,11 +130,11 @@ ${JSON.stringify(input.concepts, null, 2)}
 
 PREGUNTAS ASOCIADAS:
 ${JSON.stringify(input.questions.map(q => ({
-  id: q.id,
-  question: q.question,
-  conceptId: q.conceptId,
-  qualityScore: q.qualityScore
-})), null, 2)}
+                id: q.id,
+                question: q.question,
+                conceptId: q.conceptId,
+                qualityScore: q.qualityScore
+              })), null, 2)}
 
 TAREAS A REALIZAR:
 
@@ -177,7 +177,7 @@ CRITERIOS DE CALIDAD:
           ]
         }
       ],
-      model: 'googleai/gemini-2.5-flash-lite',
+      model: 'googleai/gemini-2.5-flash',
       output: {
         schema: MapConceptRelationshipsOutputSchema,
         format: 'json'

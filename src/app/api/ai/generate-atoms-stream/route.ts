@@ -24,7 +24,12 @@ async function generateAtomsWithStreaming(
     return result;
   } catch (error) {
     console.error('=== DIRECT CALL FAILED ===');
-    console.error('Error:', error);
+    console.error('Error name:', (error as Error).name);
+    console.error('Error message:', (error as Error).message);
+    console.error('Error stack:', (error as Error).stack);
+    if (error && typeof error === 'object' && 'details' in error) {
+      console.error('Error details:', JSON.stringify((error as any).details, null, 2));
+    }
     throw error;
   }
 }

@@ -4,8 +4,8 @@
  * @fileOverview Evaluates and improves the quality of generated questions.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const EvaluateQualityInputSchema = z.object({
   questions: z.array(z.object({
@@ -131,7 +131,7 @@ Para preguntas abiertas, asegúrate de que:
           ]
         }
       ],
-      model: 'googleai/gemini-2.5-flash-lite',
+      model: 'googleai/gemini-2.5-flash',
       output: {
         schema: EvaluateQualityOutputSchema,
         format: 'json'

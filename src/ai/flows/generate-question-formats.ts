@@ -4,8 +4,8 @@
  * @fileOverview Generates multiple question formats from concepts.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const GenerateQuestionFormatsInputSchema = z.object({
   concepts: z.array(z.object({
@@ -85,7 +85,7 @@ Genera un ID único para cada pregunta (ej: "concept-1-mc", "concept-2-tf")`
           ]
         }
       ],
-      model: 'googleai/gemini-2.5-flash-lite',
+      model: 'googleai/gemini-2.5-flash',
       output: {
         schema: GenerateQuestionFormatsOutputSchema,
         format: 'json'

@@ -138,7 +138,7 @@ export async function generateAtomsFromLargeContentWithProgress(
 
   try {
     console.log('=== STARTING ATOMS GENERATION ===');
-    const atomsResult = await generateAtomsWithContext(content, isPDF, documentContext, onProgress);
+    const atomsResult = await generateAtomsInChunks(content, documentContext, onProgress);
     console.log('=== ATOMS GENERATION COMPLETE ===');
     console.log('Atoms result:', atomsResult.atoms.length, 'atoms');
 
@@ -303,7 +303,7 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
 
   try {
     console.log('=== STARTING ATOMS GENERATION ===');
-    const atomsResult = await generateAtomsWithContext(content, isPDF, documentContext, onProgress);
+    const atomsResult = await generateAtomsInChunks(content, documentContext, onProgress);
     console.log('=== ATOMS GENERATION COMPLETE ===');
     console.log('Atoms result:', atomsResult.atoms.length, 'atoms');
 
@@ -410,7 +410,7 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
 
   try {
     console.log('=== STARTING ATOMS GENERATION ===');
-    const atomsResult = await generateAtomsWithContext(content, isPDF, documentContext, onProgress);
+    const atomsResult = await generateAtomsInChunks(content, documentContext, onProgress);
     console.log('=== ATOMS GENERATION COMPLETE ===');
     console.log('Atoms result:', atomsResult.atoms.length, 'atoms');
 
@@ -477,7 +477,7 @@ IMPORTANTE: El array "distractors" debe tener EXACTAMENTE ${chunk.length} sub-ar
     try {
       const response = await ai.generate({
         prompt: batchPrompt,
-        model: 'googleai/gemini-2.5-flash-lite',
+        model: 'googleai/gemini-2.5-flash',
         output: {
           schema: z.object({
             distractors: z.array(z.array(z.string()))
@@ -542,8 +542,8 @@ async function analyzeDocumentContextUnified(content: string, isPDF: boolean, on
 5. Categorías relevantes (máximo 3)
 6. Tipo de documento
 
-CONTENIDO:
-${contentPreview}
+CONTENIDO (VISTA PREVIA Y FINAL):
+${content.length > 30000 ? content.substring(0, 15000) + '\n\n...[CONTENIDO OMITIDO]...\n\n' + content.substring(content.length - 15000) : content}
 
 FORMATO DE RESPUESTA (JSON):
 {
@@ -561,7 +561,7 @@ Usa únicamente estos valores para documentType: academic_paper, textbook, manua
     console.log('=== SENDING CONTEXT ANALYSIS REQUEST ===');
     const response = await ai.generate({
       prompt,
-      model: 'googleai/gemini-2.5-flash-lite',
+      model: 'googleai/gemini-2.5-flash',
       output: {
         schema: z.object({
           inferredTitle: z.string().min(1),
@@ -645,7 +645,7 @@ FORMATO DE RESPUESTA (JSON):
   console.log('=== SENDING AI REQUEST ===');
   const response = await ai.generate({
     prompt: atomsPrompt,
-    model: 'googleai/gemini-2.5-flash-lite',
+    model: 'googleai/gemini-2.5-flash',
     output: {
       schema: z.object({
         atoms: z.array(z.object({
@@ -695,23 +695,60 @@ FORMATO DE RESPUESTA (JSON):
   console.log(`=== ATOMS FILTERING COMPLETE ===`);
   console.log(`Original atoms count from model: ${response.output.atoms.length}`);
   console.log(`Valid atoms after filtering: ${validAtoms.length}`);
-  console.log('Sample of valid atoms:', validAtoms.slice(0, 3));
-
-  onProgress({
-    stage: 'atoms_complete',
-    message: '✅ Átomos generados y validados!',
-    details: `${validAtoms.length} preguntas sobre ${documentContext.subject}`,
-    progress: 80
-  });
-
-  // Final check: if no valid atoms were generated, throw a clear error
-  if (validAtoms.length === 0) {
-    console.error('=== NO VALID ATOMS GENERATED ===');
-    console.error('This happened after filtering. The original, unfiltered response from the AI was:', response.output);
-    throw new Error('No se generaron átomos válidos del documento. El contenido podría no ser adecuado o el modelo falló en la extracción.');
-  }
 
   return { atoms: validAtoms };
+}
+
+// Function to process content in chunks to ensure full coverage
+async function generateAtomsInChunks(content: string, documentContext: any, onProgress: (progress: any) => void) {
+  const CHUNK_SIZE = 35000;
+  const OVERLAP = 3000;
+  const totalLength = content.length;
+
+  if (totalLength <= CHUNK_SIZE + OVERLAP) {
+    return generateAtomsWithContext(content, false, documentContext, onProgress);
+  }
+
+  console.log(`=== PROCESSING CONTENT IN CHUNKS: ${totalLength} characters ===`);
+  const chunks: string[] = [];
+  for (let i = 0; i < totalLength; i += (CHUNK_SIZE - OVERLAP)) {
+    chunks.push(content.substring(i, i + CHUNK_SIZE));
+    if (i + CHUNK_SIZE >= totalLength) break;
+  }
+
+  console.log(`Split into ${chunks.length} chunks`);
+  let allAtoms: any[] = [];
+
+  for (let i = 0; i < chunks.length; i++) {
+    onProgress({
+      stage: 'extracting_chunks',
+      message: `🧠 Procesando parte ${i + 1} de ${chunks.length}...`,
+      details: `Extrayendo contenido de ${documentContext.subject}`,
+      progress: 40 + Math.round((i / chunks.length) * 30)
+    });
+
+    try {
+      const result = await generateAtomsWithContext(chunks[i], false, documentContext, () => { });
+      allAtoms = [...allAtoms, ...result.atoms];
+      console.log(`Chunk ${i + 1} produced ${result.atoms.length} atoms. Total so far: ${allAtoms.length}`);
+    } catch (error) {
+      console.warn(`Error in chunk ${i + 1}, skipping:`, error);
+    }
+  }
+
+  // Basic deduplication based on normalized question text
+  const seenQuestions = new Set();
+  const uniqueAtoms = allAtoms.filter(atom => {
+    const normalized = atom.question.toLowerCase().trim().replace(/[?¿!¡]/g, '');
+    if (seenQuestions.has(normalized)) return false;
+    seenQuestions.add(normalized);
+    return true;
+  });
+
+  console.log(`=== CHUNK PROCESSING COMPLETE ===`);
+  console.log(`Original total: ${allAtoms.length}, Unique after deduplication: ${uniqueAtoms.length}`);
+
+  return { atoms: uniqueAtoms };
 }
 
 // Function to decode data URI for text files only

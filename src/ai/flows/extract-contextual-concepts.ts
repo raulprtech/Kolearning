@@ -4,8 +4,8 @@
  * @fileOverview Extracts educational concepts based on document context.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import { AnalyzeDocumentContextOutput } from './analyze-document-context';
 
 const ExtractContextualConceptsInputSchema = z.object({
@@ -86,7 +86,7 @@ Para cada concepto, determina:
           ]
         }
       ],
-      model: 'googleai/gemini-2.5-flash-lite',
+      model: 'googleai/gemini-2.5-flash',
       output: {
         schema: ExtractContextualConceptsOutputSchema,
         format: 'json'

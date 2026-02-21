@@ -149,6 +149,12 @@ export interface Database {
           last_reviewed: string | null
           retrievability: number | null
           incorrect_answers: string[]
+          phase: string | null
+          zettelkasten_note: string | null
+          dependencies: string[] | null
+          ordering_items: string[] | null
+          correct_order: string[] | null
+          last_response_time_ms: number | null
           created_at: string
           updated_at: string
         }
@@ -162,6 +168,12 @@ export interface Database {
           last_reviewed?: string | null
           retrievability?: number | null
           incorrect_answers?: string[]
+          phase?: string | null
+          zettelkasten_note?: string | null
+          dependencies?: string[] | null
+          ordering_items?: string[] | null
+          correct_order?: string[] | null
+          last_response_time_ms?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -175,6 +187,12 @@ export interface Database {
           last_reviewed?: string | null
           retrievability?: number | null
           incorrect_answers?: string[]
+          phase?: string | null
+          zettelkasten_note?: string | null
+          dependencies?: string[] | null
+          ordering_items?: string[] | null
+          correct_order?: string[] | null
+          last_response_time_ms?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -187,6 +205,8 @@ export interface Database {
           topic: string
           session_type: string
           questions: string
+          phase: string | null
+          question_formats: string | null
           created_at: string
         }
         Insert: {
@@ -196,6 +216,8 @@ export interface Database {
           topic: string
           session_type: string
           questions: string
+          phase?: string | null
+          question_formats?: string | null
           created_at?: string
         }
         Update: {
@@ -205,6 +227,8 @@ export interface Database {
           topic?: string
           session_type?: string
           questions?: string
+          phase?: string | null
+          question_formats?: string | null
           created_at?: string
         }
       }
@@ -217,6 +241,8 @@ export interface Database {
           questions: string | null
           duration: string
           status: string
+          phase: string | null
+          question_formats: string | null
           created_at: string
           updated_at: string
         }
@@ -228,6 +254,8 @@ export interface Database {
           questions?: string | null
           duration?: string
           status?: string
+          phase?: string | null
+          question_formats?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -239,6 +267,8 @@ export interface Database {
           questions?: string | null
           duration?: string
           status?: string
+          phase?: string | null
+          question_formats?: string | null
           created_at?: string
           updated_at?: string
         }

@@ -3,12 +3,16 @@
 'use server';
 
 /**
- * @fileOverview This file defines a Genkit flow for calibrating a learning plan.
- *
- * It includes:
- * - calibratePlanFromQuestionnaire - A function to trigger the learning plan calibration.
- * - CalibratePlanInput - The input type for the calibratePlanfromQuestionnaire function.
- * - CalibratePlanOutput - The return type for the calibratePlanFromQuestionnaire function.
+ * @fileOverview Genkit flow for calibrating initial learning plans.
+ * 
+ * Generates plans with 4 learning phases:
+ * - Calibración: MC-only diagnostic (5-10 atoms)
+ * - Incursión: Comprehension via association + open-ended questions 
+ * - Refuerzo: Analytical reasoning via hypothetical scenarios
+ * - Prueba de Dominio: Mastery test adapted to knowledge type
+ * 
+ * IMPORTANT: Uses atom INDICES (0-based) instead of question text matching,
+ * because LLMs cannot reliably copy exact text strings.
  */
 
 import { ai } from '@/ai/genkit';
@@ -26,23 +30,55 @@ const CalibratePlanInputSchema = z.object({
 
 export type CalibratePlanInput = z.infer<typeof CalibratePlanInputSchema>;
 
-const CalibratePlanOutputSchema = z.object({
+// --- Raw AI output schemas (relaxed types to tolerate AI flakiness) ---
+
+const RawSessionSchema = z.object({
+  session: z.number().describe('Sequential session number (1, 2, 3...).'),
+  topic: z.string().describe('What the user will learn in this session.'),
+  sessionType: z.string().describe('Session type: Calibración, Incursión, Refuerzo, or Prueba de Dominio.'),
+  questions: z.string().describe('The question format description for this session.'),
+  atomIndices: z.array(z.number()).describe('An array of 0-based indices referring to the atoms list. For example, [0, 3, 5] means atoms at positions 0, 3, and 5.'),
+  numAtoms: z.number().optional().describe('Number of atoms for this session (5-20).'),
+  phase: z.string().optional().describe('The learning phase: calibracion, incursion, refuerzo, or dominio.'),
+  questionFormats: z.string().optional().describe('Comma-separated question formats.'),
+});
+
+const RawCalibratePlanOutputSchema = z.object({
   projectDescription: z.string().describe('A brief, one-sentence description of the project.'),
   categories: z.array(z.string()).describe('An array of one to three relevant categories for the project.'),
   learningPath: z.array(z.object({
     day: z.number().describe("The day number, starting from 1."),
-    sessions: z.array(z.object({
-      session: z.number().describe('The overall session number (1, 2, 3...).'),
-      topic: z.string().describe('What the user will learn in this session.'),
-      sessionType: z.string().describe('The type of the session (e.g., Calibración, Incursión).'),
-      questions: z.string().describe('The format of the questions for this session (e.g., "Opción Múltiple", "Preguntas Abiertas").'),
-      atoms: z.array(AtomSchema).describe('The specific atoms assigned to this session.'),
-      numAtoms: z.number().describe('The optimal number of knowledge atoms for this session, based on the topic complexity and pedagogical goals. Should be between 5 and 20.')
-    })).describe("An array of sessions for this specific day.")
+    sessions: z.array(RawSessionSchema).describe("An array of sessions for this specific day.")
   })).describe('The structured learning path with sessions grouped by day.'),
-  koliJustification: z.string().optional().describe('The justification from Koli about the plan, explaining the daily structure if applicable.'),
-  expectedProgress: z.string().optional().describe('The expected progress for the user.'),
-  fullLearningPlanMarkdown: z.string().optional().describe('The original full learning plan in Markdown format for storage.'),
+  koliJustification: z.string().optional().describe('Justification of the pedagogical strategy.'),
+  expectedProgress: z.string().optional().describe('Encouraging paragraph about expected learning.'),
+  fullLearningPlanMarkdown: z.string().optional().describe('The full learning plan in Markdown format.'),
+});
+
+// --- Final strict output schemas (for the rest of the application) ---
+
+const SessionSchema = z.object({
+  session: z.number(),
+  topic: z.string(),
+  sessionType: z.string(),
+  questions: z.string(),
+  atoms: z.array(AtomSchema),
+  numAtoms: z.number(),
+  phase: z.enum(['calibracion', 'incursion', 'refuerzo', 'dominio']),
+  questionFormats: z.string(),
+});
+
+const CalibratePlanOutputSchema = z.object({
+  projectDescription: z.string(),
+  categories: z.array(z.string()),
+  atoms: z.array(AtomSchema),
+  learningPath: z.array(z.object({
+    day: z.number(),
+    sessions: z.array(SessionSchema)
+  })),
+  koliJustification: z.string(),
+  expectedProgress: z.string(),
+  fullLearningPlanMarkdown: z.string(),
 });
 
 
@@ -55,71 +91,90 @@ export async function calibratePlanFromQuestionnaire(input: CalibratePlanInput):
 const calibratePlanPrompt = ai.definePrompt({
   name: 'calibratePlanPrompt',
   input: { schema: CalibratePlanInputSchema },
-  output: { schema: CalibratePlanOutputSchema },
-  model: 'googleai/gemini-2.5-flash-lite',
+  output: { schema: RawCalibratePlanOutputSchema },
+  model: 'googleai/gemini-2.5-flash',
   config: {
     temperature: 0.1,
     maxOutputTokens: 8192
   },
-  prompt: `You are Koli, an AI Strategic Tutor, designed to create personalized learning plans based on a deep pedagogical framework.
-Your response must be in Spanish.
+  prompt: `Eres Koli, un Tutor Estratégico IA, diseñado para crear planes de aprendizaje personalizados basados en un marco pedagógico profundo.
 
-A learner has provided their learning material, which has been converted into "Knowledge Atoms", and has given their project a title.
+RESPONDE SIEMPRE EN ESPAÑOL.
 
-**Project Title:** {{{projectTitle}}}
+El aprendiz ha proporcionado su material de estudio, que ha sido convertido en "Átomos de Conocimiento", y ha dado un título a su proyecto.
 
-**Your Tasks:**
+**Título del Proyecto:** {{{projectTitle}}}
 
-1.  **Analyze and Define the Project:**
-    *   **Analyze the content:** Carefully review the provided 'atoms' to understand the core subject matter.
-    *   **Generate 'projectDescription', and 'categories':** Based on your analysis of the atoms and respecting the user's chosen title, create a concise one-sentence description, and one to three appropriate categories for the learning project.
+## TUS TAREAS
 
-2.  **Create the Learning Plan Components:**
-    *   **learningPath:** Generate a structured array of *day objects*. Each day object contains the sessions for that day.
-        *   Start with a "Calibración" session on Day 1.
-        *   Distribute 'Incursión', 'Refuerzo', and 'Prueba de Dominio' sessions logically across the days.
-        *   **CRUCIAL RULE:** The 'session' numbers inside the session objects MUST remain sequential integers (1, 2, 3...).
-        *   **CRUCIAL RULE:** For each session object, you MUST populate the 'questions' field with the exact corresponding string value based on the 'sessionType' field.
-    *   **koliJustification:** Provide a concise paragraph explaining the pedagogical strategy, *especially the daily distribution of sessions*.
-    *   **expectedProgress:** Write an encouraging paragraph about the expected learning progression.
-    *   **fullLearningPlanMarkdown:** Generate a complete learning plan using Markdown.
+### 1. Analizar y Definir el Proyecto
+- Revisa cuidadosamente los átomos para entender la materia.
+- Genera un 'projectDescription' conciso de una oración.
+- Genera entre 1-3 'categories' apropiadas.
 
+### 2. Crear el Plan de Aprendizaje
 
-**Knowledge Atoms:** {{{atoms}}}
+Genera un 'learningPath' estructurado por días. **Cada sesión DEBE tener los campos 'numAtoms', 'phase', 'questionFormats' y 'atomIndices'.**
 
-**Kolearning Methodology & Strict Rules:**
+#### CÓMO REFERENCIAR ÁTOMOS
+- Los átomos están numerados desde 0. Usa el campo 'atomIndices' para indicar qué átomos pertenecen a cada sesión.
+- Ejemplo: Si hay 22 átomos (índices 0-21), y una sesión usa los átomos 0, 1, 2, 5, 7: atomIndices = [0, 1, 2, 5, 7]
+- **NO copies el texto de las preguntas.** Solo usa los índices numéricos.
 
-1.  **Structure:** You MUST structure the learning plan logically. Group the sessions into a reasonable number of days (e.g., 3-7 days for moderately sized topics). Your 'learningPath' output should be an array of day objects. Explain in your 'koliJustification' why you've grouped certain sessions on the same day (e.g., "Para el Día 1, he combinado una sesión de Incursión para introducir nuevos conceptos con una de Refuerzo para consolidar lo aprendido, optimizando tu tiempo.").
-2.  **Session Numbering:** The 'session' field for each learning path item MUST be a simple, sequential integer (1, 2, 3, 4, ...), even when grouped by day. This is a critical rule.
-3.  **Session Size:** You MUST decide the optimal number of knowledge atoms ('numAtoms') for each session. This should be based on the session's purpose and the topic's complexity (e.g., a 'Calibración' might have 5-7 atoms, while an 'Incursión' into a dense topic could have 15-20). The number should be between 5 and 20. You must then select that EXACT number of atoms from the provided atoms list (do NOT create new atoms, only use the atoms that were provided to you) and assign them to the 'atoms' field for that session.
-4.  **Sub-modules:** If the material is extensive, you MUST divide it into logical sub-modules or topics. Reflect these topics in the 'topic' field.
-5.  **Session Types & Question Formats:** You MUST assign the correct question format to each session type as defined below. This is a critical rule.
+#### REQUISITO DE COBERTURA TOTAL
+- **DEBES UTILIZAR TODOS LOS ÁTOMOS proporcionados.** Ningún átomo debe quedar fuera del plan de aprendizaje.
+- Distribuye los átomos a lo largo de las sesiones de manera lógica:
+    - **Calibración:** 5-10 átomos representativos para diagnóstico.
+    - **Incursión:** Presenta los átomos por primera vez.
+    - **Refuerzo:** Practica átomos ya vistos para consolidar.
+    - **Prueba de Dominio:** Evaluación final de todos los átomos del proyecto.
 
-    *   'Calibración'
-        *   **Intention:** Diagnostic. Establish a baseline.
-        *   **Question Format ('questions' field):** "Opción Múltiple".
-        *   **Content:** A small, representative sample of atoms.
+#### FASES Y FORMATOS OBLIGATORIOS
 
-    *   'Incursión'
-        *   **Intention:** Acquisition. Introduce NEW knowledge.
-        *   **Question Format ('questions' field):** "Pregunta Abierta".
-        *   **Content:** Up to 10 new atoms.
+| Fase | sessionType | phase | questionFormats | Propósito | numAtoms |
+|---|---|---|---|---|---|
+| **Calibración** | "Calibración" | "calibracion" | "Opción Múltiple" | Diagnóstico rápido | 5-10 |
+| **Incursión (1ª mitad)** | "Incursión" | "incursion" | "Asociación, Pregunta Abierta" | Comprensión profunda | 8-15 |
+| **Incursión (2ª mitad)** | "Incursión" | "incursion" | "Completar Espacios, Clasificación" | Aplicación | 8-15 |
+| **Refuerzo** | "Refuerzo" | "refuerzo" | "Escenario Hipotético, Opción Múltiple" | Razonamiento analítico | 10-15 |
+| **Prueba de Dominio** | "Prueba de Dominio" | "dominio" | "Enseñar a Koli, Pregunta Abierta" | Evaluación y creación | 5-15 |
 
-    *   'Refuerzo de Dominio'
-        *   **Intention:** Long-term retention.
-        *   **Question Format ('questions' field):** "Formatos Mixtos (Opción Múltiple, Ordenamiento, Asociación)".
-        *   **Content:** Atoms selected by an FSRS algorithm.
+#### REGLAS DE ESTRUCTURA
 
-    *   'Prueba de Dominio'
-        *   **Intention:** Certification. Test deep understanding.
-        *   **Question Format ('questions' field):** "Pregunta Abierta y Casos Prácticos".
-        *   **Content:** All atoms related to a sub-module.
+1. **Día 1** siempre comienza con una sesión de **Calibración** (solo Opción Múltiple, 5-10 átomos).
+2. Después de la calibración, siguen las sesiones de **Incursión** para introducir conceptos nuevos.
+3. Las sesiones de **Refuerzo** van intercaladas o al final para consolidar.
+4. La **Prueba de Dominio** es la última sesión del plan.
+5. Los números de sesión ('session') DEBEN ser enteros secuenciales (1, 2, 3...).
+6. Distribuye en 3-7 días para temas de tamaño moderado.
+7. Para cada sesión, usa 'atomIndices' con los índices de los átomos que corresponden.
+8. El campo 'questions' debe describir el formato (ej: "Opción Múltiple", "Pregunta Abierta y Casos Prácticos").
 
-**CRITICAL REQUIREMENT:** You MUST use ONLY the atoms provided in the {{{atoms}}} list. Do NOT create new questions or modify existing ones. Each session's 'atoms' field must contain EXACT copies of atoms from the provided list. Do not generate new content.
+#### LÓGICA DE SUB-MÓDULOS
 
-**CRITICAL REQUIREMENT:** You MUST include ALL of these fields in your JSON output: projectDescription, categories, learningPath, koliJustification, expectedProgress, fullLearningPlanMarkdown. Do NOT omit any of them.
+Si el material es extenso:
+- Divide en sub-módulos temáticos.
+- Cada sub-módulo puede tener su propio ciclo: Incursión → Refuerzo.
+- La Calibración es global (solo una al inicio).
+- La Prueba de Dominio puede ser global o por sub-módulo si el material es muy extenso.
 
-Provide the response in the specified JSON format.
+### 3. Generar Justificación y Progreso
+- **koliJustification:** Explica la estrategia pedagógica y la distribución diaria.
+- **expectedProgress:** Párrafo alentador sobre el progreso esperado.
+- **fullLearningPlanMarkdown:** Plan completo en Markdown con formato legible.
+
+## ÁTOMOS DE CONOCIMIENTO (Numerados desde 0)
+
+{{{atoms}}}
+
+## REQUISITOS CRÍTICOS
+
+- Usa SOLO los índices de los átomos proporcionados. NO crees átomos nuevos.
+- CADA sesión DEBE tener todos los campos: session, topic, sessionType, questions, atomIndices, numAtoms, phase, questionFormats.
+- INCLUYE TODOS los campos del output: projectDescription, categories, learningPath, koliJustification, expectedProgress, fullLearningPlanMarkdown.
+- atomIndices DEBE contener SOLO números enteros válidos correspondientes a los índices de los átomos listados arriba (empezando desde 0).
+
+Responde en el formato JSON especificado.
 `,
 });
 
@@ -132,21 +187,96 @@ const calibratePlanFlow = ai.defineFlow(
   async (input) => {
     console.log('=== CALIBRATE PLAN INPUT ===');
     console.log('Atoms received:', input.atoms.length);
-    console.log('Sample atoms:', input.atoms.slice(0, 3));
+    console.log('Sample atoms:', input.atoms.slice(0, 3).map((a, i) => `[${i}] ${a.question}`));
     console.log('Project title:', input.projectTitle);
 
-    const { output } = await calibratePlanPrompt(input);
+    // Format atoms with indices for the prompt
+    const numberedInput = {
+      ...input,
+      atoms: input.atoms.map((a, i) => ({
+        ...a,
+        question: `[Átomo ${i}] ${a.question}`,
+      })),
+    };
+
+    const { output } = await calibratePlanPrompt(numberedInput);
+
+    if (!output) {
+      throw new Error('AI failed to generate a learning plan.');
+    }
+
+    // Process learning path: resolve indices to actual atoms
+    const processedLearningPath = output.learningPath.map(day => ({
+      ...day,
+      sessions: day.sessions.map(session => {
+        // Resolve atom indices to actual atoms
+        const validIndices = (session.atomIndices || []).filter(
+          idx => typeof idx === 'number' && idx >= 0 && idx < input.atoms.length
+        );
+
+        const invalidIndices = (session.atomIndices || []).filter(
+          idx => typeof idx !== 'number' || idx < 0 || idx >= input.atoms.length
+        );
+
+        if (invalidIndices.length > 0) {
+          console.warn(`[PlanFlow] Session ${session.session}: ${invalidIndices.length} invalid indices: ${invalidIndices.join(', ')}`);
+        }
+
+        const hydratedAtoms = validIndices.map(idx => input.atoms[idx]);
+
+        console.log(`[PlanFlow] Session ${session.session}: ${hydratedAtoms.length} atoms hydrated from indices [${validIndices.join(', ')}]`);
+
+        // Infer phase from sessionType if missing or invalid
+        const rawPhase = session.phase?.toLowerCase().trim() || '';
+        let phase: 'calibracion' | 'incursion' | 'refuerzo' | 'dominio';
+
+        if (['calibracion', 'incursion', 'refuerzo', 'dominio'].includes(rawPhase)) {
+          phase = rawPhase as 'calibracion' | 'incursion' | 'refuerzo' | 'dominio';
+        } else {
+          const type = session.sessionType.toLowerCase();
+          if (type.includes('calibración')) phase = 'calibracion';
+          else if (type.includes('incursión')) phase = 'incursion';
+          else if (type.includes('refuerzo')) phase = 'refuerzo';
+          else if (type.includes('dominio')) phase = 'dominio';
+          else phase = 'incursion'; // Default
+        }
+
+        // Infer questionFormats if missing
+        let questionFormats = session.questionFormats;
+        if (!questionFormats) {
+          if (phase === 'calibracion') questionFormats = 'Opción Múltiple';
+          else if (phase === 'incursion') questionFormats = 'Asociación, Pregunta Abierta';
+          else if (phase === 'refuerzo') questionFormats = 'Escenario Hipotético, Opción Múltiple';
+          else if (phase === 'dominio') questionFormats = 'Enseñar a Koli, Pregunta Abierta';
+          else questionFormats = 'Opción Múltiple';
+        }
+
+        return {
+          session: session.session,
+          topic: session.topic,
+          sessionType: session.sessionType,
+          questions: session.questions,
+          atoms: hydratedAtoms,
+          numAtoms: hydratedAtoms.length,
+          phase,
+          questionFormats,
+        };
+      })
+    }));
 
     console.log('=== CALIBRATE PLAN OUTPUT ===');
-    console.log('Learning path sessions:', output?.learningPath?.flatMap(day => day.sessions).length || 0);
-    console.log('Sample session atoms:', output?.learningPath?.[0]?.sessions?.[0]?.atoms?.length || 0);
+    const totalSessions = processedLearningPath.flatMap(day => day.sessions).length;
+    const totalHydratedAtoms = processedLearningPath.flatMap(day => day.sessions).reduce((acc, s) => acc + s.atoms.length, 0);
+    console.log(`Learning path: ${totalSessions} sessions, ${totalHydratedAtoms} total atom assignments`);
 
     // Ensure required fields have defaults if the AI omitted them
     const result: CalibratePlanOutput = {
-      ...output!,
-      koliJustification: output?.koliJustification || 'Plan generado automáticamente por Koli.',
-      expectedProgress: output?.expectedProgress || 'Progreso esperado según el plan de estudio.',
-      fullLearningPlanMarkdown: output?.fullLearningPlanMarkdown || '',
+      ...output,
+      atoms: input.atoms, // Keep full atoms at top level
+      learningPath: processedLearningPath,
+      koliJustification: output.koliJustification || 'Plan generado automáticamente por Koli.',
+      expectedProgress: output.expectedProgress || 'Progreso esperado según el plan de estudio.',
+      fullLearningPlanMarkdown: output.fullLearningPlanMarkdown || '',
     };
 
     return result;

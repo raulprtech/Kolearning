@@ -26,16 +26,16 @@ export type ExtractContentOutput = z.infer<
 >;
 
 async function fetchHtmlFromUrl(url: string): Promise<string> {
-    try {
-        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
-        }
-        return await response.text();
-    } catch (error) {
-        console.error('Error fetching URL content:', error);
-        throw new Error('Could not retrieve content from the provided URL.');
+  try {
+    const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
     }
+    return await response.text();
+  } catch (error) {
+    console.error('Error fetching URL content:', error);
+    throw new Error('Could not retrieve content from the provided URL.');
+  }
 }
 
 
@@ -49,7 +49,7 @@ const extractContentPrompt = ai.definePrompt({
   name: 'extractContentPrompt',
   input: { schema: z.object({ htmlContent: z.string() }) },
   output: { schema: ExtractContentOutputSchema },
-  model: 'googleai/gemini-2.5-flash-lite',
+  model: 'googleai/gemini-2.5-flash',
   config: {
     temperature: 0.1,
     maxOutputTokens: 8192
@@ -81,7 +81,7 @@ const extractContentFlow = ai.defineFlow(
 
     const { output } = await extractContentPrompt({ htmlContent });
     if (!output) {
-        throw new Error("The AI model failed to extract content from the HTML.");
+      throw new Error("The AI model failed to extract content from the HTML.");
     }
 
     return output;

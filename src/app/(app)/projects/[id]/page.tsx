@@ -56,7 +56,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2 } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2, Network } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
@@ -72,6 +72,8 @@ import { EditProjectDialog } from "@/components/ui/edit-project-dialog";
 import { ShareDialog } from "@/components/ui/share-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { RecalibratePlanDialog } from "@/components/ui/recalibrate-plan-dialog";
+import ConceptMap from "@/components/ui/ConceptMap";
+import { mapConceptRelationships } from "@/ai/flows/map-concept-relationships";
 
 const projectIcons: { [key: string]: React.ElementType } = {
     Book,
@@ -340,8 +342,8 @@ function ProjectDetails() {
         toast({ title: "Proyecto actualizado", description: "Los detalles de tu proyecto han sido guardados." });
     }
 
-    const handleArchiveProject = () => {
-        const success = archiveProject(project.id);
+    const handleArchiveProject = async () => {
+        const success = await archiveProject(project.id);
         setIsArchiveDialogOpen(false);
         if (success) {
             toast({ title: "Proyecto archivado", description: `"${project.title}" ha sido movido al archivo.` });
@@ -374,6 +376,8 @@ function ProjectDetails() {
             topic: session.topic,
             sessionType: session.sessionType,
             questions: session.questions,
+            phase: session.phase,
+            questionFormats: session.questionFormats,
         }));
 
         const newProject: Project = {
@@ -810,6 +814,9 @@ function ProjectDetails() {
                     </DialogContent>
                 </Dialog>
 
+                {/* Mapa Conceptual Section */}
+                <ConceptMapSection project={project} />
+
                 <div className="mb-8">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-semibold">Átomos de conocimiento</h2>
@@ -902,6 +909,79 @@ function ProjectDetails() {
 
             </div>
         </ScrollArea>
+    );
+}
+
+function ConceptMapSection({ project }: { project: Project }) {
+    const [conceptMapData, setConceptMapData] = useState<any>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const { toast } = useToast();
+
+    const handleGenerate = async () => {
+        if (!project.atoms || project.atoms.length < 3) {
+            toast({ title: "Átomos insuficientes", description: "Necesitas al menos 3 átomos para generar un mapa conceptual.", variant: "destructive" });
+            return;
+        }
+        setIsGenerating(true);
+        try {
+            const concepts = project.atoms.slice(0, 30).map((atom, i) => ({
+                concept: atom.question,
+                definition: atom.answer,
+                importance: atom.phase === 'dominio' ? 'high' : atom.phase === 'refuerzo' ? 'medium' : 'low',
+                category: atom.phase || 'calibracion',
+                relatedConcepts: atom.dependencies || [],
+            }));
+            const questions = project.atoms.slice(0, 30).map((atom, i) => ({
+                id: `atom-${i}`,
+                type: 'knowledge',
+                question: atom.question,
+                correctAnswer: atom.answer,
+                conceptId: `atom-${i}`,
+            }));
+            const result = await mapConceptRelationships({
+                concepts,
+                questions,
+                documentContext: {
+                    subject: project.title,
+                    academicLevel: 'university',
+                    mainTopics: project.categories || [],
+                },
+            });
+            setConceptMapData(result);
+        } catch (err) {
+            toast({ title: "Error", description: "No se pudo generar el mapa conceptual.", variant: "destructive" });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    return (
+        <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <Network className="h-5 w-5 text-blue-400" />
+                    Mapa Conceptual
+                </h2>
+                <Button onClick={handleGenerate} disabled={isGenerating} variant="outline" size="sm">
+                    {isGenerating ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Generando...</> : <><Wand2 className="h-4 w-4 mr-2" /> Generar Mapa</>}
+                </Button>
+            </div>
+            {conceptMapData ? (
+                <ConceptMap data={conceptMapData} />
+            ) : (
+                <Card className="bg-card/30 border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                        <Network className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                        <p className="text-muted-foreground text-sm">
+                            Genera un mapa de relaciones entre los conceptos de tu proyecto.
+                        </p>
+                        <p className="text-muted-foreground/60 text-xs mt-1">
+                            Visualiza prerequisitos, dependencias y clusters temáticos.
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
+        </div>
     );
 }
 

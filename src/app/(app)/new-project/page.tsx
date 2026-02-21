@@ -18,11 +18,12 @@ import {
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Project, useProjects } from "@/contexts/ProjectContext";
+import { Project, useProjects, Atom } from "@/contexts/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
 import { Input } from "@/components/ui/input";
+import { AtomReviewList } from "@/components/ui/AtomReviewList";
 
 const initialSteps = [
     {
@@ -233,14 +234,23 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, t
                         </div>
                     </div>
 
-                    {/* Loading Animation */}
-                    <div className="flex justify-center">
-                        <div className="flex space-x-1">
-                            <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                            <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                            <div className="h-2 w-2 bg-primary rounded-full animate-bounce"></div>
+                    {/* Loading Animation or Success Message */}
+                    {progress >= 100 ? (
+                        <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in duration-500">
+                            <div className="h-12 w-12 bg-green-500 rounded-full flex items-center justify-center text-white scale-110">
+                                <Plus className="h-6 w-6 rotate-45" /> {/* This is an 'X' rotated back? No, let's use a Check if available */}
+                            </div>
+                            <p className="font-bold text-green-600">¡Todo listo!</p>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="flex justify-center">
+                            <div className="flex space-x-1">
+                                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                <div className="h-2 w-2 bg-primary rounded-full animate-bounce"></div>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
@@ -262,6 +272,8 @@ function NewProjectContent() {
     const [atomizationError, setAtomizationError] = useState<string | null>(null);
     const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
     const [inferredMetadata, setInferredMetadata] = useState<{ title: string; description: string; categories: string[] } | null>(null);
+    const [isReviewing, setIsReviewing] = useState(false);
+    const [reviewData, setReviewData] = useState<{ atoms: GenerateAtomsOutput; metadata: any; files: File[] } | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -277,79 +289,116 @@ function NewProjectContent() {
     }
 
     const handleFinalizeProject = useCallback(async (plan: CalibratePlanOutput, atomsResult: GenerateAtomsOutput, metadata: { title: string; description: string; categories: string[] }, processedFiles: File[] = selectedFiles) => {
-        if (!atomsResult || !metadata) {
-            toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
-            return;
-        }
-
-        const slug = metadata.title
-            .toString()
-            .normalize('NFD') // split an accented letter in the base letter and the acent
-            .replace(/[\u0300-\u036f]/g, '') // remove all previously split accents
-            .toLowerCase()
-            .trim()
-            .replace(/\s+/g, '-') // replace spaces with -
-            .replace(/[^\w-]+/g, '') // remove all non-word chars
-            .replace(/--+/g, '-'); // replace multiple - with single -
-
-        const newProjectId = `${slug}-${Date.now()}`;
-
-        // Convert processed files to sources with content
-        const sources = await Promise.all(processedFiles.map(async (file) => {
-            try {
-                let content = '';
-                const fileType = file.type.includes('pdf') ? 'PDF' :
-                    file.type.includes('doc') ? 'Documento' :
-                        file.type.includes('text') ? 'Texto' :
-                            'Documento';
-
-                if (file.type.includes('pdf')) {
-                    // For PDFs, we store the data URI as we can't easily extract text content here
-                    const dataUri = await fileToDataUri(file);
-                    content = `Documento PDF: ${file.name}\n\nContenido procesado automáticamente por Koli AI para generar los átomos de conocimiento.\n\nTamaño: ${Math.round(file.size / 1024)}KB`;
-                } else {
-                    // For text files, we can read the content directly
-                    content = await file.text();
-                    // If content is empty or very short, add some context
-                    if (content.length < 50) {
-                        content = `Documento: ${file.name}\n\n${content}\n\nContenido procesado por Koli AI.`;
-                    }
-                }
-
-                return {
-                    name: file.name,
-                    type: fileType,
-                    content: content
-                };
-            } catch (error) {
-                console.error(`Error reading file ${file.name}:`, error);
-                return {
-                    name: file.name,
-                    type: 'Documento',
-                    content: `Documento: ${file.name}\n\nArchivo procesado automáticamente por Koli AI para extraer conocimiento y generar átomos de aprendizaje.\n\nTamaño: ${Math.round(file.size / 1024)}KB\nTipo: ${file.type || 'Desconocido'}`
-                };
+        try {
+            if (!atomsResult || !metadata) {
+                toast({ title: "Error", description: "Faltan datos para crear el proyecto.", variant: "destructive" });
+                return;
             }
-        }));
 
-        const newProject: Omit<Project, 'sessions'> = {
-            id: newProjectId,
-            title: metadata.title,
-            description: metadata.description,
-            mastery: 0,
-            categories: metadata.categories,
-            icon: "Book",
-            atoms: atomsResult.atoms,
-            learningPath: plan.learningPath.flatMap(day => day.sessions),
-            fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
-            sources: sources,
-        };
-        const realProjectId = await addProject(newProject as any);
-        toast({
-            title: "¡Proyecto Creado!",
-            description: `${metadata.title} ha sido añadido a tu dashboard.`
-        })
-        router.push(`/projects/${realProjectId}`);
-    }, [addProject, router, toast, selectedFiles]);
+            setProcessingStatus(prev => ({ ...prev, status: `🚀 Finalizando y guardando proyecto...` }));
+
+            const slug = metadata.title
+                .toString()
+                .normalize('NFD') // split an accented letter in the base letter and the acent
+                .replace(/[\u0300-\u036f]/g, '') // remove all previously split accents
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, '-') // replace spaces with -
+                .replace(/[^\w-]+/g, '') // remove all non-word chars
+                .replace(/--+/g, '-'); // replace multiple - with single -
+
+            const newProjectId = `${slug}-${Date.now()}`;
+
+            // Convert processed files to sources with content
+            const sources = await Promise.all(processedFiles.map(async (file) => {
+                try {
+                    let content = '';
+                    const fileType = file.type.includes('pdf') ? 'PDF' :
+                        file.type.includes('doc') ? 'Documento' :
+                            file.type.includes('text') ? 'Texto' :
+                                'Documento';
+
+                    if (file.type.includes('pdf')) {
+                        // For PDFs, we store the data URI as we can't easily extract text content here
+                        const dataUri = await fileToDataUri(file);
+                        content = `Documento PDF: ${file.name}\n\nContenido procesado automáticamente por Koli AI para generar los átomos de conocimiento.\n\nTamaño: ${Math.round(file.size / 1024)}KB`;
+                    } else {
+                        // For text files, we can read the content directly
+                        content = await file.text();
+                        // If content is empty or very short, add some context
+                        if (content.length < 50) {
+                            content = `Documento: ${file.name}\n\n${content}\n\nContenido procesado por Koli AI.`;
+                        }
+                    }
+
+                    return {
+                        name: file.name,
+                        type: fileType,
+                        content: content
+                    };
+                } catch (error) {
+                    console.error(`Error reading file ${file.name}:`, error);
+                    return {
+                        name: file.name,
+                        type: 'Documento',
+                        content: `Documento: ${file.name}\n\nArchivo procesado automáticamente por Koli AI para extraer conocimiento y generar átomos de aprendizaje.\n\nTamaño: ${Math.round(file.size / 1024)}KB\nTipo: ${file.type || 'Desconocido'}`
+                    };
+                }
+            }));
+
+            const newProject: Omit<Project, 'sessions'> = {
+                id: newProjectId,
+                title: metadata.title,
+                description: metadata.description,
+                mastery: 0,
+                categories: metadata.categories,
+                icon: "Book",
+                atoms: atomsResult.atoms,
+                learningPath: plan.learningPath.flatMap(day => day.sessions),
+                fullLearningPlanMarkdown: plan.fullLearningPlanMarkdown,
+                sources: sources,
+            };
+
+            console.log('[NewProject] Calling addProject with:', {
+                id: newProject.id,
+                title: newProject.title,
+                atomsCount: newProject.atoms?.length,
+                learningPathCount: newProject.learningPath?.length,
+                sourcesCount: newProject.sources?.length,
+                learningPathSample: newProject.learningPath?.slice(0, 2).map((s: any) => ({
+                    session: s.session,
+                    topic: s.topic,
+                    atomsCount: s.atoms?.length,
+                    phase: s.phase,
+                })),
+            });
+            const realProjectId = await addProject(newProject as any);
+            console.log('[NewProject] ✅ Project created successfully! ID:', realProjectId);
+
+            setIsLoading(false);
+
+            toast({
+                title: "¡Proyecto Creado!",
+                description: `${metadata.title} ha sido añadido a tu dashboard.`
+            })
+
+            // Use window.location as a fallback if router.push doesn't navigate
+            router.push(`/projects/${realProjectId}`);
+
+            // Safeguard: If router.push doesn't trigger navigation within 1s, force it
+            // Reduced from 2s to 1s for better responsiveness
+            setTimeout(() => {
+                if (window.location.pathname.includes('new-project')) {
+                    console.warn('[NewProject] Router.push did not navigate, forcing redirect...');
+                    window.location.href = `/projects/${realProjectId}`;
+                }
+            }, 1000);
+        } catch (error) {
+            console.error('[NewProject] Error during finalization:', error);
+            setAtomizationError('Ocurrió un error al guardar el proyecto. Por favor, intenta de nuevo.');
+            setIsLoading(false);
+        }
+    }, [addProject, router, toast, selectedFiles, setProcessingStatus, setAtomizationError, setIsLoading]);
 
     const processFiles = useCallback(async (filesToProcess: File[]) => {
         setIsLoading(true);
@@ -421,9 +470,14 @@ function NewProjectContent() {
                                 console.log('Has pipeline?', !!data.data?.pipeline);
                                 finalResult = data.data;
                             } else if (data.type === 'error') {
+                                console.error(`[ProjectAPI] Error for ${file.name}:`, data.error);
                                 throw new Error(data.error);
                             }
                         } catch (e) {
+                            // Re-throw if it's the error we manually raised above
+                            if (e instanceof Error && payloadStr.includes('"type":"error"')) {
+                                throw e;
+                            }
                             console.warn('Failed to parse SSE event payload:', e, payloadStr);
                         }
                     }
@@ -508,14 +562,16 @@ function NewProjectContent() {
             }
 
             setInferredMetadata(metadata);
-            setProcessingStatus(prev => ({ ...prev, status: `Generando plan de aprendizaje...`, index: totalFiles + 2 }));
 
-            const plan = await calibratePlanFromQuestionnaire({
-                atoms: finalAtomsResult.atoms,
-                projectTitle: metadata.title,
+            // Phase 2 Upgrade: Transition to Review stage instead of finalizing immediately
+            setReviewData({
+                atoms: finalAtomsResult,
+                metadata: metadata,
+                files: filesToProcess
             });
+            setIsReviewing(true);
+            setIsLoading(false);
 
-            handleFinalizeProject(plan, finalAtomsResult, metadata, filesToProcess);
         } catch (error) {
             console.error("Error generating project:", error);
             setAtomizationError('Lo siento, ha ocurrido un error al generar tu proyecto.');
@@ -523,6 +579,35 @@ function NewProjectContent() {
         }
 
     }, [handleFinalizeProject]);
+
+    const handleFinalizeReview = async (finalAtoms: Atom[]) => {
+        if (!reviewData) return;
+
+        setIsLoading(true);
+        setIsReviewing(false);
+
+        try {
+            // Update the atoms in the review data
+            const updatedAtomsResult = {
+                ...reviewData.atoms,
+                atoms: finalAtoms
+            };
+
+            setProcessingStatus(prev => ({ ...prev, status: `Generando plan de aprendizaje...` }));
+
+            // Now generate the plan based on the REVIEWED atoms
+            const plan = await calibratePlanFromQuestionnaire({
+                atoms: finalAtoms,
+                projectTitle: reviewData.metadata.title,
+            });
+
+            await handleFinalizeProject(plan, updatedAtomsResult, reviewData.metadata, reviewData.files);
+        } catch (error) {
+            console.error("Error finalizing review:", error);
+            setAtomizationError('Lo siento, ha ocurrido un error al finalizar el proyecto.');
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
         const preloadedSourceParam = searchParams.get('source');
@@ -650,21 +735,35 @@ function NewProjectContent() {
 
         return (
             <div className="flex flex-col flex-1 h-full overflow-hidden relative">
-                <Button
-                    variant="outline"
-                    onClick={handleResetProcess}
-                    className="absolute top-8 left-8 z-10"
-                >
-                    <ChevronLeft className="mr-2 h-4 w-4" />
-                    Volver
-                </Button>
-                <AtomizationProgress
-                    fileName={processingStatus.name}
-                    status={processingStatus.status}
-                    totalFiles={processingStatus.total}
-                    currentFileIndex={processingStatus.index}
-                    totalAtoms={processingStatus.atoms}
-                />
+                {isReviewing && reviewData ? (
+                    <AtomReviewList
+                        atoms={reviewData.atoms.atoms}
+                        title={reviewData.metadata.title}
+                        onBack={() => {
+                            setIsReviewing(false);
+                            setIsProjectStarted(false);
+                        }}
+                        onFinalize={handleFinalizeReview}
+                    />
+                ) : (
+                    <>
+                        <Button
+                            variant="outline"
+                            onClick={handleResetProcess}
+                            className="absolute top-8 left-8 z-10"
+                        >
+                            <ChevronLeft className="mr-2 h-4 w-4" />
+                            Volver
+                        </Button>
+                        <AtomizationProgress
+                            fileName={processingStatus.name}
+                            status={processingStatus.status}
+                            totalFiles={processingStatus.total}
+                            currentFileIndex={processingStatus.index}
+                            totalAtoms={processingStatus.atoms}
+                        />
+                    </>
+                )}
             </div>
         );
     }

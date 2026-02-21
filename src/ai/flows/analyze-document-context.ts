@@ -4,8 +4,8 @@
  * @fileOverview Analyzes document context to understand content type and relevant sections.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const AnalyzeDocumentContextInputSchema = z.object({
   title: z.string().describe('Document title or filename'),
@@ -72,7 +72,7 @@ Identifica:
           ]
         }
       ],
-      model: 'googleai/gemini-2.5-flash-lite',
+      model: 'googleai/gemini-2.5-flash',
       output: {
         schema: AnalyzeDocumentContextOutputSchema,
         format: 'json'

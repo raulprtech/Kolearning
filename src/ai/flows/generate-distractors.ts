@@ -1,8 +1,8 @@
 // src/ai/flows/generate-distractors.ts
 'use server';
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const GenerateDistractorsInputSchema = z.object({
   question: z.string().describe('The question for which to generate distractors.'),
@@ -22,7 +22,7 @@ export type GenerateDistractorsOutput = z.infer<typeof GenerateDistractorsOutput
 function generateFallbackDistractors(answer: string, count: number): string[] {
   const distractors: string[] = [];
   const isShortAnswer = answer.length <= 20;
-  
+
   if (isShortAnswer) {
     // For short answers, create simple variations
     for (let i = 0; i < count; i++) {
@@ -47,7 +47,7 @@ function generateFallbackDistractors(answer: string, count: number): string[] {
       distractors.push(`Opción ${String.fromCharCode(65 + i)}: Alternativa incorrecta`);
     }
   }
-  
+
   return distractors.slice(0, count);
 }
 
@@ -65,9 +65,9 @@ export async function generateDistractors(input: GenerateDistractorsInput): Prom
 
 const prompt = ai.definePrompt({
   name: 'generateDistractorsPrompt',
-  input: {schema: GenerateDistractorsInputSchema},
-  output: {schema: GenerateDistractorsOutputSchema},
-  model: 'googleai/gemini-2.5-flash-lite',
+  input: { schema: GenerateDistractorsInputSchema },
+  output: { schema: GenerateDistractorsOutputSchema },
+  model: 'googleai/gemini-2.5-flash',
   config: {
     temperature: 0.1,
     maxOutputTokens: 8192
@@ -109,7 +109,7 @@ const generateDistractorsFlow = ai.defineFlow(
     outputSchema: GenerateDistractorsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const { output } = await prompt(input);
     return output!;
   }
 );

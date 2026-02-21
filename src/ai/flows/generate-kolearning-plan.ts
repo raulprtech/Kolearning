@@ -4,8 +4,8 @@
  * @fileOverview Generates study plans using KoLearning methodology.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const GenerateKolearningPlanInputSchema = z.object({
   conceptMap: z.object({
@@ -175,13 +175,13 @@ ${JSON.stringify(input.conceptMap, null, 2)}
 
 PREGUNTAS DISPONIBLES:
 ${JSON.stringify(input.questions.map(q => ({
-  id: q.id,
-  type: q.type,
-  question: q.question.substring(0, 100) + '...',
-  difficulty: q.difficulty,
-  conceptId: q.conceptId,
-  qualityScore: q.qualityScore
-})), null, 2)}
+                id: q.id,
+                type: q.type,
+                question: q.question.substring(0, 100) + '...',
+                difficulty: q.difficulty,
+                conceptId: q.conceptId,
+                qualityScore: q.qualityScore
+              })), null, 2)}
 
 PREFERENCIAS DEL USUARIO:
 - Tiempo por sesión: ${input.userPreferences.availableTimePerSession} minutos
@@ -237,7 +237,7 @@ El plan debe ser práctico, personalizado y pedagógicamente sólido, maximizand
           ]
         }
       ],
-      model: 'googleai/gemini-2.5-flash-lite',
+      model: 'googleai/gemini-2.5-flash',
       output: {
         schema: GenerateKolearningPlanOutputSchema,
         format: 'json'

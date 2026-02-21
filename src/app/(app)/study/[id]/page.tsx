@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
@@ -32,6 +32,11 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from "@/lib/utils";
 import { VariantProps } from "class-variance-authority";
+import AssociationQuestion from "@/components/ui/study/AssociationQuestion";
+import FillBlankQuestion from "@/components/ui/study/FillBlankQuestion";
+import ScenarioQuestion from "@/components/ui/study/ScenarioQuestion";
+import KoliIgnoranteChat from "@/components/ui/study/KoliIgnoranteChat";
+import ZettelkastenNote from "@/components/ui/study/ZettelkastenNote";
 
 
 const ratings = [
@@ -43,36 +48,36 @@ const ratings = [
 
 // Correctly typed SortableItem
 type SortableItemProps = {
-  id: string;
-  children: React.ReactNode;
-  isAnswered: boolean;
-  isCorrect: boolean;
+    id: string;
+    children: React.ReactNode;
+    isAnswered: boolean;
+    isCorrect: boolean;
 }
 
 function SortableItem({ id, children, isAnswered, isCorrect }: SortableItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({id});
-  
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({ id });
 
-  const getVariantClass = () => {
-      if (!isAnswered) return "bg-muted";
-      return isCorrect ? "bg-green-200 dark:bg-green-900" : "bg-red-200 dark:bg-red-900";
-  }
-  
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("p-4 rounded-md shadow-sm cursor-grab active:cursor-grabbing", getVariantClass())}>
-      {children}
-    </div>
-  );
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    const getVariantClass = () => {
+        if (!isAnswered) return "bg-muted";
+        return isCorrect ? "bg-green-200 dark:bg-green-900" : "bg-red-200 dark:bg-red-900";
+    }
+
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("p-4 rounded-md shadow-sm cursor-grab active:cursor-grabbing", getVariantClass())}>
+            {children}
+        </div>
+    );
 }
 
 // Correctly typed OrderingQuestion
@@ -100,7 +105,7 @@ const OrderingQuestion = ({ atom, onRate, onAnswerSelect }: OrderingQuestionProp
     }, [atom, onAnswerSelect]);
 
     const handleDragEnd = (event: DragEndEvent) => {
-        const {active, over} = event;
+        const { active, over } = event;
         if (over && active.id !== over.id) {
             setItems((currentItems) => {
                 const oldIndex = currentItems.indexOf(active.id as string);
@@ -126,8 +131,8 @@ const OrderingQuestion = ({ atom, onRate, onAnswerSelect }: OrderingQuestionProp
                 <SortableContext items={items} strategy={verticalListSortingStrategy}>
                     <div className="space-y-3">
                         {items.map((item, index) => (
-                            <SortableItem 
-                                key={item} 
+                            <SortableItem
+                                key={item}
                                 id={item}
                                 isAnswered={isAnswered}
                                 isCorrect={atom.correctOrder ? item === atom.correctOrder[index] : false}
@@ -214,7 +219,7 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: Mu
     }, [atom.answer, atom.question, atom.incorrectAnswers]);
 
     useEffect(() => {
-        if(isRevealed) {
+        if (isRevealed) {
             setIsAnswered(true);
         }
     }, [isRevealed]);
@@ -259,7 +264,7 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: Mu
                 </Button>
             ))}
             {isAnswered && (
-                 <div className="mt-8 pt-6 border-t">
+                <div className="mt-8 pt-6 border-t">
                     <h3 className="font-headline text-muted-foreground mb-4 text-center">
                         Califica tu rendimiento de recuerdo:
                     </h3>
@@ -304,7 +309,7 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: Koli
             ]);
         }
     }, [isOpen, question]);
-    
+
     useEffect(() => {
         const scrollArea = scrollAreaRef.current;
         if (scrollArea) {
@@ -359,7 +364,7 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: Koli
                                 <div className="flex gap-3">
                                     <KoliAvatar className="h-8 w-8 flex-shrink-0" />
                                     <div className="p-3 rounded-lg bg-muted flex items-center">
-                                        <Loader2 className="h-5 w-5 animate-spin"/>
+                                        <Loader2 className="h-5 w-5 animate-spin" />
                                     </div>
                                 </div>
                             )}
@@ -382,7 +387,7 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: Koli
                             onClick={handleSendMessage}
                             disabled={isLoading || !input.trim()}
                         >
-                            <Send className="h-4 w-4"/>
+                            <Send className="h-4 w-4" />
                         </Button>
                     </div>
                 </SheetFooter>
@@ -393,446 +398,571 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: Koli
 
 
 export default function StudySessionPage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { 
-      projects, 
-      completeSession,
-      energy, 
-      sessionStreak, 
-      cognitiveCredits, 
-      masteryPoints, 
-      updateEnergy, 
-      recordAnswer, 
-      resetSessionStats,
-      isAuthenticated
-  } = useProjects();
-  
-  const projectId = params.id as string;
-  const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
-  
-  const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
-  const session = useMemo(() => project?.sessions[sessionIndex], [project, sessionIndex]);
+    const params = useParams();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const {
+        projects,
+        completeSession,
+        energy,
+        sessionStreak,
+        cognitiveCredits,
+        masteryPoints,
+        updateEnergy,
+        recordAnswer,
+        resetSessionStats,
+        updateAtom,
+        isAuthenticated
+    } = useProjects();
 
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [sessionAtoms, setSessionAtoms] = useState(session?.atoms || []);
-  const [viewState, setViewState] = useState<'question' | 'answer'>('question');
-  const [userAnswer, setUserAnswer] = useState("");
-  const [userOrderingAnswer, setUserOrderingAnswer] = useState<string[]>([]);
-  const [aidsUsed, setAidsUsed] = useState<string[]>([]);
-  const [isConvertedToMc, setIsConvertedToMc] = useState(false);
-  const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<VerifyAnswerOutput | null>(null);
-  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
-  
-  const [isSessionFinished, setIsSessionFinished] = useState(false);
-  const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
-  const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
-  const [isExplanationLoading, setIsExplanationLoading] = useState(false);
+    const projectId = params.id as string;
+    const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
 
-  const [isAidLoading, setIsAidLoading] = useState<string | null>(null);
-  const [hint, setHint] = useState<string | null>(null);
-  const [rephrasedQuestion, setRephrasedQuestion] = useState<string | null>(null);
-  const [isTutorPanelOpen, setIsTutorPanelOpen] = useState(false);
+    const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
+    const session = useMemo(() => project?.sessions[sessionIndex], [project, sessionIndex]);
 
-  useEffect(() => {
-    if (isSessionFinished) {
-      // Use a timeout to allow state updates to propagate before navigating.
-      setTimeout(() => {
-        router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}`);
-      }, 100);
-    }
-  }, [isSessionFinished, router, projectId, sessionIndex]);
+    const [currentCardIndex, setCurrentCardIndex] = useState(0);
+    const [sessionAtoms, setSessionAtoms] = useState(session?.atoms || []);
+    const [viewState, setViewState] = useState<'question' | 'answer'>('question');
+    const [userAnswer, setUserAnswer] = useState("");
+    const [userOrderingAnswer, setUserOrderingAnswer] = useState<string[]>([]);
+    const [aidsUsed, setAidsUsed] = useState<string[]>([]);
+    const [isConvertedToMc, setIsConvertedToMc] = useState(false);
+    const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [verificationResult, setVerificationResult] = useState<VerifyAnswerOutput | null>(null);
+    const [questionStartTime, setQuestionStartTime] = useState(Date.now());
 
-  useEffect(() => {
+    const [isSessionFinished, setIsSessionFinished] = useState(false);
+    const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false);
+    const [explanation, setExplanation] = useState<ExplainCorrectAnswerOutput | null>(null);
+    const [isExplanationLoading, setIsExplanationLoading] = useState(false);
+
+    const [isAidLoading, setIsAidLoading] = useState<string | null>(null);
+    const [hint, setHint] = useState<string | null>(null);
+    const [rephrasedQuestion, setRephrasedQuestion] = useState<string | null>(null);
+    const [isTutorPanelOpen, setIsTutorPanelOpen] = useState(false);
+
+    useEffect(() => {
+        if (isSessionFinished) {
+            // Use a timeout to allow state updates to propagate before navigating.
+            setTimeout(() => {
+                router.push(`/study/${projectId}/summary?sessionIndex=${sessionIndex}`);
+            }, 100);
+        }
+    }, [isSessionFinished, router, projectId, sessionIndex]);
+
+    useEffect(() => {
+        if (!isAuthenticated) {
+            router.push('/login');
+        }
+    }, [isAuthenticated, router]);
+
+    useEffect(() => {
+        if (session) {
+            setSessionAtoms(session.atoms);
+            resetSessionStats();
+            setQuestionStartTime(Date.now());
+        }
+        // ONLY reset when the actual session context changes (project ID or session index)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectId, sessionIndex]);
+
+    const currentAtom: ProjectAtom = useMemo(() => {
+        if (!sessionAtoms || sessionAtoms.length === 0 || currentCardIndex >= sessionAtoms.length) {
+            return { question: "Cargando pregunta...", answer: "" };
+        }
+        return sessionAtoms[currentCardIndex];
+    }, [sessionAtoms, currentCardIndex]);
+
+    const normalizeText = (text: string) => text.toLowerCase().trim().replace(/\s+/g, ' ');
+
+    const currentAtomProjectIndex = useMemo(() => {
+        if (!project || !currentAtom?.question) return -1;
+        const normalizedQuestion = normalizeText(currentAtom.question);
+        const index = project.atoms.findIndex(atom => normalizeText(atom.question) === normalizedQuestion);
+        return index;
+    }, [project, currentAtom]);
+
+    const isMultipleChoice = useMemo(() => session?.questions === "Opción Múltiple", [session]);
+    const isOrdering = useMemo(() => session?.questions === "Ordenamiento", [session]);
+    const sessionPhase = useMemo(() => session?.phase || 'calibracion', [session]);
+
+
+    const handleRate = useCallback((fsrs: 1 | 2 | 3 | 4) => {
+        let isCorrect = false;
+        if (isOrdering) {
+            isCorrect = currentAtom.correctOrder ? JSON.stringify(userOrderingAnswer) === JSON.stringify(currentAtom.correctOrder) : false;
+        } else if (isMultipleChoice || isConvertedToMc) {
+            isCorrect = userAnswer === currentAtom.answer;
+        } else {
+            isCorrect = verificationResult?.isCorrect ?? false;
+        }
+
+        const responseTime = Date.now() - questionStartTime;
+
+        if (projectId && currentAtomProjectIndex !== -1) {
+            console.log(`[Study] Recording answer for atom ${currentAtomProjectIndex}. Correct: ${isCorrect}, responseTime: ${responseTime}ms`);
+            recordAnswer(projectId, currentAtomProjectIndex, fsrs, isCorrect, responseTime, aidsUsed);
+        } else {
+            console.warn(`[Study] ⚠️ SKIPPING recordAnswer! projectId: ${projectId}, atomIdx: ${currentAtomProjectIndex}`);
+        }
+
+        if (currentCardIndex < sessionAtoms.length - 1) {
+            setCurrentCardIndex(prev => prev + 1);
+            setViewState('question');
+            setUserAnswer("");
+            setUserOrderingAnswer([]);
+            setVerificationResult(null);
+            setAidsUsed([]);
+            setIsConvertedToMc(false);
+            setIsAnswerRevealed(false);
+            setHint(null);
+            setRephrasedQuestion(null);
+            setQuestionStartTime(Date.now());
+        } else {
+            setIsSessionFinished(true);
+        }
+    }, [isOrdering, userOrderingAnswer, currentAtom, isMultipleChoice, isConvertedToMc, userAnswer, verificationResult, recordAnswer, projectId, currentAtomProjectIndex, aidsUsed, currentCardIndex, sessionAtoms.length, router, sessionIndex, questionStartTime]);
+
+
     if (!isAuthenticated) {
-        router.push('/login');
+        return (
+            <div className="flex flex-col flex-1 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="mt-4 text-muted-foreground">Redirigiendo a inicio de sesión...</p>
+            </div>
+        );
     }
-  }, [isAuthenticated, router]);
 
-  useEffect(() => {
-    if (session) {
-      setSessionAtoms(session.atoms);
-      resetSessionStats();
-      setQuestionStartTime(Date.now());
+    if (!project || !session) {
+        return (
+            <div className="flex flex-col flex-1 items-center justify-center">
+                <h1 className="text-2xl">Sesión no encontrada</h1>
+                <Button onClick={() => router.push('/app/projects')} className="mt-4">Volver a Proyectos</Button>
+            </div>
+        )
     }
-  }, [session, resetSessionStats]);
 
-  const currentAtom: ProjectAtom = useMemo(() => {
-    if (!sessionAtoms || sessionAtoms.length === 0 || currentCardIndex >= sessionAtoms.length) {
-      return { question: "Cargando pregunta...", answer: "" };
+    const handleUseEnergy = (cost: number, aidType?: string) => {
+        if (energy >= cost) {
+            updateEnergy(-cost);
+            if (aidType) {
+                setAidsUsed(prev => [...prev, aidType]);
+            }
+            return true;
+        }
+        return false;
     }
-    return sessionAtoms[currentCardIndex];
-  }, [sessionAtoms, currentCardIndex]);
-  
-  const currentAtomProjectIndex = useMemo(() => {
-    if (!project || !currentAtom?.question) return -1;
-    return project.atoms.findIndex(atom => atom.question === currentAtom.question);
-  }, [project, currentAtom]);
 
-  const isMultipleChoice = useMemo(() => session?.questions === "Opción Múltiple", [session]);
-  const isOrdering = useMemo(() => session?.questions === "Ordenamiento", [session]);
-  
-  
-  const handleRate = useCallback((fsrs: 1|2|3|4) => {
-    let isCorrect = false;
-    if (isOrdering) {
-        isCorrect = currentAtom.correctOrder ? JSON.stringify(userOrderingAnswer) === JSON.stringify(currentAtom.correctOrder) : false;
-    } else if (isMultipleChoice || isConvertedToMc) {
-        isCorrect = userAnswer === currentAtom.answer;
-    } else {
-        isCorrect = verificationResult?.isCorrect ?? false;
+    const handleCheckAnswer = async () => {
+        if (!userAnswer.trim()) return;
+
+        setIsVerifying(true);
+        setVerificationResult(null);
+        try {
+            const result = await verifyAnswer({
+                question: currentAtom.question,
+                correctAnswer: currentAtom.answer,
+                userAnswer: userAnswer,
+            });
+            setVerificationResult(result);
+        } catch (error) {
+            console.error("Error verifying answer:", error);
+            setVerificationResult({ isCorrect: false, feedback: "Hubo un problema al verificar tu respuesta. Inténtalo de nuevo." });
+        } finally {
+            setIsVerifying(false);
+            setViewState('answer');
+        }
     }
-    
-    const responseTime = Date.now() - questionStartTime;
-      
-    if (projectId && currentAtomProjectIndex !== -1) {
-        recordAnswer(projectId, currentAtomProjectIndex, fsrs, isCorrect, responseTime, aidsUsed);
+
+    const handleExplainAnswer = async () => {
+        if (!handleUseEnergy(1, 'explain')) return;
+        setIsExplanationDialogOpen(true);
+        setIsExplanationLoading(true);
+        try {
+            const result = await explainCorrectAnswer({
+                question: currentAtom.question,
+                correctAnswer: currentAtom.answer,
+                learnerAnswer: userAnswer,
+                context: `El usuario está en una sesión de tipo "${session.type}" para el proyecto "${project.title}".`
+            });
+            setExplanation(result);
+        } catch (error) {
+            console.error("Error explaining answer:", error);
+            setExplanation({ explanation: "Lo siento, no pude generar una explicación en este momento.", examples: [] });
+        } finally {
+            setIsExplanationLoading(false);
+        }
     }
-    
-    if (currentCardIndex < sessionAtoms.length - 1) {
-      setCurrentCardIndex(prev => prev + 1);
-      setViewState('question');
-      setUserAnswer("");
-      setUserOrderingAnswer([]);
-      setVerificationResult(null);
-      setAidsUsed([]);
-      setIsConvertedToMc(false);
-      setIsAnswerRevealed(false);
-      setHint(null);
-      setRephrasedQuestion(null);
-      setQuestionStartTime(Date.now());
-    } else {
-      setIsSessionFinished(true);
+
+    const handleGetStudyAid = async (aidType: 'hint' | 'rephrase') => {
+        const cost = aidType === 'hint' ? 1 : 1;
+        if (!handleUseEnergy(cost, aidType)) return;
+
+        setIsAidLoading(aidType);
+        try {
+            const result = await getStudyAid({
+                aidType,
+                question: currentAtom.question,
+                answer: currentAtom.answer,
+            });
+
+            if (aidType === 'hint') {
+                setHint(result.result);
+            } else {
+                setRephrasedQuestion(result.result);
+            }
+        } catch (error) {
+            console.error(`Error getting ${aidType}:`, error);
+        } finally {
+            setIsAidLoading(null);
+        }
     }
-  }, [isOrdering, userOrderingAnswer, currentAtom, isMultipleChoice, isConvertedToMc, userAnswer, verificationResult, recordAnswer, projectId, currentAtomProjectIndex, aidsUsed, currentCardIndex, sessionAtoms.length, router, sessionIndex, questionStartTime]);
+
+    const handleSeeAnswer = () => {
+        if (handleUseEnergy(5, 'seeAnswer')) {
+            setViewState('answer');
+            setIsAnswerRevealed(true);
+        }
+    };
 
 
-  if (!isAuthenticated) {
-    return (
-        <div className="flex flex-col flex-1 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="mt-4 text-muted-foreground">Redirigiendo a inicio de sesión...</p>
-        </div>
-    );
-  }
+    const handleConvertToMc = () => {
+        if (handleUseEnergy(2, 'convertToMc')) {
+            setIsConvertedToMc(true);
+        }
+    }
 
-  if (!project || !session) {
-    return (
-        <div className="flex flex-col flex-1 items-center justify-center">
-            <h1 className="text-2xl">Sesión no encontrada</h1>
-            <Button onClick={() => router.push('/app/projects')} className="mt-4">Volver a Proyectos</Button>
-        </div>
+    const handleOpenTutorChat = () => {
+        if (handleUseEnergy(3, 'tutorChat')) {
+            setIsTutorPanelOpen(true);
+        }
+    }
+
+    const progress = (currentCardIndex / sessionAtoms.length) * 100;
+
+    type TacticalButtonProps = {
+        icon: React.ReactNode;
+        label: string;
+        cost: number;
+        action: () => void;
+        disabled?: boolean;
+        isLoading?: boolean;
+    };
+
+    const TacticalButton = ({ icon, label, cost, action, disabled = false, isLoading = false }: TacticalButtonProps) => (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" aria-label={label} onClick={action} disabled={disabled || energy < cost || isLoading}>
+                        {isLoading ? <Loader2 className="animate-spin" /> : icon}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>{label} (⚡-{cost})</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     )
-  }
 
-  const handleUseEnergy = (cost: number, aidType?: string) => {
-      if (energy >= cost) {
-          updateEnergy(-cost);
-          if (aidType) {
-            setAidsUsed(prev => [...prev, aidType]);
-          }
-          return true;
-      }
-      return false;
-  }
+    const renderQuestionInterface = () => {
+        // Phase-aware rendering: dispatch to the correct component based on session phase
 
-const handleCheckAnswer = async () => {
-    if (!userAnswer.trim()) return;
+        // Calibración phase: always multiple choice
+        if (sessionPhase === 'calibracion' || isMultipleChoice || isConvertedToMc) {
+            return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} isRevealed={isAnswerRevealed} onAnswerSelect={setUserAnswer} />;
+        }
 
-    setIsVerifying(true);
-    setVerificationResult(null);
-    try {
-        const result = await verifyAnswer({
-            question: currentAtom.question,
-            correctAnswer: currentAtom.answer,
-            userAnswer: userAnswer,
-        });
-        setVerificationResult(result);
-    } catch (error) {
-        console.error("Error verifying answer:", error);
-        setVerificationResult({ isCorrect: false, feedback: "Hubo un problema al verificar tu respuesta. Inténtalo de nuevo." });
-    } finally {
-        setIsVerifying(false);
-        setViewState('answer');
+        // Incursión phase: association or fill-blank
+        if (sessionPhase === 'incursion') {
+            const questionFormats = session?.questionFormats || '';
+            // If the session includes association format, use AssociationQuestion
+            if (questionFormats.includes('Asociación')) {
+                // Generate association pairs from atoms in the current session
+                const pairs = sessionAtoms.slice(0, Math.min(6, sessionAtoms.length)).map((atom, i) => ({
+                    id: `pair-${i}`,
+                    concept: atom.question,
+                    definition: atom.answer,
+                }));
+                return (
+                    <AssociationQuestion
+                        pairs={pairs}
+                        onComplete={(isCorrect) => {
+                            handleRate(isCorrect ? 3 : 1);
+                        }}
+                        onAnswerSelect={setUserAnswer}
+                    />
+                );
+            }
+            // If fill-blank format
+            if (questionFormats.includes('Completar')) {
+                // Generate fill-blank segments from the current atom's answer
+                const words = currentAtom.answer.split(' ');
+                const segments = words.map((word, i) => {
+                    // Make every 3rd substantial word a blank
+                    const isBlank = i > 0 && i % 3 === 0 && word.length > 3;
+                    return {
+                        text: isBlank ? '___' : word + ' ',
+                        isBlank,
+                        answer: isBlank ? word : undefined,
+                    };
+                });
+                return (
+                    <FillBlankQuestion
+                        segments={segments}
+                        questionText={currentAtom.question}
+                        onComplete={(isCorrect) => {
+                            handleRate(isCorrect ? 3 : 1);
+                        }}
+                        onAnswerSelect={setUserAnswer}
+                    />
+                );
+            }
+            // Default incursion: open-ended textarea
+            return (
+                <>
+                    <Textarea
+                        rows={8}
+                        placeholder="Escribe tu respuesta con tus propias palabras..."
+                        className="bg-background text-lg"
+                        value={userAnswer}
+                        onChange={(e) => setUserAnswer(e.target.value)}
+                        readOnly={viewState === 'answer'}
+                    />
+                    <div className="mt-6 flex justify-center">
+                        <Button size="lg" className="w-full max-w-xs" onClick={handleCheckAnswer} disabled={isVerifying || !userAnswer.trim()}>
+                            {isVerifying ? <Loader2 className="animate-spin" /> : "Comprobar"}
+                        </Button>
+                    </div>
+                </>
+            );
+        }
+
+        // Refuerzo phase: scenario-based reasoning
+        if (sessionPhase === 'refuerzo') {
+            return (
+                <ScenarioQuestion
+                    scenario={`Imagina que necesitas explicar o aplicar el siguiente concepto en un contexto real: ${currentAtom.question}`}
+                    question={`¿Cómo aplicarías o explicarías "${currentAtom.answer}" en este contexto? Justifica tu razonamiento.`}
+                    expectedAnswer={currentAtom.answer}
+                    relatedConcepts={sessionAtoms.slice(0, 3).map(a => a.question)}
+                    onComplete={(isCorrect) => {
+                        handleRate(isCorrect ? 3 : 2);
+                    }}
+                    onAnswerSelect={setUserAnswer}
+                />
+            );
+        }
+
+        // Dominio phase: Koli Ignorante chat
+        if (sessionPhase === 'dominio') {
+            return (
+                <KoliIgnoranteChat
+                    concept={currentAtom.question}
+                    expectedExplanation={currentAtom.answer}
+                    onComplete={(mastered) => {
+                        handleRate(mastered ? 4 : 2);
+                    }}
+                    onAnswerSelect={setUserAnswer}
+                />
+            );
+        }
+
+        // Legacy ordering fallback
+        if (isOrdering) {
+            return <OrderingQuestion atom={currentAtom} onRate={handleRate} onAnswerSelect={setUserOrderingAnswer} />;
+        }
+
+        // Default fallback: open-ended textarea
+        return (
+            <>
+                <Textarea
+                    rows={8}
+                    placeholder="Tu respuesta..."
+                    className="bg-background text-lg"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    readOnly={viewState === 'answer'}
+                />
+                <div className="mt-6 flex justify-center">
+                    <Button size="lg" className="w-full max-w-xs" onClick={handleCheckAnswer} disabled={isVerifying || !userAnswer.trim()}>
+                        {isVerifying ? <Loader2 className="animate-spin" /> : "Comprobar"}
+                    </Button>
+                </div>
+            </>
+        );
     }
-  }
 
-  const handleExplainAnswer = async () => {
-      if (!handleUseEnergy(1, 'explain')) return;
-      setIsExplanationDialogOpen(true);
-      setIsExplanationLoading(true);
-      try {
-          const result = await explainCorrectAnswer({
-              question: currentAtom.question,
-              correctAnswer: currentAtom.answer,
-              learnerAnswer: userAnswer,
-              context: `El usuario está en una sesión de tipo "${session.type}" para el proyecto "${project.title}".`
-          });
-          setExplanation(result);
-      } catch (error) {
-          console.error("Error explaining answer:", error);
-          setExplanation({ explanation: "Lo siento, no pude generar una explicación en este momento.", examples: [] });
-      } finally {
-          setIsExplanationLoading(false);
-      }
-  }
+    const questionToDisplay = rephrasedQuestion || currentAtom.question;
 
-  const handleGetStudyAid = async (aidType: 'hint' | 'rephrase') => {
-      const cost = aidType === 'hint' ? 1 : 1;
-      if (!handleUseEnergy(cost, aidType)) return;
-
-      setIsAidLoading(aidType);
-      try {
-          const result = await getStudyAid({
-              aidType,
-              question: currentAtom.question,
-              answer: currentAtom.answer,
-          });
-
-          if (aidType === 'hint') {
-              setHint(result.result);
-          } else {
-              setRephrasedQuestion(result.result);
-          }
-      } catch (error) {
-          console.error(`Error getting ${aidType}:`, error);
-      } finally {
-          setIsAidLoading(null);
-      }
-  }
-
-  const handleSeeAnswer = () => {
-    if (handleUseEnergy(5, 'seeAnswer')) {
-      setViewState('answer');
-      setIsAnswerRevealed(true);
-    }
-  };
-
-
-  const handleConvertToMc = () => {
-    if (handleUseEnergy(2, 'convertToMc')) {
-        setIsConvertedToMc(true);
-    }
-  }
-
-  const handleOpenTutorChat = () => {
-    if (handleUseEnergy(3, 'tutorChat')) {
-        setIsTutorPanelOpen(true);
-    }
-  }
-
-  const progress = (currentCardIndex / sessionAtoms.length) * 100;
-
-  type TacticalButtonProps = {
-      icon: React.ReactNode;
-      label: string;
-      cost: number;
-      action: () => void;
-      disabled?: boolean;
-      isLoading?: boolean;
-  };
-
-  const TacticalButton = ({ icon, label, cost, action, disabled = false, isLoading = false }: TacticalButtonProps) => (
-    <TooltipProvider>
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" aria-label={label} onClick={action} disabled={disabled || energy < cost || isLoading}>
-                    {isLoading ? <Loader2 className="animate-spin" /> : icon}
-                </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-                <p>{label} (⚡-{cost})</p>
-            </TooltipContent>
-        </Tooltip>
-    </TooltipProvider>
-  )
-
-  const renderQuestionInterface = () => {
-    if (isMultipleChoice || isConvertedToMc) {
-        return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} isRevealed={isAnswerRevealed} onAnswerSelect={setUserAnswer} />;
-    }
-    if (isOrdering) {
-        return <OrderingQuestion atom={currentAtom} onRate={handleRate} onAnswerSelect={setUserOrderingAnswer} />;
-    }
     return (
-        <>
-            <Textarea
-                rows={8}
-                placeholder="Tu respuesta..."
-                className="bg-background text-lg"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                readOnly={viewState === 'answer'}
-            />
-            <div className="mt-6 flex justify-center">
-                <Button size="lg" className="w-full max-w-xs" onClick={handleCheckAnswer} disabled={isVerifying || !userAnswer.trim()}>
-                    {isVerifying ? <Loader2 className="animate-spin" /> : "Comprobar"}
-                </Button>
-            </div>
-        </>
-    );
-  }
-
-  const questionToDisplay = rephrasedQuestion || currentAtom.question;
-
-  return (
-    <div className="flex flex-col flex-1 h-[calc(100vh)]">
-       <header className="flex items-center justify-between p-4 border-b border-border gap-4 shrink-0">
-            <div className="w-1/4">
-                <Button variant="outline" onClick={() => router.back()}>Salir de la Sesión</Button>
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center">
-                 <Badge variant="secondary" className="mb-2">{session.type}</Badge>
-                <div className="w-full max-w-md">
-                  <Progress value={progress} />
-                  <p className="text-xs text-muted-foreground mt-1 text-center">{currentCardIndex + 1} de {sessionAtoms.length}</p>
+        <div className="flex flex-col flex-1 h-[calc(100vh)]">
+            <header className="flex items-center justify-between p-4 border-b border-border gap-4 shrink-0">
+                <div className="w-1/4">
+                    <Button variant="outline" onClick={() => router.back()}>Salir de la Sesión</Button>
                 </div>
-            </div>
-            <div className="w-1/4 flex justify-end">
-                <div className="flex items-center gap-6 bg-card/50 px-4 py-1.5 rounded-md">
-                    <div className="flex items-center gap-2" title="Créditos Cognitivos de Sesión">
-                        <Brain className="h-5 w-5 text-blue-400" />
-                        <span className="font-bold text-lg">{cognitiveCredits}</span>
-                    </div>
-                    <div className="flex items-center gap-2" title="Energía de Sesión">
-                        <Zap className="h-5 w-5 text-yellow-400" />
-                        <span className="font-bold text-lg text-foreground">{energy}</span>
+                <div className="flex-1 flex flex-col items-center justify-center">
+                    <Badge variant="secondary" className="mb-2">{session.type}</Badge>
+                    <div className="w-full max-w-md">
+                        <Progress value={progress} />
+                        <p className="text-xs text-muted-foreground mt-1 text-center">{currentCardIndex + 1} de {sessionAtoms.length}</p>
                     </div>
                 </div>
-            </div>
-        </header>
+                <div className="w-1/4 flex justify-end">
+                    <div className="flex items-center gap-6 bg-card/50 px-4 py-1.5 rounded-md">
+                        <div className="flex items-center gap-2" title="Créditos Cognitivos de Sesión">
+                            <Brain className="h-5 w-5 text-blue-400" />
+                            <span className="font-bold text-lg">{cognitiveCredits}</span>
+                        </div>
+                        <div className="flex items-center gap-2" title="Energía de Sesión">
+                            <Zap className="h-5 w-5 text-yellow-400" />
+                            <span className="font-bold text-lg text-foreground">{energy}</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
 
-        <main className="flex-1 flex flex-col items-center p-4 md:p-8 overflow-y-auto">
-            <div className="w-full max-w-3xl">
-                <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl text-center">
-                    {questionToDisplay}
-                    {rephrasedQuestion && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="ml-2 h-6 w-6" onClick={() => setRephrasedQuestion(null)}>
-                                        <RefreshCw className="h-3 w-3 text-muted-foreground" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Ver pregunta original</TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-                    </CardTitle>
-                    <CardDescription className="text-center">
-                      {isOrdering ? "Arrastra y suelta los elementos para ordenarlos correctamente." : isMultipleChoice || isConvertedToMc ? "Selecciona la respuesta correcta." : "Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio."}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    
-                     {hint && (
-                        <Alert className="mb-4 bg-primary/10 border-primary/20 text-primary">
-                            <Lightbulb className="h-4 w-4 text-primary" />
-                            <AlertTitle className="flex justify-between items-center">
-                                Pista de Koli
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setHint(null)}><X className="h-4 w-4"/></Button>
-                            </AlertTitle>
-                            <AlertDescription>{hint}</AlertDescription>
-                        </Alert>
-                    )}
-                    
-                    {viewState === 'question' && renderQuestionInterface()}
-                    
-                    {viewState === 'answer' && (isMultipleChoice || isConvertedToMc || isOrdering) && renderQuestionInterface()}
+            <main className="flex-1 flex flex-col items-center p-4 md:p-8 overflow-y-auto">
+                <div className="w-full max-w-3xl">
+                    <Card className="bg-card/50 shadow-2xl relative overflow-hidden">
+                        <CardHeader>
+                            <CardTitle className="font-headline text-2xl text-center">
+                                {questionToDisplay}
+                                {rephrasedQuestion && (
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="ml-2 h-6 w-6" onClick={() => setRephrasedQuestion(null)}>
+                                                    <RefreshCw className="h-3 w-3 text-muted-foreground" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Ver pregunta original</TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                )}
+                            </CardTitle>
+                            <CardDescription className="text-center">
+                                {isOrdering ? "Arrastra y suelta los elementos para ordenarlos correctamente." : isMultipleChoice || isConvertedToMc ? "Selecciona la respuesta correcta." : "Formula tu respuesta a continuación. El recuerdo activo es clave para el dominio."}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
 
-                    {viewState === 'answer' && !isMultipleChoice && !isConvertedToMc && !isOrdering && (
-                        <div className="mt-8 pt-6 border-t">
-                            {verificationResult && (
-                                <Alert className={cn('mb-4', verificationResult.isCorrect ? 'border-green-500/50 text-green-300' : 'border-destructive/50 text-destructive')}>
-                                    <AlertTitle>{verificationResult.isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</AlertTitle>
-                                    <AlertDescription>{verificationResult.feedback}</AlertDescription>
+                            {hint && (
+                                <Alert className="mb-4 bg-primary/10 border-primary/20 text-primary">
+                                    <Lightbulb className="h-4 w-4 text-primary" />
+                                    <AlertTitle className="flex justify-between items-center">
+                                        Pista de Koli
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setHint(null)}><X className="h-4 w-4" /></Button>
+                                    </AlertTitle>
+                                    <AlertDescription>{hint}</AlertDescription>
                                 </Alert>
                             )}
-                            <div className="bg-muted/50 p-4 rounded-lg mb-6">
-                                <h4 className="font-bold font-headline mb-2 text-primary">
-                                Respuesta Correcta
-                                </h4>
-                                <p>{currentAtom.answer}</p>
+
+                            {viewState === 'question' && renderQuestionInterface()}
+
+                            {viewState === 'answer' && (isMultipleChoice || isConvertedToMc || isOrdering) && renderQuestionInterface()}
+
+                            {viewState === 'answer' && !isMultipleChoice && !isConvertedToMc && !isOrdering && (
+                                <div className="mt-8 pt-6 border-t">
+                                    {verificationResult && (
+                                        <Alert className={cn('mb-4', verificationResult.isCorrect ? 'border-green-500/50 text-green-300' : 'border-destructive/50 text-destructive')}>
+                                            <AlertTitle>{verificationResult.isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</AlertTitle>
+                                            <AlertDescription>{verificationResult.feedback}</AlertDescription>
+                                        </Alert>
+                                    )}
+                                    <div className="bg-muted/50 p-4 rounded-lg mb-6">
+                                        <h4 className="font-bold font-headline mb-2 text-primary">
+                                            Respuesta Correcta
+                                        </h4>
+                                        <p>{currentAtom.answer}</p>
+                                    </div>
+
+                                    <h3 className="font-headline text-muted-foreground mb-4 text-center">
+                                        Califica tu rendimiento de recuerdo:
+                                    </h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {ratings.map(rating => (
+                                            <Button key={rating.label} variant={rating.variant} className="h-auto py-3 flex-col w-full" onClick={() => handleRate(rating.fsrs)}>
+                                                <span className="text-lg font-bold">{rating.label}</span>
+                                                <span className="text-xs opacity-80">{rating.description}</span>
+                                            </Button>
+                                        ))}
+                                    </div>
+
+                                    {/* Zettelkasten Note */}
+                                    <ZettelkastenNote
+                                        atomQuestion={currentAtom.question}
+                                        atomAnswer={currentAtom.answer}
+                                        existingNote={currentAtom.zettelkastenNote}
+                                        onSaveNote={(note) => {
+                                            if (projectId && currentAtomProjectIndex !== -1) {
+                                                updateAtom(projectId, currentAtomProjectIndex, { ...currentAtom, zettelkastenNote: note });
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
+                                <h3 className="font-headline text-muted-foreground mb-4">
+                                    Usar ayuda
+                                </h3>
+                                <div className="flex items-center justify-center gap-4">
+                                    <TacticalButton icon={<Eye />} label="Ver respuesta" cost={5} action={handleSeeAnswer} disabled={viewState === 'answer'} />
+                                    <TacticalButton icon={<Lightbulb />} label="Pista" cost={1} action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} isLoading={isAidLoading === 'hint'} />
+                                    {!isMultipleChoice && !isConvertedToMc && !isOrdering && <TacticalButton icon={<ListChecks />} label="Convertir a Opción Múltiple" cost={2} action={handleConvertToMc} disabled={viewState === 'answer'} />}
+                                    <TacticalButton icon={<BrainCircuit />} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
+                                    <TacticalButton icon={<Repeat />} label="Reformular" cost={1} action={() => handleGetStudyAid('rephrase')} disabled={viewState === 'answer' || !!rephrasedQuestion} isLoading={isAidLoading === 'rephrase'} />
+                                    <TacticalButton icon={<KoliAvatar className="h-6 w-6" />} label="Consultar a Koli" cost={3} action={handleOpenTutorChat} />
+                                </div>
                             </div>
 
-                            <h3 className="font-headline text-muted-foreground mb-4 text-center">
-                                Califica tu rendimiento de recuerdo:
-                            </h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {ratings.map(rating => (
-                                    <Button key={rating.label} variant={rating.variant} className="h-auto py-3 flex-col w-full" onClick={() => handleRate(rating.fsrs)}>
-                                        <span className="text-lg font-bold">{rating.label}</span>
-                                        <span className="text-xs opacity-80">{rating.description}</span>
-                                    </Button>
-                                ))}
-                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Dialog open={isExplanationDialogOpen} onOpenChange={setIsExplanationDialogOpen}>
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Explicación de la Respuesta</DialogTitle>
+                            <DialogDescription>
+                                Koli ha generado una explicación para ayudarte a entender mejor.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 max-h-[60vh] overflow-y-auto">
+                            {isExplanationLoading ? (
+                                <div className="flex items-center justify-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                </div>
+                            ) : (
+                                <div className="prose dark:prose-invert max-w-none">
+                                    <p>{explanation?.explanation}</p>
+                                    {explanation?.examples && explanation.examples.length > 0 && (
+                                        <>
+                                            <h4 className="font-bold mt-4">Ejemplos:</h4>
+                                            <ul className="list-disc pl-5">
+                                                {explanation.examples.map((ex, i) => <li key={i}>{ex}</li>)}
+                                            </ul>
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                    )}
+                        <DialogFooter>
+                            <Button onClick={() => setIsExplanationDialogOpen(false)}>Cerrar</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
-                    <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
-                        <h3 className="font-headline text-muted-foreground mb-4">
-                            Usar ayuda
-                        </h3>
-                        <div className="flex items-center justify-center gap-4">
-                            <TacticalButton icon={<Eye/>} label="Ver respuesta" cost={5} action={handleSeeAnswer} disabled={viewState === 'answer'} />
-                            <TacticalButton icon={<Lightbulb/>} label="Pista" cost={1} action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} isLoading={isAidLoading === 'hint'} />
-                            {!isMultipleChoice && !isConvertedToMc && !isOrdering && <TacticalButton icon={<ListChecks/>} label="Convertir a Opción Múltiple" cost={2} action={handleConvertToMc} disabled={viewState === 'answer'} />}
-                            <TacticalButton icon={<BrainCircuit/>} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
-                            <TacticalButton icon={<Repeat/>} label="Reformular" cost={1} action={() => handleGetStudyAid('rephrase')} disabled={viewState === 'answer' || !!rephrasedQuestion} isLoading={isAidLoading === 'rephrase'} />
-                            <TacticalButton icon={<KoliAvatar className="h-6 w-6"/>} label="Consultar a Koli" cost={3} action={handleOpenTutorChat} />
-                        </div>
-                    </div>
-                    
-                </CardContent>
-                </Card>
-            </div>
-            
-            <Dialog open={isExplanationDialogOpen} onOpenChange={setIsExplanationDialogOpen}>
-                <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Explicación de la Respuesta</DialogTitle>
-                        <DialogDescription>
-                            Koli ha generado una explicación para ayudarte a entender mejor.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4 max-h-[60vh] overflow-y-auto">
-                        {isExplanationLoading ? (
-                            <div className="flex items-center justify-center">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                            <div className="prose dark:prose-invert max-w-none">
-                                <p>{explanation?.explanation}</p>
-                                {explanation?.examples && explanation.examples.length > 0 && (
-                                    <>
-                                        <h4 className="font-bold mt-4">Ejemplos:</h4>
-                                        <ul className="list-disc pl-5">
-                                            {explanation.examples.map((ex, i) => <li key={i}>{ex}</li>)}
-                                        </ul>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={() => setIsExplanationDialogOpen(false)}>Cerrar</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <KoliTutorPanel 
-                isOpen={isTutorPanelOpen}
-                onClose={() => setIsTutorPanelOpen(false)}
-                question={currentAtom.question}
-                answer={currentAtom.answer}
-                onUseEnergy={handleUseEnergy}
-            />
-        </main>
-    </div>
-  );
+                <KoliTutorPanel
+                    isOpen={isTutorPanelOpen}
+                    onClose={() => setIsTutorPanelOpen(false)}
+                    question={currentAtom.question}
+                    answer={currentAtom.answer}
+                    onUseEnergy={handleUseEnergy}
+                />
+            </main >
+        </div >
+    );
 }

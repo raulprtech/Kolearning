@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 
 // Type definitions
 export type Atom = {
+  id?: string;
   question: string;
   answer: string;
   // FSRS Metrics
@@ -20,6 +21,13 @@ export type Atom = {
   lastReviewed?: string; // ISO date string
   retrievability?: number; // FSRS score from 1 to 4
   incorrectAnswers?: string[]; // For multiple choice questions
+  // Learning phase fields
+  phase?: 'calibracion' | 'incursion' | 'refuerzo' | 'dominio';
+  zettelkastenNote?: string;
+  dependencies?: string[]; // IDs of prerequisite atoms
+  // Ordering question fields
+  orderingItems?: string[];
+  correctOrder?: string[];
 }
 
 export type Source = {
@@ -35,6 +43,8 @@ export type Session = {
   duration: string;
   status: 'Completed' | 'Continue' | 'Locked';
   atoms: Atom[];
+  phase?: 'calibracion' | 'incursion' | 'refuerzo' | 'dominio';
+  questionFormats?: string;
 }
 
 export type LearningPathItem = {
@@ -42,6 +52,8 @@ export type LearningPathItem = {
   topic: string;
   sessionType: string;
   questions: string; // Added from CalibratePlanOutput
+  phase?: 'calibracion' | 'incursion' | 'refuerzo' | 'dominio';
+  questionFormats?: string;
 }
 
 export type Project = {
@@ -85,7 +97,7 @@ type ProjectContextType = {
   projects: Project[];
   completedProjects: Project[];
   archivedProjects: Project[];
-  addProject: (project: Project) => Promise<void>;
+  addProject: (project: Project) => Promise<string>;
   updateProjectIcon: (projectId: string, icon: string) => Promise<void>;
   updateProjectDetails: (projectId: string, title: string, description: string) => Promise<void>;
   updateProjectPlan: (projectId: string, plan: CalibratePlanOutput) => void;
@@ -107,7 +119,7 @@ type ProjectContextType = {
   masteryPoints: number;
   totalMasteryPoints: number;
   updateEnergy: (amount: number) => void;
-  recordAnswer: (projectId: string, atomIndex: number, fsrs: 1 | 2 | 3 | 4, aidsUsed: boolean, isCorrect: boolean) => void;
+  recordAnswer: (projectId: string, atomIndex: number, fsrs: 1 | 2 | 3 | 4, isCorrect: boolean, responseTime: number, aidsUsed: string[]) => void;
   resetSessionStats: () => void;
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
   nextEnergyIn: number;
@@ -217,7 +229,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [hasLocalData, setHasLocalData] = useState(false);
 
   // Auth context
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, updateProfile } = useAuth();
   const projectDb = new ProjectDatabase();
   const { toast } = useToast();
 
@@ -253,6 +265,15 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       loadFallbackData();
     }
   }, [user, authLoading]);
+
+  // Keep global stats in sync with profile updates
+  useEffect(() => {
+    if (profile) {
+      setTotalMasteryPoints(profile.total_mastery_points || 0);
+      setGlobalCognitiveCredits(profile.global_cognitive_credits || 0);
+      setDailyStreak(profile.daily_streak || 0);
+    }
+  }, [profile]);
 
   // Track last reload time to avoid excessive refetches
   const lastReloadRef = React.useRef<number>(0);
@@ -319,20 +340,25 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const loadUserData = async (showLoading: boolean = true) => {
     if (!user) {
-      console.warn('[LoadData] No user found, skipping load');
+      console.warn('[ProjectContext] No user found, skipping load');
       return;
     }
 
-    console.log('[LoadData] Loading data for user:', user.id, showLoading ? '(with spinner)' : '(background)');
+    console.log('[ProjectContext] 🔄 Loading data for user:', user.id);
     if (showLoading) setIsLoading(true);
+
     try {
+      console.log('[ProjectContext] Fetching projects from Supabase...');
+      const startTime = Date.now();
+
       const [userProjects, userCompletedProjects, userArchivedProjects] = await Promise.all([
         projectDb.getProjects(user.id),
         projectDb.getCompletedProjects(user.id),
         projectDb.getArchivedProjects(user.id),
       ]);
 
-      console.log('[LoadData] Loaded from Supabase:', {
+      const duration = Date.now() - startTime;
+      console.log(`[ProjectContext] ✅ Data fetched in ${duration}ms from Supabase`, {
         projects: userProjects.length,
         completed: userCompletedProjects.length,
         archived: userArchivedProjects.length,
@@ -349,7 +375,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       }
 
     } catch (error) {
-      console.error('[LoadData] Error loading user data from Supabase:', error);
+      console.error('[ProjectContext] ❌ Error loading data from Supabase:', error);
       loadFallbackData();
     } finally {
       if (showLoading) setIsLoading(false);
@@ -408,9 +434,15 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
       // If there's a learning path, generate sessions from it
       if (project.learningPath && project.learningPath.length > 0) {
-        const atoms = [...project.atoms];
         const sessions: Session[] = project.learningPath.map((item, index) => {
-          const sessionAtoms = atoms.slice(index * sessionSize, (index + 1) * sessionSize);
+          // If the learning path item already has atoms assigned (from AI), use them
+          // Otherwise, fall back to sequential slicing (backward compatibility)
+          let sessionAtoms = (item as any).atoms || [];
+
+          if (sessionAtoms.length === 0) {
+            sessionAtoms = project.atoms.slice(index * sessionSize, (index + 1) * sessionSize);
+          }
+
           return {
             session: item.session,
             type: item.sessionType,
@@ -418,6 +450,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             duration: '20 min',
             status: index === 0 ? 'Continue' : 'Locked' as const,
             atoms: sessionAtoms,
+            phase: item.phase,
+            questionFormats: item.questionFormats,
           };
         });
         return { ...project, sessions };
@@ -431,44 +465,39 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         duration: '20 min',
         status: 'Continue',
         atoms: project.atoms.slice(0, sessionSize),
+        phase: 'calibracion',
+        questionFormats: 'Opción Múltiple',
       };
       return { ...project, sessions: [calibrationSession] };
     };
 
     const projectWithSessions = ensureCalibrationSession(projectToAdd);
 
-    console.log('[AddProject] Adding project:', {
-      title: projectWithSessions.title,
-      hasUser: !!user,
-      userId: user?.id,
-      atomsCount: projectWithSessions.atoms.length,
-      sessionsCount: projectWithSessions.sessions?.length || 0,
-    });
+    console.log('[ProjectContext] ➕ Creating project:', projectWithSessions.title);
 
     if (user) {
       try {
-        console.log('[AddProject] Creating project in Supabase for user:', user.id);
+        console.log('[ProjectContext] Saving to Supabase...');
         const projectId = await projectDb.createProject(user.id, projectWithSessions);
-        console.log('[AddProject] ✅ Project created with ID:', projectId);
+        console.log('[ProjectContext] ✅ Project saved in Supabase:', projectId);
 
-        console.log('[AddProject] Reloading user data...');
-        await loadUserData();
-        console.log('[AddProject] ✅ User data reloaded');
-        return projectId; // Return real Supabase UUID
+        // Optimistic update: add the project with its real ID to the state immediately
+        const projectWithRealId = { ...projectWithSessions, id: projectId };
+        setProjects(prev => [projectWithRealId, ...prev]);
+
+        console.log('[ProjectContext] ✅ Returning ID for immediate redirection');
+        return projectId;
       } catch (error) {
-        console.error('[AddProject] ❌ Failed to create project in Supabase:', error);
-        const tempId = `temp-${Date.now()}`;
-        setProjects(prev => [...prev, { ...projectWithSessions, id: tempId }]);
-        return tempId;
+        console.error('[ProjectContext] ❌ Save error:', error);
+        throw error; // Let the UI handle the error
       }
     } else {
-      console.log('[AddProject] No user, saving to localStorage only');
-      if (!projects.find(p => p.id === projectWithSessions.id)) {
-        setProjects(prevProjects => [...prevProjects, projectWithSessions]);
-      }
-      return projectWithSessions.id;
+      console.log('[ProjectContext] No user, saving to local state');
+      const finalProject = { ...projectWithSessions };
+      setProjects(prevProjects => [...prevProjects, finalProject]);
+      return finalProject.id;
     }
-  }, [projects, user, projectDb]);
+  }, [user, projectDb, loadUserData]);
 
   const updateProjectIcon = useCallback(async (projectId: string, icon: string) => {
     if (user) {
@@ -520,6 +549,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             duration: '20 min',
             status: index === 0 ? 'Continue' : 'Locked',
             atoms: p.atoms.slice(index * 10, (index + 1) * 10),
+            phase: item.phase,
+            questionFormats: item.questionFormats,
           }));
           mastery = calculateMastery(p.atoms);
           return {
@@ -710,7 +741,19 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const completeSession = useCallback(async (projectId: string, sessionIndex: number) => {
-    setGlobalCognitiveCredits(prev => prev + cognitiveCredits);
+    const finalCreditsReward = cognitiveCredits;
+    const finalMasteryReward = masteryPoints;
+
+    setGlobalCognitiveCredits(prev => prev + finalCreditsReward);
+    setTotalMasteryPoints(prev => prev + finalMasteryReward);
+
+    // Sync profile stats to Supabase (Background)
+    if (user && profile) {
+      updateProfile({
+        global_cognitive_credits: (profile.global_cognitive_credits || 0) + finalCreditsReward,
+        total_mastery_points: (profile.total_mastery_points || 0) + finalMasteryReward,
+      }).catch((err: Error) => console.error('[ProjectContext] Failed to sync profile stats:', err));
+    }
 
     let projectToUpdate: Project | undefined;
     let isCompletedProject = false;
@@ -793,29 +836,38 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             type: s.type,
             questions: s.questions,
             status: s.status,
-            atomCount: s.atoms.length
+            atomCount: s.atoms.length,
+            phase: s.phase || 'calibracion',
+            questionFormats: s.questionFormats,
           })),
           learningPath: projectToUpdate.learningPath
         });
 
-        const adjustment = await dynamicLearningPathAdjustment({
+        // Run AI adjustment in the background without awaiting it to prevent UI hang
+        dynamicLearningPathAdjustment({
           fsrsData,
           performanceHistory,
           currentLearningPlan,
           tutorLog: ''
+        }).then(adjustment => {
+          if (adjustment.adjustments.add && adjustment.adjustments.add.length > 0) {
+            console.log(`AI Strategic Tutor recommended ${adjustment.adjustments.add.length} additional sessions:`, adjustment.feedback);
+            console.log('Failure diagnosis:', adjustment.failureDiagnosis.type, '-', adjustment.failureDiagnosis.positiveMessage);
+
+            const newSessionsToAdd = adjustment.adjustments.add.map((newSession) => ({
+              type: newSession.type,
+              questions: newSession.questions,
+              duration: newSession.duration,
+              phase: newSession.phase,
+              questionFormats: newSession.questionFormats,
+            }));
+
+            addSessionsToProject(projectId, newSessionsToAdd, sessionIndex);
+          }
+        }).catch(error => {
+          console.error("Error during background dynamic learning path adjustment:", error);
         });
 
-        if (adjustment.adjustments.add && adjustment.adjustments.add.length > 0) {
-          console.log(`AI Strategic Tutor recommended ${adjustment.adjustments.add.length} additional sessions:`, adjustment.feedback);
-
-          const newSessionsToAdd = adjustment.adjustments.add.map((newSession) => ({
-            type: newSession.type,
-            questions: newSession.questions,
-            duration: newSession.duration
-          }));
-
-          addSessionsToProject(projectId, newSessionsToAdd, sessionIndex);
-        }
       } catch (error) {
         console.error("Error during dynamic learning path adjustment:", error);
       }
@@ -852,14 +904,18 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           projectToUpdate.learningPath,
           projectToUpdate.sessions
         );
-        console.log(`✅ Session ${sessionIndex} completion synchronized to Supabase`);
+
+        // Sync updated atoms (FSRS metadata)
+        await projectDb.updateAtoms(projectId, projectToUpdate.atoms);
+
+        console.log(`✅ Session ${sessionIndex} and knowledge state synchronized to Supabase`);
       } catch (error) {
-        console.error('❌ Failed to sync session completion to Supabase:', error);
+        console.error('❌ Failed to sync session completion and atoms to Supabase:', error);
       }
     }
 
     resetSessionStats();
-  }, [cognitiveCredits, sessionAnswers, sessionStreak, addSessionsToProject, resetSessionStats, user, projectDb]);
+  }, [cognitiveCredits, masteryPoints, sessionAnswers, sessionStreak, addSessionsToProject, resetSessionStats, user, projectDb, profile, updateProfile]);
 
   const archiveProject = useCallback(async (projectId: string): Promise<boolean> => {
     const MAX_ARCHIVED_PROJECTS = 5;
@@ -941,7 +997,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setEnergy(prev => Math.max(0, prev + amount));
   }, []);
 
-  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrsRating: 1 | 2 | 3 | 4, aidsUsed: boolean, isCorrect: boolean) => {
+  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrsRating: 1 | 2 | 3 | 4, isCorrect: boolean, responseTime: number, aidsUsed: string[]) => {
     setSessionAnswers(prev => [...prev, isCorrect]);
 
     const today = new Date().toISOString();
@@ -991,7 +1047,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
     if (isCorrect) {
       setSessionStreak(prev => prev + 1);
-      setCognitiveCredits(prev => prev + (aidsUsed ? 1 : 2));
+      setCognitiveCredits(prev => prev + (aidsUsed.length > 0 ? 1 : 2));
     } else {
       setSessionStreak(0);
     }

@@ -48,19 +48,19 @@ export const generateOrderingQuestion = ai.defineFlow(
     `;
 
     const llmResponse = await ai.generate({
-        prompt,
-        model: 'gemini-1.5-flash',
-        output: { schema: GenerateOrderingOutputSchema },
-        config: { temperature: 0.3 },
+      prompt,
+      model: 'googleai/gemini-2.5-flash',
+      output: { schema: GenerateOrderingOutputSchema },
+      config: { temperature: 0.3 },
     });
 
     if (!llmResponse?.output) {
-        throw new Error("Failed to generate ordering question, output function is null.");
+      throw new Error("Failed to generate ordering question, output function is null.");
     }
-    
+
     const output = llmResponse.output;
     if (output === null) {
-        throw new Error("Failed to generate ordering question, output was null.");
+      throw new Error("Failed to generate ordering question, output was null.");
     }
     return output;
   }
