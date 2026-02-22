@@ -5,49 +5,49 @@ export default function TermsPage() {
     <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center">Términos y Condiciones</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center">Terms and Conditions</CardTitle>
         </CardHeader>
         <CardContent className="prose max-w-none">
-          <p className="text-muted-foreground text-center">Última actualización: 4 de Septiembre de 2025</p>
-          
-          <h2>1. Aceptación de los Términos</h2>
+          <p className="text-muted-foreground text-center">Last updated: September 4, 2025</p>
+
+          <h2>1. Acceptance of Terms</h2>
           <p>
-            Al acceder o utilizar Kolearning (el "Servicio"), usted acepta estar sujeto a estos Términos y Condiciones. Si no está de acuerdo con alguna parte de los términos, no podrá acceder al Servicio.
+            By accessing or using Learning Box (the "Service"), you agree to be bound by these Terms and Conditions. If you do not agree with any part of the terms, you may not access the Service.
           </p>
 
-          <h2>2. Descripción del Servicio</h2>
+          <h2>2. Description of Service</h2>
           <p>
-            Kolearning es una plataforma de aprendizaje adaptativo que utiliza inteligencia artificial para ayudar a los usuarios a estudiar y retener información de manera más efectiva. El Servicio incluye tutoría estratégica, generación de material de estudio y seguimiento del progreso.
+            Learning Box is an adaptive learning platform that uses artificial intelligence to help users study and retain information more effectively. The Service includes strategic tutoring, study material generation, and progress tracking.
           </p>
 
-          <h2>3. Cuentas de Usuario</h2>
+          <h2>3. User Accounts</h2>
           <p>
-            Para utilizar la mayoría de las funciones del Servicio, debe registrarse para obtener una cuenta. Usted es responsable de mantener la confidencialidad de su cuenta y contraseña. Acepta notificar a Kolearning inmediatamente sobre cualquier uso no autorizado de su cuenta.
+            To use most of the features of the Service, you must register for an account. You are responsible for maintaining the confidentiality of your account and password. You agree to notify Learning Box immediately of any unauthorized use of your account.
           </p>
 
-          <h2>4. Contenido del Usuario</h2>
+          <h2>4. User Content</h2>
           <p>
-            Usted conserva todos los derechos sobre cualquier material de estudio, texto o información que cargue o ingrese en el Servicio ("Contenido del Usuario"). Al proporcionar Contenido del Usuario, nos otorga una licencia mundial, no exclusiva, libre de regalías para usar, reproducir, modificar y distribuir dicho contenido con el único propósito de operar y proporcionar el Servicio.
+            You retain all rights to any study materials, text, or information that you upload or input into the Service ("User Content"). By providing User Content, you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, and distribute such content solely for the purpose of operating and providing the Service.
           </p>
 
-          <h2>5. Uso Aceptable</h2>
+          <h2>5. Acceptable Use</h2>
           <p>
-            Usted se compromete a no utilizar el Servicio para ningún propósito ilegal o prohibido por estos Términos. No puede utilizar el Servicio de ninguna manera que pueda dañar, deshabilitar, sobrecargar o perjudicar el Servicio.
+            You agree not to use the Service for any illegal purpose or any purpose prohibited by these Terms. You may not use the Service in any manner that could damage, disable, overburden, or impair the Service.
           </p>
 
-          <h2>6. Terminación</h2>
+          <h2>6. Termination</h2>
           <p>
-            Podemos suspender o cancelar su acceso al Servicio de inmediato, sin previo aviso ni responsabilidad, por cualquier motivo, incluido, entre otros, el incumplimiento de los Términos.
+            We may suspend or terminate your access to the Service immediately, without prior notice or liability, for any reason, including without limitation if you breach the Terms.
           </p>
 
-          <h2>7. Cambios en los Términos</h2>
+          <h2>7. Changes to Terms</h2>
           <p>
-            Nos reservamos el derecho, a nuestra entera discreción, de modificar o reemplazar estos Términos en cualquier momento. Le notificaremos sobre cualquier cambio publicando los nuevos Términos y Condiciones en esta página.
+            We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will notify you of any changes by posting the new Terms and Conditions on this page.
           </p>
 
-          <h2>8. Contáctenos</h2>
+          <h2>8. Contact Us</h2>
           <p>
-            Si tiene alguna pregunta sobre estos Términos, contáctenos en <a href="mailto:soporte@kolearning.com">soporte@kolearning.com</a>.
+            If you have any questions about these Terms, please contact us at <a href="mailto:support@learningbox.com">support@learningbox.com</a>.
           </p>
         </CardContent>
       </Card>

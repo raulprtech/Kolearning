@@ -84,10 +84,10 @@ export async function migrateLocalStorageToSupabase(): Promise<{
           isCompleted: (project as any).isCompleted || false,
           isArchived: (project as any).isArchived || false,
         }
-        
+
         await projectDb.createProject(user.id, projectData)
         migratedProjects++
-        
+
         console.log(`Migrated project: ${project.title}`)
       } catch (error) {
         const errorMsg = `Failed to migrate project "${project.title}": ${error}`
@@ -112,7 +112,7 @@ export async function migrateLocalStorageToSupabase(): Promise<{
     const errorMsg = `Migration failed: ${error}`
     errors.push(errorMsg)
     console.error(errorMsg)
-    
+
     return {
       success: false,
       migratedProjects,
@@ -123,10 +123,10 @@ export async function migrateLocalStorageToSupabase(): Promise<{
 
 function getLocalStorageData(): LocalStorageData | null {
   try {
-    const projects = localStorage.getItem('kolearning_projects')
-    const completedProjects = localStorage.getItem('kolearning_completed_projects')
-    const archivedProjects = localStorage.getItem('kolearning_archived_projects')
-    const user = localStorage.getItem('kolearning_user')
+    const projects = localStorage.getItem('learningbox_projects')
+    const completedProjects = localStorage.getItem('learningbox_completed_projects')
+    const archivedProjects = localStorage.getItem('learningbox_archived_projects')
+    const user = localStorage.getItem('learningbox_user')
 
     return {
       projects: projects ? JSON.parse(projects) : [],
@@ -142,13 +142,13 @@ function getLocalStorageData(): LocalStorageData | null {
 
 function clearLocalStorageData(): void {
   const keys = [
-    'kolearning_projects',
-    'kolearning_completed_projects', 
-    'kolearning_archived_projects',
-    'kolearning_user',
-    'kolearning_users' // Old user list
+    'learningbox_projects',
+    'learningbox_completed_projects',
+    'learningbox_archived_projects',
+    'learningbox_user',
+    'learningbox_users' // Old user list
   ]
-  
+
   keys.forEach(key => {
     localStorage.removeItem(key)
   })
@@ -157,14 +157,14 @@ function clearLocalStorageData(): void {
 // Utility function to check if there's data to migrate
 export function hasLocalStorageData(): boolean {
   try {
-    const projects = localStorage.getItem('kolearning_projects')
-    const completedProjects = localStorage.getItem('kolearning_completed_projects')
-    const archivedProjects = localStorage.getItem('kolearning_archived_projects')
-    
+    const projects = localStorage.getItem('learningbox_projects')
+    const completedProjects = localStorage.getItem('learningbox_completed_projects')
+    const archivedProjects = localStorage.getItem('learningbox_archived_projects')
+
     const hasProjects = !!(projects && JSON.parse(projects).length > 0)
     const hasCompleted = !!(completedProjects && JSON.parse(completedProjects).length > 0)
     const hasArchived = !!(archivedProjects && JSON.parse(archivedProjects).length > 0)
-    
+
     return hasProjects || hasCompleted || hasArchived
   } catch (error) {
     return false

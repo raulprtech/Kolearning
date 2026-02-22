@@ -119,9 +119,9 @@ function LoginContent() {
           <div className="flex justify-center mb-4">
             <Brain className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
+          <CardTitle className="text-2xl font-bold">Log In</CardTitle>
           <CardDescription>
-            Ingresa a tu cuenta de Kolearning
+            Enter your Learning Box account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -142,14 +142,14 @@ function LoginContent() {
             </div>
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
-                Contraseña
+                Password
               </label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Tu contraseña"
+                placeholder="Your password"
                 required
                 disabled={isLoading}
               />
@@ -158,10 +158,10 @@ function LoginContent() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Iniciando sesión...
+                  Logging in...
                 </>
               ) : (
-                'Iniciar Sesión'
+                'Log In'
               )}
             </Button>
           </form>
@@ -173,7 +173,7 @@ function LoginContent() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  O continúa con
+                  Or continue with
                 </span>
               </div>
             </div>
@@ -183,14 +183,14 @@ function LoginContent() {
               className="w-full mt-4"
               disabled={isLoading}
             >
-              Continuar con Google
+              Continue with Google
             </Button>
           </div>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            ¿No tienes una cuenta?{' '}
+            Don't have an account?{' '}
             <Link href={`/signup?redirect=${encodeURIComponent(redirectUrl)}`} className="text-primary hover:underline">
-              Regístrate
+              Sign up
             </Link>
           </p>
         </CardContent>

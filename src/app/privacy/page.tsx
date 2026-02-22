@@ -5,55 +5,55 @@ export default function PrivacyPage() {
     <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center">Política de Privacidad</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center">Privacy Policy</CardTitle>
         </CardHeader>
         <CardContent className="prose max-w-none">
-          <p className="text-muted-foreground text-center">Última actualización: 4 de Septiembre de 2025</p>
+          <p className="text-muted-foreground text-center">Last updated: September 4, 2025</p>
 
-          <h2>1. Información que Recopilamos</h2>
+          <h2>1. Information We Collect</h2>
           <p>
-            Recopilamos información que usted nos proporciona directamente, como cuando crea una cuenta, y la información que se genera a través de su uso del Servicio. Esto incluye:
+            We collect information that you provide directly to us, such as when you create an account, and information generated through your use of the Service. This includes:
             <ul>
-              <li><strong>Información de la cuenta:</strong> Su nombre, dirección de correo electrónico y contraseña.</li>
-              <li><strong>Contenido del Usuario:</strong> Los materiales de estudio que usted carga o crea.</li>
-              <li><strong>Datos de Uso:</strong> Información sobre cómo interactúa con nuestro Servicio, como su progreso de aprendizaje, respuestas a preguntas y uso de funciones.</li>
+              <li><strong>Account Information:</strong> Your name, email address, and password.</li>
+              <li><strong>User Content:</strong> Study materials you upload or create.</li>
+              <li><strong>Usage Data:</strong> Information about how you interact with our Service, such as your learning progress, answers to questions, and feature usage.</li>
             </ul>
           </p>
 
-          <h2>2. Cómo Usamos la Información</h2>
+          <h2>2. How We Use Information</h2>
           <p>
-            Utilizamos la información que recopilamos para:
+            We use the information we collect to:
             <ul>
-              <li>Proporcionar, mantener y mejorar nuestro Servicio.</li>
-              <li>Personalizar su experiencia de aprendizaje.</li>
-              <li>Comunicarnos con usted, incluyendo el envío de correos electrónicos relacionados con el servicio y, si lo ha aceptado, boletines informativos.</li>
-              <li>Analizar el uso del Servicio para comprender y mejorar nuestra plataforma.</li>
+              <li>Provide, maintain, and improve our Service.</li>
+              <li>Personalize your learning experience.</li>
+              <li>Communicate with you, including sending service-related emails and, if you have opted in, newsletters.</li>
+              <li>Analyze Service usage to understand and improve our platform.</li>
             </ul>
           </p>
 
-          <h2>3. Suscripción al Boletín</h2>
+          <h2>3. Newsletter Subscription</h2>
           <p>
-            Si elige suscribirse a nuestro boletín, utilizaremos su dirección de correo electrónico para enviarle actualizaciones sobre nuevas funciones, consejos de estudio y noticias sobre Kolearning. Puede darse de baja de estas comunicaciones en cualquier momento haciendo clic en el enlace "cancelar suscripción" que se encuentra en la parte inferior de cada correo electrónico.
+            If you choose to subscribe to our newsletter, we will use your email address to send you updates about new features, study tips, and news about Learning Box. You can unsubscribe from these communications at any time by clicking the "unsubscribe" link at the bottom of each email.
           </p>
 
-          <h2>4. Intercambio de Información</h2>
+          <h2>4. Information Sharing</h2>
           <p>
-            No compartimos su información personal con terceros, excepto en las siguientes circunstancias:
+            We do not share your personal information with third parties, except in the following circumstances:
             <ul>
-              <li>Con su consentimiento.</li>
-              <li>Para cumplir con las leyes o responder a procesos legales.</li>
-              <li>Para proteger los derechos y la propiedad de Kolearning.</li>
+              <li>With your consent.</li>
+              <li>To comply with laws or respond to legal processes.</li>
+              <li>To protect the rights and property of Learning Box.</li>
             </ul>
           </p>
 
-          <h2>5. Seguridad de los Datos</h2>
+          <h2>5. Data Security</h2>
           <p>
-            Tomamos medidas razonables para proteger su información contra pérdida, robo, uso indebido y acceso no autorizado.
+            We take reasonable measures to protect your information against loss, theft, misuse, and unauthorized access.
           </p>
 
-          <h2>6. Contáctenos</h2>
+          <h2>6. Contact Us</h2>
           <p>
-            Si tiene alguna pregunta sobre esta Política de Privacidad, contáctenos en <a href="mailto:privacidad@kolearning.com">privacidad@kolearning.com</a>.
+            If you have any questions about this Privacy Policy, please contact us at <a href="mailto:privacy@learningbox.com">privacy@learningbox.com</a>.
           </p>
         </CardContent>
       </Card>

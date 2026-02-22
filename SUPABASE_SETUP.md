@@ -1,124 +1,124 @@
-# Configuración de Supabase para Kolearning
+# Supabase Configuration for Learning Box
 
-Esta guía te ayudará a configurar Supabase como base de datos y sistema de autenticación para Kolearning.
+This guide will help you configure Supabase as the database and authentication system for Learning Box.
 
-## Paso 1: Crear proyecto en Supabase
+## Step 1: Create a Supabase Project
 
-1. Ve a [supabase.com](https://supabase.com) y crea una cuenta
-2. Crea un nuevo proyecto
-3. Espera a que el proyecto se inicialice (puede tardar unos minutos)
+1. Go to [supabase.com](https://supabase.com) and create an account.
+2. Create a new project.
+3. Wait for the project to initialize (it may take a few minutes).
 
-## Paso 2: Configurar variables de entorno
+## Step 2: Configure Environment Variables
 
-1. En tu proyecto de Supabase, ve a `Settings` > `API`
-2. Copia las siguientes credenciales:
+1. in your Supabase project, go to `Settings` > `API`.
+2. Copy the following credentials:
    - `Project URL`
    - `anon public key`  
-   - `service_role key` (mantén esta clave secreta)
+   - `service_role key` (keep this key secret)
 
-3. Actualiza tu archivo `.env` con estos valores:
+3. Update your `.env` file with these values:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=tu-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
-SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-## Paso 3: Ejecutar el esquema de base de datos
+## Step 3: Execute the Database Schema
 
-1. En tu proyecto de Supabase, ve a `SQL Editor`
-2. Copia todo el contenido del archivo `database/schema.sql`
-3. Pégalo en el editor y ejecuta el script
-4. Esto creará todas las tablas, índices, políticas de seguridad y funciones necesarias
+1. In your Supabase project, go to `SQL Editor`.
+2. Copy all the content from the `database/schema.sql` file.
+3. Paste it into the editor and run the script.
+4. This will create all the necessary tables, indexes, security policies, and functions.
 
-## Paso 4: Configurar autenticación
+## Step 4: Configure Authentication
 
-### Autenticación por Email
+### Email Authentication
 
-La autenticación por email ya está configurada por defecto.
+Email authentication is already configured by default.
 
-### Autenticación con Google (Opcional)
+### Google Authentication (Optional)
 
-1. En tu proyecto de Supabase, ve a `Authentication` > `Settings` > `Auth Providers`
-2. Habilita Google como proveedor
-3. Configura las credenciales de Google OAuth:
-   - Ve a [Google Cloud Console](https://console.cloud.google.com/)
-   - Crea un nuevo proyecto o selecciona uno existente
-   - Habilita la API de Google+
-   - Crea credenciales OAuth 2.0
-   - Configura las URLs de redirección:
-     - `https://tu-proyecto.supabase.co/auth/v1/callback`
-     - `http://localhost:9002` (para desarrollo)
+1. In your Supabase project, go to `Authentication` > `Settings` > `Auth Providers`.
+2. Enable Google as a provider.
+3. Configure Google OAuth credentials:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/).
+   - Create a new project or select an existing one.
+   - Enable the Google+ API.
+   - Create OAuth 2.0 credentials.
+   - Configure redirection URLs:
+     - `https://your-project.supabase.co/auth/v1/callback`
+     - `http://localhost:9002` (for development)
 
-## Paso 5: Configurar políticas de seguridad (RLS)
+## Step 5: Configure Security Policies (RLS)
 
-Las políticas de Row Level Security ya están incluidas en el esquema SQL y proporcionan:
+Row Level Security policies are already included in the SQL schema and provide:
 
-- **Perfiles**: Los usuarios solo pueden ver y editar su propio perfil
-- **Proyectos**: Los usuarios solo pueden ver sus propios proyectos o proyectos públicos
-- **Átomos, Fuentes, Sesiones**: Solo accesibles por el propietario del proyecto
-- **Seguridad automática**: No es necesario validar manualmente los permisos en el frontend
+- **Profiles**: Users can only see and edit their own profiles.
+- **Projects**: Users can only see their own projects or public projects.
+- **Atoms, Sources, Sessions**: Only accessible by the project owner.
+- **Automatic Security**: No need to manually validate permissions in the frontend.
 
-## Paso 6: Verificar la configuración
+## Step 6: Verify Configuration
 
-1. Inicia tu aplicación: `npm run dev`
-2. Ve a `/signup` y crea una nueva cuenta
-3. Verifica que puedas iniciar sesión en `/login`
-4. Verifica que se cree automáticamente un perfil en la tabla `profiles`
+1. Start your application: `npm run dev`.
+2. Go to `/signup` and create a new account.
+3. Verify that you can log in at `/login`.
+4. Verify that a profile is automatically created in the `profiles` table.
 
-## Estructura de la base de datos
+## Database Structure
 
-### Tablas principales:
+### Main Tables:
 
-- **profiles**: Extiende auth.users con información adicional del usuario
-- **projects**: Proyectos de aprendizaje de cada usuario
-- **atoms**: Átomos de conocimiento (preguntas/respuestas) con métricas FSRS
-- **sources**: Fuentes/materiales subidos para cada proyecto
-- **sessions**: Sesiones de estudio de cada proyecto
-- **learning_path_items**: Elementos del plan de aprendizaje
-- **session_atoms**: Relación muchos-a-muchos entre sesiones y átomos
+- **profiles**: Extends auth.users with additional user information.
+- **projects**: Learning projects for each user.
+- **atoms**: Knowledge atoms (questions/answers) with FSRS metrics.
+- **sources**: Uploaded sources/materials for each project.
+- **sessions**: Study sessions for each project.
+- **learning_path_items**: Elements of the learning plan.
+- **session_atoms**: Many-to-many relationship between sessions and atoms.
 
-### Funciones automáticas:
+### Automatic Functions:
 
-- **handle_new_user()**: Crea un perfil automáticamente cuando se registra un usuario
-- **update_updated_at_column()**: Actualiza automáticamente las timestamps
+- **handle_new_user()**: Automatically creates a profile when a user registers.
+- **update_updated_at_column()**: Automatically updates timestamps.
 
-### Índices optimizados:
+### Optimized Indexes:
 
-- Consultas rápidas por usuario, proyecto y estado
-- Búsqueda eficiente de proyectos públicos
-- Filtrado rápido por fechas de repaso FSRS
+- Fast queries by user, project, and status.
+- Efficient searching of public projects.
+- Rapid filtering by FSRS review dates.
 
-## Migración de datos existentes
+## Existing Data Migration
 
-Si ya tienes datos en localStorage, puedes migrarlos ejecutando:
+If you already have data in localStorage, you can migrate it by running:
 
 ```typescript
-// Código de migración estará disponible en ProjectContext
+// Migration code will be available in ProjectContext
 await migrateLocalStorageToSupabase()
 ```
 
 ## Troubleshooting
 
 ### Error: "Invalid JWT"
-- Verifica que las variables de entorno estén correctas
-- Asegúrate de haber reiniciado el servidor después de cambiar las variables
+- Verify that environment variables are correct.
+- Ensure you have restarted the server after changing variables.
 
 ### Error: "Row Level Security"
-- Verifica que las políticas RLS se hayan creado correctamente
-- Ejecuta nuevamente el script SQL si es necesario
+- Verify that RLS policies were created correctly.
+- Re-run the SQL script if necessary.
 
-### Error de conexión
-- Verifica que el proyecto de Supabase esté activo
-- Comprueba que la URL del proyecto sea correcta
+### Connection Error
+- Verify that the Supabase project is active.
+- Check that the project URL is correct.
 
-## Próximos pasos
+## Next Steps
 
-Una vez configurado Supabase:
+Once Supabase is configured:
 
-1. Los datos se guardarán automáticamente en la base de datos
-2. Los usuarios podrán acceder a sus proyectos desde cualquier dispositivo
-3. Los proyectos públicos estarán disponibles para toda la comunidad
-4. Las métricas FSRS se mantendrán persistentemente
+1. Data will be automatically saved in the database.
+2. Users can access their projects from any device.
+3. Public projects will be available to the entire community.
+4. FSRS metrics will be maintained persistently.
 
-¡Tu aplicación Kolearning ya está lista para producción con Supabase!
+Your Learning Box application is now ready for production with Supabase!

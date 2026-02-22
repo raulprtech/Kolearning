@@ -290,7 +290,7 @@ export class ProjectDatabase {
             last_reviewed: atom.lastReviewed,
             retrievability: atom.retrievability,
             incorrect_answers: atom.incorrectAnswers || [],
-            phase: atom.phase || 'calibracion',
+            phase: atom.phase || 'calibration',
             zettelkasten_note: atom.zettelkastenNote,
             dependencies: atom.dependencies,
             ordering_items: atom.orderingItems,
@@ -324,7 +324,7 @@ export class ProjectDatabase {
               questions: session.questions,
               duration: session.duration,
               status: session.status,
-              phase: session.phase || 'calibracion',
+              phase: session.phase || 'calibration',
               question_formats: session.questionFormats,
             }))
           )
@@ -400,7 +400,7 @@ export class ProjectDatabase {
             topic: item.topic,
             session_type: item.sessionType,
             questions: item.questions,
-            phase: item.phase || 'calibracion',
+            phase: item.phase || 'calibration',
             question_formats: item.questionFormats,
           }))
         )
@@ -436,44 +436,93 @@ export class ProjectDatabase {
   }
 
   async updateLearningPathAndSessions(projectId: string, learningPath: LearningPathItem[], sessions: Session[]): Promise<void> {
-    // This is a transactional operation: delete old, insert new
+    // 1. Fetch current atoms to get their IDs for re-linking
+    const { data: atomsData, error: atomsError } = await this.supabase
+      .from('atoms')
+      .select('id, question')
+      .eq('project_id', projectId);
+
+    if (atomsError) throw new Error(`Failed to fetch atoms for re-linking: ${atomsError.message}`);
+
+    const atomMap = new Map();
+    atomsData.forEach(a => atomMap.set(a.question, a.id));
+
+    // 2. Transactional operation: delete old items, then insert new ones
+    // Delete old learning path items
     const { error: deleteLpError } = await this.supabase
       .from('learning_path_items')
       .delete()
       .eq('project_id', projectId);
     if (deleteLpError) throw new Error(`Failed to delete old learning path: ${deleteLpError.message}`);
 
+    // Delete old sessions (this will cascade delete session_atoms links due to FK)
     const { error: deleteSessionsError } = await this.supabase
       .from('sessions')
       .delete()
       .eq('project_id', projectId);
     if (deleteSessionsError) throw new Error(`Failed to delete old sessions: ${deleteSessionsError.message}`);
 
-    // Insert new learning path items
-    const lpToInsert = learningPath.map(item => ({
-      project_id: projectId,
-      session_number: item.session,
-      topic: item.topic,
-      session_type: item.sessionType,
-      questions: item.questions,
-      phase: item.phase || 'calibracion',
-      question_formats: item.questionFormats,
-    }));
-    const { error: insertLpError } = await this.supabase.from('learning_path_items').insert(lpToInsert);
-    if (insertLpError) throw new Error(`Failed to insert new learning path: ${insertLpError.message}`);
+    // 3. Insert new learning path items
+    if (learningPath.length > 0) {
+      const lpToInsert = learningPath.map(item => ({
+        project_id: projectId,
+        session_number: item.session,
+        topic: item.topic,
+        session_type: item.sessionType,
+        questions: item.questions,
+        phase: item.phase || 'calibration',
+        question_formats: item.questionFormats,
+      }));
+      const { error: insertLpError } = await this.supabase.from('learning_path_items').insert(lpToInsert);
+      if (insertLpError) throw new Error(`Failed to insert new learning path: ${insertLpError.message}`);
+    }
 
-    // Insert new sessions
-    const sessionsToInsert = sessions.map(session => ({
-      project_id: projectId,
-      session_number: session.session,
-      type: session.type,
-      duration: session.duration,
-      status: session.status,
-      phase: session.phase || 'calibracion',
-      question_formats: session.questionFormats,
-    }));
-    const { error: insertSessionsError } = await this.supabase.from('sessions').insert(sessionsToInsert);
-    if (insertSessionsError) throw new Error(`Failed to insert new sessions: ${insertSessionsError.message}`);
+    // 4. Insert new sessions
+    if (sessions.length > 0) {
+      const sessionsToInsert = sessions.map(session => ({
+        project_id: projectId,
+        session_number: session.session,
+        type: session.type,
+        duration: session.duration,
+        status: session.status,
+        phase: session.phase || 'calibration',
+        question_formats: session.questionFormats,
+      }));
+      const { data: insertedSessions, error: insertSessionsError } = await this.supabase
+        .from('sessions')
+        .insert(sessionsToInsert)
+        .select('id, session_number');
+
+      if (insertSessionsError) throw new Error(`Failed to insert new sessions: ${insertSessionsError.message}`);
+
+      // 5. Re-link atoms to the newly inserted sessions
+      const sessionAtomInserts: any[] = [];
+      sessions.forEach(session => {
+        const sessionRow = insertedSessions?.find(s => s.session_number === session.session);
+        if (sessionRow && session.atoms && session.atoms.length > 0) {
+          session.atoms.forEach(atom => {
+            const atomId = atomMap.get(atom.question);
+            if (atomId) {
+              sessionAtomInserts.push({
+                session_id: sessionRow.id,
+                atom_id: atomId,
+              });
+            }
+          });
+        }
+      });
+
+      if (sessionAtomInserts.length > 0) {
+        const { error: linkError } = await this.supabase
+          .from('session_atoms')
+          .insert(sessionAtomInserts);
+        if (linkError) {
+          console.error(`⚠️ Failed to re-link atoms to sessions: ${linkError.message}`);
+          // Don't throw here to avoid failing the whole sync if only linking fails, 
+          // but in production we might want more robust handling.
+        }
+      }
+    }
   }
 
   async deleteProject(projectId: string): Promise<void> {
@@ -547,7 +596,7 @@ export class ProjectDatabase {
           last_reviewed: atom.lastReviewed,
           retrievability: atom.retrievability,
           incorrect_answers: atom.incorrectAnswers || [],
-          phase: atom.phase || 'calibracion',
+          phase: atom.phase || 'calibration',
           zettelkasten_note: atom.zettelkastenNote,
           dependencies: atom.dependencies,
         })
@@ -571,7 +620,7 @@ export class ProjectDatabase {
           last_reviewed: atom.lastReviewed,
           retrievability: atom.retrievability,
           incorrect_answers: atom.incorrectAnswers || [],
-          phase: atom.phase || 'calibracion',
+          phase: atom.phase || 'calibration',
           zettelkasten_note: atom.zettelkastenNote,
           dependencies: atom.dependencies,
           ordering_items: atom.orderingItems,
@@ -626,7 +675,7 @@ export class ProjectDatabase {
           questions: session.questions,
           duration: session.duration,
           status: session.status,
-          phase: session.phase || 'calibracion',
+          phase: session.phase || 'calibration',
           question_formats: session.questionFormats,
         }))
       )

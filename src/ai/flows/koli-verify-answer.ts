@@ -1,7 +1,7 @@
 'use server';
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const VerifyAnswerInputSchema = z.object({
   question: z.string().describe('The question that was asked.'),
@@ -24,16 +24,16 @@ export async function verifyAnswer(input: VerifyAnswerInput): Promise<VerifyAnsw
 
 const prompt = ai.definePrompt({
   name: 'verifyAnswerPrompt',
-  input: {schema: VerifyAnswerInputSchema},
-  output: {schema: VerifyAnswerOutputSchema},
+  input: { schema: VerifyAnswerInputSchema },
+  output: { schema: VerifyAnswerOutputSchema },
   model: 'googleai/gemini-2.5-flash-lite',
   config: {
     temperature: 0.1,
     maxOutputTokens: 8192
   },
-  prompt: `You are Koli, an AI tutor. Your task is to evaluate a learner's answer to a question.
+  prompt: `You are the Learning Box Tutor, an AI tutor. Your task is to evaluate a learner's answer to a question.
 Compare the "Learner's Answer" to the "Correct Answer". The learner's answer doesn't need to be word-for-word identical, but it MUST contain the key concepts of the correct answer. Be strict but fair.
-Your response must be in Spanish.
+Your response must be in English.
 
 Question: {{{question}}}
 Correct Answer: {{{correctAnswer}}}

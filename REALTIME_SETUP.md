@@ -1,54 +1,54 @@
-# 🔴 Configuración de Supabase Realtime para Sincronización en Tiempo Real
+# 🔴 Supabase Realtime Configuration for Real-Time Synchronization
 
-## 📋 ¿Qué hace esto?
+## 📋 What does this do?
 
-Permite que los cambios en proyectos se **sincronicen instantáneamente** entre diferentes navegadores, tabs y dispositivos sin necesidad de recargar la página.
+It allows changes in projects to **synchronize instantly** between different browsers, tabs, and devices without needing to reload the page.
 
-## ⚙️ Pasos para Habilitar Realtime
+## ⚙️ Steps to Enable Realtime
 
-### 1. **Ir al Dashboard de Supabase**
-   - Abre https://supabase.com/dashboard
-   - Selecciona tu proyecto de Kolearning
+### 1. **Go to Supabase Dashboard**
+   - Open https://supabase.com/dashboard
+   - Select your Learning Box project.
 
-### 2. **Habilitar Realtime en la tabla `projects`**
+### 2. **Enable Realtime on the `projects` table**
 
-#### Opción A: Desde la UI (Más fácil)
-1. Ve a **Database** > **Tables**
-2. Encuentra la tabla `projects`
-3. Click en los 3 puntos (⋮) > **Edit table**
-4. Scroll hasta abajo y encuentra **Realtime**
-5. ✅ **Activa** el switch de "Enable Realtime"
-6. Click en **Save**
+#### Option A: From the UI (Easiest)
+1. Go to **Database** > **Tables**.
+2. Find the `projects` table.
+3. Click on the 3 dots (⋮) > **Edit table**.
+4. Scroll to the bottom and find **Realtime**.
+5. ✅ **Enable** the "Enable Realtime" switch.
+6. Click **Save**.
 
-#### Opción B: Desde SQL Editor (Más rápido)
-1. Ve a **SQL Editor**
-2. Crea una nueva query
-3. Pega este código:
+#### Option B: From SQL Editor (Fastest)
+1. Go to **SQL Editor**.
+2. Create a new query.
+3. Paste this code:
 
 ```sql
--- Habilitar Realtime en la tabla projects
+-- Enable Realtime on the projects table
 ALTER TABLE public.projects
 REPLICA IDENTITY FULL;
 
--- Verificar que esté habilitado
+-- Verify that it is enabled
 SELECT schemaname, tablename, replica_identity
 FROM pg_tables
 WHERE tablename = 'projects';
 ```
 
-4. Click en **Run**
-5. Deberías ver `replica_identity = 'f'` (que significa FULL)
+4. Click **Run**.
+5. You should see `replica_identity = 'f'` (which means FULL).
 
-### 3. **Verificar que funciona**
+### 3. **Verify it works**
 
-Después de habilitar Realtime:
+After enabling Realtime:
 
-1. Abre dos navegadores diferentes (o dos ventanas de incognito)
-2. Inicia sesión con la misma cuenta en ambos
-3. En el navegador 1: Crea un nuevo proyecto
-4. En el navegador 2: **Deberías ver el proyecto aparecer automáticamente** sin recargar
+1. Open two different browsers (or two incognito windows).
+2. Log in with the same account in both.
+3. In browser 1: Create a new project.
+4. In browser 2: **You should see the project appear automatically** without reloading.
 
-Verás en la consola:
+You will see in the console:
 ```
 [Realtime] Setting up Supabase Realtime subscriptions
 [Realtime] Subscription status: SUBSCRIBED
@@ -59,52 +59,52 @@ Verás en la consola:
 ## 🔍 Troubleshooting
 
 ### "Subscription status: CHANNEL_ERROR"
-- Verifica que Realtime esté habilitado en la tabla `projects`
-- Asegúrate de que tu plan de Supabase soporte Realtime (Free tier sí lo soporta)
+- Verify that Realtime is enabled on the `projects` table.
+- Ensure your Supabase plan supports Realtime (Free tier does).
 
-### "No veo cambios en tiempo real"
-1. Verifica los logs de la consola del navegador
-2. Asegúrate de que ambas sesiones estén autenticadas
-3. Verifica que el `user_id` del filtro sea correcto
+### "I don't see real-time changes"
+1. Check the browser console logs.
+2. Ensure both sessions are authenticated.
+3. Verify that the `user_id` filter is correct.
 
-### "Demasiados recargas"
-- Es normal que `loadUserData()` se llame al detectar cambios
-- Considera implementar debouncing si es necesario
+### "Too many reloads"
+- It is normal for `loadUserData()` to be called when changes are detected.
+- Consider implementing debouncing if necessary.
 
-## 📊 Tablas que se Sincronizan
+## 📊 Synchronized Tables
 
-Actualmente solo la tabla `projects` está configurada para Realtime.
+Currently, only the `projects` table is configured for Realtime.
 
-Si quieres sincronizar **atoms**, **sessions**, etc., repite el proceso para esas tablas:
+If you want to sync **atoms**, **sessions**, etc., repeat the process for those tables:
 
 ```sql
--- Para atoms
+-- For atoms
 ALTER TABLE public.atoms REPLICA IDENTITY FULL;
 
--- Para sessions
+-- For sessions
 ALTER TABLE public.sessions REPLICA IDENTITY FULL;
 
--- Para learning_path_items
+-- For learning_path_items
 ALTER TABLE public.learning_path_items REPLICA IDENTITY FULL;
 ```
 
-## 💡 Alternativas (si no quieres usar Realtime)
+## 💡 Alternatives (if you don't want to use Realtime)
 
-Si prefieres no usar Realtime, la app ya tiene sincronización **por focus**:
-- Cuando cambias de tab/ventana, se recarga automáticamente
-- Funciona pero no es instantáneo
+If you prefer not to use Realtime, the app already has **focus-based** synchronization:
+- When you switch tabs/windows, it reloads automatically.
+- It works but is not instantaneous.
 
-## 📝 Notas Importantes
+## 📝 Important Notes
 
-- ✅ Realtime está incluido en el **Free tier** de Supabase
-- ✅ Solo sincroniza datos del usuario actual (por el filtro `user_id`)
-- ✅ No afecta el rendimiento negativamente
-- ⚠️ Asegúrate de tener Row Level Security (RLS) habilitado
+- ✅ Realtime is included in the Supabase **Free tier**.
+- ✅ Only synchronizes data for the current user (via the `user_id` filter).
+- ✅ Does not negatively affect performance.
+- ⚠️ Ensure you have Row Level Security (RLS) enabled.
 
-## 🎯 Resultado Esperado
+## 🎯 Expected Result
 
-Con Realtime habilitado:
-- ✅ Cambios instantáneos entre navegadores
-- ✅ Sin necesidad de recargar manualmente
-- ✅ Mejor experiencia de usuario
-- ✅ Sincronización en menos de 1 segundo
+With Realtime enabled:
+- ✅ Instant changes between browsers.
+- ✅ No need to manually reload.
+- ✅ Better user experience.
+- ✅ Synchronization in less than 1 second.

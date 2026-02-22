@@ -26,7 +26,7 @@ export default function SignupForm({ redirectUrl }: Props) {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (password !== confirmPassword) {
       toast({
         title: 'Error',
@@ -114,23 +114,23 @@ export default function SignupForm({ redirectUrl }: Props) {
           <div className="flex justify-center mb-4">
             <Brain className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">Crear Cuenta</CardTitle>
+          <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
           <CardDescription>
-            Únete a Kolearning y empieza a aprender
+            Join Learning Box and start learning effectively
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="name" className="text-sm font-medium">
-                Nombre completo
+                Full Name
               </label>
               <Input
                 id="name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Tu nombre completo"
+                placeholder="Your full name"
                 required
                 disabled={isLoading}
               />
@@ -151,14 +151,14 @@ export default function SignupForm({ redirectUrl }: Props) {
             </div>
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
-                Contraseña
+                Password
               </label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="At least 6 characters"
                 required
                 disabled={isLoading}
                 minLength={6}
@@ -166,14 +166,14 @@ export default function SignupForm({ redirectUrl }: Props) {
             </div>
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-sm font-medium">
-                Confirmar contraseña
+                Confirm Password
               </label>
               <Input
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirma tu contraseña"
+                placeholder="Confirm your password"
                 required
                 disabled={isLoading}
                 minLength={6}
@@ -183,14 +183,14 @@ export default function SignupForm({ redirectUrl }: Props) {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creando cuenta...
+                  Creating account...
                 </>
               ) : (
-                'Crear Cuenta'
+                'Create Account'
               )}
             </Button>
           </form>
-          
+
           <div className="mt-4">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -198,7 +198,7 @@ export default function SignupForm({ redirectUrl }: Props) {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  O continúa con
+                  Or continue with
                 </span>
               </div>
             </div>
@@ -208,14 +208,14 @@ export default function SignupForm({ redirectUrl }: Props) {
               className="w-full mt-4"
               disabled={isLoading}
             >
-              Continuar con Google
+              Continue with Google
             </Button>
           </div>
-          
+
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            ¿Ya tienes una cuenta?{' '}
+            Already have an account?{' '}
             <Link href={`/login?redirect=${encodeURIComponent(redirectUrl)}`} className="text-primary hover:underline">
-              Inicia sesión
+              Log in
             </Link>
           </p>
         </CardContent>

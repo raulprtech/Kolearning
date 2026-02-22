@@ -27,7 +27,7 @@ export default function MigratePage() {
     if (!user) {
       toast({
         title: 'Error',
-        description: 'Debes estar autenticado para migrar tus datos.',
+        description: 'You must be authenticated to migrate your data.',
         variant: 'destructive'
       })
       return
@@ -40,20 +40,20 @@ export default function MigratePage() {
 
       if (result.success) {
         toast({
-          title: '¡Migración exitosa!',
-          description: `Se migraron ${result.migratedProjects} proyectos a la nube.`,
+          title: 'Migration successful!',
+          description: `${result.migratedProjects} projects were migrated to the cloud.`,
         })
       } else {
         toast({
-          title: 'Migración completada con errores',
-          description: `Se migraron ${result.migratedProjects} proyectos, pero hubo algunos errores.`,
+          title: 'Migration completed with errors',
+          description: `${result.migratedProjects} projects were migrated, but there were some errors.`,
           variant: 'destructive'
         })
       }
     } catch (error) {
       toast({
-        title: 'Error en la migración',
-        description: 'No se pudo completar la migración. Inténtalo de nuevo.',
+        title: 'Migration error',
+        description: 'Could not complete the migration. Please try again.',
         variant: 'destructive'
       })
     } finally {
@@ -71,14 +71,14 @@ export default function MigratePage() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-            <CardTitle>Autenticación Requerida</CardTitle>
+            <CardTitle>Authentication Required</CardTitle>
             <CardDescription>
-              Debes iniciar sesión para acceder a esta página.
+              You must log in to access this page.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/login')} className="w-full">
-              Iniciar Sesión
+              Log In
             </Button>
           </CardContent>
         </Card>
@@ -94,10 +94,10 @@ export default function MigratePage() {
             <Database className="h-16 w-16 text-primary" />
           </div>
           <CardTitle className="text-3xl font-bold">
-            ¡Bienvenido a Kolearning en la Nube!
+            Welcome to Learning Box in the Cloud!
           </CardTitle>
           <CardDescription className="text-lg">
-            Ahora tus proyectos se sincronizan automáticamente entre dispositivos
+            Now your projects automatically sync between devices
           </CardDescription>
         </CardHeader>
 
@@ -107,18 +107,18 @@ export default function MigratePage() {
             <div className="flex items-start space-x-3 p-4 rounded-lg bg-primary/10">
               <Cloud className="h-6 w-6 text-primary mt-1 shrink-0" />
               <div>
-                <h3 className="font-semibold">Sincronización automática</h3>
+                <h3 className="font-semibold">Automatic Synchronization</h3>
                 <p className="text-sm text-muted-foreground">
-                  Accede a tus proyectos desde cualquier dispositivo
+                  Access your projects from any device
                 </p>
               </div>
             </div>
             <div className="flex items-start space-x-3 p-4 rounded-lg bg-primary/10">
               <CheckCircle className="h-6 w-6 text-green-500 mt-1 shrink-0" />
               <div>
-                <h3 className="font-semibold">Datos seguros</h3>
+                <h3 className="font-semibold">Secure Data</h3>
                 <p className="text-sm text-muted-foreground">
-                  Tus datos están protegidos con encriptación de nivel empresarial
+                  Your data is protected with enterprise-level encryption
                 </p>
               </div>
             </div>
@@ -130,24 +130,24 @@ export default function MigratePage() {
               <Alert>
                 <HardDrive className="h-4 w-4" />
                 <AlertDescription>
-                  Detectamos datos de proyectos guardados localmente en tu navegador. 
-                  ¿Te gustaría migrarlos a la nube para mantenerlos seguros?
+                  We detected project data saved locally in your browser.
+                  Would you like to migrate them to the cloud to keep them safe?
                 </AlertDescription>
               </Alert>
 
               <div className="flex justify-center space-x-4">
                 <Button variant="outline" onClick={handleContinue}>
-                  Saltar migración
+                  Skip migration
                 </Button>
                 <Button onClick={handleMigration} disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Migrando...
+                      Migrating...
                     </>
                   ) : (
                     <>
-                      Migrar datos
+                      Migrate data
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </>
                   )}
@@ -167,17 +167,17 @@ export default function MigratePage() {
               <AlertDescription>
                 <div className="space-y-2">
                   <p>
-                    <strong>Migración completada:</strong> {migrationResult.migratedProjects} proyectos migrados
+                    <strong>Migration completed:</strong> {migrationResult.migratedProjects} projects migrated
                   </p>
                   {migrationResult.errors.length > 0 && (
                     <div>
-                      <p className="font-semibold">Errores encontrados:</p>
+                      <p className="font-semibold">Errors found:</p>
                       <ul className="list-disc list-inside text-sm">
                         {migrationResult.errors.slice(0, 3).map((error, index) => (
                           <li key={index}>{error}</li>
                         ))}
                         {migrationResult.errors.length > 3 && (
-                          <li>... y {migrationResult.errors.length - 3} errores más</li>
+                          <li>... and {migrationResult.errors.length - 3} more errors</li>
                         )}
                       </ul>
                     </div>
@@ -191,7 +191,7 @@ export default function MigratePage() {
           {(!hasLocalData || migrationResult) && (
             <div className="flex justify-center">
               <Button onClick={handleContinue} size="lg">
-                Continuar a Kolearning
+                Continue to Learning Box
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -200,8 +200,8 @@ export default function MigratePage() {
           {/* Info Section */}
           <div className="text-center text-sm text-muted-foreground border-t pt-4">
             <p>
-              Kolearning ahora utiliza Supabase para almacenar tus datos de forma segura.
-              Si tienes alguna pregunta, consulta nuestra documentación.
+              Learning Box now uses Supabase to store your data securely.
+              If you have any questions, check our documentation.
             </p>
           </div>
         </CardContent>

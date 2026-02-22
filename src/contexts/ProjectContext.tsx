@@ -22,7 +22,7 @@ export type Atom = {
   retrievability?: number; // FSRS score from 1 to 4
   incorrectAnswers?: string[]; // For multiple choice questions
   // Learning phase fields
-  phase?: 'calibracion' | 'incursion' | 'refuerzo' | 'dominio';
+  phase?: 'calibration' | 'incursion' | 'reinforcement' | 'mastery';
   zettelkastenNote?: string;
   dependencies?: string[]; // IDs of prerequisite atoms
   // Ordering question fields
@@ -44,7 +44,7 @@ export type Session = {
   duration: string;
   status: 'Completed' | 'Continue' | 'Locked';
   atoms: Atom[];
-  phase?: 'calibracion' | 'incursion' | 'refuerzo' | 'dominio';
+  phase?: 'calibration' | 'incursion' | 'reinforcement' | 'mastery';
   questionFormats?: string;
 }
 
@@ -53,7 +53,7 @@ export type LearningPathItem = {
   topic: string;
   sessionType: string;
   questions: string; // Added from CalibratePlanOutput
-  phase?: 'calibracion' | 'incursion' | 'refuerzo' | 'dominio';
+  phase?: 'calibration' | 'incursion' | 'reinforcement' | 'mastery';
   questionFormats?: string;
 }
 
@@ -386,9 +386,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const loadFallbackData = () => {
     try {
-      const storedProjects = localStorage.getItem('kolearning_projects');
-      const storedCompleted = localStorage.getItem('kolearning_completed_projects');
-      const storedArchived = localStorage.getItem('kolearning_archived_projects');
+      const storedProjects = localStorage.getItem('learningbox_projects');
+      const storedCompleted = localStorage.getItem('learningbox_completed_projects');
+      const storedArchived = localStorage.getItem('learningbox_archived_projects');
 
       setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
       if (storedCompleted) setCompletedProjects(JSON.parse(storedCompleted));
@@ -462,13 +462,13 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       // Fallback: create a single calibration session with the first atoms
       const calibrationSession: Session = {
         session: 1,
-        type: 'Calibración Inicial',
-        questions: `${Math.min(sessionSize, project.atoms.length)} preguntas de calibración`,
+        type: 'Initial Calibration',
+        questions: `${Math.min(sessionSize, project.atoms.length)} calibration questions`,
         duration: '20 min',
         status: 'Continue',
         atoms: project.atoms.slice(0, sessionSize),
-        phase: 'calibracion',
-        questionFormats: 'Opción Múltiple',
+        phase: 'calibration',
+        questionFormats: 'Multiple Choice',
       };
       return { ...project, sessions: [calibrationSession] };
     };
@@ -845,7 +845,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             questions: s.questions,
             status: s.status,
             atomCount: s.atoms.length,
-            phase: s.phase || 'calibracion',
+            phase: s.phase || 'calibration',
             questionFormats: s.questionFormats,
           })),
           learningPath: projectToUpdate.learningPath
@@ -906,7 +906,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           mastery: projectToUpdate.mastery,
         } as any);
 
-        // Update sessions status
+        // Update sessions status (this now handles re-linking)
         await projectDb.updateLearningPathAndSessions(
           projectId,
           projectToUpdate.learningPath,
@@ -1068,7 +1068,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       case 4: newMasteryPoints = 20; break;
     }
     setMasteryPoints(prev => prev + newMasteryPoints);
-    setTotalMasteryPoints(prev => prev + newMasteryPoints);
   }, []);
 
   const exchangeCreditsForEnergy = useCallback((credits: number, energyAmount: number): boolean => {

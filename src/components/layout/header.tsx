@@ -26,11 +26,11 @@ import { useRouter } from "next/navigation";
 import { Progress } from "../ui/progress";
 
 export function Header() {
-  const { 
-    energy, 
-    globalCognitiveCredits, 
-    nextEnergyIn, 
-    learnerRankInfo 
+  const {
+    energy,
+    globalCognitiveCredits,
+    nextEnergyIn,
+    learnerRankInfo
   } = useProjects();
   const { user, profile, signOut, loading } = useAuth();
   const router = useRouter();
@@ -65,18 +65,18 @@ export function Header() {
 
   const renderUserStats = (isMobile = false) => (
     <>
-      <div className="flex items-center gap-4" title="Energía">
+      <div className="flex items-center gap-4" title="Energy">
         <Zap className="h-5 w-5 text-yellow-400" />
         <div className="flex flex-col">
           <span className="font-bold text-lg">{energy}</span>
-          {isMobile && <span className="text-xs text-muted-foreground">Energía</span>}
+          {isMobile && <span className="text-xs text-muted-foreground">Energy</span>}
         </div>
       </div>
-      <div className="flex items-center gap-4" title="Créditos Cognitivos">
+      <div className="flex items-center gap-4" title="Cognitive Credits">
         <Brain className="h-5 w-5 text-blue-400" />
         <div className="flex flex-col">
           <span className="font-bold text-lg">{globalCognitiveCredits}</span>
-          {isMobile && <span className="text-xs text-muted-foreground">Créditos</span>}
+          {isMobile && <span className="text-xs text-muted-foreground">Credits</span>}
         </div>
       </div>
     </>
@@ -87,29 +87,29 @@ export function Header() {
       {learnerRankInfo && (
         <>
           <div className="p-2 rounded-md border">
-              <p className="text-sm text-muted-foreground">Rango de Aprendedor</p>
-              <p className="text-2xl font-bold font-headline">{learnerRankInfo.rankName}</p>
-              <Progress value={learnerRankInfo.progress} className="h-1.5 mt-1" />
-              <p className="text-xs text-muted-foreground mt-1">
-                  {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
-                      ? `${learnerRankInfo.pointsToNext} pts para Rango ${learnerRankInfo.nextRankName}`
-                      : "¡Rango Máximo!"
-                  }
-              </p>
+            <p className="text-sm text-muted-foreground">Learner Rank</p>
+            <p className="text-2xl font-bold font-headline">{learnerRankInfo.rankName}</p>
+            <Progress value={learnerRankInfo.progress} className="h-1.5 mt-1" />
+            <p className="text-xs text-muted-foreground mt-1">
+              {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
+                ? `${learnerRankInfo.pointsToNext} pts to Rank ${learnerRankInfo.nextRankName}`
+                : "Max Rank!"
+              }
+            </p>
           </div>
         </>
       )}
       <Button variant="ghost" className="w-full justify-start" onClick={() => handleLinkClick('/profile')}>
         <User className="mr-2 h-4 w-4" />
-        <span>Perfil</span>
+        <span>Profile</span>
       </Button>
       <Button variant="ghost" className="w-full justify-start" onClick={() => handleLinkClick('/archive')}>
         <Archive className="mr-2 h-4 w-4" />
-        <span>Archivo</span>
+        <span>Archive</span>
       </Button>
       <Button variant="ghost" className="w-full justify-start" onClick={() => handleLinkClick('/store')}>
         <Store className="mr-2 h-4 w-4" />
-        <span>Tienda</span>
+        <span>Store</span>
       </Button>
       <DropdownMenuSeparator />
       <Button
@@ -119,7 +119,7 @@ export function Header() {
         disabled={isSigningOut || loading}
       >
         <LogOut className="mr-2 h-4 w-4" />
-        <span>{isSigningOut ? "Cerrando..." : "Cerrar Sesión"}</span>
+        <span>{isSigningOut ? "Signing out..." : "Sign Out"}</span>
       </Button>
     </div>
   );
@@ -129,54 +129,54 @@ export function Header() {
       <Link href="/" className="flex items-center gap-3">
         <Logo className="h-8 w-8 text-primary" />
         <h1 className="hidden sm:block text-2xl font-bold font-headline">
-          Kolearning
+          Learning Box
         </h1>
       </Link>
-      
+
       {user ? (
         <>
           {/* Desktop View */}
           <div className="hidden md:flex items-center gap-6">
             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <div className="flex items-center gap-2 cursor-pointer" title="Energía">
-                        <Zap className="h-5 w-5 text-yellow-400" />
-                        <span className="font-bold text-lg">{energy}</span>
-                    </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <div className="p-2 text-center">
-                        <p className="font-bold text-lg">Regeneración de Energía</p>
-                         {nextEnergyIn > 0 ? (
-                            <>
-                                <p className="text-sm text-muted-foreground mt-1">Próximo punto en:</p>
-                                <p className="text-2xl font-mono mt-1">{formatTime(nextEnergyIn)}</p>
-                            </>
-                         ) : (
-                             <p className="text-sm text-muted-foreground mt-2">¡Energía al máximo!</p>
-                         )}
-                    </div>
-                </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                 <div className="flex items-center gap-2 cursor-pointer" title="Créditos Cognitivos">
-                    <Brain className="h-5 w-5 text-blue-400" />
-                    <span className="font-bold text-lg">{globalCognitiveCredits}</span>
+                <div className="flex items-center gap-2 cursor-pointer" title="Energy">
+                  <Zap className="h-5 w-5 text-yellow-400" />
+                  <span className="font-bold text-lg">{energy}</span>
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                 <div className="p-2 text-xs text-muted-foreground">
-                    <p>Gana créditos al estudiar y úsalos para obtener energía.</p>
-                 </div>
-                 <DropdownMenuSeparator />
-                 <Link href="/store" passHref>
-                    <DropdownMenuItem>
-                      <Store className="mr-2 h-4 w-4" />
-                      <span>Tienda de Créditos</span>
-                    </DropdownMenuItem>
-                 </Link>
+                <div className="p-2 text-center">
+                  <p className="font-bold text-lg">Energy Regeneration</p>
+                  {nextEnergyIn > 0 ? (
+                    <>
+                      <p className="text-sm text-muted-foreground mt-1">Next point in:</p>
+                      <p className="text-2xl font-mono mt-1">{formatTime(nextEnergyIn)}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-2">Energy full!</p>
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex items-center gap-2 cursor-pointer" title="Cognitive Credits">
+                  <Brain className="h-5 w-5 text-blue-400" />
+                  <span className="font-bold text-lg">{globalCognitiveCredits}</span>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="p-2 text-xs text-muted-foreground">
+                  <p>Earn credits by studying and use them to get energy.</p>
+                </div>
+                <DropdownMenuSeparator />
+                <Link href="/store" passHref>
+                  <DropdownMenuItem>
+                    <Store className="mr-2 h-4 w-4" />
+                    <span>Credits Store</span>
+                  </DropdownMenuItem>
+                </Link>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -194,15 +194,15 @@ export function Header() {
                   <>
                     <DropdownMenuSeparator />
                     <div className="p-2">
-                        <p className="text-sm text-muted-foreground">Rango de Aprendedor</p>
-                        <p className="text-2xl font-bold font-headline">{learnerRankInfo.rankName}</p>
-                        <Progress value={learnerRankInfo.progress} className="h-1.5 mt-1" />
-                        <p className="text-xs text-muted-foreground mt-1">
-                            {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
-                                ? `${learnerRankInfo.pointsToNext} pts para Rango ${learnerRankInfo.nextRankName}`
-                                : "¡Rango Máximo!"
-                            }
-                        </p>
+                      <p className="text-sm text-muted-foreground">Learner Rank</p>
+                      <p className="text-2xl font-bold font-headline">{learnerRankInfo.rankName}</p>
+                      <Progress value={learnerRankInfo.progress} className="h-1.5 mt-1" />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
+                          ? `${learnerRankInfo.pointsToNext} pts to Rank ${learnerRankInfo.nextRankName}`
+                          : "Max Rank!"
+                        }
+                      </p>
                     </div>
                   </>
                 )}
@@ -210,13 +210,13 @@ export function Header() {
                 <Link href="/profile" passHref>
                   <DropdownMenuItem>
                     <User className="mr-2 h-4 w-4" />
-                    <span>Perfil</span>
+                    <span>Profile</span>
                   </DropdownMenuItem>
                 </Link>
                 <Link href="/archive" passHref>
                   <DropdownMenuItem>
                     <Archive className="mr-2 h-4 w-4" />
-                    <span>Archivo</span>
+                    <span>Archive</span>
                   </DropdownMenuItem>
                 </Link>
                 <DropdownMenuSeparator />
@@ -226,7 +226,7 @@ export function Header() {
                   className="text-red-500 hover:text-red-600"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>{isSigningOut ? "Cerrando..." : "Cerrar Sesión"}</span>
+                  <span>{isSigningOut ? "Signing out..." : "Sign Out"}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -246,7 +246,7 @@ export function Header() {
                     <Link href="/" className="flex items-center gap-3" onClick={() => setIsSheetOpen(false)}>
                       <Logo className="h-8 w-8 text-primary" />
                       <h1 className="text-2xl font-bold font-headline">
-                        Kolearning
+                        Learning Box
                       </h1>
                     </Link>
                   </SheetTitle>
@@ -266,10 +266,10 @@ export function Header() {
       ) : (
         <div className="flex items-center gap-2">
           <Link href="/login" passHref>
-              <Button variant="ghost">Acceder</Button>
+            <Button variant="ghost">Log In</Button>
           </Link>
           <Link href="/signup" passHref>
-              <Button>Registrarse</Button>
+            <Button>Sign Up</Button>
           </Link>
         </div>
       )}

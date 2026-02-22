@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers how to deploy Kolearning with Supabase integration to production environments like Vercel, Netlify, or any hosting platform.
+This guide covers how to deploy Learning Box with Supabase integration to production environments like Vercel, Netlify, or any hosting platform.
 
 ## Prerequisites
 
@@ -31,20 +31,20 @@ DATABASE_URL=postgresql://postgres:[PASSWORD]@db.your-project-ref.supabase.co:54
 ### How to Get These Values
 
 1. **Supabase URL & Keys**: 
-   - Go to your Supabase project dashboard
-   - Navigate to Settings → API
-   - Copy the Project URL and anon/service_role keys
+   - Go to your Supabase project dashboard.
+   - Navigate to Settings → API.
+   - Copy the Project URL and anon/service_role keys.
 
 2. **Database URL**:
-   - Settings → Database → Connection string
-   - Use for database migrations if needed
+   - Settings → Database → Connection string.
+   - Use it for database migrations if needed.
 
 ## Deployment Options
 
 ### Option 1: Vercel (Recommended)
 
 #### One-Click Deploy
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/kolearningMVP)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/learning-box)
 
 #### Manual Deploy
 1. **Connect Repository**:
@@ -58,9 +58,9 @@ DATABASE_URL=postgresql://postgres:[PASSWORD]@db.your-project-ref.supabase.co:54
    ```
 
 2. **Environment Variables**:
-   - Go to Vercel Dashboard → Project → Settings → Environment Variables
-   - Add all required variables from above
-   - Make sure to add them for all environments (Development, Preview, Production)
+   - Go to Vercel Dashboard → Project → Settings → Environment Variables.
+   - Add all required variables from above.
+   - Make sure to add them for all environments (Development, Preview, Production).
 
 3. **Build Settings**:
    - Build Command: `npm run build`
@@ -86,17 +86,17 @@ DATABASE_URL=postgresql://postgres:[PASSWORD]@db.your-project-ref.supabase.co:54
 ### Option 2: Netlify
 
 1. **Connect Repository**:
-   - Go to Netlify Dashboard
-   - New site from Git
-   - Choose your repository
+   - Go to Netlify Dashboard.
+   - New site from Git.
+   - Choose your repository.
 
 2. **Build Settings**:
    - Build command: `npm run build`
    - Publish directory: `.next`
 
 3. **Environment Variables**:
-   - Site settings → Environment variables
-   - Add all required variables
+   - Site settings → Environment variables.
+   - Add all required variables.
 
 4. **Netlify Configuration (netlify.toml)**:
 ```toml
@@ -174,7 +174,7 @@ CMD ["node", "server.js"]
 version: '3.8'
 
 services:
-  kolearning:
+  learning-box:
     build: .
     ports:
       - "3000:3000"
@@ -189,32 +189,32 @@ services:
 ## Post-Deployment Checklist
 
 ### 1. Database Setup
-- [ ] Supabase project created
-- [ ] Database schema applied (`database/schema.sql`)
-- [ ] RLS policies enabled and configured
-- [ ] Test database connection
+- [ ] Supabase project created.
+- [ ] Database schema applied (`database/schema.sql`).
+- [ ] RLS policies enabled and configured.
+- [ ] Test database connection.
 
 ### 2. Authentication
-- [ ] Authentication providers enabled (Email, Google OAuth)
-- [ ] Redirect URLs configured in Supabase
-- [ ] Test signup/login flow
+- [ ] Authentication providers enabled (Email, Google OAuth).
+- [ ] Redirect URLs configured in Supabase.
+- [ ] Test signup/login flow.
 
 ### 3. Environment Variables
-- [ ] All environment variables set correctly
-- [ ] No sensitive keys exposed in client-side code
-- [ ] Test environment variable access
+- [ ] All environment variables set correctly.
+- [ ] No sensitive keys exposed in client-side code.
+- [ ] Test environment variable access.
 
 ### 4. Security
-- [ ] RLS policies prevent unauthorized access
-- [ ] API keys are properly scoped
-- [ ] HTTPS enabled on production domain
+- [ ] RLS policies prevent unauthorized access.
+- [ ] API keys are properly scoped.
+- [ ] HTTPS enabled on production domain.
 
 ### 5. Functionality Tests
-- [ ] User can sign up and log in
-- [ ] Projects can be created and saved
-- [ ] Migration from localStorage works
-- [ ] AI features function correctly
-- [ ] Data persists across sessions
+- [ ] User can sign up and log in.
+- [ ] Projects can be created and saved.
+- [ ] Migration from localStorage works.
+- [ ] AI features function correctly.
+- [ ] Data persists across sessions.
 
 ## Domain Configuration
 
@@ -227,12 +227,12 @@ services:
    ```
 
 2. **DNS Configuration**:
-   - Add CNAME record pointing to your deployment
-   - Update Supabase redirect URLs to include new domain
+   - Add CNAME record pointing to your deployment.
+   - Update Supabase redirect URLs to include new domain.
 
 3. **Update Supabase Settings**:
    - Authentication → Settings → Site URL: `https://yourdomain.com`
-   - Add redirect URLs for auth providers
+   - Add redirect URLs for auth providers.
 
 ## Performance Optimization
 
@@ -255,21 +255,21 @@ module.exports = nextConfig
 ```
 
 ### 2. Database Optimization
-- Enable database connection pooling in Supabase
-- Use proper indexes for frequently queried data
-- Consider Supabase Edge Functions for heavy operations
+- Enable database connection pooling in Supabase.
+- Use proper indexes for frequently queried data.
+- Consider Supabase Edge Functions for heavy operations.
 
 ### 3. Caching Strategy
-- Enable Vercel's Edge Network caching
-- Use Next.js ISR for static content
-- Implement proper cache headers
+- Enable Vercel's Edge Network caching.
+- Use Next.js ISR for static content.
+- Implement proper cache headers.
 
 ## Monitoring & Analytics
 
 ### 1. Supabase Dashboard
-- Monitor database performance
-- Track authentication metrics
-- Review logs for errors
+- Monitor database performance.
+- Track authentication metrics.
+- Review logs for errors.
 
 ### 2. Application Monitoring
 ```bash
@@ -286,26 +286,26 @@ npm install @sentry/nextjs
 ## Backup & Recovery
 
 ### 1. Database Backups
-- Supabase automatically backs up data
-- Enable point-in-time recovery
-- Export critical data regularly
+- Supabase automatically backs up data.
+- Enable point-in-time recovery.
+- Export critical data regularly.
 
 ### 2. Code Backups
-- Keep repository synchronized
-- Tag production releases
-- Maintain deployment documentation
+- Keep repository synchronized.
+- Tag production releases.
+- Maintain deployment documentation.
 
 ## Scaling Considerations
 
 ### 1. Database Scaling
-- Monitor Supabase usage limits
-- Upgrade to Pro plan when needed
-- Consider read replicas for high traffic
+- Monitor Supabase usage limits.
+- Upgrade to Pro plan when needed.
+- Consider read replicas for high traffic.
 
 ### 2. Application Scaling
-- Use Vercel's automatic scaling
-- Implement proper caching
-- Optimize bundle size
+- Use Vercel's automatic scaling.
+- Implement proper caching.
+- Optimize bundle size.
 
 ## Troubleshooting
 
@@ -318,9 +318,9 @@ console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
 ```
 
 #### 2. Database Connection Issues
-- Verify Supabase URL format
-- Check RLS policies
-- Ensure proper authentication
+- Verify Supabase URL format.
+- Check RLS policies.
+- Ensure proper authentication.
 
 #### 3. Build Failures
 ```bash
@@ -331,9 +331,9 @@ npm run build
 ```
 
 #### 4. Authentication Issues
-- Verify redirect URLs in Supabase
-- Check environment variables
-- Test auth flow locally first
+- Verify redirect URLs in Supabase.
+- Check environment variables.
+- Test auth flow locally first.
 
 ### Debug Mode
 ```javascript
@@ -354,7 +354,7 @@ const supabase = createClient(
 - **Supabase Docs**: https://supabase.com/docs
 - **Next.js Deployment**: https://nextjs.org/docs/deployment
 - **Vercel Guide**: https://vercel.com/docs
-- **GitHub Issues**: Report issues in your repository
+- **GitHub Issues**: Report issues in your repository.
 
 ---
 
@@ -363,7 +363,7 @@ const supabase = createClient(
 ```bash
 # Complete deployment in one go
 git clone <your-repo>
-cd kolearningMVP
+cd learning-box
 
 # Set up environment
 cp .env.example .env
@@ -377,8 +377,8 @@ npm run build
 npx vercel --prod
 
 # Or deploy with Docker
-docker build -t kolearning .
-docker run -p 3000:3000 kolearning
+docker build -t learning-box .
+docker run -p 3000:3000 learning-box
 ```
 
-🎉 **Your Kolearning app is now production-ready with Supabase!**
+🎉 **Your Learning Box app is now production-ready with Supabase!**

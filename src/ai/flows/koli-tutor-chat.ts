@@ -8,16 +8,16 @@
  * - KoliTutorChatOutput - The return type for the koliTutorChat function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const KoliTutorChatInputSchema = z.object({
-    questionContext: z.string().describe("The flashcard question the user is currently studying."),
-    answerContext: z.string().describe("The answer to the flashcard question for context."),
-    chatHistory: z.array(z.object({
-        role: z.enum(['user', 'model']),
-        content: z.string(),
-    })).describe("The history of the conversation so far.")
+  questionContext: z.string().describe("The flashcard question the user is currently studying."),
+  answerContext: z.string().describe("The answer to the flashcard question for context."),
+  chatHistory: z.array(z.object({
+    role: z.enum(['user', 'model']),
+    content: z.string(),
+  })).describe("The history of the conversation so far.")
 });
 export type KoliTutorChatInput = z.infer<typeof KoliTutorChatInputSchema>;
 
@@ -39,9 +39,9 @@ const prompt = ai.definePrompt({
     temperature: 0.1,
     maxOutputTokens: 8192
   },
-  prompt: `You are Koli, an expert AI tutor, currently in a live chat with a learner during a study session.
+  prompt: `You are the Learning Box Tutor, an expert AI tutor, currently in a live chat with a learner during a study session.
 The learner is working on a specific question and has asked for your help. Your role is to guide them, clarify doubts, and provide deeper insights without simply giving away the answer.
-All your responses must be in Spanish.
+All your responses must be in English.
 
 **Current Study Context:**
 - Question: {{{questionContext}}}

@@ -1,14 +1,14 @@
-# **App Name**: Kolearning
+# **App Name**: Learning Box
 
 ## Core Features:
 
-- Koli Canvas Onboarding: Koli Canvas: A conversational onboarding experience to upload learning material and set up initial project configurations.
-- Atomization Pipeline: Atomization Pipeline: An orchestrated pipeline that uses specialized agents to extract, relate, generate and validate entities within the learning material, converting each into question/answer formats.
-- AI Strategic Tutor: AI Strategic Tutor: Uses FSRS data to dynamically adjust learning paths, and suggests 'Breach Detected' sessions if needed. Can be used as a tool within 'Consultations with Koli'.
-- Strategic Dashboard: Strategic Dashboard: Shows all learning projects with a 'Daily Report' widget suggesting the next study session, driven by the AI Strategic Tutor.
-- Study Session Interface: Study Session Interface: Offers active recall via open-ended questions with 'Tactical Support' actions consuming energy for hints, explanations, and reformulation.
-- Community Arsenal: Community Arsenal: Public library where learners can discover and integrate projects from others into their plans. Enables shared resources within study groups.
-- Gamified Progress Tracking: Gamified Progress Tracking: Tracks user progress with 'Mastery Points' (tied to FSRS retenability, decays over time), ranks, 'Seasons of Mastery' for competitive recalibration, and rank-based perks such as accelerated Energy regeneration.
+- **Tutor Canvas Onboarding**: A conversational onboarding experience to upload learning material and set up initial project configurations.
+- **Atomization Pipeline**: An orchestrated pipeline that uses specialized agents to extract, relate, generate, and validate entities within the learning material, converting each into question/answer formats.
+- **AI Strategic Tutor**: Uses FSRS data to dynamically adjust learning paths and suggests 'Breach Detected' sessions if needed. Can be used as a tool within 'Consultations with the Tutor'.
+- **Strategic Dashboard**: Shows all learning projects with a 'Daily Report' widget suggesting the next study session, driven by the AI Strategic Tutor.
+- **Study Session Interface**: Offers active recall via open-ended questions with 'Tactical Support' actions consuming energy for hints, explanations, and reformulation.
+- **Community Arsenal**: Public library where learners can discover and integrate projects from others into their plans. Enables shared resources within study groups.
+- **Gamified Progress Tracking**: Tracks user progress with 'Mastery Points' (tied to FSRS retrievability, decays over time), ranks, 'Seasons of Mastery' for competitive recalibration, and rank-based perks such as accelerated Energy regeneration.
 
 ## Style Guidelines:
 

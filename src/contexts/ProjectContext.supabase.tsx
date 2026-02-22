@@ -20,12 +20,17 @@ export type Atom = {
   lastReviewed?: string; // ISO date string
   retrievability?: number; // FSRS score from 1 to 4
   incorrectAnswers?: string[]; // For multiple choice questions
+  phase?: 'calibration' | 'incursion' | 'reinforcement' | 'mastery';
+  zettelkastenNote?: string;
+  dependencies?: string[];
+  orderingItems?: string[];
+  correctOrder?: string[];
 }
 
 export type Source = {
-    name: string;
-    type: string;
-    content: string;
+  name: string;
+  type: string;
+  content: string;
 }
 
 export type Session = {
@@ -35,13 +40,17 @@ export type Session = {
   duration: string;
   status: 'Completed' | 'Continue' | 'Locked';
   atoms: Atom[];
+  phase?: 'calibration' | 'incursion' | 'reinforcement' | 'mastery';
+  questionFormats?: string;
 }
 
 export type LearningPathItem = {
-    session: number;
-    topic: string;
-    sessionType: string;
-    questions: string; // Added from CalibratePlanOutput
+  session: number;
+  topic: string;
+  sessionType: string;
+  questions: string; // Added from CalibratePlanOutput
+  phase?: 'calibration' | 'incursion' | 'reinforcement' | 'mastery';
+  questionFormats?: string;
 }
 
 export type Project = {
@@ -56,7 +65,7 @@ export type Project = {
   sources: Source[];
   learningPath: LearningPathItem[];
   fullLearningPlanMarkdown?: string;
-  author?: string; 
+  author?: string;
   category?: string;
   isPublic?: boolean;
   bestStreak?: number;
@@ -65,20 +74,20 @@ export type Project = {
 };
 
 export type User = {
-    name: string;
-    email: string;
-    password?: string; // Should not be stored long-term in a real app
-    profession?: string;
-    company?: string;
-    age?: string;
-    additionalInfo?: string;
+  name: string;
+  email: string;
+  password?: string; // Should not be stored long-term in a real app
+  profession?: string;
+  company?: string;
+  age?: string;
+  additionalInfo?: string;
 }
 
 type LearnerRankInfo = {
-    rankName: string;
-    nextRankName: string;
-    progress: number;
-    pointsToNext: number;
+  rankName: string;
+  nextRankName: string;
+  progress: number;
+  pointsToNext: number;
 }
 
 type ProjectContextType = {
@@ -107,7 +116,7 @@ type ProjectContextType = {
   masteryPoints: number;
   totalMasteryPoints: number;
   updateEnergy: (amount: number) => void;
-  recordAnswer: (projectId: string, atomIndex: number, fsrs: 1|2|3|4, aidsUsed: boolean, isCorrect: boolean) => void;
+  recordAnswer: (projectId: string, atomIndex: number, fsrs: 1 | 2 | 3 | 4, aidsUsed: boolean, isCorrect: boolean) => void;
   resetSessionStats: () => void;
   exchangeCreditsForEnergy: (credits: number, energyAmount: number) => boolean;
   nextEnergyIn: number;
@@ -138,7 +147,7 @@ const calculateMastery = (atoms: Atom[]): number => {
   }
 
   const studiedAtoms = atoms.filter(atom => atom.lastReviewed && atom.stability);
-  
+
   if (studiedAtoms.length === 0) {
     return 0;
   }
@@ -152,7 +161,7 @@ const calculateMastery = (atoms: Atom[]): number => {
   const averageRetrievability = totalRetrievability / studiedAtoms.length;
   const coverage = studiedAtoms.length / atoms.length;
   const masteryScore = (averageRetrievability * coverage) * 100;
-  
+
   return Math.round(masteryScore);
 };
 
@@ -186,7 +195,7 @@ const getLearnerRank = (totalMasteryPoints: number): LearnerRankInfo => {
   const pointsForNextRank = nextRank.minPoints - currentRank.minPoints;
   const progressPercentage = pointsForNextRank === Infinity ? 100 : Math.round((pointsInCurrentRank / pointsForNextRank) * 100);
   const pointsToNext = pointsForNextRank === Infinity ? 0 : pointsForNextRank - pointsInCurrentRank;
-  
+
   return {
     rankName: currentRank.name,
     nextRankName: nextRank.name,
@@ -338,14 +347,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const loadFallbackData = () => {
     try {
-      const storedProjects = localStorage.getItem('kolearning_projects');
-      const storedCompleted = localStorage.getItem('kolearning_completed_projects');
-      const storedArchived = localStorage.getItem('kolearning_archived_projects');
+      const storedProjects = localStorage.getItem('learningbox_projects');
+      const storedCompleted = localStorage.getItem('learningbox_completed_projects');
+      const storedArchived = localStorage.getItem('learningbox_archived_projects');
 
       setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
       if (storedCompleted) setCompletedProjects(JSON.parse(storedCompleted));
       if (storedArchived) setArchivedProjects(JSON.parse(storedArchived));
-      
+
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
       setProjects(initialProjects);
@@ -362,12 +371,12 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       const result = await migrateLocalStorageToSupabase();
-      
+
       if (result.success) {
         await loadUserData();
         setHasLocalData(false);
       }
-      
+
       return result;
     } catch (error) {
       console.error('Migration failed:', error);
@@ -679,15 +688,15 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         if (updatedSessions[sessionIndex + 1]) {
           updatedSessions[sessionIndex + 1].status = 'Continue';
         }
-        
+
         const sessionCorrectAnswers = sessionAnswers.filter(a => a).length;
         const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
         const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
         const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
         const newMastery = calculateMastery(p.atoms);
-        
-        projectToUpdate = { 
-          ...p, 
+
+        projectToUpdate = {
+          ...p,
           sessions: updatedSessions,
           totalAnswers: newTotalAnswers,
           correctAnswers: newCorrectAnswers,
@@ -707,7 +716,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       }
       return updatedCompleted;
     });
-    
+
     if (projectToUpdate && sessionAnswers.length > 0) {
       try {
         const fsrsData = JSON.stringify({
@@ -718,15 +727,15 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             stability: atom.stability || 0,
             retrievability: atom.retrievability || 1,
             lastReviewed: atom.lastReviewed,
-            daysSinceLastReview: atom.lastReviewed 
+            daysSinceLastReview: atom.lastReviewed
               ? differenceInDays(new Date(), new Date(atom.lastReviewed))
               : 0
           })),
           currentSessionPerformance: {
             correctAnswers: sessionAnswers.filter(a => a).length,
             totalAnswers: sessionAnswers.length,
-            accuracy: sessionAnswers.length > 0 
-              ? (sessionAnswers.filter(a => a).length / sessionAnswers.length) * 100 
+            accuracy: sessionAnswers.length > 0
+              ? (sessionAnswers.filter(a => a).length / sessionAnswers.length) * 100
               : 0,
             sessionStreak
           }
@@ -737,8 +746,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           correctAnswers: projectToUpdate.correctAnswers || 0,
           bestStreak: projectToUpdate.bestStreak || 0,
           mastery: projectToUpdate.mastery || 0,
-          lastSessionAccuracy: sessionAnswers.length > 0 
-            ? (sessionAnswers.filter(a => a).length / sessionAnswers.length) * 100 
+          lastSessionAccuracy: sessionAnswers.length > 0
+            ? (sessionAnswers.filter(a => a).length / sessionAnswers.length) * 100
             : 0
         });
 
@@ -762,7 +771,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
         if (adjustment.adjustments.add && adjustment.adjustments.add.length > 0) {
           console.log(`AI Strategic Tutor recommended ${adjustment.adjustments.add.length} additional sessions:`, adjustment.feedback);
-          
+
           const newSessionsToAdd = adjustment.adjustments.add.map((newSession) => ({
             type: newSession.type,
             questions: newSession.questions,
@@ -775,7 +784,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         console.error("Error during dynamic learning path adjustment:", error);
       }
     }
-    
+
     if (projectToUpdate && !isCompletedProject && projectToUpdate.sessions.every(s => s.status === 'Completed' || s.type === "Refuerzo de Dominio")) {
       setProjects(prev => prev.filter(p => p.id !== projectId));
       setCompletedProjects(prev => [...prev, projectToUpdate!]);
@@ -896,9 +905,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setEnergy(prev => Math.max(0, prev + amount));
   }, []);
 
-  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrsRating: 1|2|3|4, aidsUsed: boolean, isCorrect: boolean) => {
+  const recordAnswer = useCallback((projectId: string, atomIndex: number, fsrsRating: 1 | 2 | 3 | 4, aidsUsed: boolean, isCorrect: boolean) => {
     setSessionAnswers(prev => [...prev, isCorrect]);
-    
+
     const today = new Date().toISOString();
     const FSRS_WEIGHTS = [0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61];
 
@@ -919,15 +928,15 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
       let newStability;
       if (oldStability === 0) {
-        const initialStabilityMap = {1: 0.4, 2: 1.0, 3: 2.5, 4: 4.0};
+        const initialStabilityMap = { 1: 0.4, 2: 1.0, 3: 2.5, 4: 4.0 };
         newStability = initialStabilityMap[fsrsRating as keyof typeof initialStabilityMap];
       } else if (fsrsRating === 1) {
         newStability = FSRS_WEIGHTS[7] * Math.pow(oldStability, FSRS_WEIGHTS[8]) * Math.exp(FSRS_WEIGHTS[9] * (1 - retrievability));
       } else {
         const difficultyFactor = Math.pow(FSRS_WEIGHTS[4], -clampedDifficulty);
-        newStability = oldStability * (1 + FSRS_WEIGHTS[2] * difficultyFactor * (1-retrievability) * Math.exp(FSRS_WEIGHTS[3] * (1 - retrievability)));
+        newStability = oldStability * (1 + FSRS_WEIGHTS[2] * difficultyFactor * (1 - retrievability) * Math.exp(FSRS_WEIGHTS[3] * (1 - retrievability)));
       }
-      
+
       const newAtoms = [...project.atoms];
       newAtoms[atomIndex] = {
         ...atom,
@@ -943,14 +952,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
     setProjects(prev => prev.map(updateAtomInProject));
     setCompletedProjects(prev => prev.map(updateAtomInProject));
-    
+
     if (isCorrect) {
       setSessionStreak(prev => prev + 1);
       setCognitiveCredits(prev => prev + (aidsUsed ? 1 : 2));
     } else {
       setSessionStreak(0);
     }
-    
+
     let newMasteryPoints = 0;
     switch (fsrsRating) {
       case 1: newMasteryPoints = 5; break;
@@ -987,7 +996,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const login = () => false; // Deprecated - use AuthContext
   const signup = () => false; // Deprecated - use AuthContext
-  const logout = () => {}; // Deprecated - use AuthContext
+  const logout = () => { }; // Deprecated - use AuthContext
   const updateUserProfile = () => false; // Deprecated - use AuthContext
 
   const value = {

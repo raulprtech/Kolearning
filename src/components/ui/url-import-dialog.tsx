@@ -36,9 +36,9 @@ export function UrlImportDialog({ isOpen, onClose, onImport, isLoading }: UrlImp
     }
   };
 
-  const title = "Importar desde URL";
-  const description = "Pega la URL del sitio web del que quieres extraer el material de estudio. Koli leerá el contenido por ti.";
-  const placeholder = "https://ejemplo.com/articulo";
+  const title = "Import from URL";
+  const description = "Paste the URL of the website you want to extract study material from. The Tutor will read the content for you.";
+  const placeholder = "https://example.com/article";
   const Icon = LinkIcon;
 
 
@@ -53,7 +53,7 @@ export function UrlImportDialog({ isOpen, onClose, onImport, isLoading }: UrlImp
         </DialogHeader>
         <div className="relative">
           <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
+          <Input
             placeholder={placeholder}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
@@ -62,10 +62,10 @@ export function UrlImportDialog({ isOpen, onClose, onImport, isLoading }: UrlImp
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancel</Button>
           <Button onClick={handleImport} disabled={isLoading || !url}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Importar
+            Import
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -73,4 +73,3 @@ export function UrlImportDialog({ isOpen, onClose, onImport, isLoading }: UrlImp
   );
 }
 
-    

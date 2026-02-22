@@ -108,11 +108,11 @@ export async function generateAtomsFromLargeContentWithProgress(
     }
   }
 
-  // Etapa 3: Generación de Átomos
+  // Stage 3: Atoms Generation
   onProgress({
     stage: 'generating_atoms',
-    message: '🧠 Generando átomos de conocimiento...',
-    details: `Iniciando análisis semántico del documento`,
+    message: '🧠 Generating knowledge atoms...',
+    details: `Initiating semantic analysis of the document`,
     progress: 40
   });
 
@@ -132,8 +132,8 @@ export async function generateAtomsFromLargeContentWithProgress(
     if (atomsMissingDistractors.length > 0) {
       onProgress({
         stage: 'generating_distractors',
-        message: '🎯 Generando opciones de respuesta...',
-        details: `Creando distractores para ${atomsMissingDistractors.length} átomos`,
+        message: '🎯 Generating answer options...',
+        details: `Creating distractors for ${atomsMissingDistractors.length} atoms`,
         progress: 75
       });
 
@@ -151,9 +151,9 @@ export async function generateAtomsFromLargeContentWithProgress(
         for (const atom of atomsResult.atoms) {
           if (!atom.incorrectAnswers || atom.incorrectAnswers.length === 0) {
             atom.incorrectAnswers = batchDistractors[distractorIndex] || [
-              'Opción incorrecta A',
-              'Opción incorrecta B',
-              'Opción incorrecta C'
+              'Incorrect option A',
+              'Incorrect option B',
+              'Incorrect option C'
             ];
             distractorIndex++;
           }
@@ -165,20 +165,20 @@ export async function generateAtomsFromLargeContentWithProgress(
         for (const atom of atomsResult.atoms) {
           if (!atom.incorrectAnswers || atom.incorrectAnswers.length === 0) {
             atom.incorrectAnswers = [
-              `No es correcto: variación de "${atom.answer.substring(0, 30)}..."`,
-              'Esta opción es incorrecta',
-              'Ninguna de las anteriores aplica'
+              `Not correct: variation of "${atom.answer.substring(0, 30)}..."`,
+              'This option is incorrect',
+              'None of the above apply'
             ];
           }
         }
       }
     }
 
-    // Etapa 6: Inferencia de Título y Metadatos a partir de los Átomos Generados
+    // Stage 6: Metadata and Title Inference from Generated Atoms
     onProgress({
       stage: 'analyzing_context',
-      message: '📄 Infiriendo metadatos del proyecto...',
-      details: `> Resumiendo temática general a partir de ${atomsResult.atoms.length} conceptos extraídos`,
+      message: '📄 Inferring project metadata...',
+      details: `> Summarizing general theme from ${atomsResult.atoms.length} extracted concepts`,
       progress: 90
     });
 
@@ -193,8 +193,8 @@ export async function generateAtomsFromLargeContentWithProgress(
     } catch (error) {
       console.error('Error analyzing deferred document context:', error);
       documentContext = {
-        inferredTitle: "Proyecto de Estudio",
-        inferredDescription: `Proyecto generado a partir de ${atomsResult.atoms.length} átomos.`,
+        inferredTitle: "Study Project",
+        inferredDescription: `Project generated from ${atomsResult.atoms.length} atoms.`,
         subject: "General",
         academicLevel: "undergraduate",
         categories: ["General"],
@@ -204,13 +204,13 @@ export async function generateAtomsFromLargeContentWithProgress(
 
     onProgress({
       stage: 'finalizing',
-      message: '✅ Finalizando átomos de conocimiento...',
-      details: `${atomsResult.atoms.length} átomos con opciones de respuesta`,
+      message: '✅ Finalizing knowledge atoms...',
+      details: `${atomsResult.atoms.length} atoms with answer options`,
       progress: 90
     });
 
     const result = {
-      initialResponse: `¡Hola! He procesado tu documento de ${documentContext.subject} y extraído ${atomsResult.atoms.length} átomos de conocimiento relevantes del contenido específico que subiste.`,
+      initialResponse: `Hello! I've processed your ${documentContext.subject} document and extracted ${atomsResult.atoms.length} relevant knowledge atoms from the specific content you uploaded.`,
       pipeline: {
         documentContext,
         concepts: { extracted: atomsResult.atoms.length },
@@ -232,7 +232,7 @@ export async function generateAtomsFromLargeContentWithProgress(
 
   } catch (error) {
     console.error('Error generating atoms:', error);
-    throw new Error(`Error al generar átomos del documento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`Error generating atoms from document: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -254,7 +254,7 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
   const matches = input.studyMaterial.match(dataURIPattern);
 
   if (!matches) {
-    throw new Error('Formato de data URI inválido');
+    throw new Error('Invalid data URI format');
   }
 
   const [, mimeType] = matches;
@@ -280,15 +280,15 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
     console.log('Content preview (last 200 chars):', content.substring(Math.max(0, content.length - 200)));
 
     if (!content || content.length < 10) {
-      throw new Error('Contenido del documento vacío o demasiado corto');
+      throw new Error('Document content is empty or too short');
     }
   }
 
-  // Etapa 3: Análisis de Contexto Unificado (título, tema, nivel, estructura)
+  // Stage 3: Unified Context Analysis (title, subject, level, structure)
   onProgress({
     stage: 'analyzing_context',
-    message: '📄 Analizando contexto del documento...',
-    details: `Identificando tema, título y estructura del documento`,
+    message: '📄 Analyzing document context...',
+    details: `Identifying document subject, title, and structure`,
     progress: 10
   });
 
@@ -301,14 +301,14 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
   } catch (error) {
     console.error('Error analyzing document context:', error);
     console.error('Full error details:', error);
-    throw new Error(`Error crítico en análisis de contexto: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`Critical error in context analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  // Etapa 4: Generación de Átomos con Contexto
+  // Stage 4: Atom Generation with Context
   onProgress({
     stage: 'generating_atoms',
-    message: '🧠 Generando átomos basados en el contexto...',
-    details: `Extrayendo contenido educativo de ${documentContext.subject}`,
+    message: '🧠 Generating atoms based on context...',
+    details: `Extracting educational content from ${documentContext.subject}`,
     progress: 40
   });
 
@@ -319,7 +319,7 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
     console.log('Atoms result:', atomsResult.atoms.length, 'atoms');
 
     const result = {
-      initialResponse: `¡Hola! He procesado tu documento de ${documentContext.subject} y extraído ${atomsResult.atoms.length} átomos de conocimiento relevantes del contenido específico que subiste.`,
+      initialResponse: `Hello! I've processed your ${documentContext.subject} document and extracted ${atomsResult.atoms.length} relevant knowledge atoms from the specific content you uploaded.`,
       pipeline: {
         documentContext,
         concepts: { extracted: atomsResult.atoms.length },
@@ -340,7 +340,7 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
 
   } catch (error) {
     console.error('Error generating atoms:', error);
-    throw new Error(`Error al generar átomos del documento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`Error generating atoms from document: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 */
@@ -361,7 +361,7 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
   const matches = input.studyMaterial.match(dataURIPattern);
 
   if (!matches) {
-    throw new Error('Formato de data URI inválido');
+    throw new Error('Invalid data URI format');
   }
 
   const [, mimeType] = matches;
@@ -387,15 +387,15 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
     console.log('Content preview (last 200 chars):', content.substring(Math.max(0, content.length - 200)));
 
     if (!content || content.length < 10) {
-      throw new Error('Contenido del documento vacío o demasiado corto');
+      throw new Error('Document content is empty or too short');
     }
   }
 
-  // Etapa 3: Análisis de Contexto Unificado (título, tema, nivel, estructura)
+  // Stage 3: Unified Context Analysis (title, subject, level, structure)
   onProgress({
     stage: 'analyzing_context',
-    message: '📄 Analizando contexto del documento...',
-    details: `Identificando tema, título y estructura del documento`,
+    message: '📄 Analyzing document context...',
+    details: `Identifying document subject, title, and structure`,
     progress: 10
   });
 
@@ -408,14 +408,14 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
   } catch (error) {
     console.error('Error analyzing document context:', error);
     console.error('Full error details:', error);
-    throw new Error(`Error crítico en análisis de contexto: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`Critical error in context analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  // Etapa 4: Generación de Átomos con Contexto
+  // Stage 4: Atom Generation with Context
   onProgress({
     stage: 'generating_atoms',
-    message: '🧠 Generando átomos basados en el contexto...',
-    details: `Extrayendo contenido educativo de ${documentContext.subject}`,
+    message: '🧠 Generating atoms based on context...',
+    details: `Extracting educational content from ${documentContext.subject}`,
     progress: 40
   });
 
@@ -426,7 +426,7 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
     console.log('Atoms result:', atomsResult.atoms.length, 'atoms');
 
     const result = {
-      initialResponse: `¡Hola! He procesado tu documento de ${documentContext.subject} y extraído ${atomsResult.atoms.length} átomos de conocimiento relevantes del contenido específico que subiste.`,
+      initialResponse: `Hello! I've processed your ${documentContext.subject} document and extracted ${atomsResult.atoms.length} relevant knowledge atoms from the specific content you uploaded.`,
       pipeline: {
         documentContext,
         concepts: { extracted: atomsResult.atoms.length },
@@ -447,7 +447,7 @@ async function originalGenerateAtomsFromLargeContentWithProgress(
 
   } catch (error) {
     console.error('Error generating atoms:', error);
-    throw new Error(`Error al generar átomos del documento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`Error generating atoms from document: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 */
@@ -466,24 +466,24 @@ async function generateDistractorsBatch(
   for (let i = 0; i < atoms.length; i += chunkSize) {
     const chunk = atoms.slice(i, i + chunkSize);
     const atomsList = chunk.map((a, idx) =>
-      `${idx + 1}. Pregunta: "${a.question}"\n   Respuesta correcta: "${a.answer}"`
+      `${idx + 1}. Question: "${a.question}"\n   Correct Answer: "${a.answer}"`
     ).join('\n\n');
 
-    const batchPrompt = `Eres un experto en ${subject} creando contenido educativo.
-Para cada pregunta y respuesta correcta a continuación, genera EXACTAMENTE 3 opciones de respuesta incorrectas pero plausibles (distractores).
-Los distractores deben ser conceptos relacionados que un estudiante podría confundir con la respuesta correcta.
+    const batchPrompt = `You are an expert in ${subject} creating educational content.
+For each question and correct answer below, generate EXACTLY 3 incorrect but plausible answer options (distractors).
+Distractors should be related concepts that a student might confuse with the correct answer.
 
 ${atomsList}
 
-FORMATO DE RESPUESTA (JSON):
+RESPONSE FORMAT (JSON):
 {
   "distractors": [
-    ["distractor1_para_pregunta1", "distractor2_para_pregunta1", "distractor3_para_pregunta1"],
-    ["distractor1_para_pregunta2", "distractor2_para_pregunta2", "distractor3_para_pregunta2"]
+    ["distractor1_for_question1", "distractor2_for_question1", "distractor3_for_question1"],
+    ["distractor1_for_question2", "distractor2_for_question2", "distractor3_for_question2"]
   ]
 }
 
-IMPORTANTE: El array "distractors" debe tener EXACTAMENTE ${chunk.length} sub-arrays, uno por cada pregunta, en el MISMO orden.`;
+IMPORTANT: The "distractors" array must have EXACTLY ${chunk.length} sub-arrays, one for each question, in the SAME order.`;
 
     try {
       const response = await ai.generate({
@@ -504,23 +504,23 @@ IMPORTANTE: El array "distractors" debe tener EXACTAMENTE ${chunk.length} sub-ar
       if (response?.output?.distractors) {
         // Ensure each entry has exactly 3 distractors
         for (const d of response.output.distractors) {
-          while (d.length < 3) d.push('Opción incorrecta');
+          while (d.length < 3) d.push('Incorrect option');
           allDistractors.push(d.slice(0, 3));
         }
         // Fill in any missing entries
         while (allDistractors.length < i + chunk.length) {
-          allDistractors.push(['Opción A incorrecta', 'Opción B incorrecta', 'Opción C incorrecta']);
+          allDistractors.push(['Incorrect option A', 'Incorrect option B', 'Incorrect option C']);
         }
       } else {
         // Fill with defaults for this chunk
         for (let j = 0; j < chunk.length; j++) {
-          allDistractors.push(['Opción A incorrecta', 'Opción B incorrecta', 'Opción C incorrecta']);
+          allDistractors.push(['Incorrect option A', 'Incorrect option B', 'Incorrect option C']);
         }
       }
     } catch (error) {
       console.warn(`Batch distractor generation failed for chunk ${i / chunkSize + 1}:`, error);
       for (let j = 0; j < chunk.length; j++) {
-        allDistractors.push(['Opción A incorrecta', 'Opción B incorrecta', 'Opción C incorrecta']);
+        allDistractors.push(['Incorrect option A', 'Incorrect option B', 'Incorrect option C']);
       }
     }
   }
@@ -529,47 +529,47 @@ IMPORTANTE: El array "distractors" debe tener EXACTAMENTE ${chunk.length} sub-ar
   return allDistractors;
 }
 
-// Análisis de contexto unificado basado en los átomos de conocimiento generados
+// Unified context analysis based on generated knowledge atoms
 export async function analyzeDocumentContextUnified(atoms: Array<{ question: string; answer: string }>, onProgress: (progress: any) => void) {
   console.log('=== ANALYZING UNIFIED DOCUMENT CONTEXT FROM ATOMS ===');
   console.log('Atoms sampled for context:', atoms.length);
 
   onProgress({
     stage: 'context_analysis',
-    message: '🔍 Infiriendo título y materia...',
-    details: 'Generando metadatos estructurados a partir de los átomos',
+    message: '🔍 Inferring title and subject...',
+    details: 'Generating structured metadata from atoms',
     progress: 90
   });
 
   try {
-    const atomsPreview = atoms.map((a, i) => `[${i}] P: ${a.question}\nR: ${a.answer}`).join('\n\n');
-    const prompt = `Analiza la siguiente muestra de conocimientos (Pregunta y Respuesta) extraídos de un documento de estudio, y con base ÚNICAMENTE en ellos infiere:
+    const atomsPreview = atoms.map((a, i) => `[${i}] Q: ${a.question}\nA: ${a.answer}`).join('\n\n');
+    const prompt = `Analyze the following sample of knowledge (Question and Answer) extracted from a study document, and based ONLY on them, infer:
 
-1. Título principal representativo del tema general (Máximo 7 palabras, directo y claro)
-2. Descripción breve de lo que cubre el conocimiento (1-2 oraciones)
-3. Campo de estudio o materia principal
-4. Nivel académico apropiado
-5. Categorías relevantes (máximo 3)
-6. Tipo de documento original probable
+1. Representative main title of the general theme (Maximum 7 words, direct and clear)
+2. Brief description of what the knowledge covers (1-2 sentences)
+3. Main field of study or subject
+4. Appropriate academic level
+5. Relevant categories (maximum 3)
+6. Probable original document type
 
-REGLA CRÍTICA PARA EL TÍTULO: 
-ESTÁ ESTRICTAMENTE PROHIBIDO usar títulos genéricos o comodines como "Documento Analizado", "Proyecto de Estudio", "Documento", "Notas", etc. DEBES inferir el tema o concepto central OBLIGATORIAMENTE basándote en el contenido real de los átomos. Por ejemplo, si los átomos hablan de la revolución francesa, el título DEBE ser "Revolución Francesa", NO "Documento de Historia".
+CRITICAL RULE FOR THE TITLE:
+It is STRICTLY FORBIDDEN to use generic or placeholder titles like "Analyzed Document", "Study Project", "Document", "Notes", etc. You MUST obligatorily infer the theme or central concept based on the actual content of the atoms. For example, if the atoms talk about the French Revolution, the title MUST be "French Revolution", NOT "History Document".
 
-MUESTRA DE CONOCIMIENTO (ÁTOMOS):
+KNOWLEDGE SAMPLE (ATOMS):
 ${atomsPreview}
 
-FORMATO DE RESPUESTA (JSON):
+RESPONSE FORMAT (JSON):
 {
-  "inferredTitle": "Título inferido del tema específico",
-  "inferredDescription": "Descripción breve",
-  "subject": "Campo de estudio",
+  "inferredTitle": "Inferred title of the specific theme",
+  "inferredDescription": "Brief description",
+  "subject": "Field of study",
   "academicLevel": "undergraduate",
-  "categories": ["categoría1", "categoría2"],
+  "categories": ["category1", "category2"],
   "documentType": "other"
 }
 
-Usa únicamente estos valores para academicLevel: elementary, high_school, undergraduate, graduate, professional
-Usa únicamente estos valores para documentType: academic_paper, textbook, manual, lecture_notes, article, other`;
+Use only these values for academicLevel: elementary, high_school, undergraduate, graduate, professional
+Use only these values for documentType: academic_paper, textbook, manual, lecture_notes, article, other`;
 
     const response = await ai.generate({
       prompt,
@@ -599,14 +599,14 @@ Usa únicamente estos valores para documentType: academic_paper, textbook, manua
 
     const fallbackTitleFromAtoms = atoms && atoms.length > 0
       ? atoms[0].question.substring(0, 40) + '...'
-      : "Proyecto de Estudio";
+      : "Study Project";
 
     // Provide sensible defaults if fields are missing or if generation was cut off
     // We intentionally make the fallback title more generic if the AI completely failed
     const finalResult = {
       inferredTitle: result?.inferredTitle || fallbackTitleFromAtoms,
-      inferredDescription: result?.inferredDescription || "Documento de estudio procesado automáticamente.",
-      subject: result?.subject || "Estudio",
+      inferredDescription: result?.inferredDescription || "Automatically processed study document.",
+      subject: result?.subject || "Study",
       academicLevel: result?.academicLevel || "undergraduate",
       categories: result?.categories && result.categories.length > 0 ? result.categories : ["General"],
       documentType: result?.documentType || "other"
@@ -622,12 +622,12 @@ Usa únicamente estos valores para documentType: academic_paper, textbook, manua
     // if AI safety filters or context length issues occur.
     const fallbackTitleFromAtomsError = atoms && atoms.length > 0
       ? atoms[0].question.substring(0, 40) + '...'
-      : "Documento Analizado";
+      : "Analyzed Document";
 
     return {
       inferredTitle: fallbackTitleFromAtomsError,
-      inferredDescription: "Documento de estudio revisado con opciones limitadas debido a filtros de contenido.",
-      subject: "Estudio",
+      inferredDescription: "Study document reviewed with limited options due to content filters.",
+      subject: "Study",
       academicLevel: "undergraduate",
       categories: ["General"],
       documentType: "other"
@@ -635,7 +635,7 @@ Usa únicamente estos valores para documentType: academic_paper, textbook, manua
   }
 }
 
-// Generación de átomos con contexto previo (o sin él)
+// Atom generation with prior context (or without it)
 async function generateAtomsWithContext(content: string, isPDF: boolean, documentContext: any, onProgress: (progress: any) => void) {
   console.log('=== GENERATE ATOMS START ===');
   console.log('isPDF:', isPDF);
@@ -644,43 +644,43 @@ async function generateAtomsWithContext(content: string, isPDF: boolean, documen
 
   const contentSlice = content.length > 50000 ? content.substring(0, 50000) + '...' : content;
 
-  const ctxSubject = documentContext?.subject || "Documento General";
+  const ctxSubject = documentContext?.subject || "General Document";
   const ctxLevel = documentContext?.academicLevel || "General";
 
   onProgress({
     stage: 'extracting_with_context',
-    message: '🧠 Extrayendo conceptos principales...',
-    details: `> Inicializando módulo de extracción semántica...\n> Configurando filtros de descarte...\n> Leyendo fragmento de ${contentSlice.length} caracteres...\n> Buscando conceptos clave y relaciones estructurales...`,
+    message: '🧠 Extracting main concepts...',
+    details: `> Initializing semantic extraction module...\n> Configuring discard filters...\n> Reading fragment of ${contentSlice.length} characters...\n> Looking for key concepts and structural relationships...`,
     progress: 40
   });
 
-  const atomsPrompt = `Eres un experto educativo que extrae preguntas específicas del contenido proporcionado. Debes crear preguntas ÚNICAMENTE sobre el núcleo informativo y conceptual del texto.
+  const atomsPrompt = `You are an educational expert extracting specific questions from the provided content. You must create questions ONLY about the informative and conceptual core of the text.
 
-CONTEXTO CONOCIDO:
-- Tema: ${ctxSubject}
-- Nivel: ${ctxLevel}
+KNOWN CONTEXT:
+- Subject: ${ctxSubject}
+- Level: ${ctxLevel}
 
-CONTENIDO:
+CONTENT:
 ${contentSlice}
 
-INSTRUCCIONES ESPECÍFICAS DE EXTRACCIÓN Y CALIDAD:
-1. IGNORA ABSOLUTAMENTE las siguientes secciones (no generes preguntas sobre ellas):
-   - Índices, tablas de contenido y glosarios estructurados.
-   - Bibliografía, referencias a autores, citas académicas y listados de referencias.
-   - Agradecimientos, dedicatorias, introducciones genéricas y texto de relleno o administrativo.
-   - Metadatos del archivo, números de página, encabezados repetitivos o notas al pie irrelevantes.
-2. ENFÓCATE EXCLUSIVAMENTE en el contenido didáctico central:
-   - Conceptos clave, definiciones fundamentales, procesos, fórmulas, fechas históricas críticas y relaciones conceptuales importantes de ${documentContext.subject}.
-3. CALIDAD SOBRE CANTIDAD, PERO SIENDO EXHAUSTIVO:
-   - Extrae todos los conceptos importantes presentes en el texto, sin importar si resultan en un número alto de preguntas.
-   - Sin embargo, NO sacrifiques la calidad. Cada átomo (pregunta/respuesta) debe condesar un tema principal de forma eficaz, directa y sin ambigüedades.
-   - Si un párrafo o sección no contiene información educativa valiosa o principal, ignóralo por completo.
-4. Nivel de dificultad adecuado para: ${documentContext.academicLevel}. Asegúrate de que las explicaciones sean claras y concisas.
+SPECIFIC EXTRACTION AND QUALITY INSTRUCTIONS:
+1. ABSOLUTELY IGNORE the following sections (do not generate questions about them):
+   - Indexes, tables of contents, and structured glossaries.
+   - Bibliographies, author references, academic citations, and reference lists.
+   - Acknowledgments, dedications, generic introductions, and filler or administrative text.
+   - File metadata, page numbers, repetitive headers, or irrelevant footnotes.
+2. FOCUS EXCLUSIVELY on the central educational content:
+   - Key concepts, fundamental definitions, processes, formulas, critical historical dates, and important conceptual relationships of ${documentContext.subject}.
+3. QUALITY OVER QUANTITY, BUT BEING EXHAUSTIVE:
+   - Extract all important concepts present in the text, regardless of whether they result in a high number of questions.
+   - However, DO NOT sacrifice quality. Each atom (question/answer) must condense a main topic effectively, directly, and without ambiguities.
+   - If a paragraph or section does not contain valuable or main educational information, ignore it completely.
+4. Appropriate difficulty level for: ${documentContext.academicLevel}. Ensure explanations are clear and concise.
 
-FORMATO DE RESPUESTA (JSON):
+RESPONSE FORMAT (JSON):
 {
   "atoms": [
-    { "question": "...", "answer": "..." }
+    { "question": "string", "answer": "string" }
   ]
 }`;
 
@@ -711,7 +711,7 @@ FORMATO DE RESPUESTA (JSON):
   // Robust validation of the AI model's response
   if (!response?.output || !Array.isArray(response.output.atoms)) {
     console.error('CRITICAL: AI response is missing or `atoms` is not an array.', response);
-    throw new Error('El modelo no devolvió una estructura de átomos válida.');
+    throw new Error('The model did not return a valid atom structure.');
   }
 
   // Filter for valid and non-empty atoms
@@ -764,8 +764,8 @@ async function generateAtomsInChunks(content: string, documentContext: any, onPr
   for (let i = 0; i < chunks.length; i++) {
     onProgress({
       stage: 'extracting_chunks',
-      message: `🧠 Procesando bloque ${i + 1} de ${chunks.length}...`,
-      details: `> Cargando bloque en memoria de contexto (tamaño: ${chunks[i].length} tokens)...\n> Integridad del contexto principal: Activa.\n> Escaneando conceptos técnicos y relaciones semánticas...\n> Generando sub-átomos...`,
+      message: `🧠 Processing chunk ${i + 1} of ${chunks.length}...`,
+      details: `> Loading chunk into context memory (size: ${chunks[i].length} tokens)...\n> Main context integrity: Active.\n> Scanning technical concepts and semantic relationships...\n> Generating sub-atoms...`,
       progress: 40 + Math.round((i / chunks.length) * 30)
     });
 

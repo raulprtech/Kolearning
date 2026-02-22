@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/icons/logo";
+import { BookOpen } from "lucide-react"; // Added BookOpen import
 import Link from "next/link";
 
 export default function LandingPage() {
@@ -8,10 +8,14 @@ export default function LandingPage() {
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="flex items-center justify-between p-4 md:px-8">
         <Link href="/" className="flex items-center gap-3">
-          <Logo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold font-headline">
-            Kolearning
-          </h1>
+          <div className="flex items-center gap-2">
+            <div className="bg-primary text-primary-foreground p-1 rounded-md">
+              <BookOpen className="h-6 w-6" />
+            </div>
+            <span className="text-xl font-bold font-headline tracking-tight">
+              Learning Box
+            </span>
+          </div>
         </Link>
         <nav className="hidden md:flex items-center gap-6">
           <Link href="#" className="text-sm font-medium hover:text-primary transition-colors">
@@ -30,13 +34,11 @@ export default function LandingPage() {
       </header>
       <main className="flex-1 flex items-center justify-center text-center px-4">
         <div className="max-w-3xl">
-          <h1 className="text-5xl md:text-7xl font-bold font-headline tracking-tight">
-            Conquista Cualquier <span className="text-primary">Tema.</span>
+          <h1 className="text-5xl md:text-7xl font-bold font-headline leading-tight mb-6 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+            Learn Anything, <br /> <span className="text-primary italic">Better & Faster.</span>
           </h1>
-          <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Kolearning transforma tus apuntes en un plan de estudio interactivo
-            y gamificado. Aprende más rápido y retén el conocimiento por más
-            tiempo con nuestro sistema inteligente.
+          <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+            Learning Box transforms your notes into an interactive study plan powered by AI and pedagogical cognitive science.
           </p>
           <div className="mt-10">
             <Link href="/new-project" passHref>
@@ -47,8 +49,10 @@ export default function LandingPage() {
           </div>
         </div>
       </main>
-      <footer className="p-4 md:px-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Kolearning. Hecho con ❤️ para los aprendedores. Todos los derechos reservados.
+      <footer className="py-8 px-6 border-t border-border mt-auto">
+        <p className="text-center text-sm text-muted-foreground">
+          © {new Date().getFullYear()} Learning Box. Made with ❤️ for learners. All rights reserved.
+        </p>
       </footer>
     </div>
   );

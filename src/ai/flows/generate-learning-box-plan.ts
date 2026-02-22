@@ -110,9 +110,9 @@ const GenerateKolearningPlanOutputSchema = z.object({
     averageSessionTime: z.number().describe('Average session time in minutes'),
     sessions: z.array(StudySession),
     milestones: z.array(MasteryMilestone),
-  }).describe('Complete KoLearning study plan'),
+  }).describe('Complete Learning Box study plan'),
   methodology: z.object({
-    kolearningPrinciples: z.array(z.string()).describe('KoLearning principles applied'),
+    kolearningPrinciples: z.array(z.string()).describe('Learning Box principles applied'),
     learningSequence: z.string().describe('Rationale for the learning sequence'),
     adaptiveFeatures: z.array(z.string()).describe('How the plan adapts to user progress'),
     assessmentStrategy: z.string().describe('How mastery will be measured'),
@@ -145,22 +145,22 @@ export const generateKolearningPlanFlow = ai.defineFlow(
           role: 'system',
           content: [
             {
-              text: `Eres el experto principal en la metodología KoLearning, un enfoque pedagógico innovador que combina aprendizaje atómico, repetición espaciada, recuperación activa, intercalado de conceptos e interrogación elaborativa. Tu misión es crear planes de estudio personalizados y altamente efectivos para ${input.documentContext.subject} nivel ${input.documentContext.academicLevel}.
+              text: `You are the leading expert in the Learning Box methodology, an innovative pedagogical approach that combines atomic learning, spaced repetition, active recall, concept interleaving, and elaborative interrogation. Your mission is to create personalized and highly effective study plans for ${input.documentContext.subject} at the ${input.documentContext.academicLevel} level.
 
-PRINCIPIOS FUNDAMENTALES DE KOLEARNING:
+CORE PRINCIPLES OF LEARNING BOX:
 
-1. **APRENDIZAJE ATÓMICO**: Divide el conocimiento en unidades mínimas comprensibles
-2. **REPETICIÓN ESPACIADA**: Repite conceptos en intervalos optimizados para la retención
-3. **RECUPERACIÓN ACTIVA**: Prioriza la práctica de recordar sobre la relectura pasiva
-4. **INTERCALADO**: Mezcla diferentes conceptos para fortalecer la discriminación
-5. **INTERROGACIÓN ELABORATIVA**: Usa preguntas que profundizan la comprensión
+1. **ATOMIC LEARNING**: Divides knowledge into minimal understandable units
+2. **SPACED REPETITION**: Repeats concepts at optimized intervals for retention
+3. **ACTIVE RECALL**: Prioritizes the practice of remembering over passive rereading
+4. **INTERLEAVING**: Mixes different concepts to strengthen discrimination
+5. **ELABORATIVE INTERROGATION**: Uses questions that deepen understanding
 
-METODOLOGÍA DE SESIONES:
-- Cada sesión debe durar entre 15-45 minutos (micro-learning)
-- Estructura: Activación → Aprendizaje → Práctica → Evaluación → Reflexión
-- Progresión gradual con prerequisitos claros
-- Evaluación continua de la comprensión
-- Adaptación basada en el rendimiento del estudiante`
+SESSION METHODOLOGY:
+- Each session should last between 15-45 minutes (micro-learning)
+- Structure: Activation → Learning → Practice → Assessment → Reflection
+- Gradual progression with clear prerequisites
+- Continuous assessment of understanding
+- Adaptation based on student performance`
             }
           ]
         },
@@ -168,12 +168,12 @@ METODOLOGÍA DE SESIONES:
           role: 'user',
           content: [
             {
-              text: `Diseña un plan de estudio completo usando la metodología KoLearning para este material de ${input.documentContext.subject}:
+              text: `Design a complete study plan using the Learning Box methodology for this material on ${input.documentContext.subject}:
 
-MAPA CONCEPTUAL:
+CONCEPT MAP:
 ${JSON.stringify(input.conceptMap, null, 2)}
 
-PREGUNTAS DISPONIBLES:
+AVAILABLE QUESTIONS:
 ${JSON.stringify(input.questions.map(q => ({
                 id: q.id,
                 type: q.type,
@@ -183,56 +183,56 @@ ${JSON.stringify(input.questions.map(q => ({
                 qualityScore: q.qualityScore
               })), null, 2)}
 
-PREFERENCIAS DEL USUARIO:
-- Tiempo por sesión: ${input.userPreferences.availableTimePerSession} minutos
-- Tiempo total disponible: ${input.userPreferences.totalAvailableTime} minutos
-- Estilo de aprendizaje: ${input.userPreferences.learningStyle || 'no especificado'}
-- Preferencia de dificultad: ${input.userPreferences.difficultyPreference || 'gradual'}
+USER PREFERENCES:
+- Time per session: ${input.userPreferences.availableTimePerSession} minutes
+- Total available time: ${input.userPreferences.totalAvailableTime} minutes
+- Learning style: ${input.userPreferences.learningStyle || 'not specified'}
+- Difficulty preference: ${input.userPreferences.difficultyPreference || 'gradual'}
 
-CONTEXTO:
-- Materia: ${input.documentContext.subject}
-- Nivel: ${input.documentContext.academicLevel}
-- Temas: ${input.documentContext.mainTopics.join(', ')}
+CONTEXT:
+- Subject: ${input.documentContext.subject}
+- Level: ${input.documentContext.academicLevel}
+- Topics: ${input.documentContext.mainTopics.join(', ')}
 
-INSTRUCCIONES ESPECÍFICAS:
+SPECIFIC INSTRUCTIONS:
 
-1. **DISEÑO DE SESIONES**:
-   - Crea sesiones de ${input.userPreferences.availableTimePerSession} minutos cada una
-   - Cada sesión debe tener 3-5 conceptos máximo (principio atómico)
-   - Incluye actividades de activación, aprendizaje, práctica y evaluación
-   - Asegura prerequisitos claros entre sesiones
+1. **SESSION DESIGN**:
+   - Create sessions of ${input.userPreferences.availableTimePerSession} minutes each
+   - Each session should have a maximum of 3-5 concepts (atomic principle)
+   - Include activation, learning, practice, and assessment activities
+   - Ensure clear prerequisites between sessions
 
-2. **SECUENCIACIÓN**:
-   - Sigue las rutas de aprendizaje del mapa conceptual
-   - Implementa progresión de dificultad gradual
-   - Incluye revisiones periódicas (repetición espaciada)
-   - Intercala conceptos relacionados
+2. **SEQUENCING**:
+   - Follow the learning paths from the concept map
+   - Implement gradual difficulty progression
+   - Include periodic reviews (spaced repetition)
+   - Interleave related concepts
 
-3. **EVALUACIÓN Y MILESTONES**:
-   - Crea milestones de dominio cada 3-5 sesiones
-   - Define umbrales de aprobación realistas (70-85%)
-   - Incluye preguntas de diferentes tipos y dificultades
-   - Permite evaluación continua del progreso
+3. **EVALUATION AND MILESTONES**:
+   - Create mastery milestones every 3-5 sessions
+   - Define realistic passing thresholds (70-85%)
+   - Include questions of different types and difficulties
+   - Allow continuous progress evaluation
 
-4. **PERSONALIZACIÓN**:
-   - Adapta el plan al tiempo disponible del usuario
-   - Considera el estilo de aprendizaje preferido
-   - Ajusta la dificultad según las preferencias
-   - Incluye estrategias de retención específicas
+4. **PERSONALIZATION**:
+   - Adapt the plan to the user's available time
+   - Consider the preferred learning style
+   - Adjust difficulty according to preferences
+   - Include specific retention strategies
 
-5. **METODOLOGÍA KOLEARNING**:
-   - Identifica claramente qué principios se aplican en cada sesión
-   - Explica la secuencia de aprendizaje elegida
-   - Describe las características adaptativas
-   - Define la estrategia de evaluación
+5. **LEARNING BOX METHODOLOGY**:
+   - Clearly identify which principles are applied in each session
+   - Explain the chosen learning sequence
+   - Describe the adaptive features
+   - Define the evaluation strategy
 
-6. **RECOMENDACIONES**:
-   - Proporciona consejos específicos de estudio
-   - Sugiere técnicas de gestión del tiempo
-   - Recomienda estrategias de retención
-   - Explica la progresión de dificultad
+6. **RECOMMENDATIONS**:
+   - Provide specific study tips
+   - Suggest time management techniques
+   - Recommend retention strategies
+   - Explain the difficulty progression
 
-El plan debe ser práctico, personalizado y pedagógicamente sólido, maximizando la retención y comprensión del estudiante.`
+The plan must be practical, personalized, and pedagogically sound, maximizing the student's retention and understanding.`
             }
           ]
         }
@@ -249,7 +249,7 @@ El plan debe ser práctico, personalizado y pedagógicamente sólido, maximizand
     });
 
     if (!response?.output) {
-      throw new Error('Failed to generate KoLearning plan.');
+      throw new Error('Failed to generate Learning Box plan.');
     }
 
     return response.output;

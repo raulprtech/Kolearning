@@ -9,8 +9,8 @@
  * - StudyAidOutput - The return type for the getStudyAid function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const StudyAidInputSchema = z.object({
   aidType: z.enum(['hint', 'rephrase']).describe('The type of aid requested.'),
@@ -29,17 +29,17 @@ export async function getStudyAid(input: StudyAidInput): Promise<StudyAidOutput>
 }
 
 const hintPrompt = ai.definePrompt({
-    name: 'hintPrompt',
-    input: { schema: StudyAidInputSchema },
-    output: { schema: StudyAidOutputSchema },
-    model: 'googleai/gemini-2.5-flash-lite',
-    config: {
-      temperature: 0.1,
-      maxOutputTokens: 8192
-    },
-    prompt: `You are Koli, an AI tutor. A learner has requested a hint for the following question.
+  name: 'hintPrompt',
+  input: { schema: StudyAidInputSchema },
+  output: { schema: StudyAidOutputSchema },
+  model: 'googleai/gemini-2.5-flash-lite',
+  config: {
+    temperature: 0.1,
+    maxOutputTokens: 8192
+  },
+  prompt: `You are the Learning Box Tutor, an expert AI tutor. A learner has requested a hint for the following question.
 Provide a concise, helpful hint that guides the learner toward the answer without giving it away directly.
-All your responses must be in Spanish.
+All your responses must be in English.
 
 Question: {{{question}}}
 Answer for your context: {{{answer}}}
@@ -48,17 +48,17 @@ Hint:`,
 });
 
 const rephrasePrompt = ai.definePrompt({
-    name: 'rephrasePrompt',
-    input: { schema: StudyAidInputSchema },
-    output: { schema: StudyAidOutputSchema },
-    model: 'googleai/gemini-2.5-flash-lite',
-    config: {
-      temperature: 0.1,
-      maxOutputTokens: 8192
-    },
-    prompt: `You are Koli, an AI tutor. A learner has requested that you rephrase the following question to make it easier to understand.
+  name: 'rephrasePrompt',
+  input: { schema: StudyAidInputSchema },
+  output: { schema: StudyAidOutputSchema },
+  model: 'googleai/gemini-2.5-flash-lite',
+  config: {
+    temperature: 0.1,
+    maxOutputTokens: 8192
+  },
+  prompt: `You are the Learning Box Tutor, an expert AI tutor. A learner has requested that you rephrase the following question to make it easier to understand.
 Ask the same question but using different words or from a different angle.
-All your responses must be in Spanish.
+All your responses must be in English.
 
 Original Question: {{{question}}}
 

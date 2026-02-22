@@ -49,7 +49,7 @@ export const KoliIgnoranteChat = ({
     useEffect(() => {
         const koliIntro: ChatMessage = {
             role: 'koli',
-            content: initialQuestion || `¡Hola! He escuchado sobre "${concept}" pero no lo entiendo bien. ¿Me podrías explicar qué es y por qué es importante? 🤔`,
+            content: initialQuestion || `Hi! I've heard about "${concept}" but I don't quite understand it. Could you explain what it is and why it's important? 🤔`,
         };
         setMessages([koliIntro]);
         setExchangeCount(0);
@@ -108,7 +108,7 @@ export const KoliIgnoranteChat = ({
             console.error('Error in Koli Ignorante chat:', error);
             const errorResponse: ChatMessage = {
                 role: 'koli',
-                content: '¡Oh! Tuve un pequeño problema para procesar eso. ¿Podrías intentar explicármelo de otra manera?',
+                content: "Oh! I had a little trouble processing that. Could you try explaining it to me in another way?",
             };
             setMessages(prev => [...prev, errorResponse]);
         } finally {
@@ -129,9 +129,9 @@ export const KoliIgnoranteChat = ({
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
                 <GraduationCap className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 <div>
-                    <p className="font-medium text-sm">Modo: Enseña a Koli</p>
+                    <p className="font-medium text-sm">Mode: Teach the Tutor</p>
                     <p className="text-xs text-muted-foreground">
-                        Koli no sabe sobre "{concept}". Enséñale como si fueras su tutor.
+                        The Tutor doesn't know about "{concept}". Teach them as if you were their tutor.
                     </p>
                 </div>
             </div>
@@ -189,7 +189,7 @@ export const KoliIgnoranteChat = ({
                     {!isEvaluationDone && (
                         <div className="flex gap-2 mt-4 pt-4 border-t">
                             <Input
-                                placeholder="Explícale a Koli..."
+                                placeholder="Explain to the Tutor..."
                                 value={currentInput}
                                 onChange={(e) => setCurrentInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
@@ -209,7 +209,7 @@ export const KoliIgnoranteChat = ({
                     {/* Exchange counter */}
                     {!isEvaluationDone && (
                         <div className="text-xs text-muted-foreground text-center mt-2">
-                            Intercambio {exchangeCount}/{MAX_EXCHANGES}
+                            Exchange {exchangeCount}/{MAX_EXCHANGES}
                         </div>
                     )}
                 </CardContent>
@@ -232,8 +232,8 @@ export const KoliIgnoranteChat = ({
                             <div>
                                 <p className="font-semibold text-base">
                                     {masteryResult.mastered
-                                        ? '¡Dominio demostrado! 🎉'
-                                        : '¡Gran esfuerzo! Casi lo tienes 💪'}
+                                        ? 'Mastery demonstrated! 🎉'
+                                        : 'Great effort! Almost there 💪'}
                                 </p>
                                 <p className="text-sm mt-1 text-muted-foreground">
                                     {masteryResult.feedback}

@@ -1,11 +1,11 @@
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ClientProvider } from '@/contexts/client-provider';
 
 export const metadata: Metadata = {
-  title: 'Kolearning',
-  description: 'Un sistema de dominio del conocimiento para estudiantes de élite.',
+  title: 'Learning Box',
+  description: 'AI-Powered Adaptive Learning Platform',
 };
 
 export default function RootLayout({

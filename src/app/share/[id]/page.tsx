@@ -32,9 +32,9 @@ export default function SharedProjectPage() {
     if (!project) {
         return (
             <div className="flex flex-col min-h-screen bg-background text-foreground items-center justify-center p-4">
-                <h1 className="text-3xl font-bold font-headline">Proyecto no encontrado</h1>
-                <p className="text-muted-foreground mt-2">El enlace puede ser incorrecto o el proyecto ya no está compartido.</p>
-                <Button onClick={() => router.push('/')} className="mt-6">Ir a la página principal</Button>
+                <h1 className="text-3xl font-bold font-headline">Project not found</h1>
+                <p className="text-muted-foreground mt-2">The link might be incorrect or the project is no longer shared.</p>
+                <Button onClick={() => router.push('/')} className="mt-6">Go to Home</Button>
             </div>
         );
     }
@@ -57,8 +57,8 @@ export default function SharedProjectPage() {
         addProject(newProject);
         setCopied(true);
         toast({
-            title: "¡Proyecto copiado!",
-            description: `"${project.title}" ha sido añadido a tus proyectos.`,
+            title: "Project copied!",
+            description: `"${project.title}" has been added to your projects.`,
         });
         setTimeout(() => router.push(`/projects/${newProjectId}`), 1000);
     }
@@ -69,31 +69,31 @@ export default function SharedProjectPage() {
                 <div className="flex items-center gap-3">
                     <Logo className="h-8 w-8 text-primary" />
                     <h1 className="text-2xl font-bold font-headline">
-                        Kolearning
+                        Learning Box
                     </h1>
                 </div>
             </header>
             <main className="flex-1 flex items-center justify-center text-center px-4">
                 <Card className="w-full max-w-2xl bg-card/50">
                     <CardHeader>
-                        <p className="text-sm text-muted-foreground">Estás viendo un proyecto compartido</p>
+                        <p className="text-sm text-muted-foreground">You are viewing a shared project</p>
                         <CardTitle className="text-3xl font-bold font-headline">{project.title}</CardTitle>
                         <CardDescription>{project.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground mb-6">
-                            Este proyecto contiene <span className="font-bold text-foreground">{project.atoms.length}</span> átomos de conocimiento. Cópialo a tu cuenta para empezar a estudiar.
+                            This project contains <span className="font-bold text-foreground">{project.atoms.length}</span> knowledge atoms. Copy it to your account to start studying.
                         </p>
                         <Button size="lg" onClick={handleCopyToMyProjects} disabled={copied}>
                             {copied ? (
                                 <>
                                     <Check className="mr-2 h-5 w-5" />
-                                    ¡Copiado! Redirigiendo...
+                                    Copied! Redirecting...
                                 </>
                             ) : (
                                 <>
                                     <BookCopy className="mr-2 h-5 w-5" />
-                                    Copiar a mis Proyectos
+                                    Copy to my Projects
                                 </>
                             )}
                         </Button>

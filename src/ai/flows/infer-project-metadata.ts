@@ -6,7 +6,7 @@ import { z } from 'genkit';
 const InferProjectMetadataSchema = z.object({
   title: z.string().describe("A concise, descriptive title for the learning project based on the content (max 60 characters)"),
   description: z.string().describe("A brief description of what the project covers and what the learner will achieve (max 200 characters)"),
-  categories: z.array(z.string()).describe("1-3 relevant academic categories that best describe the content (e.g., 'Ciencia', 'Tecnología', 'Humanidades', 'Arte', 'Matemáticas')"),
+  categories: z.array(z.string()).describe("1-3 relevant academic categories that best describe the content (e.g., 'Science', 'Technology', 'Humanities', 'Art', 'Mathematics')"),
   mainTopics: z.array(z.string()).describe("3-5 main topics or concepts that the content covers")
 });
 
@@ -32,43 +32,43 @@ const inferProjectMetadataPrompt = ai.definePrompt({
     temperature: 0.1,
     maxOutputTokens: 8192
   },
-  prompt: `Eres Koli, un tutor de IA especializado en análisis de contenido educativo.
-Todas tus respuestas deben estar en español.
+  prompt: `You are the Learning Box Tutor, an AI tutor specializing in educational content analysis.
+All your responses must be in English.
 
-**Tu misión:**
-Analizar el contenido educativo proporcionado y generar metadatos apropiados para un proyecto de aprendizaje.
+**Your Mission:**
+Analyze the provided educational content and generate appropriate metadata for a learning project.
 
-CONTENIDO A ANALIZAR:
+CONTENT TO ANALYZE:
 {{contentSummary}}
 
-ARCHIVOS PROPORCIONADOS:
+PROVIDED FILES:
 {{#if fileNames}}
 {{#each fileNames}}
 - {{this}}
 {{/each}}
 {{else}}
-(Sin archivos específicos)
+(No specific files)
 {{/if}}
 
-**INSTRUCCIONES:**
-- Crea un título conciso y descriptivo que capture la esencia del contenido (máximo 60 caracteres)
-- Escribe una descripción clara de qué aprenderá el estudiante (máximo 200 caracteres)
-- Selecciona 1-3 categorías académicas relevantes en español
-- Identifica 3-5 temas principales que se cubren
-- Todo debe estar en español
-- El título debe ser específico pero accesible
-- La descripción debe ser motivadora y clara sobre los objetivos
+**INSTRUCTIONS:**
+- Create a concise and descriptive title that captures the essence of the content (max 60 characters).
+- Write a clear description of what the student will learn (max 200 characters).
+- Select 1-3 relevant academic categories in English.
+- Identify 3-5 main topics covered.
+- Everything must be in English.
+- The title should be specific yet accessible.
+- The description should be motivating and clear about learning objectives.
 
-**EJEMPLOS DE BUEN FORMATO:**
-Título: "Fundamentos de Física Cuántica"
-Descripción: "Domina los conceptos básicos de mecánica cuántica, desde dualidad onda-partícula hasta el principio de incertidumbre."
-Categorías: ["Ciencia", "Física"]
+**GOOD FORMAT EXAMPLES:**
+Title: "Foundations of Quantum Physics"
+Description: "Master the basic concepts of quantum mechanics, from wave-particle duality to the uncertainty principle."
+Categories: ["Science", "Physics"]
 
-Título: "Programación en Python para Principiantes"  
-Descripción: "Aprende a programar desde cero con Python, cubriendo variables, estructuras de control y programación orientada a objetos."
-Categorías: ["Tecnología", "Programación"]
+Title: "Python Programming for Beginners"  
+Description: "Learn to program from scratch with Python, covering variables, control structures, and object-oriented programming."
+Categories: ["Technology", "Programming"]
 
-**GENERA LOS METADATOS:**`,
+**GENERATE THE METADATA:**`,
 });
 
 const inferProjectMetadataFlow = ai.defineFlow({

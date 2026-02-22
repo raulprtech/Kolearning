@@ -38,21 +38,21 @@ export function PasteTextDialog({ isOpen, onClose, onImport }: PasteTextDialogPr
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Pegar texto como fuente</DialogTitle>
+          <DialogTitle>Paste text as source</DialogTitle>
           <DialogDescription>
-            Pega el contenido que quieres que Koli atomice.
+            Paste the content you want the Tutor to atomize.
           </DialogDescription>
         </DialogHeader>
-        <Textarea 
-            placeholder="Pega aquí tu material de estudio..."
-            className="h-64 mt-4"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
+        <Textarea
+          placeholder="Paste your study material here..."
+          className="h-64 mt-4"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
         />
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleImport} disabled={!text.trim()}>
-            Importar Texto
+            Import Text
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -60,4 +60,3 @@ export function PasteTextDialog({ isOpen, onClose, onImport }: PasteTextDialogPr
   );
 }
 
-    
