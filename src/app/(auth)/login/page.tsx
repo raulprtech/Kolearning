@@ -25,8 +25,10 @@ function LoginContent() {
   const redirectUrl = getRedirectUrl(searchParams)
 
   useEffect(() => {
+    console.log('[LoginContent] Effect triggered:', { loading, hasUser: !!user, redirectUrl });
     // Redirect if user is already logged in and not loading
     if (!loading && user) {
+      console.log('[LoginContent] Routing to:', redirectUrl);
       router.push(redirectUrl)
     }
   }, [user, loading, router, redirectUrl])

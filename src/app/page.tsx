@@ -1,9 +1,14 @@
+"use client";
 
 import { Button } from "@/components/ui/button";
 import { BookOpen } from "lucide-react"; // Added BookOpen import
 import Link from "next/link";
+import { useEffect } from "react";
 
 export default function LandingPage() {
+  useEffect(() => {
+    console.log('[LandingPage] Mounted');
+  }, []);
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="flex items-center justify-between p-4 md:px-8">

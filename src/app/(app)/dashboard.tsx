@@ -1,6 +1,8 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +28,12 @@ const projectIcons: { [key: string]: React.ElementType } = {
 
 export default function DashboardPage() {
     const { projects, isLoading } = useProjects();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        console.log('[DashboardPage] Mounted. isLoading:', isLoading);
+        setMounted(true);
+    }, [isLoading]);
 
     return (
         <div className="space-y-8">
