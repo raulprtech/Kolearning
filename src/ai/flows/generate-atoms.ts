@@ -488,7 +488,7 @@ IMPORTANT: The "distractors" array must have EXACTLY ${chunk.length} sub-arrays,
     try {
       const response = await ai.generate({
         prompt: batchPrompt,
-        model: 'googleai/gemini-2.5-flash',
+        model: 'googleai/gemini-2.5-flash-lite',
         output: {
           schema: z.object({
             distractors: z.array(z.array(z.string()))
@@ -573,7 +573,7 @@ Use only these values for documentType: academic_paper, textbook, manual, lectur
 
     const response = await ai.generate({
       prompt,
-      model: 'googleai/gemini-2.5-flash',
+      model: 'googleai/gemini-2.5-flash-lite',
       output: {
         schema: z.object({
           inferredTitle: z.string().min(1).optional(),
@@ -687,7 +687,7 @@ RESPONSE FORMAT (JSON):
   console.log('=== SENDING AI REQUEST ===');
   const response = await ai.generate({
     prompt: atomsPrompt,
-    model: 'googleai/gemini-2.5-flash',
+    model: 'googleai/gemini-2.5-flash-lite',
     output: {
       schema: z.object({
         atoms: z.array(z.object({

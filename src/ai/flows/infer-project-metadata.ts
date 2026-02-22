@@ -27,7 +27,7 @@ const inferProjectMetadataPrompt = ai.definePrompt({
   name: 'inferProjectMetadataPrompt',
   input: { schema: InferProjectMetadataInputSchema },
   output: { schema: InferProjectMetadataSchema },
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-2.5-flash-lite',
   config: {
     temperature: 0.1,
     maxOutputTokens: 8192

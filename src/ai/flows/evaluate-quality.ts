@@ -131,7 +131,7 @@ Para preguntas abiertas, asegúrate de que:
           ]
         }
       ],
-      model: 'googleai/gemini-2.5-flash',
+      model: 'googleai/gemini-2.5-flash-lite',
       output: {
         schema: EvaluateQualityOutputSchema,
         format: 'json'
