@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ClientProvider } from '@/contexts/client-provider';
 
 export const metadata: Metadata = {
-  title: 'Learning Box',
+  title: 'Kolearning',
   description: 'AI-Powered Adaptive Learning Platform',
 };
 

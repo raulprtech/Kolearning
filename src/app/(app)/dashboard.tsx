@@ -41,7 +41,7 @@ export default function DashboardPage() {
                 <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                     <KoliAvatar className="h-12 w-12 sm:h-16 sm:w-16" />
                     <div>
-                        <CardTitle className="font-headline text-xl sm:text-2xl">Learning Box Daily Report</CardTitle>
+                        <CardTitle className="font-headline text-xl sm:text-2xl">Kolearning Daily Report</CardTitle>
                         <CardDescription>
                             The Tutor suggests your next study session to maximize retention.
                         </CardDescription>
@@ -91,11 +91,11 @@ export default function DashboardPage() {
                     ) : (
                         <Card className="md:col-span-2 lg:col-span-3 bg-card/50">
                             <CardHeader>
-                                <CardTitle>Welcome to Learning Box!</CardTitle>
+                                <CardTitle>Welcome to Kolearning!</CardTitle>
                                 <CardDescription>You don't have any projects yet. Create one to start learning!</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Link href="/new-project">
+                                <Link href="/">
                                     <Button>Create New Project</Button>
                                 </Link>
                             </CardContent>

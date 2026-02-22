@@ -9,6 +9,8 @@ import { ProjectDatabase } from '@/lib/supabase/database';
 import { migrateLocalStorageToSupabase, hasLocalStorageData } from '@/lib/migrate-localStorage';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
+import { classifyPaper as classifyPaperFlow } from '@/ai/flows/classify-paper';
+import { fetchPaperAbstract } from '@/lib/paper-utils';
 
 // Type definitions
 export type Atom = {
@@ -36,6 +38,38 @@ export type Source = {
   type: string;
   content: string;
 }
+
+export type PaperStatus = 'in_box' | 'assigned' | 'processing' | 'ready';
+export type PDFStatus = 'available' | 'pending' | 'not_available';
+export type ImportSource = 'ArXiv' | 'BibTeX' | 'DOI' | 'manual' | 'Zotero';
+export type ReadingStatus = 'unread' | 'in_progress' | 'read';
+export type PaperPriority = 'high' | 'medium' | 'low';
+export type DifficultyLevel = 'basic' | 'intermediate' | 'advanced';
+export type PaperType = 'survey' | 'experimental' | 'theoretical' | 'review';
+
+export type Paper = {
+  id: string;
+  title: string;
+  authors: string[];
+  year?: number;
+  doi?: string;
+  journalConference?: string;
+  url?: string;
+  pdfStatus: PDFStatus;
+  importSource: ImportSource;
+  status: PaperStatus;
+  processingPercentage: number;
+  fieldOfKnowledge?: string;
+  difficultyLevel?: DifficultyLevel;
+  paperType?: PaperType;
+  tags: string[];
+  readingStatus: ReadingStatus;
+  notes?: string;
+  priority: PaperPriority;
+  lastInteraction: string;
+  projectId?: string; // Project ID it belongs to
+  createdAt: string;
+};
 
 export type Session = {
   session: number;
@@ -137,6 +171,12 @@ type ProjectContextType = {
   migrateFromLocalStorage: () => Promise<{ success: boolean; migratedProjects: number; errors: string[]; }>;
   hasLocalData: boolean;
   getSourceContent: (sourceId: string) => Promise<string>;
+  // Paper Box methods
+  papers: Paper[];
+  addPaper: (paper: Omit<Paper, 'id' | 'createdAt' | 'lastInteraction'>) => Promise<string>;
+  updatePaper: (paperId: string, updates: Partial<Paper>) => Promise<void>;
+  deletePaper: (paperId: string) => Promise<void>;
+  classifyPaper: (paperId: string) => Promise<void>;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -229,6 +269,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [sessionAnswers, setSessionAnswers] = useState<boolean[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLocalData, setHasLocalData] = useState(false);
+  const [papers, setPapers] = useState<Paper[]>([]);
 
   // Auth context
   const { user, profile, loading: authLoading, updateProfile } = useAuth();
@@ -353,10 +394,11 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       console.log('[ProjectContext] Fetching projects from Supabase...');
       const startTime = Date.now();
 
-      const [userProjects, userCompletedProjects, userArchivedProjects] = await Promise.all([
+      const [userProjects, userCompletedProjects, userArchivedProjects, userPapers] = await Promise.all([
         projectDb.getProjects(user.id),
         projectDb.getCompletedProjects(user.id),
         projectDb.getArchivedProjects(user.id),
+        projectDb.getPapers(user.id),
       ]);
 
       const duration = Date.now() - startTime;
@@ -369,6 +411,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       setProjects(userProjects);
       setCompletedProjects(userCompletedProjects);
       setArchivedProjects(userArchivedProjects);
+      setPapers(userPapers);
 
       if (profile) {
         setTotalMasteryPoints(profile.total_mastery_points);
@@ -381,6 +424,121 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       loadFallbackData();
     } finally {
       if (showLoading) setIsLoading(false);
+    }
+  };
+
+  const addPaper = async (paper: Omit<Paper, 'id' | 'createdAt' | 'lastInteraction'>): Promise<string> => {
+    console.log('[ProjectContext] addPaper called with:', paper);
+    if (!user) throw new Error('User must be authenticated to add papers');
+    try {
+      console.log('[ProjectContext] Calling projectDb.createPaper...');
+      const paperId = await projectDb.createPaper(user.id, paper);
+      console.log('[ProjectContext] createPaper succeeded with ID:', paperId);
+
+      console.log('[ProjectContext] Calling projectDb.getPapers...');
+      // Refresh papers list in background
+      const updatedPapers = await projectDb.getPapers(user.id);
+      console.log('[ProjectContext] getPapers succeeded, updating state...');
+      setPapers(updatedPapers);
+
+      console.log('[ProjectContext] Triggering background classification...');
+      // Trigger background classification
+      classifyPaper(paperId).catch(err => console.error('Auto-classification failed:', err));
+
+      console.log('[ProjectContext] addPaper resolving with ID:', paperId);
+      return paperId;
+    } catch (error: any) {
+      console.error('[ProjectContext] Failed to add paper in context:', error);
+      console.error('Details:', error?.message, error?.details, error?.hint, error?.code);
+      toast({
+        title: "Error",
+        description: "No se pudo agregar el paper a la base de datos.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const updatePaper = async (paperId: string, updates: Partial<Paper>): Promise<void> => {
+    if (!user) throw new Error('User must be authenticated to update papers');
+    try {
+      await projectDb.updatePaper(paperId, updates);
+      // Optimistic update
+      setPapers(prev => prev.map(p => p.id === paperId ? {
+        ...p,
+        ...updates,
+        lastInteraction: new Date().toISOString()
+      } : p));
+    } catch (error) {
+      console.error('[ProjectContext] Failed to update paper:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el paper.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const deletePaper = async (paperId: string): Promise<void> => {
+    if (!user) throw new Error('User must be authenticated to delete papers');
+    try {
+      await projectDb.deletePaper(paperId);
+      setPapers(prev => prev.filter(p => p.id !== paperId));
+    } catch (error) {
+      console.error('[ProjectContext] Failed to delete paper:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el paper.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const classifyPaper = async (paperId: string): Promise<void> => {
+    if (!user) throw new Error('User must be authenticated to classify papers');
+
+    try {
+      const paperToClassify = papers.find(p => p.id === paperId);
+      if (!paperToClassify) {
+        console.warn('[ProjectContext] Paper not found for classification:', paperId);
+        return;
+      }
+
+      console.log('[ProjectContext] Classifying paper:', paperToClassify.title);
+      await updatePaper(paperId, { status: 'processing' });
+
+      let abstract = paperToClassify.notes;
+      if (!abstract) {
+        console.log('[ProjectContext] Abstract missing, attempting to fetch from Semantic Scholar...');
+        const fetchedAbstract = await fetchPaperAbstract(paperToClassify.title, paperToClassify.doi || undefined);
+        if (fetchedAbstract) {
+          abstract = fetchedAbstract;
+          await updatePaper(paperId, { notes: abstract });
+        }
+      }
+
+      const result = await classifyPaperFlow({
+        title: paperToClassify.title,
+        authors: paperToClassify.authors,
+        journalConference: paperToClassify.journalConference,
+        year: paperToClassify.year,
+        abstract: abstract
+      });
+
+      console.log('[ProjectContext] Paper classified successfully:', result);
+
+      await updatePaper(paperId, {
+        fieldOfKnowledge: result.fieldOfKnowledge,
+        difficultyLevel: result.difficultyLevel,
+        paperType: result.paperType,
+        tags: [...new Set([...(paperToClassify.tags || []), ...(result.tags || [])])],
+        status: 'ready'
+      });
+    } catch (error) {
+      console.error('[ProjectContext] Classification failed:', error);
+      await updatePaper(paperId, { status: 'in_box' });
     }
   };
 
@@ -1140,6 +1298,11 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     migrateFromLocalStorage,
     hasLocalData,
     getSourceContent: async (sourceId: string) => await projectDb.getSourceContent(sourceId),
+    papers,
+    addPaper,
+    updatePaper,
+    deletePaper,
+    classifyPaper,
   };
 
   return (

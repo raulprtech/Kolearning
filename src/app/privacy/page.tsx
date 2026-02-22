@@ -33,7 +33,7 @@ export default function PrivacyPage() {
 
           <h2>3. Newsletter Subscription</h2>
           <p>
-            If you choose to subscribe to our newsletter, we will use your email address to send you updates about new features, study tips, and news about Learning Box. You can unsubscribe from these communications at any time by clicking the "unsubscribe" link at the bottom of each email.
+            If you choose to subscribe to our newsletter, we will use your email address to send you updates about new features, study tips, and news about Kolearning. You can unsubscribe from these communications at any time by clicking the "unsubscribe" link at the bottom of each email.
           </p>
 
           <h2>4. Information Sharing</h2>
@@ -42,7 +42,7 @@ export default function PrivacyPage() {
             <ul>
               <li>With your consent.</li>
               <li>To comply with laws or respond to legal processes.</li>
-              <li>To protect the rights and property of Learning Box.</li>
+              <li>To protect the rights and property of Kolearning.</li>
             </ul>
           </p>
 
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
 
           <h2>6. Contact Us</h2>
           <p>
-            If you have any questions about this Privacy Policy, please contact us at <a href="mailto:privacy@learningbox.com">privacy@learningbox.com</a>.
+            If you have any questions about this Privacy Policy, please contact us at <a href="mailto:privacy@kolearning.com">privacy@kolearning.com</a>.
           </p>
         </CardContent>
       </Card>

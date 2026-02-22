@@ -116,7 +116,7 @@ export default function SignupForm({ redirectUrl }: Props) {
           </div>
           <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
           <CardDescription>
-            Join Learning Box and start learning effectively
+            Join Kolearning and start learning effectively
           </CardDescription>
         </CardHeader>
         <CardContent>

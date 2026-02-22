@@ -123,7 +123,7 @@ function LoginContent() {
           </div>
           <CardTitle className="text-2xl font-bold">Log In</CardTitle>
           <CardDescription>
-            Enter your Learning Box account
+            Enter your Kolearning account
           </CardDescription>
         </CardHeader>
         <CardContent>

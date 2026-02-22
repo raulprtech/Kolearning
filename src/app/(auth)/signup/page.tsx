@@ -10,7 +10,7 @@ type Props = {
 async function SignUpPage({ searchParams }: Props) {
   const resolvedParams = await searchParams;
   const redirect = resolvedParams?.redirect;
-  const redirectUrl = Array.isArray(redirect) ? redirect[0] : redirect || '/new-project';
+  const redirectUrl = Array.isArray(redirect) ? redirect[0] : redirect || '/';
 
   return (
     <Suspense fallback={<div>Loading...</div>}>

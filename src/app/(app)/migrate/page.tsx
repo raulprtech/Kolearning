@@ -62,7 +62,7 @@ export default function MigratePage() {
   }
 
   const handleContinue = () => {
-    router.push('/new-project')
+    router.push('/')
   }
 
   if (!user) {
@@ -94,7 +94,7 @@ export default function MigratePage() {
             <Database className="h-16 w-16 text-primary" />
           </div>
           <CardTitle className="text-3xl font-bold">
-            Welcome to Learning Box in the Cloud!
+            Welcome to Kolearning in the Cloud!
           </CardTitle>
           <CardDescription className="text-lg">
             Now your projects automatically sync between devices
@@ -191,7 +191,7 @@ export default function MigratePage() {
           {(!hasLocalData || migrationResult) && (
             <div className="flex justify-center">
               <Button onClick={handleContinue} size="lg">
-                Continue to Learning Box
+                Continue to Kolearning
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -200,7 +200,7 @@ export default function MigratePage() {
           {/* Info Section */}
           <div className="text-center text-sm text-muted-foreground border-t pt-4">
             <p>
-              Learning Box now uses Supabase to store your data securely.
+              Kolearning now uses Supabase to store your data securely.
               If you have any questions, check our documentation.
             </p>
           </div>

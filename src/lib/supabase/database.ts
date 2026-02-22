@@ -1,6 +1,6 @@
 import { createClient } from './client'
 import { Database } from '@/lib/database.types'
-import { Atom, Project, Source, Session, LearningPathItem } from '@/contexts/ProjectContext'
+import { Atom, Project, Source, Session, LearningPathItem, Paper } from '@/contexts/ProjectContext'
 
 type Tables = Database['public']['Tables']
 type ProjectRow = Tables['projects']['Row']
@@ -8,8 +8,34 @@ type AtomRow = Tables['atoms']['Row']
 type SourceRow = Tables['sources']['Row']
 type SessionRow = Tables['sessions']['Row']
 type LearningPathRow = Tables['learning_path_items']['Row']
+type PaperRow = any // Use any for now as database.types.ts might not be updated yet
 
 // Convert database types to frontend types
+export const convertPaperFromDB = (paperRow: any): Paper => ({
+  id: paperRow.id,
+  title: paperRow.title,
+  authors: paperRow.authors || [],
+  year: paperRow.year,
+  doi: paperRow.doi,
+  journalConference: paperRow.journal_conference,
+  url: paperRow.url,
+  pdfStatus: paperRow.pdf_status,
+  importSource: paperRow.import_source,
+  status: paperRow.status,
+  processingPercentage: paperRow.processing_percentage,
+  fieldOfKnowledge: paperRow.field_of_knowledge,
+  difficultyLevel: paperRow.difficulty_level,
+  paperType: paperRow.paper_type,
+  tags: paperRow.tags || [],
+  readingStatus: paperRow.reading_status,
+  notes: paperRow.notes,
+  priority: paperRow.priority,
+  lastInteraction: paperRow.last_interaction,
+  projectId: paperRow.project_id,
+  createdAt: paperRow.created_at,
+});
+
+// Convert database types to frontend types without additional async calls
 // Convert database types to frontend types without additional async calls
 export const convertProjectFromDBSync = (
   projectRow: any,
@@ -681,5 +707,96 @@ export class ProjectDatabase {
       )
 
     if (error) throw error
+  }
+
+  // Paper Box Operations
+  async getPapers(userId: string): Promise<Paper[]> {
+    const { data, error } = await this.supabase
+      .from('papers')
+      .select('*')
+      .eq('user_id', userId)
+      .order('last_interaction', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map(convertPaperFromDB);
+  }
+
+  async createPaper(userId: string, paper: Omit<Paper, 'id' | 'createdAt' | 'lastInteraction'>): Promise<string> {
+    console.log('[DB] Preparing to insert paper into Supabase:', { userId, title: paper.title });
+    try {
+      const { data, error } = await this.supabase
+        .from('papers')
+        .insert({
+          user_id: userId,
+          title: paper.title,
+          authors: paper.authors,
+          year: paper.year,
+          doi: paper.doi,
+          journal_conference: paper.journalConference,
+          url: paper.url,
+          pdf_status: paper.pdfStatus,
+          import_source: paper.importSource,
+          status: paper.status,
+          processing_percentage: paper.processingPercentage,
+          field_of_knowledge: paper.fieldOfKnowledge,
+          difficulty_level: paper.difficultyLevel,
+          paper_type: paper.paperType,
+          tags: paper.tags,
+          reading_status: paper.readingStatus,
+          notes: paper.notes,
+          priority: paper.priority,
+          project_id: paper.projectId,
+        })
+        .select('id')
+        .single();
+
+      console.log('[DB] Supabase insert response:', { data, error });
+
+      if (error) throw error;
+      return data.id;
+    } catch (e) {
+      console.error('[DB] Exception in createPaper:', e);
+      throw e;
+    }
+  }
+
+  async updatePaper(paperId: string, updates: Partial<Paper>): Promise<void> {
+    const dbUpdates: any = {};
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.authors !== undefined) dbUpdates.authors = updates.authors;
+    if (updates.year !== undefined) dbUpdates.year = updates.year;
+    if (updates.doi !== undefined) dbUpdates.doi = updates.doi;
+    if (updates.journalConference !== undefined) dbUpdates.journal_conference = updates.journalConference;
+    if (updates.url !== undefined) dbUpdates.url = updates.url;
+    if (updates.pdfStatus !== undefined) dbUpdates.pdf_status = updates.pdfStatus;
+    if (updates.importSource !== undefined) dbUpdates.import_source = updates.importSource;
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.processingPercentage !== undefined) dbUpdates.processing_percentage = updates.processingPercentage;
+    if (updates.fieldOfKnowledge !== undefined) dbUpdates.field_of_knowledge = updates.fieldOfKnowledge;
+    if (updates.difficultyLevel !== undefined) dbUpdates.difficulty_level = updates.difficultyLevel;
+    if (updates.paperType !== undefined) dbUpdates.paper_type = updates.paperType;
+    if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
+    if (updates.readingStatus !== undefined) dbUpdates.reading_status = updates.readingStatus;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+    if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
+    if (updates.projectId !== undefined) dbUpdates.project_id = updates.projectId;
+
+    dbUpdates.last_interaction = new Date().toISOString();
+
+    const { error } = await this.supabase
+      .from('papers')
+      .update(dbUpdates)
+      .eq('id', paperId);
+
+    if (error) throw error;
+  }
+
+  async deletePaper(paperId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('papers')
+      .delete()
+      .eq('id', paperId);
+
+    if (error) throw error;
   }
 }

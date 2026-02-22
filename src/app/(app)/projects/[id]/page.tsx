@@ -325,7 +325,7 @@ function ProjectDetails() {
             <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background">
                 <h1 className="text-2xl font-bold">Proyecto no encontrado</h1>
                 <p className="text-muted-foreground">El proyecto que buscas no existe o ha sido eliminado.</p>
-                <Button onClick={() => router.push('/new-project')} className="mt-4">Crear Nuevo Proyecto</Button>
+                <Button onClick={() => router.push('/')} className="mt-4">Crear Nuevo Proyecto</Button>
             </div>
         )
     }
@@ -348,7 +348,7 @@ function ProjectDetails() {
         setIsArchiveDialogOpen(false);
         if (success) {
             toast({ title: "Proyecto archivado", description: `"${project.title}" ha sido movido al archivo.` });
-            router.push('/new-project');
+            router.push('/');
         } else {
             toast({
                 title: "Archivo lleno",

@@ -12,17 +12,17 @@ export default function TermsPage() {
 
           <h2>1. Acceptance of Terms</h2>
           <p>
-            By accessing or using Learning Box (the "Service"), you agree to be bound by these Terms and Conditions. If you do not agree with any part of the terms, you may not access the Service.
+            By accessing or using Kolearning (the "Service"), you agree to be bound by these Terms and Conditions. If you do not agree with any part of the terms, you may not access the Service.
           </p>
 
           <h2>2. Description of Service</h2>
           <p>
-            Learning Box is an adaptive learning platform that uses artificial intelligence to help users study and retain information more effectively. The Service includes strategic tutoring, study material generation, and progress tracking.
+            Kolearning is an adaptive learning platform that uses artificial intelligence to help users study and retain information more effectively. The Service includes strategic tutoring, study material generation, and progress tracking.
           </p>
 
           <h2>3. User Accounts</h2>
           <p>
-            To use most of the features of the Service, you must register for an account. You are responsible for maintaining the confidentiality of your account and password. You agree to notify Learning Box immediately of any unauthorized use of your account.
+            To use most of the features of the Service, you must register for an account. You are responsible for maintaining the confidentiality of your account and password. You agree to notify Kolearning immediately of any unauthorized use of your account.
           </p>
 
           <h2>4. User Content</h2>
@@ -47,7 +47,7 @@ export default function TermsPage() {
 
           <h2>8. Contact Us</h2>
           <p>
-            If you have any questions about these Terms, please contact us at <a href="mailto:support@learningbox.com">support@learningbox.com</a>.
+            If you have any questions about these Terms, please contact us at <a href="mailto:support@kolearning.com">support@kolearning.com</a>.
           </p>
         </CardContent>
       </Card>
