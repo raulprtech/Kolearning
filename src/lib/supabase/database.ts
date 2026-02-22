@@ -172,21 +172,26 @@ export const convertProjectFromDB = async (
   }
 }
 
-export const convertAtomFromDB = (atomRow: AtomRow): Atom & { id?: string } => ({
-  id: atomRow.id,
-  question: atomRow.question,
-  answer: atomRow.answer,
-  difficulty: parseFloat(atomRow.difficulty as any),
-  stability: atomRow.stability,
-  lastReviewed: atomRow.last_reviewed || undefined,
-  retrievability: atomRow.retrievability || undefined,
-  incorrectAnswers: atomRow.incorrect_answers,
-  phase: atomRow.phase as any || undefined,
-  zettelkastenNote: atomRow.zettelkasten_note || undefined,
-  dependencies: atomRow.dependencies || undefined,
-  orderingItems: atomRow.ordering_items || undefined,
-  correctOrder: atomRow.correct_order || undefined,
-})
+export const convertAtomFromDB = (atomRow: AtomRow): Atom & { id?: string } => {
+  const payload = atomRow.payload || {};
+  return {
+    id: atomRow.id,
+    type: atomRow.type || 'text_card',
+    payload: payload,
+    question: payload.question || atomRow.question,
+    answer: payload.answer || atomRow.answer,
+    difficulty: parseFloat(atomRow.difficulty as any),
+    stability: atomRow.stability,
+    lastReviewed: atomRow.last_reviewed || undefined,
+    retrievability: atomRow.retrievability || undefined,
+    incorrectAnswers: atomRow.incorrect_answers,
+    phase: atomRow.phase as any || undefined,
+    zettelkastenNote: atomRow.zettelkasten_note || undefined,
+    dependencies: atomRow.dependencies || undefined,
+    orderingItems: atomRow.ordering_items || undefined,
+    correctOrder: atomRow.correct_order || undefined,
+  };
+}
 
 export const convertSourceFromDB = (sourceRow: SourceRow): Source => ({
   id: sourceRow.id,
@@ -227,6 +232,21 @@ export class ProjectDatabase {
     const projects = (data || []).map(project => convertProjectFromDBSync(project));
     console.log(`[DB] ✅ Converted ${projects.length} projects`);
     return projects;
+  }
+
+  async getProjectById(projectId: string): Promise<Project | null> {
+    const { data, error } = await this.supabase
+      .from('projects')
+      .select('*, atoms(*), sources(id, name, type), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
+      .eq('id', projectId)
+      .single()
+
+    if (error || !data) {
+      console.error('[DB] ❌ Failed to get project by ID:', error);
+      return null;
+    }
+
+    return convertProjectFromDBSync(data);
   }
 
   async getCompletedProjects(userId: string): Promise<Project[]> {
@@ -593,8 +613,10 @@ export class ProjectDatabase {
       const { error } = await this.supabase
         .from('atoms')
         .update({
-          question: atom.question,
+          question: atom.question, // still write down the text representations for backwards query compatibility
           answer: atom.answer,
+          type: atom.type || 'text_card',
+          payload: atom.payload || { question: atom.question, answer: atom.answer },
           difficulty: atom.difficulty,
           stability: atom.stability,
           last_reviewed: atom.lastReviewed,
@@ -617,6 +639,8 @@ export class ProjectDatabase {
           project_id: projectId,
           question: atom.question,
           answer: atom.answer,
+          type: atom.type || 'text_card',
+          payload: atom.payload || { question: atom.question, answer: atom.answer },
           difficulty: atom.difficulty || 0.3,
           stability: atom.stability || 0,
           last_reviewed: atom.lastReviewed,
@@ -641,6 +665,8 @@ export class ProjectDatabase {
           project_id: projectId,
           question: atom.question,
           answer: atom.answer,
+          type: atom.type || 'text_card',
+          payload: atom.payload || { question: atom.question, answer: atom.answer },
           difficulty: atom.difficulty || 0.3,
           stability: atom.stability || 0,
           last_reviewed: atom.lastReviewed,
@@ -671,6 +697,8 @@ export class ProjectDatabase {
           project_id: projectId,
           question: atom.question,
           answer: atom.answer,
+          type: atom.type || 'text_card',
+          payload: atom.payload || { question: atom.question, answer: atom.answer },
           difficulty: atom.difficulty,
           stability: atom.stability,
           last_reviewed: atom.lastReviewed,

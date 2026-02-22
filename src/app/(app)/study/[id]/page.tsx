@@ -37,6 +37,8 @@ import FillBlankQuestion from "@/components/ui/study/FillBlankQuestion";
 import ScenarioQuestion from "@/components/ui/study/ScenarioQuestion";
 import KoliIgnoranteChat from "@/components/ui/study/KoliIgnoranteChat";
 import ZettelkastenNote from "@/components/ui/study/ZettelkastenNote";
+import { VideoReviewQuestion } from "@/components/ui/study/VideoReviewQuestion";
+import { MatchingGameQuestion } from "@/components/ui/study/MatchingGameQuestion";
 
 
 const ratings = [
@@ -486,7 +488,7 @@ export default function StudySessionPage() {
 
     const isMultipleChoice = useMemo(() => session?.questions === "Opción Múltiple", [session]);
     const isOrdering = useMemo(() => session?.questions === "Ordenamiento", [session]);
-    const sessionPhase = useMemo(() => session?.phase || 'calibracion', [session]);
+    const sessionPhase = useMemo(() => session?.phase || 'calibration', [session]);
 
 
     const handleRate = useCallback((fsrs: 1 | 2 | 3 | 4) => {
@@ -667,10 +669,28 @@ export default function StudySessionPage() {
     )
 
     const renderQuestionInterface = () => {
-        // Phase-aware rendering: dispatch to the correct component based on session phase
+        // Handle polymorphic atom types
+        if (currentAtom.type === 'video_review') {
+            return (
+                <VideoReviewQuestion
+                    atom={currentAtom}
+                    onAnswerSubmit={(isCorrect, time) => handleRate(isCorrect ? 3 : 1)}
+                />
+            );
+        }
 
-        // Calibración phase: always multiple choice
-        if (sessionPhase === 'calibracion' || isMultipleChoice || isConvertedToMc) {
+        if (currentAtom.type === 'mini_game') {
+            return (
+                <MatchingGameQuestion
+                    atom={currentAtom}
+                    onAnswerSubmit={(isCorrect, time) => handleRate(isCorrect ? 4 : 1)}
+                />
+            );
+        }
+
+        // Default 'text_card' handling
+        // Phase-aware rendering: dispatch to the correct component based on session phase
+        if (sessionPhase === 'calibration' || isMultipleChoice || isConvertedToMc) {
             return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} isRevealed={isAnswerRevealed} onAnswerSelect={setUserAnswer} />;
         }
 
@@ -740,7 +760,7 @@ export default function StudySessionPage() {
         }
 
         // Refuerzo phase: scenario-based reasoning
-        if (sessionPhase === 'refuerzo') {
+        if (sessionPhase === 'reinforcement') {
             return (
                 <ScenarioQuestion
                     scenario={`Imagina que necesitas explicar o aplicar el siguiente concepto en un contexto real: ${currentAtom.question}`}
@@ -756,7 +776,7 @@ export default function StudySessionPage() {
         }
 
         // Dominio phase: Koli Ignorante chat
-        if (sessionPhase === 'dominio') {
+        if (sessionPhase === 'mastery') {
             return (
                 <KoliIgnoranteChat
                     concept={currentAtom.question}

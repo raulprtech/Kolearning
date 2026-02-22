@@ -142,6 +142,8 @@ export interface Database {
         Row: {
           id: string
           project_id: string
+          type: string
+          payload: any
           question: string
           answer: string
           difficulty: number
@@ -161,6 +163,8 @@ export interface Database {
         Insert: {
           id?: string
           project_id: string
+          type?: string
+          payload?: any
           question: string
           answer: string
           difficulty?: number
@@ -180,6 +184,8 @@ export interface Database {
         Update: {
           id?: string
           project_id?: string
+          type?: string
+          payload?: any
           question?: string
           answer?: string
           difficulty?: number

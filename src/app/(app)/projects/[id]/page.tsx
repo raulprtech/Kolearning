@@ -74,6 +74,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RecalibratePlanDialog } from "@/components/ui/recalibrate-plan-dialog";
 import ConceptMap from "@/components/ui/ConceptMap";
 import { mapConceptRelationships } from "@/ai/flows/map-concept-relationships";
+import { PolymorphicAtomEditor } from "@/components/ui/PolymorphicAtomEditor";
 
 const projectIcons: { [key: string]: React.ElementType } = {
     Book,
@@ -87,7 +88,7 @@ const projectIcons: { [key: string]: React.ElementType } = {
 
 interface AtomActionDialogProps {
     atom: Atom | null;
-    mode: 'view' | 'edit' | 'delete' | null;
+    mode: 'view' | 'edit' | 'delete' | 'create' | null;
     isOpen: boolean;
     onClose: () => void;
     onConfirm: (data?: Atom) => void;
@@ -103,7 +104,7 @@ function AtomActionDialog({ atom, mode, isOpen, onClose, onConfirm }: AtomAction
     if (!isOpen || !atom || !mode) return null;
 
     const handleConfirm = () => {
-        if (mode === 'edit' && editableAtom) {
+        if ((mode === 'edit' || mode === 'create') && editableAtom) {
             onConfirm(editableAtom);
         } else {
             onConfirm();
@@ -113,11 +114,13 @@ function AtomActionDialog({ atom, mode, isOpen, onClose, onConfirm }: AtomAction
     const titles = {
         view: "Ver Átomo",
         edit: "Editar Átomo",
+        create: "Crear Nuevo Átomo",
         delete: "Confirmar Eliminación"
     }
     const descriptions = {
         view: "Detalles del átomo de conocimiento.",
-        edit: "Edita la pregunta y la respuesta de este átomo.",
+        edit: "Edita las propiedades de este átomo.",
+        create: "Crea un nuevo contenido interactivo.",
         delete: `¿Estás seguro de que quieres eliminar este átomo? Esta acción no se puede deshacer.`
     }
 
@@ -134,36 +137,21 @@ function AtomActionDialog({ atom, mode, isOpen, onClose, onConfirm }: AtomAction
                         <p className="text-muted-foreground">{editableAtom.answer}</p>
                     </div>
                 )}
-                {mode === 'edit' && editableAtom && (
-                    <div className="space-y-4 py-4">
-                        <div>
-                            <label className="text-sm font-medium">Pregunta</label>
-                            <Textarea
-                                value={editableAtom.question}
-                                onChange={(e) => setEditableAtom({ ...editableAtom, question: e.target.value })}
-                                className="mt-1"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">Respuesta</label>
-                            <Textarea
-                                value={editableAtom.answer}
-                                onChange={(e) => setEditableAtom({ ...editableAtom, answer: e.target.value })}
-                                className="mt-1"
-                            />
-                        </div>
+                {(mode === 'edit' || mode === 'create') && editableAtom && (
+                    <div className="py-2">
+                        <PolymorphicAtomEditor atom={editableAtom} onChange={setEditableAtom as any} />
                     </div>
                 )}
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>
                         {mode === 'delete' ? 'Cancelar' : 'Cerrar'}
                     </Button>
-                    {(mode === 'edit' || mode === 'delete') && (
+                    {(mode === 'edit' || mode === 'create' || mode === 'delete') && (
                         <Button
                             onClick={handleConfirm}
                             variant={mode === 'delete' ? 'destructive' : 'default'}
                         >
-                            {mode === 'edit' ? 'Guardar Cambios' : 'Eliminar'}
+                            {mode === 'edit' ? 'Guardar Cambios' : mode === 'create' ? 'Crear Átomo' : 'Eliminar'}
                         </Button>
                     )}
                 </DialogFooter>
@@ -303,7 +291,7 @@ function ProjectDetails() {
 
     const [showAllAtoms, setShowAllAtoms] = useState(false);
     const [showFullPlan, setShowFullPlan] = useState(false);
-    const [atomAction, setAtomAction] = useState<{ mode: 'view' | 'edit' | 'delete' | null, atom: Atom | null, index: number | null }>({ mode: null, atom: null, index: null });
+    const [atomAction, setAtomAction] = useState<{ mode: 'view' | 'edit' | 'delete' | 'create' | null, atom: Atom | null, index: number | null }>({ mode: null, atom: null, index: null });
     const [sourceToDelete, setSourceToDelete] = useState<{ source: Source, index: number } | null>(null);
     const [sourceToView, setSourceToView] = useState<Source | null>(null);
     const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
@@ -361,6 +349,8 @@ function ProjectDetails() {
     const handleAtomActionConfirm = (data?: Atom) => {
         if (atomAction.mode === 'edit' && atomAction.index !== null && data) {
             updateAtom(project.id, atomAction.index, data);
+        } else if (atomAction.mode === 'create' && data) {
+            addAtomsToProject(project.id, [data as any]);
         } else if (atomAction.mode === 'delete' && atomAction.index !== null) {
             deleteAtom(project.id, atomAction.index);
         }
@@ -845,15 +835,26 @@ function ProjectDetails() {
 
                 <div className="mb-8">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold">Átomos de conocimiento</h2>
-                        <Button variant="outline" onClick={() => setShowAllAtoms(!showAllAtoms)}>
-                            {showAllAtoms ? "Ver menos" : `Ver todas (${project.atoms?.length || 0})`}
-                        </Button>
+                        <h2 className="text-xl font-semibold flex items-center gap-2">
+                            Átomos de conocimiento
+                        </h2>
+                        <div className="flex gap-2">
+                            {isUserProject && (
+                                <Button size="sm" onClick={() => setAtomAction({ mode: 'create', atom: { type: 'text_card', question: '', answer: '' }, index: null })}>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Nuevo Átomo
+                                </Button>
+                            )}
+                            <Button variant="outline" size="sm" onClick={() => setShowAllAtoms(!showAllAtoms)}>
+                                {showAllAtoms ? "Ver menos" : `Ver todas (${project.atoms?.length || 0})`}
+                            </Button>
+                        </div>
                     </div>
                     <Card className="bg-card/50">
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-16">Tipo</TableHead>
                                     <TableHead>Término</TableHead>
                                     <TableHead>Definición</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
@@ -862,6 +863,15 @@ function ProjectDetails() {
                             <TableBody>
                                 {displayedAtoms?.map((atom, index) => (
                                     <TableRow key={index}>
+                                        <TableCell className="align-top">
+                                            {atom.type === 'video_review' ? (
+                                                <div className="flex items-center justify-center p-2 bg-red-500/10 text-red-500 rounded-md" title="Revisión de Video"><Play className="h-4 w-4" /></div>
+                                            ) : atom.type === 'mini_game' ? (
+                                                <div className="flex items-center justify-center p-2 bg-purple-500/10 text-purple-500 rounded-md" title="Mini-Juego"><Target className="h-4 w-4" /></div>
+                                            ) : (
+                                                <div className="flex items-center justify-center p-2 bg-blue-500/10 text-blue-500 rounded-md" title="Tarjeta de Texto"><Book className="h-4 w-4" /></div>
+                                            )}
+                                        </TableCell>
                                         <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
                                         <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
                                         <TableCell className="text-right align-top">

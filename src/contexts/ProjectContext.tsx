@@ -13,8 +13,18 @@ import { classifyPaper as classifyPaperFlow } from '@/ai/flows/classify-paper';
 import { fetchPaperAbstract } from '@/lib/paper-utils';
 
 // Type definitions
+export type AtomPayload = {
+  videoUrl?: string;
+  startTime?: number;
+  endTime?: number;
+  pairs?: { id: string; term: string; definition: string }[];
+  [key: string]: any;
+};
+
 export type Atom = {
   id?: string;
+  type?: string;
+  payload?: AtomPayload;
   question: string;
   answer: string;
   // FSRS Metrics
@@ -181,73 +191,9 @@ type ProjectContextType = {
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
-// Utility functions
-const calculateCurrentRetrievability = (stability: number, daysSinceLastReview: number): number => {
-  return Math.pow(0.9, daysSinceLastReview / stability);
-};
-
-const calculateMastery = (atoms: Atom[]): number => {
-  if (atoms.length === 0) {
-    return 0;
-  }
-
-  const studiedAtoms = atoms.filter(atom => atom.lastReviewed && atom.stability);
-
-  if (studiedAtoms.length === 0) {
-    return 0;
-  }
-
-  const totalRetrievability = studiedAtoms.reduce((sum, atom) => {
-    const daysSince = differenceInDays(new Date(), new Date(atom.lastReviewed!));
-    const retrievability = calculateCurrentRetrievability(atom.stability!, daysSince);
-    return sum + retrievability;
-  }, 0);
-
-  const averageRetrievability = totalRetrievability / studiedAtoms.length;
-  const coverage = studiedAtoms.length / atoms.length;
-  const masteryScore = (averageRetrievability * coverage) * 100;
-
-  return Math.round(masteryScore);
-};
-
-const ranks = [
-  { name: "G", minPoints: 0 },
-  { name: "F", minPoints: 100 },
-  { name: "E", minPoints: 250 },
-  { name: "D", minPoints: 500 },
-  { name: "C", minPoints: 1000 },
-  { name: "B", minPoints: 2000 },
-  { name: "A", minPoints: 5000 },
-  { name: "S", minPoints: 10000 },
-];
-
-const getLearnerRank = (totalMasteryPoints: number): LearnerRankInfo => {
-  let currentRank = ranks[0];
-  let nextRank = ranks[1];
-
-  for (let i = 0; i < ranks.length; i++) {
-    if (totalMasteryPoints >= ranks[i].minPoints) {
-      currentRank = ranks[i];
-      if (i < ranks.length - 1) {
-        nextRank = ranks[i + 1];
-      } else {
-        nextRank = { name: "S", minPoints: Infinity };
-      }
-    }
-  }
-
-  const pointsInCurrentRank = totalMasteryPoints - currentRank.minPoints;
-  const pointsForNextRank = nextRank.minPoints - currentRank.minPoints;
-  const progressPercentage = pointsForNextRank === Infinity ? 100 : Math.round((pointsInCurrentRank / pointsForNextRank) * 100);
-  const pointsToNext = pointsForNextRank === Infinity ? 0 : pointsForNextRank - pointsInCurrentRank;
-
-  return {
-    rankName: currentRank.name,
-    nextRankName: nextRank.name,
-    progress: progressPercentage,
-    pointsToNext: pointsToNext,
-  };
-};
+// Utility functions imported from domain
+import { calculateMastery } from '@/core/domain/mastery';
+import { getLearnerRank, LearnerRankInfo } from '@/core/domain/ranks';
 
 const initialProjects: Project[] = [];
 
