@@ -69,7 +69,7 @@ const prompt = ai.definePrompt({
   name: 'dynamicLearningPathAdjustmentPrompt',
   input: { schema: DynamicLearningPathAdjustmentInputSchema },
   output: { schema: DynamicLearningPathAdjustmentOutputSchema },
-  model: 'googleai/gemini-2.5-flash-lite',
+  model: 'googleai/gemini-2.5-flash',
   config: {
     temperature: 0.1,
     maxOutputTokens: 8192

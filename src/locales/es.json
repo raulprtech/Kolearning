@@ -14,7 +14,10 @@
         "data_box": "Caja de Datos",
         "profile": "Mi Perfil",
         "logout": "Cerrar Sesión",
-        "new_project": "Nuevo Proyecto"
+        "new_project": "Nuevo Proyecto",
+        "explorer": "Explorar",
+        "papers": "Artículos",
+        "archive": "Archivo"
     },
     "dashboard": {
         "greeting": "¡Hola, {{name}}!",

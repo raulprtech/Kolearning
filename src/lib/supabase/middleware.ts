@@ -97,9 +97,7 @@ export async function updateSession(request: NextRequest) {
     const isProtectedRoute =
       request.nextUrl.pathname === '/' ||
       request.nextUrl.pathname.startsWith('/new-project') ||
-      request.nextUrl.pathname.startsWith('/projects') ||
       request.nextUrl.pathname.startsWith('/study') ||
-      request.nextUrl.pathname.startsWith('/explore') ||
       request.nextUrl.pathname.startsWith('/paper-box');
 
     if (isProtectedRoute && !session) {

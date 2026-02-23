@@ -71,7 +71,7 @@ export default function DashboardPage() {
                         projects.map(project => {
                             const Icon = projectIcons[project.icon] || Book;
                             return (
-                                <Link href={`/projects/${project.id}`} key={project.id}>
+                                <Link href={`/study/${project.id}`} key={project.id}>
                                     <Card className="bg-card/50 hover:border-primary transition-colors h-full flex flex-col">
                                         <CardHeader className="flex-row items-center gap-4">
                                             {Icon && <Icon className="w-8 h-8 text-primary" />}

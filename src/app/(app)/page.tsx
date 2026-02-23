@@ -35,6 +35,10 @@ import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
 import { Input } from "@/components/ui/input";
 import { AtomReviewList } from "@/components/ui/AtomReviewList";
+import { ChatInterface } from "@/components/chat/ChatInterface";
+import { useAI } from "@/contexts/AIContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LayoutDashboard, MessageSquare } from "lucide-react";
 
 const initialSteps = [
     {
@@ -372,7 +376,7 @@ const DashboardView = ({ projects, profile, onStartNewProject }: { projects: Pro
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {projects.map((project) => (
-                            <Link href={`/projects/${project.id}`} key={project.id}>
+                            <Link href={`/study/${project.id}`} key={project.id}>
                                 <Card className="bg-card/50 hover:shadow-xl transition-all duration-300 border-primary/10 group cursor-pointer h-full">
                                     <CardHeader className="pb-2">
                                         <div className="flex justify-between items-start">
@@ -537,15 +541,15 @@ function NewProjectContent() {
                 description: t('dashboard.project_created_desc', { title: metadata.title })
             })
 
-            console.log('[NewProject] Pre-router.push to', `/projects/${realProjectId}`);
+            console.log('[NewProject] Pre-router.push to', `/study/${realProjectId}`);
 
             // Execute the routing synchronously to make sure it runs, and wrap it
             try {
-                router.push(`/projects/${realProjectId}`);
+                router.push(`/study/${realProjectId}`);
                 console.log('[NewProject] router.push executed smoothly');
             } catch (rErr) {
                 console.error('[NewProject] router.push threw:', rErr);
-                window.location.href = `/projects/${realProjectId}`;
+                window.location.href = `/study/${realProjectId}`;
             }
 
             // Safeguard
@@ -553,7 +557,7 @@ function NewProjectContent() {
                 try {
                     if (window.location.pathname.includes('new-project')) {
                         console.warn('[NewProject] Router.push did not navigate, forcing redirect...');
-                        window.location.href = `/projects/${realProjectId}`;
+                        window.location.href = `/study/${realProjectId}`;
                     }
                 } catch (e) {
                     console.error('Safeguard error:', e);
@@ -567,6 +571,7 @@ function NewProjectContent() {
             setIsLoading(false);
         }
     }, [addProject, router, toast, selectedFiles, setProcessingStatus, setAtomizationError, setIsLoading]);
+
 
     const processFiles = useCallback(async (filesToProcess: File[]) => {
         setIsLoading(true);
@@ -885,149 +890,126 @@ function NewProjectContent() {
         setIsLoading(false);
     };
 
-    if (isProjectStarted) {
-        if (atomizationError) {
-            return (
-                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-                    <Button
-                        variant="outline"
-                        onClick={handleResetProcess}
-                        className="absolute top-8 left-8"
-                    >
-                        <ChevronLeft className="mr-2 h-4 w-4" />
-                        Volver
-                    </Button>
-                    <Card className="w-full max-w-3xl bg-card/50">
-                        <CardHeader>
-                            <CardTitle className="text-center text-2xl font-headline text-destructive">Error en el Proceso</CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-center">
-                            <p className="text-muted-foreground mb-6">{atomizationError}</p>
-                            <Button onClick={handleResetProcess}>
-                                Intentar de nuevo
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
-            )
-        }
+    const handleChatAction = useCallback(async (action: string, data: any) => {
+        if (action === 'CREATE_PROJECT') {
+            const { title, description, sourceType, sourceValue } = data;
+            console.log(`[AI Action] Creating project: ${title} from ${sourceType}`);
 
+            setIsLoading(true);
+            try {
+                let fileToProcess: File;
+
+                if (sourceType === 'URL') {
+                    setProcessingStatus(prev => ({ ...prev, status: '🌐 Extrayendo contenido de la URL...' }));
+                    const response = await fetch('/api/ai/extract-url', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: sourceValue })
+                    });
+                    const extractData = await response.json();
+                    if (extractData.error) throw new Error(extractData.error);
+
+                    const blob = new Blob([extractData.content], { type: 'text/plain' });
+                    fileToProcess = new File([blob], `${title}.txt`, { type: 'text/plain' });
+                } else {
+                    const blob = new Blob([sourceValue], { type: 'text/plain' });
+                    fileToProcess = new File([blob], `${title}.txt`, { type: 'text/plain' });
+                }
+
+                // Call the existing processFiles logic
+                processFiles([fileToProcess]);
+            } catch (error: any) {
+                console.error('[AI Action Error]:', error);
+                toast({ title: "Error", description: error.message || "No se pudo crear el proyecto.", variant: "destructive" });
+                setIsLoading(false);
+            }
+        } else if (action === 'FILES_UPLOADED') {
+            const { files } = data;
+            setSelectedFiles(prev => [...prev, ...files]);
+            toast({ title: "Archivos añadidos", description: `${files.length} archivos añadidos a la cola.` });
+        } else if (action === 'START_STUDY_SESSION') {
+            const { projectId } = data;
+            router.push(`/study/${projectId}/session`);
+        }
+    }, [processFiles, toast, router]);
+
+    if (isLoading && isProjectStarted) {
         return (
             <div className="flex flex-col flex-1 h-full overflow-hidden relative">
-                {isReviewing && reviewData ? (
+                <Button
+                    variant="outline"
+                    onClick={handleResetProcess}
+                    className="absolute top-8 left-8 z-10"
+                >
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Volver
+                </Button>
+                <AtomizationProgress
+                    fileName={processingStatus.name}
+                    status={processingStatus.status}
+                    totalFiles={processingStatus.total}
+                    currentFileIndex={processingStatus.index}
+                    totalAtoms={processingStatus.atoms}
+                    aiLogs={aiLogs}
+                />
+            </div>
+        );
+    }
+
+    if (isReviewing && reviewData) {
+        return (
+            <div className="flex-1 overflow-auto bg-background p-6">
+                <div className="max-w-5xl mx-auto space-y-6">
+                    <header className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold font-headline">Revisa tu Proyecto</h1>
+                            <p className="text-muted-foreground">Koli ha extraído estos conceptos. Puedes editarlos antes de finalizar.</p>
+                        </div>
+                        <div className="flex gap-3">
+                            <Button variant="outline" onClick={() => setIsReviewing(false)}>Cancelar</Button>
+                            <Button onClick={() => handleFinalizeReview(reviewData.atoms.atoms)}>Crear Proyecto</Button>
+                        </div>
+                    </header>
                     <AtomReviewList
                         atoms={reviewData.atoms.atoms}
                         title={reviewData.metadata.title}
-                        onBack={() => {
-                            setIsReviewing(false);
-                            setIsProjectStarted(false);
-                        }}
+                        onBack={() => setIsReviewing(false)}
                         onFinalize={handleFinalizeReview}
                     />
-                ) : (
-                    <>
-                        <Button
-                            variant="outline"
-                            onClick={handleResetProcess}
-                            className="absolute top-8 left-8 z-10"
-                        >
-                            <ChevronLeft className="mr-2 h-4 w-4" />
-                            Volver
-                        </Button>
-                        <AtomizationProgress
-                            fileName={processingStatus.name}
-                            status={processingStatus.status}
-                            totalFiles={processingStatus.total}
-                            currentFileIndex={processingStatus.index}
-                            totalAtoms={processingStatus.atoms}
-                            aiLogs={aiLogs}
-                        />
-                    </>
-                )}
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col flex-1 h-full overflow-hidden">
-            <UrlImportDialog
-                isOpen={isUrlImportOpen}
-                onClose={() => setIsUrlImportOpen(false)}
-                onImport={handleImportFromUrl}
-                isLoading={isLoading}
-            />
-            <PasteTextDialog
-                isOpen={isPasteTextOpen}
-                onClose={() => setIsPasteTextOpen(false)}
-                onImport={handleImportFromText}
-            />
-            <main className="flex-1 flex flex-col items-center bg-background overflow-hidden relative">
-                {projects.length > 0 && !isForcedNewProject ? (
+        <main className="flex-1 flex flex-col overflow-hidden bg-background">
+            <Tabs defaultValue="chat" className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex items-center justify-center p-2 border-b bg-card/10">
+                    <TabsList className="grid w-[400px] grid-cols-2">
+                        <TabsTrigger value="chat" className="gap-2">
+                            <MessageSquare className="h-4 w-4" />
+                            AI Chat Center
+                        </TabsTrigger>
+                        <TabsTrigger value="dashboard" className="gap-2">
+                            <LayoutDashboard className="h-4 w-4" />
+                            Dashboard
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
+
+                <TabsContent value="chat" className="flex-1 overflow-hidden m-0 p-0 border-none">
+                    <ChatInterface onAction={handleChatAction} />
+                </TabsContent>
+
+                <TabsContent value="dashboard" className="flex-1 overflow-auto m-0 p-0 border-none">
                     <DashboardView
                         projects={projects}
                         profile={profile}
                         onStartNewProject={() => setIsForcedNewProject(true)}
                     />
-                ) : (
-                    <div className="w-full flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
-                        {isForcedNewProject && (
-                            <Button
-                                variant="ghost"
-                                onClick={() => setIsForcedNewProject(false)}
-                                className="absolute top-8 left-8"
-                            >
-                                <ChevronLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
-                            </Button>
-                        )}
-                        <div className="text-center mb-12">
-                            <h1 className="text-4xl font-bold font-headline mb-2">Crea un Nuevo Proyecto de Aprendizaje</h1>
-                            <p className="text-lg text-muted-foreground">Transforma cualquier material de estudio en un plan de aprendizaje interactivo.</p>
-                        </div>
-
-                        <div className="w-full max-w-3xl">
-                            <Card className="bg-card/50">
-                                <CardContent className="p-6">
-                                    <InputBar
-                                        handleSendMessage={handleSendMessage}
-                                        isLoading={isLoading}
-                                        selectedFiles={selectedFiles}
-                                        removeFile={removeFile}
-                                        handleFileChange={handleFileChange}
-                                        fileInputRef={fileInputRef}
-                                        getFileIcon={getFileIcon}
-                                        onImportFromUrl={() => setIsUrlImportOpen(true)}
-                                        onPasteText={() => setIsPasteTextOpen(true)}
-                                        isSourcePopoverOpen={isSourcePopoverOpen}
-                                        setIsSourcePopoverOpen={setIsSourcePopoverOpen}
-                                    />
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        <div className="mt-16 w-full max-w-5xl">
-                            <h3 className="text-center text-xl font-semibold mb-8">{t('dashboard.how_it_works')}</h3>
-                            <div className="grid md:grid-cols-3 gap-8">
-                                {[
-                                    { title: t('dashboard.import_material'), description: t('dashboard.import_material_desc') },
-                                    { title: t('dashboard.auto_process'), description: t('dashboard.auto_process_desc') },
-                                    { title: t('dashboard.start_study'), description: t('dashboard.start_study_desc') }
-                                ].map((step, index) => (
-                                    <div key={index} className="text-center">
-                                        <div className="flex items-center justify-center mb-4">
-                                            <div className="bg-primary/10 text-primary rounded-full h-12 w-12 flex items-center justify-center font-bold text-xl">
-                                                {index + 1}
-                                            </div>
-                                        </div>
-                                        <h4 className="font-semibold text-lg mb-2">{step.title}</h4>
-                                        <p className="text-muted-foreground text-sm">{step.description}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </main>
-        </div>
+                </TabsContent>
+            </Tabs>
+        </main>
     );
 }
 

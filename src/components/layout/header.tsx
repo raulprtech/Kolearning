@@ -46,9 +46,9 @@ export function Header() {
 
   const navItems = [
     { label: t('header.dashboard'), href: "/", icon: LayoutDashboard },
-    { label: t('header.explore'), href: "/explore", icon: Search },
+    { label: t('header.explore'), href: "/study/explore", icon: Search },
     { label: t('header.papers'), href: "/paper-box", icon: FileBox },
-    { label: t('header.archive'), href: "/archive", icon: Archive },
+    { label: t('header.archive'), href: "/study/archive", icon: Archive },
   ];
 
   const renderProfileMenu = () => (

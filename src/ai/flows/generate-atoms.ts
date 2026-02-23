@@ -689,7 +689,7 @@ RESPONSE FORMAT (JSON):
   console.log('=== SENDING AI REQUEST ===');
   const response = await ai.generate({
     prompt: atomsPrompt,
-    model: 'googleai/gemini-2.5-flash-lite',
+    model: 'googleai/gemini-2.5-flash',
     output: {
       schema: z.object({
         atoms: z.array(z.object({

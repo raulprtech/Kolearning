@@ -426,15 +426,15 @@ function NewProjectContent() {
                 description: `${metadata.title} ha sido añadido a tu dashboard.`
             })
 
-            console.log('[NewProject] Pre-router.push to', `/projects/${realProjectId}`);
+            console.log('[NewProject] Pre-router.push to', `/study/${realProjectId}`);
 
             // Execute the routing synchronously to make sure it runs, and wrap it
             try {
-                router.push(`/projects/${realProjectId}`);
+                router.push(`/study/${realProjectId}`);
                 console.log('[NewProject] router.push executed smoothly');
             } catch (rErr) {
                 console.error('[NewProject] router.push threw:', rErr);
-                window.location.href = `/projects/${realProjectId}`;
+                window.location.href = `/study/${realProjectId}`;
             }
 
             // Safeguard
@@ -442,7 +442,7 @@ function NewProjectContent() {
                 try {
                     if (window.location.pathname.includes('new-project')) {
                         console.warn('[NewProject] Router.push did not navigate, forcing redirect...');
-                        window.location.href = `/projects/${realProjectId}`;
+                        window.location.href = `/study/${realProjectId}`;
                     }
                 } catch (e) {
                     console.error('Safeguard error:', e);

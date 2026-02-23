@@ -623,20 +623,6 @@ const DataBoxPage = () => {
                 </div>
             </div>
 
-            {/* Footer Info inspired by ResearchRabbit */}
-            <div className="p-4 border-t border-border bg-card/10 shrink-0 flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="h-5">BibTeX</Badge>
-                        <Badge variant="outline" className="h-5">Zotero</Badge>
-                    </div>
-                    <span>Mostrando {filteredPapers.length} de {papers.length} artículos</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <Link href="#" className="hover:text-primary transition-colors">Ayuda</Link>
-                    <Link href="#" className="hover:text-primary transition-colors">Feedback</Link>
-                </div>
-            </div>
         </div>
     );
 };

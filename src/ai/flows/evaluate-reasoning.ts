@@ -37,7 +37,7 @@ const evaluateReasoningPrompt = ai.definePrompt({
     name: 'evaluateReasoningPrompt',
     input: { schema: EvaluateReasoningInputSchema },
     output: { schema: EvaluateReasoningOutputSchema },
-    model: 'googleai/gemini-2.5-flash-lite',
+    model: 'googleai/gemini-2.5-flash',
     config: {
         temperature: 0.2,
         maxOutputTokens: 4096,

@@ -14,7 +14,10 @@
         "data_box": "Data Box",
         "profile": "My Profile",
         "logout": "Logout",
-        "new_project": "New Project"
+        "new_project": "New Project",
+        "explorer": "Explorer",
+        "papers": "Papers",
+        "archive": "Archive"
     },
     "dashboard": {
         "greeting": "Hello, {{name}}!",

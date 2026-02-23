@@ -69,12 +69,12 @@ function SessionSummaryContent() {
         setIsLoading(true);
         try {
             await completeSession(projectId, sessionIndex);
-            router.push(`/projects/${projectId}?sessionCompleted=true`);
+            router.push(`/study/${projectId}?sessionCompleted=true`);
         } catch (error) {
             console.error("Error completing session:", error);
             setIsLoading(false);
             // Still navigate even if AI adjustment fails
-            router.push(`/projects/${projectId}?sessionCompleted=true`);
+            router.push(`/study/${projectId}?sessionCompleted=true`);
         }
     };
 

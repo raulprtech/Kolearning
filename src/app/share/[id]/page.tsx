@@ -60,7 +60,7 @@ export default function SharedProjectPage() {
             title: "Project copied!",
             description: `"${project.title}" has been added to your projects.`,
         });
-        setTimeout(() => router.push(`/projects/${newProjectId}`), 1000);
+        setTimeout(() => router.push(`/study/${newProjectId}`), 1000);
     }
 
     return (

@@ -120,7 +120,7 @@ export default function ExplorePage() {
         {filteredProjects.length > 0 ? filteredProjects.map((project) => {
           const Icon = projectIcons[project.icon as keyof typeof projectIcons];
           return (
-            <Link href={`/projects/${project.id}`} key={project.id} className="block hover:bg-muted/30 transition-colors rounded-lg">
+            <Link href={`/study/${project.id}`} key={project.id} className="block hover:bg-muted/30 transition-colors rounded-lg">
               <Card className="bg-card/50 flex flex-col h-full cursor-pointer border-transparent hover:border-primary">
                 <CardHeader className="flex-row items-center gap-4">
                   {Icon && <Icon className="w-10 h-10 text-primary" />}

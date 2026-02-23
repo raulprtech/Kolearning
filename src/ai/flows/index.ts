@@ -7,4 +7,5 @@ export * from './extract-contextual-concepts';
 export * from './generate-question-formats';
 export * from './map-concept-relationships';
 export * from './classify-paper';
+export * from './koli-orchestrator';
 // Agrega aquí cualquier otro flujo que quieras exportar

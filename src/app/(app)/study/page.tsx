@@ -33,9 +33,9 @@ export default function ProjectsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     <Button asChild variant="outline" size="sm">
-                        <Link href="/explore">
+                        <Link href="/study/explore">
                             <Search className="mr-2 h-4 w-4" />
-                            {t('header.explore')}
+                            {t('header.explorer')}
                         </Link>
                     </Button>
                     <Button asChild size="sm">
@@ -82,7 +82,7 @@ export default function ProjectsPage() {
                                             <div className="pt-2 flex justify-between items-center">
                                                 <span className="text-xs text-muted-foreground">{project.atoms.length} {t('dashboard.atoms')}</span>
                                                 <Button asChild size="sm" variant="ghost" className="group-hover:translate-x-1 transition-transform">
-                                                    <Link href={`/projects/${project.id}`}>
+                                                    <Link href={`/study/${project.id}`}>
                                                         {t('dashboard.study')}
                                                         <ArrowRight className="ml-2 h-4 w-4" />
                                                     </Link>
@@ -129,7 +129,7 @@ export default function ProjectsPage() {
                                         <div className="flex justify-between items-center">
                                             <span className="text-xs font-medium text-muted-foreground">100% {t('dashboard.study')}</span>
                                             <Button asChild size="sm" variant="link">
-                                                <Link href={`/projects/${project.id}`}>
+                                                <Link href={`/study/${project.id}`}>
                                                     {t('dashboard.view_all')}
                                                 </Link>
                                             </Button>
@@ -157,7 +157,7 @@ export default function ProjectsPage() {
                                 </div>
                             </div>
                             <Button asChild variant="outline">
-                                <Link href="/archive">
+                                <Link href="/study/archive">
                                     Ver Archivo
                                 </Link>
                             </Button>
