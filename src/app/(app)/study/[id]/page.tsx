@@ -406,11 +406,6 @@ export default function StudySessionPage() {
     const {
         projects,
         completeSession,
-        energy,
-        sessionStreak,
-        cognitiveCredits,
-        masteryPoints,
-        updateEnergy,
         recordAnswer,
         resetSessionStats,
         updateAtom,
@@ -546,17 +541,6 @@ export default function StudySessionPage() {
         )
     }
 
-    const handleUseEnergy = (cost: number, aidType?: string) => {
-        if (energy >= cost) {
-            updateEnergy(-cost);
-            if (aidType) {
-                setAidsUsed(prev => [...prev, aidType]);
-            }
-            return true;
-        }
-        return false;
-    }
-
     const handleCheckAnswer = async () => {
         if (!userAnswer.trim()) return;
 
@@ -578,8 +562,16 @@ export default function StudySessionPage() {
         }
     }
 
+    const handleUseEnergy = (cost: number, aidType?: string) => {
+        // Gamification disabled - all aids are free
+        if (aidType) {
+            setAidsUsed(prev => [...prev, aidType]);
+        }
+        return true;
+    }
+
     const handleExplainAnswer = async () => {
-        if (!handleUseEnergy(1, 'explain')) return;
+        handleUseEnergy(0, 'explain');
         setIsExplanationDialogOpen(true);
         setIsExplanationLoading(true);
         try {
@@ -599,8 +591,7 @@ export default function StudySessionPage() {
     }
 
     const handleGetStudyAid = async (aidType: 'hint' | 'rephrase') => {
-        const cost = aidType === 'hint' ? 1 : 1;
-        if (!handleUseEnergy(cost, aidType)) return;
+        handleUseEnergy(0, aidType);
 
         setIsAidLoading(aidType);
         try {
@@ -623,23 +614,20 @@ export default function StudySessionPage() {
     }
 
     const handleSeeAnswer = () => {
-        if (handleUseEnergy(5, 'seeAnswer')) {
-            setViewState('answer');
-            setIsAnswerRevealed(true);
-        }
+        handleUseEnergy(0, 'seeAnswer');
+        setViewState('answer');
+        setIsAnswerRevealed(true);
     };
 
 
     const handleConvertToMc = () => {
-        if (handleUseEnergy(2, 'convertToMc')) {
-            setIsConvertedToMc(true);
-        }
+        handleUseEnergy(0, 'convertToMc');
+        setIsConvertedToMc(true);
     }
 
     const handleOpenTutorChat = () => {
-        if (handleUseEnergy(3, 'tutorChat')) {
-            setIsTutorPanelOpen(true);
-        }
+        handleUseEnergy(0, 'tutorChat');
+        setIsTutorPanelOpen(true);
     }
 
     const progress = (currentCardIndex / sessionAtoms.length) * 100;
@@ -647,22 +635,21 @@ export default function StudySessionPage() {
     type TacticalButtonProps = {
         icon: React.ReactNode;
         label: string;
-        cost: number;
         action: () => void;
         disabled?: boolean;
         isLoading?: boolean;
     };
 
-    const TacticalButton = ({ icon, label, cost, action, disabled = false, isLoading = false }: TacticalButtonProps) => (
+    const TacticalButton = ({ icon, label, action, disabled = false, isLoading = false }: TacticalButtonProps) => (
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" aria-label={label} onClick={action} disabled={disabled || energy < cost || isLoading}>
+                    <Button variant="outline" size="icon" aria-label={label} onClick={action} disabled={disabled || isLoading}>
                         {isLoading ? <Loader2 className="animate-spin" /> : icon}
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                    <p>{label} (⚡-{cost})</p>
+                    <p>{label}</p>
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
@@ -830,16 +817,7 @@ export default function StudySessionPage() {
                     </div>
                 </div>
                 <div className="w-1/4 flex justify-end">
-                    <div className="flex items-center gap-6 bg-card/50 px-4 py-1.5 rounded-md">
-                        <div className="flex items-center gap-2" title="Créditos Cognitivos de Sesión">
-                            <Brain className="h-5 w-5 text-blue-400" />
-                            <span className="font-bold text-lg">{cognitiveCredits}</span>
-                        </div>
-                        <div className="flex items-center gap-2" title="Energía de Sesión">
-                            <Zap className="h-5 w-5 text-yellow-400" />
-                            <span className="font-bold text-lg text-foreground">{energy}</span>
-                        </div>
-                    </div>
+                    {/* Gamification stats removed */}
                 </div>
             </header>
 
@@ -925,16 +903,13 @@ export default function StudySessionPage() {
                             )}
 
                             <div className="mt-8 pt-6 border-t border-border/50 flex flex-col items-center">
-                                <h3 className="font-headline text-muted-foreground mb-4">
-                                    Usar ayuda
-                                </h3>
                                 <div className="flex items-center justify-center gap-4">
-                                    <TacticalButton icon={<Eye />} label="Ver respuesta" cost={5} action={handleSeeAnswer} disabled={viewState === 'answer'} />
-                                    <TacticalButton icon={<Lightbulb />} label="Pista" cost={1} action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} isLoading={isAidLoading === 'hint'} />
-                                    {!isMultipleChoice && !isConvertedToMc && !isOrdering && <TacticalButton icon={<ListChecks />} label="Convertir a Opción Múltiple" cost={2} action={handleConvertToMc} disabled={viewState === 'answer'} />}
-                                    <TacticalButton icon={<BrainCircuit />} label="Explicar Respuesta" cost={1} action={handleExplainAnswer} disabled={viewState === 'question'} />
-                                    <TacticalButton icon={<Repeat />} label="Reformular" cost={1} action={() => handleGetStudyAid('rephrase')} disabled={viewState === 'answer' || !!rephrasedQuestion} isLoading={isAidLoading === 'rephrase'} />
-                                    <TacticalButton icon={<KoliAvatar className="h-6 w-6" />} label="Consultar a Koli" cost={3} action={handleOpenTutorChat} />
+                                    <TacticalButton icon={<Eye />} label="Ver respuesta" action={handleSeeAnswer} disabled={viewState === 'answer'} />
+                                    <TacticalButton icon={<Lightbulb />} label="Pista" action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} isLoading={isAidLoading === 'hint'} />
+                                    {!isMultipleChoice && !isConvertedToMc && !isOrdering && <TacticalButton icon={<ListChecks />} label="Convertir a Opción Múltiple" action={handleConvertToMc} disabled={viewState === 'answer'} />}
+                                    <TacticalButton icon={<BrainCircuit />} label="Explicar Respuesta" action={handleExplainAnswer} disabled={viewState === 'question'} />
+                                    <TacticalButton icon={<Repeat />} label="Reformular" action={() => handleGetStudyAid('rephrase')} disabled={viewState === 'answer' || !!rephrasedQuestion} isLoading={isAidLoading === 'rephrase'} />
+                                    <TacticalButton icon={<KoliAvatar className="h-6 w-6" />} label="Consultar a Koli" action={handleOpenTutorChat} />
                                 </div>
                             </div>
 

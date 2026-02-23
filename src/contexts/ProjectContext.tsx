@@ -6,137 +6,36 @@ import { dynamicLearningPathAdjustment } from '@/ai/flows/koli-strategic-tutor';
 import { differenceInDays, addDays } from 'date-fns';
 import { useAuth } from './AuthContext';
 import { ProjectDatabase } from '@/lib/supabase/database';
-import { migrateLocalStorageToSupabase, hasLocalStorageData } from '@/lib/migrate-localStorage';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
-import { classifyPaper as classifyPaperFlow } from '@/ai/flows/classify-paper';
+import { SupabaseProjectRepository } from '@/infrastructure/repositories/SupabaseProjectRepository';
+import { GenkitLLMService } from '@/infrastructure/ai/GenkitLLMService';
+import { OpenClawLLMService } from '@/infrastructure/ai/OpenClawLLMService';
+import { CreateProjectUseCase } from '@/application/use-cases/CreateProjectUseCase';
+import { ExtractKnowledgeUseCase } from '@/application/use-cases/ExtractKnowledgeUseCase';
+import { StudySessionUseCase } from '@/application/use-cases/StudySessionUseCase';
+// Utility functions imported from domain
+import { calculateMastery, calculateCurrentRetrievability } from '@/core/domain/mastery';
+import { getLearnerRank, LearnerRankInfo } from '@/core/domain/ranks';
+
+// AI flows (for legacy functions not yet refactored if any)
+import { generateAtomsFromLargeContent } from '@/ai/flows/generate-atoms';
+import { extractContentFromUrl } from '@/ai/flows/extract-content-from-url';
 import { fetchPaperAbstract } from '@/lib/paper-utils';
 
-// Type definitions
-export type AtomPayload = {
-  videoUrl?: string;
-  startTime?: number;
-  endTime?: number;
-  pairs?: { id: string; term: string; definition: string }[];
-  [key: string]: any;
-};
+// Re-export models for backwards compatibility so other files don't break immediately
+export * from '@/core/domain/models/atom';
+export * from '@/core/domain/models/paper';
+export * from '@/core/domain/models/project';
+export * from '@/core/domain/models/user';
 
-export type Atom = {
-  id?: string;
-  type?: string;
-  payload?: AtomPayload;
-  question: string;
-  answer: string;
-  // FSRS Metrics
-  difficulty?: number; // How hard is this to learn? (0-1)
-  stability?: number; // How long will you remember this? (in days)
-  lastReviewed?: string; // ISO date string
-  retrievability?: number; // FSRS score from 1 to 4
-  incorrectAnswers?: string[]; // For multiple choice questions
-  // Learning phase fields
-  phase?: 'calibration' | 'incursion' | 'reinforcement' | 'mastery';
-  zettelkastenNote?: string;
-  dependencies?: string[]; // IDs of prerequisite atoms
-  // Ordering question fields
-  orderingItems?: string[];
-  correctOrder?: string[];
-}
+// Core Type imports for internal use
+import { Atom, AtomPayload } from '@/core/domain/models/atom';
+import { Paper, PaperStatus, PDFStatus, ImportSource, ReadingStatus, PaperPriority, DifficultyLevel, PaperType } from '@/core/domain/models/paper';
+import { Project, Session, LearningPathItem, Source } from '@/core/domain/models/project';
+import { User } from '@/core/domain/models/user';
 
-export type Source = {
-  id?: string;
-  name: string;
-  type: string;
-  content: string;
-}
 
-export type PaperStatus = 'in_box' | 'assigned' | 'processing' | 'ready';
-export type PDFStatus = 'available' | 'pending' | 'not_available';
-export type ImportSource = 'ArXiv' | 'BibTeX' | 'DOI' | 'manual' | 'Zotero';
-export type ReadingStatus = 'unread' | 'in_progress' | 'read';
-export type PaperPriority = 'high' | 'medium' | 'low';
-export type DifficultyLevel = 'basic' | 'intermediate' | 'advanced';
-export type PaperType = 'survey' | 'experimental' | 'theoretical' | 'review';
-
-export type Paper = {
-  id: string;
-  title: string;
-  authors: string[];
-  year?: number;
-  doi?: string;
-  journalConference?: string;
-  url?: string;
-  pdfStatus: PDFStatus;
-  importSource: ImportSource;
-  status: PaperStatus;
-  processingPercentage: number;
-  fieldOfKnowledge?: string;
-  difficultyLevel?: DifficultyLevel;
-  paperType?: PaperType;
-  tags: string[];
-  readingStatus: ReadingStatus;
-  notes?: string;
-  priority: PaperPriority;
-  lastInteraction: string;
-  projectId?: string; // Project ID it belongs to
-  createdAt: string;
-};
-
-export type Session = {
-  session: number;
-  type: string;
-  questions: string;
-  duration: string;
-  status: 'Completed' | 'Continue' | 'Locked';
-  atoms: Atom[];
-  phase?: 'calibration' | 'incursion' | 'reinforcement' | 'mastery';
-  questionFormats?: string;
-}
-
-export type LearningPathItem = {
-  session: number;
-  topic: string;
-  sessionType: string;
-  questions: string; // Added from CalibratePlanOutput
-  phase?: 'calibration' | 'incursion' | 'reinforcement' | 'mastery';
-  questionFormats?: string;
-}
-
-export type Project = {
-  id: string;
-  title: string;
-  description: string;
-  mastery: number;
-  icon: string;
-  categories: string[];
-  atoms: Atom[];
-  sessions: Session[];
-  sources: Source[];
-  learningPath: LearningPathItem[];
-  fullLearningPlanMarkdown?: string;
-  author?: string;
-  category?: string;
-  isPublic?: boolean;
-  bestStreak?: number;
-  totalAnswers?: number;
-  correctAnswers?: number;
-};
-
-export type User = {
-  name: string;
-  email: string;
-  password?: string; // Should not be stored long-term in a real app
-  profession?: string;
-  company?: string;
-  age?: string;
-  additionalInfo?: string;
-}
-
-type LearnerRankInfo = {
-  rankName: string;
-  nextRankName: string;
-  progress: number;
-  pointsToNext: number;
-}
 
 type ProjectContextType = {
   projects: Project[];
@@ -177,9 +76,6 @@ type ProjectContextType = {
   updateUserProfile: (profileData: Partial<User>) => boolean;
   learnerRankInfo: LearnerRankInfo | null;
   isLoading: boolean;
-  // New Supabase-specific methods
-  migrateFromLocalStorage: () => Promise<{ success: boolean; migratedProjects: number; errors: string[]; }>;
-  hasLocalData: boolean;
   getSourceContent: (sourceId: string) => Promise<string>;
   // Paper Box methods
   papers: Paper[];
@@ -190,10 +86,6 @@ type ProjectContextType = {
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
-
-// Utility functions imported from domain
-import { calculateMastery } from '@/core/domain/mastery';
-import { getLearnerRank, LearnerRankInfo } from '@/core/domain/ranks';
 
 const initialProjects: Project[] = [];
 
@@ -214,18 +106,24 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [nextEnergyIn, setNextEnergyIn] = useState(0);
   const [sessionAnswers, setSessionAnswers] = useState<boolean[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasLocalData, setHasLocalData] = useState(false);
   const [papers, setPapers] = useState<Paper[]>([]);
 
   // Auth context
   const { user, profile, loading: authLoading, updateProfile } = useAuth();
-  const projectDb = new ProjectDatabase();
-  const { toast } = useToast();
 
-  // Check for localStorage data on mount
-  useEffect(() => {
-    setHasLocalData(hasLocalStorageData());
-  }, []);
+  // Dependency Injection setup
+  const [projectDb] = useState(() => new SupabaseProjectRepository());
+  const [llmService] = useState(() => {
+    const provider = process.env.NEXT_PUBLIC_LLM_PROVIDER || 'genkit';
+    if (provider === 'openclaw') {
+      console.log('🏭 [LLM Factory] Init OpenClaw Service');
+      return new OpenClawLLMService();
+    }
+    console.log('🏭 [LLM Factory] Init Genkit Service');
+    return new GenkitLLMService();
+  });
+
+  const { toast } = useToast();
 
   // Track whether initial data load has completed
   const initialLoadDoneRef = React.useRef(false);
@@ -408,6 +306,44 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const updatePaper = async (paperId: string, updates: Partial<Paper>): Promise<void> => {
     if (!user) throw new Error('User must be authenticated to update papers');
     try {
+      // If we are assigning the paper to a project, let's extract knowledge and atoms
+      if (updates.status === 'assigned' && updates.projectId) {
+        const paperToAssign = papers.find(p => p.id === paperId);
+        if (paperToAssign) {
+          // Tell UI we are processing extraction
+          await projectDb.updatePaper(paperId, { status: 'processing', projectId: updates.projectId });
+          setPapers(prev => prev.map(p => p.id === paperId ? { ...p, status: 'processing', projectId: updates.projectId, lastInteraction: new Date().toISOString() } : p));
+
+          try {
+            console.log(`[ProjectContext] Extracting knowledge for paper: ${paperToAssign.title}`);
+
+            const extractor = new ExtractKnowledgeUseCase(llmService, projectDb);
+            const atoms = await extractor.execute(paperToAssign, updates.projectId);
+
+            if (atoms && atoms.length > 0) {
+              // Update local state by calling existing context method to maintain synced arrays 
+              await addAtomsToProject(updates.projectId, atoms);
+
+              toast({
+                title: "Conocimiento extraído",
+                description: `Se extrajeron y añadieron ${atoms.length} átomos al proyecto exitosamente.`,
+              });
+            }
+
+            // The rest of the updates (status: assigned) will be applied after
+          } catch (extractionError: any) {
+            console.error("[ProjectContext] Error extracting atoms from paper:", extractionError);
+            toast({
+              title: extractionError.message === "INSUFFICIENT_TEXT" ? "Información insuficiente" : "Error de extracción",
+              description: extractionError.message === "INSUFFICIENT_TEXT"
+                ? "El paper no tiene suficiente resumen o texto para extraer átomos."
+                : "Hubo un problema extrayendo los conceptos del artículo.",
+              variant: "destructive"
+            });
+          }
+        }
+      }
+
       await projectDb.updatePaper(paperId, updates);
       // Optimistic update
       setPapers(prev => prev.map(p => p.id === paperId ? {
@@ -465,20 +401,18 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      const result = await classifyPaperFlow({
-        title: paperToClassify.title,
-        authors: paperToClassify.authors,
-        journalConference: paperToClassify.journalConference,
-        year: paperToClassify.year,
-        abstract: abstract
-      });
+      const result = await llmService.classifyDocument(
+        paperToClassify.title,
+        abstract,
+        paperToClassify.authors
+      );
 
       console.log('[ProjectContext] Paper classified successfully:', result);
 
       await updatePaper(paperId, {
         fieldOfKnowledge: result.fieldOfKnowledge,
-        difficultyLevel: result.difficultyLevel,
-        paperType: result.paperType,
+        difficultyLevel: result.difficultyLevel as DifficultyLevel,
+        paperType: result.paperType as PaperType,
         tags: [...new Set([...(paperToClassify.tags || []), ...(result.tags || [])])],
         status: 'ready'
       });
@@ -506,110 +440,28 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const migrateFromLocalStorage = async () => {
-    if (!user) {
-      throw new Error('User must be authenticated to migrate data');
-    }
+  const addProject = useCallback(async (projectToAdd: Project, logCallback?: (msg: string) => void) => {
+    // Instantiate UseCase on demand for clean contextual lifecycle. 
+    // Uses the singleton-like adapter instance.
+    const createProjectUseCase = new CreateProjectUseCase(projectDb);
 
     try {
-      setIsLoading(true);
-      const result = await migrateLocalStorageToSupabase();
+      const finalProject = await createProjectUseCase.execute(user ? user.id : null, projectToAdd, logCallback);
 
-      if (result.success) {
-        await loadUserData();
-        setHasLocalData(false);
-      }
+      // Local state optimistic update
+      const strippedSources = finalProject.sources.map(s => ({
+        ...s,
+        content: s.content.length > 50000 ? 'FETCH_REQUIRED' : s.content
+      }));
+      const projectForState = { ...finalProject, sources: strippedSources };
+      setProjects(prev => [projectForState, ...prev]);
 
-      return result;
-    } catch (error) {
-      console.error('Migration failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const addProject = useCallback(async (projectToAdd: Project, logCallback?: (msg: string) => void): Promise<string> => {
-    // Ensure project always has at least a calibration session
-    const ensureCalibrationSession = (project: Project): Project => {
-      if (project.sessions && project.sessions.length > 0) {
-        return project;
-      }
-
-      const sessionSize = 10;
-
-      // If there's a learning path, generate sessions from it
-      if (project.learningPath && project.learningPath.length > 0) {
-        const sessions: Session[] = project.learningPath.map((item, index) => {
-          // If the learning path item already has atoms assigned (from AI), use them
-          // Otherwise, fall back to sequential slicing (backward compatibility)
-          let sessionAtoms = (item as any).atoms || [];
-
-          if (sessionAtoms.length === 0) {
-            sessionAtoms = project.atoms.slice(index * sessionSize, (index + 1) * sessionSize);
-          }
-
-          return {
-            session: item.session,
-            type: item.sessionType,
-            questions: item.questions,
-            duration: '20 min',
-            status: index === 0 ? 'Continue' : 'Locked' as const,
-            atoms: sessionAtoms,
-            phase: item.phase,
-            questionFormats: item.questionFormats,
-          };
-        });
-        return { ...project, sessions };
-      }
-
-      // Fallback: create a single calibration session with the first atoms
-      const calibrationSession: Session = {
-        session: 1,
-        type: 'Initial Calibration',
-        questions: `${Math.min(sessionSize, project.atoms.length)} calibration questions`,
-        duration: '20 min',
-        status: 'Continue',
-        atoms: project.atoms.slice(0, sessionSize),
-        phase: 'calibration',
-        questionFormats: 'Multiple Choice',
-      };
-      return { ...project, sessions: [calibrationSession] };
-    };
-
-    const projectWithSessions = ensureCalibrationSession(projectToAdd);
-
-    console.log('[ProjectContext] ➕ Creating project:', projectWithSessions.title);
-
-    if (user) {
-      try {
-        if (logCallback) logCallback('Saving to Supabase (from Context)...');
-        console.log('[ProjectContext] Saving to Supabase...');
-        const projectId = await projectDb.createProject(user.id, projectWithSessions, logCallback);
-        console.log('[ProjectContext] ✅ Project saved in Supabase:', projectId);
-
-        // Optimistic update: add the project with its real ID to the state immediately.
-        // Strip massive base64 contents from state to avoid freezing the browser.
-        const strippedSources = projectWithSessions.sources.map(s => ({
-          ...s,
-          content: s.content.length > 50000 ? 'FETCH_REQUIRED' : s.content
-        }));
-        const projectWithRealId = { ...projectWithSessions, id: projectId, sources: strippedSources };
-        setProjects(prev => [projectWithRealId, ...prev]);
-
-        console.log('[ProjectContext] ✅ Returning ID for immediate redirection');
-        return projectId;
-      } catch (error) {
-        console.error('[ProjectContext] ❌ Save error:', error);
-        throw error; // Let the UI handle the error
-      }
-    } else {
-      console.log('[ProjectContext] No user, saving to local state');
-      const finalProject = { ...projectWithSessions };
-      setProjects(prevProjects => [...prevProjects, finalProject]);
       return finalProject.id;
+    } catch (error) {
+      console.error('[ProjectContext] ❌ Save error directly propagated:', error);
+      throw error;
     }
-  }, [user, projectDb, loadUserData]);
+  }, [user, projectDb]);
 
   const updateProjectIcon = useCallback(async (projectId: string, icon: string) => {
     if (user) {
@@ -867,167 +719,50 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       }).catch((err: Error) => console.error('[ProjectContext] Failed to sync profile stats:', err));
     }
 
-    let projectToUpdate: Project | undefined;
-    let isCompletedProject = false;
+    const currentProject = projects.find(p => p.id === projectId);
+    if (!currentProject) {
+      resetSessionStats();
+      return;
+    }
 
-    const updateLogic = (p: Project) => {
-      if (p.id === projectId) {
-        const updatedSessions = [...p.sessions];
-        if (updatedSessions[sessionIndex]) {
-          updatedSessions[sessionIndex].status = 'Completed';
-        }
-        if (updatedSessions[sessionIndex + 1]) {
-          updatedSessions[sessionIndex + 1].status = 'Continue';
-        }
-
-        const sessionCorrectAnswers = sessionAnswers.filter(a => a).length;
-        const newTotalAnswers = (p.totalAnswers || 0) + sessionAnswers.length;
-        const newCorrectAnswers = (p.correctAnswers || 0) + sessionCorrectAnswers;
-        const newBestStreak = Math.max(p.bestStreak || 0, sessionStreak);
-        const newMastery = calculateMastery(p.atoms);
-
-        projectToUpdate = {
-          ...p,
-          sessions: updatedSessions,
-          totalAnswers: newTotalAnswers,
-          correctAnswers: newCorrectAnswers,
-          bestStreak: newBestStreak,
-          mastery: newMastery,
-        };
-        return projectToUpdate;
+    // Prepare Strategic Tutor wrapper to match dependency injection Interface
+    const strategicTutorAdapter = {
+      async adjustPath(params: any) {
+        return dynamicLearningPathAdjustment(params);
       }
-      return p;
     };
 
-    setProjects(prevProjects => prevProjects.map(updateLogic));
-    setCompletedProjects(prevCompleted => {
-      const updatedCompleted = prevCompleted.map(updateLogic);
-      if (updatedCompleted.some(p => p.id === projectId)) {
-        isCompletedProject = true;
-      }
-      return updatedCompleted;
-    });
+    const useCase = new StudySessionUseCase(projectDb, strategicTutorAdapter);
 
-    if (projectToUpdate && sessionAnswers.length > 0) {
-      try {
-        const fsrsData = JSON.stringify({
-          atoms: projectToUpdate.atoms.map((atom, index) => ({
-            index,
-            question: atom.question.substring(0, 100),
-            difficulty: atom.difficulty || 0.3,
-            stability: atom.stability || 0,
-            retrievability: atom.retrievability || 1,
-            lastReviewed: atom.lastReviewed,
-            daysSinceLastReview: atom.lastReviewed
-              ? differenceInDays(new Date(), new Date(atom.lastReviewed))
-              : 0
-          })),
-          currentSessionPerformance: {
-            correctAnswers: sessionAnswers.filter(a => a).length,
-            totalAnswers: sessionAnswers.length,
-            accuracy: sessionAnswers.length > 0
-              ? (sessionAnswers.filter(a => a).length / sessionAnswers.length) * 100
-              : 0,
-            sessionStreak
+    try {
+      const { updatedProject, isFullyCompleted } = await useCase.execute(
+        user ? user.id : null,
+        currentProject,
+        sessionIndex,
+        sessionAnswers,
+        sessionStreak,
+        (newSessions, index) => addSessionsToProject(projectId, newSessions, index)
+      );
+
+      // Local React State Updates
+      setProjects(prevProjects => prevProjects.map(p => p.id === projectId ? updatedProject : p));
+
+      if (isFullyCompleted) {
+        setProjects(prev => prev.filter(p => p.id !== projectId));
+        setCompletedProjects(prev => {
+          if (!prev.some(p => p.id === projectId)) {
+            return [...prev, updatedProject];
           }
+          return prev;
         });
-
-        const performanceHistory = JSON.stringify({
-          totalAnswers: projectToUpdate.totalAnswers || 0,
-          correctAnswers: projectToUpdate.correctAnswers || 0,
-          bestStreak: projectToUpdate.bestStreak || 0,
-          mastery: projectToUpdate.mastery || 0,
-          lastSessionAccuracy: sessionAnswers.length > 0
-            ? (sessionAnswers.filter(a => a).length / sessionAnswers.length) * 100
-            : 0
-        });
-
-        const currentLearningPlan = JSON.stringify({
-          sessions: projectToUpdate.sessions.map(s => ({
-            session: s.session,
-            type: s.type,
-            questions: s.questions,
-            status: s.status,
-            atomCount: s.atoms.length,
-            phase: s.phase || 'calibration',
-            questionFormats: s.questionFormats,
-          })),
-          learningPath: projectToUpdate.learningPath
-        });
-
-        // Run AI adjustment in the background without awaiting it to prevent UI hang
-        dynamicLearningPathAdjustment({
-          fsrsData,
-          performanceHistory,
-          currentLearningPlan,
-          tutorLog: ''
-        }).then(adjustment => {
-          if (adjustment.adjustments.add && adjustment.adjustments.add.length > 0) {
-            console.log(`AI Strategic Tutor recommended ${adjustment.adjustments.add.length} additional sessions:`, adjustment.feedback);
-            console.log('Failure diagnosis:', adjustment.failureDiagnosis.type, '-', adjustment.failureDiagnosis.positiveMessage);
-
-            const newSessionsToAdd = adjustment.adjustments.add.map((newSession) => ({
-              type: newSession.type,
-              questions: newSession.questions,
-              duration: newSession.duration,
-              phase: newSession.phase,
-              questionFormats: newSession.questionFormats,
-            }));
-
-            addSessionsToProject(projectId, newSessionsToAdd, sessionIndex);
-          }
-        }).catch(error => {
-          console.error("Error during background dynamic learning path adjustment:", error);
-        });
-
-      } catch (error) {
-        console.error("Error during dynamic learning path adjustment:", error);
       }
-    }
 
-    if (projectToUpdate && !isCompletedProject && projectToUpdate.sessions.every(s => s.status === 'Completed' || s.type === "Refuerzo de Dominio")) {
-      setProjects(prev => prev.filter(p => p.id !== projectId));
-      setCompletedProjects(prev => [...prev, projectToUpdate!]);
-
-      // Mark as completed in Supabase
-      if (user && projectDb) {
-        try {
-          await projectDb.completeProject(projectId);
-          console.log(`✅ Project ${projectId} marked as completed in Supabase`);
-        } catch (error) {
-          console.error('❌ Failed to mark project as completed in Supabase:', error);
-        }
-      }
-    }
-
-    // Sync session completion and project stats to Supabase
-    if (user && projectDb && projectToUpdate) {
-      try {
-        await projectDb.updateProject(projectId, {
-          totalAnswers: projectToUpdate.totalAnswers,
-          correctAnswers: projectToUpdate.correctAnswers,
-          bestStreak: projectToUpdate.bestStreak,
-          mastery: projectToUpdate.mastery,
-        } as any);
-
-        // Update sessions status (this now handles re-linking)
-        await projectDb.updateLearningPathAndSessions(
-          projectId,
-          projectToUpdate.learningPath,
-          projectToUpdate.sessions
-        );
-
-        // Sync updated atoms (FSRS metadata)
-        await projectDb.updateAtoms(projectId, projectToUpdate.atoms);
-
-        console.log(`✅ Session ${sessionIndex} and knowledge state synchronized to Supabase`);
-      } catch (error) {
-        console.error('❌ Failed to sync session completion and atoms to Supabase:', error);
-      }
+    } catch (e) {
+      console.error("[ProjectContext] UseCase Failed during completeSession", e);
     }
 
     resetSessionStats();
-  }, [cognitiveCredits, masteryPoints, sessionAnswers, sessionStreak, addSessionsToProject, resetSessionStats, user, projectDb, profile, updateProfile]);
+  }, [cognitiveCredits, masteryPoints, sessionAnswers, sessionStreak, addSessionsToProject, resetSessionStats, user, projectDb, profile, updateProfile, projects]);
 
   const archiveProject = useCallback(async (projectId: string): Promise<boolean> => {
     const MAX_ARCHIVED_PROJECTS = 5;
@@ -1189,11 +924,12 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   // Authentication methods - these will be deprecated in favor of AuthContext
   const isAuthenticated = !!user;
   const currentUser = profile ? {
+    id: profile.id,
     name: profile.name,
     email: user?.email || '',
     profession: profile.profession || undefined,
     company: profile.company || undefined,
-    age: profile.age || undefined,
+    age: profile.age?.toString(),
     additionalInfo: profile.additional_info || undefined,
   } : null;
 
@@ -1241,8 +977,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     updateUserProfile,
     learnerRankInfo,
     isLoading,
-    migrateFromLocalStorage,
-    hasLocalData,
     getSourceContent: async (sourceId: string) => await projectDb.getSourceContent(sourceId),
     papers,
     addPaper,

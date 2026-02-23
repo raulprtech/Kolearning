@@ -726,23 +726,11 @@ function ProjectDetails() {
                     onConfirm={handleAtomActionConfirm}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <Card className="bg-card/50">
-                        <CardContent className="pt-6 text-center">
-                            <p className="text-sm text-muted-foreground mb-2">Mejor Racha</p>
-                            <p className="text-4xl font-bold">{project.bestStreak || 0}</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-card/50">
+                <div className="flex justify-center mb-8">
+                    <Card className="bg-card/50 min-w-[200px]">
                         <CardContent className="pt-6 text-center">
                             <p className="text-sm text-muted-foreground mb-2">Precisión</p>
                             <p className="text-4xl font-bold">{isUserProject ? `${accuracy}%` : 'N/A'}</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-card/50">
-                        <CardContent className="pt-6 text-center">
-                            <p className="text-sm text-muted-foreground mb-2">Dominio del tema</p>
-                            <p className="text-4xl font-bold">{project.mastery}%</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -963,8 +951,8 @@ function ConceptMapSection({ project }: { project: Project }) {
             const concepts = project.atoms.slice(0, 30).map((atom, i) => ({
                 concept: atom.question,
                 definition: atom.answer,
-                importance: atom.phase === 'dominio' ? 'high' : atom.phase === 'refuerzo' ? 'medium' : 'low',
-                category: atom.phase || 'calibracion',
+                importance: atom.phase === 'mastery' ? 'high' : atom.phase === 'reinforcement' ? 'medium' : 'low',
+                category: atom.phase || 'calibration',
                 relatedConcepts: atom.dependencies || [],
             }));
             const questions = project.atoms.slice(0, 30).map((atom, i) => ({

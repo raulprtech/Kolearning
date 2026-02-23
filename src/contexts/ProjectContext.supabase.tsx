@@ -6,7 +6,6 @@ import { dynamicLearningPathAdjustment } from '@/ai/flows/koli-strategic-tutor';
 import { differenceInDays, addDays } from 'date-fns';
 import { useAuth } from './AuthContext';
 import { ProjectDatabase } from '@/lib/supabase/database';
-import { migrateLocalStorageToSupabase, hasLocalStorageData } from '@/lib/migrate-localStorage';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 
@@ -129,9 +128,6 @@ type ProjectContextType = {
   updateUserProfile: (profileData: Partial<User>) => boolean;
   learnerRankInfo: LearnerRankInfo | null;
   isLoading: boolean;
-  // New Supabase-specific methods
-  migrateFromLocalStorage: () => Promise<{ success: boolean; migratedProjects: number; errors: string[]; }>;
-  hasLocalData: boolean;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -223,17 +219,11 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [nextEnergyIn, setNextEnergyIn] = useState(0);
   const [sessionAnswers, setSessionAnswers] = useState<boolean[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasLocalData, setHasLocalData] = useState(false);
 
   // Auth context
   const { user, profile, loading: authLoading } = useAuth();
   const projectDb = new ProjectDatabase();
   const { toast } = useToast();
-
-  // Check for localStorage data on mount
-  useEffect(() => {
-    setHasLocalData(hasLocalStorageData());
-  }, []);
 
   // Load data when user changes
   useEffect(() => {
@@ -358,29 +348,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
       setProjects(initialProjects);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const migrateFromLocalStorage = async () => {
-    if (!user) {
-      throw new Error('User must be authenticated to migrate data');
-    }
-
-    try {
-      setIsLoading(true);
-      const result = await migrateLocalStorageToSupabase();
-
-      if (result.success) {
-        await loadUserData();
-        setHasLocalData(false);
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Migration failed:', error);
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -1038,8 +1005,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     updateUserProfile,
     learnerRankInfo,
     isLoading,
-    migrateFromLocalStorage,
-    hasLocalData,
   };
 
   return (

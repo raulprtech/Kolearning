@@ -2,23 +2,34 @@
 
 import { Suspense, useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { KoliAvatar } from "@/components/icons/koli-avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-    Plus,
-    FileText,
-    X,
-    Loader2,
-    Paperclip,
-    Link as LinkIcon,
     ChevronLeft,
     ClipboardPaste,
+    Trophy,
+    Flame,
+    Zap,
+    GraduationCap,
+    BookOpen,
+    Clock,
+    Target,
+    ArrowRight,
+    Plus,
+    Loader2,
+    X,
+    FileText,
+    Paperclip,
+    Link as LinkIcon,
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project, useProjects, Atom } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
@@ -31,7 +42,7 @@ const initialSteps = [
         description: "Usa el icono '+' para subir tus apuntes, PDFs, o enlaces."
     },
     {
-        title: "Koli Procesa Automáticamente",
+        title: "Procesado Automático",
         description: "Nuestra IA analiza tu contenido, infiere el título y descripción del proyecto, y descompone el material en conceptos clave."
     },
     {
@@ -301,15 +312,115 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, t
     );
 };
 
+const DashboardView = ({ projects, profile, onStartNewProject }: { projects: Project[], profile: any, onStartNewProject: () => void }) => {
+    const { t } = useLanguage();
+    return (
+        <div className="flex-1 w-full max-w-7xl mx-auto p-6 space-y-8 overflow-y-auto">
+            {/* Header: User Stats */}
+            <header className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-card/30 p-6 rounded-3xl border backdrop-blur-sm">
+                <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/20">
+                        <KoliAvatar className="h-10 w-10 text-primary" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold font-headline">{t('dashboard.greeting', { name: profile?.name || t('common.student') })}</h1>
+                        <p className="text-muted-foreground">{t('dashboard.ask_learn')}</p>
+                    </div>
+                </div>
+            </header>
+
+            {/* Quick Actions / Featured */}
+            <div className="grid md:grid-cols-3 gap-6">
+                <Card className="col-span-2 bg-primary/5 border-primary/20 overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <BookOpen className="h-32 w-32" />
+                    </div>
+                    <CardHeader>
+                        <CardTitle className="text-xl">{t('dashboard.start_new')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground mb-6 max-w-md">{t('dashboard.start_new_desc')}</p>
+                        <Button onClick={onStartNewProject} size="lg" className="rounded-xl">
+                            <Plus className="mr-2 h-5 w-5" /> {t('dashboard.create_project')}
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <Link href="/data-box" className="block h-full">
+                    <Card className="bg-card/50 border-dashed h-full flex flex-col items-center justify-center p-6 text-center group cursor-pointer hover:bg-card/80 transition-colors">
+                        <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <BookOpen className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <h3 className="font-semibold mb-1">{t('header.data_box')}</h3>
+                        <p className="text-xs text-muted-foreground">{t('dashboard.data_box_desc')}</p>
+                        <ArrowRight className="h-4 w-4 mt-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Card>
+                </Link>
+            </div>
+
+            {/* Active Projects Grid */}
+            <section className="space-y-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-primary" />
+                    {t('dashboard.active_projects')}
+                </h2>
+
+                {projects.length === 0 ? (
+                    <div className="bg-muted/30 border-2 border-dashed rounded-3xl p-12 text-center">
+                        <p className="text-muted-foreground">{t('dashboard.no_projects')}</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {projects.map((project) => (
+                            <Link href={`/projects/${project.id}`} key={project.id}>
+                                <Card className="bg-card/50 hover:shadow-xl transition-all duration-300 border-primary/10 group cursor-pointer h-full">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex justify-between items-start">
+                                            <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-xl">
+                                                {project.icon === 'Book' ? '📚' : project.icon === 'Science' ? '🔬' : '💡'}
+                                            </div>
+                                        </div>
+                                        <CardTitle className="mt-4 line-clamp-1">{project.title}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
+                                            {project.description || t('dashboard.no_description')}
+                                        </p>
+
+                                        <div className="pt-4 border-t flex items-center justify-between">
+                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                                <div className="flex items-center gap-1">
+                                                    <Clock className="h-3 w-3" />
+                                                    <span>{project.atoms.length} {t('dashboard.atoms')}</span>
+                                                </div>
+                                            </div>
+                                            <Button size="sm" variant="ghost" className="rounded-full group-hover:bg-primary group-hover:text-primary-foreground">
+                                                {t('dashboard.study')} <ArrowRight className="ml-2 h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </section>
+        </div>
+    );
+};
+
 function NewProjectContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { addProject } = useProjects();
+    const { projects, addProject } = useProjects();
+    const { profile } = useAuth();
+    const { t } = useLanguage();
     const { toast } = useToast();
 
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isProjectStarted, setIsProjectStarted] = useState(false);
+    const [isForcedNewProject, setIsForcedNewProject] = useState(false);
     const [processingStatus, setProcessingStatus] = useState({ name: '', status: '', index: 0, total: 0, atoms: 0 });
     const [aiLogs, setAiLogs] = useState<string[]>([]);
     const [isUrlImportOpen, setIsUrlImportOpen] = useState(false);
@@ -422,8 +533,8 @@ function NewProjectContent() {
             setIsLoading(false);
 
             toast({
-                title: "¡Proyecto Creado!",
-                description: `${metadata.title} ha sido añadido a tu dashboard.`
+                title: t('dashboard.project_created'),
+                description: t('dashboard.project_created_desc', { title: metadata.title })
             })
 
             console.log('[NewProject] Pre-router.push to', `/projects/${realProjectId}`);
@@ -850,48 +961,71 @@ function NewProjectContent() {
                 onClose={() => setIsPasteTextOpen(false)}
                 onImport={handleImportFromText}
             />
-            <main className="flex-1 flex flex-col items-center justify-center p-8 bg-background">
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold font-headline mb-2">Crea un Nuevo Proyecto de Aprendizaje</h1>
-                    <p className="text-lg text-muted-foreground">Transforma cualquier material de estudio en un plan de aprendizaje interactivo.</p>
-                </div>
+            <main className="flex-1 flex flex-col items-center bg-background overflow-hidden relative">
+                {projects.length > 0 && !isForcedNewProject ? (
+                    <DashboardView
+                        projects={projects}
+                        profile={profile}
+                        onStartNewProject={() => setIsForcedNewProject(true)}
+                    />
+                ) : (
+                    <div className="w-full flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
+                        {isForcedNewProject && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => setIsForcedNewProject(false)}
+                                className="absolute top-8 left-8"
+                            >
+                                <ChevronLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
+                            </Button>
+                        )}
+                        <div className="text-center mb-12">
+                            <h1 className="text-4xl font-bold font-headline mb-2">Crea un Nuevo Proyecto de Aprendizaje</h1>
+                            <p className="text-lg text-muted-foreground">Transforma cualquier material de estudio en un plan de aprendizaje interactivo.</p>
+                        </div>
 
-                <div className="w-full max-w-3xl">
-                    <Card className="bg-card/50">
-                        <CardContent className="p-6">
-                            <InputBar
-                                handleSendMessage={handleSendMessage}
-                                isLoading={isLoading}
-                                selectedFiles={selectedFiles}
-                                removeFile={removeFile}
-                                handleFileChange={handleFileChange}
-                                fileInputRef={fileInputRef}
-                                getFileIcon={getFileIcon}
-                                onImportFromUrl={() => setIsUrlImportOpen(true)}
-                                onPasteText={() => setIsPasteTextOpen(true)}
-                                isSourcePopoverOpen={isSourcePopoverOpen}
-                                setIsSourcePopoverOpen={setIsSourcePopoverOpen}
-                            />
-                        </CardContent>
-                    </Card>
-                </div>
+                        <div className="w-full max-w-3xl">
+                            <Card className="bg-card/50">
+                                <CardContent className="p-6">
+                                    <InputBar
+                                        handleSendMessage={handleSendMessage}
+                                        isLoading={isLoading}
+                                        selectedFiles={selectedFiles}
+                                        removeFile={removeFile}
+                                        handleFileChange={handleFileChange}
+                                        fileInputRef={fileInputRef}
+                                        getFileIcon={getFileIcon}
+                                        onImportFromUrl={() => setIsUrlImportOpen(true)}
+                                        onPasteText={() => setIsPasteTextOpen(true)}
+                                        isSourcePopoverOpen={isSourcePopoverOpen}
+                                        setIsSourcePopoverOpen={setIsSourcePopoverOpen}
+                                    />
+                                </CardContent>
+                            </Card>
+                        </div>
 
-                <div className="mt-16 w-full max-w-5xl">
-                    <h3 className="text-center text-xl font-semibold mb-8">¿Cómo funciona?</h3>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {initialSteps.map((step, index) => (
-                            <div key={index} className="text-center">
-                                <div className="flex items-center justify-center mb-4">
-                                    <div className="bg-primary/10 text-primary rounded-full h-12 w-12 flex items-center justify-center font-bold text-xl">
-                                        {index + 1}
+                        <div className="mt-16 w-full max-w-5xl">
+                            <h3 className="text-center text-xl font-semibold mb-8">{t('dashboard.how_it_works')}</h3>
+                            <div className="grid md:grid-cols-3 gap-8">
+                                {[
+                                    { title: t('dashboard.import_material'), description: t('dashboard.import_material_desc') },
+                                    { title: t('dashboard.auto_process'), description: t('dashboard.auto_process_desc') },
+                                    { title: t('dashboard.start_study'), description: t('dashboard.start_study_desc') }
+                                ].map((step, index) => (
+                                    <div key={index} className="text-center">
+                                        <div className="flex items-center justify-center mb-4">
+                                            <div className="bg-primary/10 text-primary rounded-full h-12 w-12 flex items-center justify-center font-bold text-xl">
+                                                {index + 1}
+                                            </div>
+                                        </div>
+                                        <h4 className="font-semibold text-lg mb-2">{step.title}</h4>
+                                        <p className="text-muted-foreground text-sm">{step.description}</p>
                                     </div>
-                                </div>
-                                <h4 className="font-semibold text-lg mb-2">{step.title}</h4>
-                                <p className="text-muted-foreground text-sm">{step.description}</p>
+                                ))}
                             </div>
-                        ))}
+                        </div>
                     </div>
-                </div>
+                )}
             </main>
         </div>
     );

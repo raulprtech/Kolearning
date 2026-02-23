@@ -11,20 +11,33 @@ import { uploadLocalPdf } from '@/lib/paper-actions';
 import { useToast } from '@/hooks/use-toast';
 import { ZoteroImportDialog } from './ZoteroImportDialog';
 
-interface AdvancedPaperSearchProps {
+interface AdvancedDataSearchProps {
     onAddPaper: (paper: any) => void;
     onPrefillManual?: (paper: any) => void;
 }
 
-export function AdvancedPaperSearch({ onAddPaper, onPrefillManual }: AdvancedPaperSearchProps) {
+export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedDataSearchProps) {
     const [query, setQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [searchInitiated, setSearchInitiated] = useState(false);
     const [isZoteroOpen, setIsZoteroOpen] = useState(false);
+
+    // Plugin-like configuration
+    const [enabledSources, setEnabledSources] = useState({
+        semanticScholar: true,
+        zotero: true,
+        bibtex: true,
+        arxiv: true
+    });
+
     const { toast } = useToast();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const toggleSource = (source: keyof typeof enabledSources) => {
+        setEnabledSources(prev => ({ ...prev, [source]: !prev[source] }));
+    };
 
     const handleSearch = async () => {
         if (!query.trim()) return;
@@ -191,17 +204,27 @@ export function AdvancedPaperSearch({ onAddPaper, onPrefillManual }: AdvancedPap
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                         <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     </div>
-                    <Input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                        placeholder="Título, DOI, o palabras clave..."
-                        className="pl-10 h-12 bg-black text-white placeholder:text-gray-400 rounded-full border-none ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/50"
-                    />
+                    {enabledSources.semanticScholar ? (
+                        <Input
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                            placeholder="Buscar en la biblioteca global..."
+                            className="pl-10 h-12 bg-black text-white placeholder:text-gray-400 rounded-full border-none ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/50"
+                        />
+                    ) : (
+                        <Input
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Búsqueda desactivada (activa Semantic Scholar)"
+                            disabled
+                            className="pl-10 h-12 bg-muted/50 text-muted-foreground rounded-full border-none"
+                        />
+                    )}
                     <div className="absolute inset-y-1.5 right-1.5 flex items-center">
                         <Button
                             onClick={handleSearch}
-                            disabled={isSearching}
+                            disabled={isSearching || !enabledSources.semanticScholar}
                             className="rounded-full bg-[#C8B6FF] hover:bg-[#B8A6EF] text-black h-9 px-6 font-medium"
                         >
                             {isSearching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Buscar'}
@@ -209,14 +232,16 @@ export function AdvancedPaperSearch({ onAddPaper, onPrefillManual }: AdvancedPap
                     </div>
                 </div>
                 <div className="flex items-center gap-2 px-2">
-                    <Button
-                        variant="outline"
-                        onClick={() => setIsZoteroOpen(true)}
-                        className="rounded-full h-10 gap-2 border-border/50 hover:bg-muted text-sm px-4 text-orange-600 border-orange-200 bg-orange-50/30 transition-all active:scale-95"
-                    >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M22,5.26c0-0.41-0.34-0.75-0.75-0.75H2.74C2.33,4.52,2,4.86,2,5.26v1.49c0,0.41,0.33,0.75,0.74,0.75h18.52 c0.41,0,0.74-0.33,0.74-0.75V5.26z M3.8,19.48c0,0.41,0.33,0.74,0.74,0.74h14.91c0.41,0,0.74-0.33,0.74-0.74V8.49H3.8V19.48z" /></svg>
-                        Importar de Zotero
-                    </Button>
+                    {enabledSources.zotero && (
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsZoteroOpen(true)}
+                            className="rounded-full h-10 gap-2 border-border/50 hover:bg-muted text-sm px-4 text-orange-600 border-orange-200 bg-orange-50/30 transition-all active:scale-95"
+                        >
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M22,5.26c0-0.41-0.34-0.75-0.75-0.75H2.74C2.33,4.52,2,4.86,2,5.26v1.49c0,0.41,0.33,0.75,0.74,0.75h18.52 c0.41,0,0.74-0.33,0.74-0.75V5.26z M3.8,19.48c0,0.41,0.33,0.74,0.74,0.74h14.91c0.41,0,0.74-0.33,0.74-0.74V8.49H3.8V19.48z" /></svg>
+                            Zotero
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -224,10 +249,9 @@ export function AdvancedPaperSearch({ onAddPaper, onPrefillManual }: AdvancedPap
                 isOpen={isZoteroOpen}
                 onOpenChange={setIsZoteroOpen}
                 onImport={(item) => {
-                    // Map Zotero item format to match SearchResult/Manual paper format exactly
                     onAddPaper({
                         title: item.title,
-                        authors: item.authors, // It's an array of strings in fetchZoteroLibrary
+                        authors: item.authors,
                         year: item.year?.toString() || new Date().getFullYear().toString(),
                         doi: item.doi || '',
                         venue: item.venue || '',
@@ -238,6 +262,37 @@ export function AdvancedPaperSearch({ onAddPaper, onPrefillManual }: AdvancedPap
                     });
                 }}
             />
+
+            <div className="flex flex-wrap gap-2 items-center text-xs text-muted-foreground bg-muted/20 p-3 rounded-xl border border-border/50">
+                <span className="font-bold mr-2">Fuentes:</span>
+                <Badge
+                    variant={enabledSources.semanticScholar ? "default" : "outline"}
+                    className="cursor-pointer transition-all hover:scale-105"
+                    onClick={() => toggleSource('semanticScholar')}
+                >
+                    Semantic Scholar {enabledSources.semanticScholar ? 'ON' : 'OFF'}
+                </Badge>
+                <Badge
+                    variant={enabledSources.zotero ? "default" : "outline"}
+                    className="cursor-pointer transition-all hover:scale-105"
+                    onClick={() => toggleSource('zotero')}
+                >
+                    Zotero {enabledSources.zotero ? 'ON' : 'OFF'}
+                </Badge>
+                <Badge
+                    variant={enabledSources.arxiv ? "default" : "outline"}
+                    className="cursor-pointer transition-all hover:scale-105"
+                    onClick={() => toggleSource('arxiv')}
+                >
+                    ArXiv {enabledSources.arxiv ? 'ON' : 'OFF'}
+                </Badge>
+                <Badge
+                    variant="secondary"
+                    className="cursor-not-allowed opacity-70"
+                >
+                    Carga Manual (Obligatorio)
+                </Badge>
+            </div>
 
             <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest mt-2 bg-gradient-to-r from-transparent via-muted-foreground/20 to-transparent py-1">
                 Busca nuevos artículos usando palabras clave / títulos
@@ -251,10 +306,10 @@ export function AdvancedPaperSearch({ onAddPaper, onPrefillManual }: AdvancedPap
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     className={`
-            mt-8 border-2 border-dashed rounded-2xl p-12 transition-all duration-300
-            flex flex-col items-center justify-center gap-4 group cursor-pointer
-            ${isDragging ? 'border-primary bg-primary/5' : 'border-border/50 bg-muted/30 hover:bg-muted/50'}
-          `}
+                        mt-8 border-2 border-dashed rounded-2xl p-12 transition-all duration-300
+                        flex flex-col items-center justify-center gap-4 group cursor-pointer
+                        ${isDragging ? 'border-primary bg-primary/5' : 'border-border/50 bg-muted/30 hover:bg-muted/50'}
+                    `}
                 >
                     <input
                         type="file"
@@ -267,7 +322,7 @@ export function AdvancedPaperSearch({ onAddPaper, onPrefillManual }: AdvancedPap
                         <Upload className={`h-8 w-8 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
                     <div className="text-center">
-                        <p className="text-lg font-medium">Arrastra y suelta un archivo PDF para agregarlo</p>
+                        <p className="text-lg font-medium">Arrastra y suelta un documento para agregarlo</p>
                         <p className="text-sm text-muted-foreground">También puedes soltar un archivo BibTeX para importar múltiples referencias</p>
                     </div>
                 </div>
@@ -313,7 +368,7 @@ export function AdvancedPaperSearch({ onAddPaper, onPrefillManual }: AdvancedPap
                                             className="rounded-full gap-2 transition-transform active:scale-95"
                                         >
                                             {paper.pdfUrl ? <Download className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                                            Añadir al Box
+                                            Añadir a la Caja
                                         </Button>
                                     </div>
                                 </CardContent>
@@ -325,7 +380,7 @@ export function AdvancedPaperSearch({ onAddPaper, onPrefillManual }: AdvancedPap
                                 <Search className="h-8 w-8 text-muted-foreground opacity-50" />
                             </div>
                             <div>
-                                <p className="text-lg font-medium">No se encontraron papers</p>
+                                <p className="text-lg font-medium">No se encontraron resultados</p>
                                 <p className="text-sm text-muted-foreground">Prueba con diferentes palabras clave o un DOI</p>
                             </div>
                             <Button variant="ghost" onClick={() => setSearchInitiated(false)}>Limpiar búsqueda</Button>

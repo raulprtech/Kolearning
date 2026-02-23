@@ -9,13 +9,6 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
-  Compass,
-  Book,
-  Landmark,
-  FlaskConical,
-  Code,
-  Music,
-  Palette,
   Archive,
   LayoutDashboard,
   CheckCircle,
@@ -28,19 +21,19 @@ import { useProjects } from "@/contexts/ProjectContext";
 import { Header } from "@/components/layout/header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { OnboardingFlow } from "@/components/ui/onboarding-flow";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 
 const projectIcons: { [key: string]: React.ElementType } = {
-  Book,
-  Landmark,
-  FlaskConical,
-  Code,
-  Music,
-  Palette,
+  Archive,
 };
 
 const SidebarContent = () => {
+  const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { t } = useLanguage();
   const { projects, completedProjects, learnerRankInfo, isLoading } = useProjects();
 
   return (
@@ -59,22 +52,16 @@ const SidebarContent = () => {
       </div>
 
       <nav className="flex flex-col gap-2 flex-1">
-        <Link href="/" passHref>
-          <Button variant="outline" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
-            <Plus className="h-4 w-4" />
-            {isSidebarOpen && <span className="ml-2">Nuevo Proyecto</span>}
+        <Link href="/projects" passHref>
+          <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'} ${pathname === '/projects' ? 'bg-muted' : ''}`}>
+            <LayoutDashboard className="h-4 w-4" />
+            {isSidebarOpen && <span className="ml-2">{t('projects.title')}</span>}
           </Button>
         </Link>
-        <Link href="/explore" passHref>
-          <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
-            <Compass className="h-4 w-4" />
-            {isSidebarOpen && <span className="ml-2">Explorar Proyectos</span>}
-          </Button>
-        </Link>
-        <Link href="/paper-box" passHref>
-          <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'}`}>
+        <Link href="/data-box" passHref>
+          <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'} ${pathname === '/data-box' ? 'bg-muted' : ''}`}>
             <Library className="h-4 w-4" />
-            {isSidebarOpen && <span className="ml-2">Paper Box</span>}
+            {isSidebarOpen && <span className="ml-2">{t('header.data_box')}</span>}
           </Button>
         </Link>
 
@@ -172,7 +159,33 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { profile, loading: authLoading } = useAuth();
+  const [showOnboarding, setShowOnboarding] = React.useState(false);
   const isStudyPage = pathname.startsWith('/study');
+
+  React.useEffect(() => {
+    if (!authLoading && profile) {
+      let onboardingCompleted = false;
+      try {
+        if (profile.additional_info && profile.additional_info.startsWith('{')) {
+          const additionalInfo = JSON.parse(profile.additional_info);
+          onboardingCompleted = !!additionalInfo.onboarding_completed;
+        }
+      } catch (e) {
+        console.error("[Dashboard] Error parsing onboarding data:", e);
+      }
+
+      if (!onboardingCompleted) {
+        setShowOnboarding(true);
+      } else {
+        setShowOnboarding(false);
+      }
+    }
+  }, [profile, authLoading]);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+  };
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -181,6 +194,10 @@ export default function DashboardLayout({
         {!isStudyPage && <Header />}
         {children}
       </div>
+      <OnboardingFlow
+        open={showOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
     </div>
   );
 }

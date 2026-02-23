@@ -1,11 +1,21 @@
+"use client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/icons/logo";
-import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Zap, Brain, Store, User, LogOut, Archive, Menu } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Plus,
+  Menu,
+  LogOut,
+  User,
+  Search,
+  LayoutDashboard,
+  BookOpen,
+  FileBox,
+  Archive
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,256 +33,77 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-import { Progress } from "../ui/progress";
 
 export function Header() {
-  const {
-    energy,
-    globalCognitiveCredits,
-    nextEnergyIn,
-    learnerRankInfo
-  } = useProjects();
-  const { user, profile, signOut, loading } = useAuth();
   const router = useRouter();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const { user, profile, signOut } = useAuth();
+  const { t } = useLanguage();
 
   const handleLogout = async () => {
-    if (isSigningOut) return; // Prevent multiple clicks
-
-    try {
-      setIsSigningOut(true);
-      setIsSheetOpen(false); // Close mobile menu if open
-      await signOut();
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Optionally show a toast or error message here
-    } finally {
-      setIsSigningOut(false);
-    }
+    await signOut();
+    router.push("/login");
   };
 
-  const handleLinkClick = (href: string) => {
-    router.push(href);
-    setIsSheetOpen(false);
-  };
+  const navItems = [
+    { label: t('header.dashboard'), href: "/", icon: LayoutDashboard },
+    { label: t('header.explore'), href: "/explore", icon: Search },
+    { label: t('header.papers'), href: "/paper-box", icon: FileBox },
+    { label: t('header.archive'), href: "/archive", icon: Archive },
+  ];
 
-  const renderUserStats = (isMobile = false) => (
+  const renderProfileMenu = () => (
     <>
-      <div className="flex items-center gap-4" title="Energy">
-        <Zap className="h-5 w-5 text-yellow-400" />
-        <div className="flex flex-col">
-          <span className="font-bold text-lg">{energy}</span>
-          {isMobile && <span className="text-xs text-muted-foreground">Energy</span>}
-        </div>
-      </div>
-      <div className="flex items-center gap-4" title="Cognitive Credits">
-        <Brain className="h-5 w-5 text-blue-400" />
-        <div className="flex flex-col">
-          <span className="font-bold text-lg">{globalCognitiveCredits}</span>
-          {isMobile && <span className="text-xs text-muted-foreground">Credits</span>}
-        </div>
-      </div>
+      <DropdownMenuItem asChild>
+        <Link href="/profile" className="flex items-center gap-2 cursor-pointer w-full">
+          <User className="h-4 w-4" />
+          <span>{t('header.profile')}</span>
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-destructive cursor-pointer w-full">
+        <LogOut className="h-4 w-4" />
+        <span>{t('header.logout')}</span>
+      </DropdownMenuItem>
     </>
   );
 
-  const renderProfileMenu = (isMobile = false) => (
-    <div className="space-y-2">
-      {learnerRankInfo && (
-        <>
-          <div className="p-2 rounded-md border">
-            <p className="text-sm text-muted-foreground">Learner Rank</p>
-            <p className="text-2xl font-bold font-headline">{learnerRankInfo.rankName}</p>
-            <Progress value={learnerRankInfo.progress} className="h-1.5 mt-1" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
-                ? `${learnerRankInfo.pointsToNext} pts to Rank ${learnerRankInfo.nextRankName}`
-                : "Max Rank!"
-              }
-            </p>
-          </div>
-        </>
-      )}
-      <Button variant="ghost" className="w-full justify-start" onClick={() => handleLinkClick('/profile')}>
-        <User className="mr-2 h-4 w-4" />
-        <span>Profile</span>
-      </Button>
-      <Button variant="ghost" className="w-full justify-start" onClick={() => handleLinkClick('/archive')}>
-        <Archive className="mr-2 h-4 w-4" />
-        <span>Archive</span>
-      </Button>
-      <Button variant="ghost" className="w-full justify-start" onClick={() => handleLinkClick('/store')}>
-        <Store className="mr-2 h-4 w-4" />
-        <span>Store</span>
-      </Button>
-      <DropdownMenuSeparator />
-      <Button
-        variant="ghost"
-        className="w-full justify-start text-red-500 hover:text-red-600"
-        onClick={handleLogout}
-        disabled={isSigningOut || loading}
-      >
-        <LogOut className="mr-2 h-4 w-4" />
-        <span>{isSigningOut ? "Signing out..." : "Sign Out"}</span>
-      </Button>
-    </div>
-  );
-
   return (
-    <header className="flex items-center justify-between p-4 border-b border-border">
-      <Link href="/" className="flex items-center gap-3">
-        <Logo className="h-8 w-8 text-primary" />
-        <h1 className="hidden sm:block text-2xl font-bold font-headline">
-          Kolearning
-        </h1>
-      </Link>
-
-      {user ? (
-        <>
-          {/* Desktop View */}
-          <div className="hidden md:flex items-center gap-6">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer" title="Energy">
-                  <Zap className="h-5 w-5 text-yellow-400" />
-                  <span className="font-bold text-lg">{energy}</span>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <div className="p-2 text-center">
-                  <p className="font-bold text-lg">Energy Regeneration</p>
-                  {nextEnergyIn > 0 ? (
-                    <>
-                      <p className="text-sm text-muted-foreground mt-1">Next point in:</p>
-                      <p className="text-2xl font-mono mt-1">{formatTime(nextEnergyIn)}</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground mt-2">Energy full!</p>
-                  )}
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer" title="Cognitive Credits">
-                  <Brain className="h-5 w-5 text-blue-400" />
-                  <span className="font-bold text-lg">{globalCognitiveCredits}</span>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <div className="p-2 text-xs text-muted-foreground">
-                  <p>Earn credits by studying and use them to get energy.</p>
-                </div>
-                <DropdownMenuSeparator />
-                <Link href="/store" passHref>
-                  <DropdownMenuItem>
-                    <Store className="mr-2 h-4 w-4" />
-                    <span>Credits Store</span>
-                  </DropdownMenuItem>
-                </Link>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{(profile?.name || user?.email)?.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel>{profile?.name || user?.email}</DropdownMenuLabel>
-                {learnerRankInfo && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <div className="p-2">
-                      <p className="text-sm text-muted-foreground">Learner Rank</p>
-                      <p className="text-2xl font-bold font-headline">{learnerRankInfo.rankName}</p>
-                      <Progress value={learnerRankInfo.progress} className="h-1.5 mt-1" />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
-                          ? `${learnerRankInfo.pointsToNext} pts to Rank ${learnerRankInfo.nextRankName}`
-                          : "Max Rank!"
-                        }
-                      </p>
-                    </div>
-                  </>
-                )}
-                <DropdownMenuSeparator />
-                <Link href="/profile" passHref>
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/archive" passHref>
-                  <DropdownMenuItem>
-                    <Archive className="mr-2 h-4 w-4" />
-                    <span>Archive</span>
-                  </DropdownMenuItem>
-                </Link>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  disabled={isSigningOut || loading}
-                  className="text-red-500 hover:text-red-600"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>{isSigningOut ? "Signing out..." : "Sign Out"}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Mobile View */}
-          <div className="md:hidden">
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>
-                    <Link href="/" className="flex items-center gap-3" onClick={() => setIsSheetOpen(false)}>
-                      <Logo className="h-8 w-8 text-primary" />
-                      <h1 className="text-2xl font-bold font-headline">
-                        Kolearning
-                      </h1>
-                    </Link>
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="mt-4 space-y-4">
-                  <div className="p-4 rounded-lg bg-muted/50 border flex justify-around">
-                    {renderUserStats(true)}
-                  </div>
-                  <div className="p-2">
-                    {renderProfileMenu(true)}
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </>
-      ) : (
-        <div className="flex items-center gap-2">
-          <Link href="/login" passHref>
-            <Button variant="ghost">Log In</Button>
-          </Link>
-          <Link href="/signup" passHref>
-            <Button>Sign Up</Button>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-16 items-center px-4 md:px-8">
+        <div className="flex items-center gap-2 mr-8">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <BookOpen className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <span className="text-xl font-bold tracking-tight font-headline hidden md:inline-block">Kolearning</span>
           </Link>
         </div>
-      )}
+
+        <div className="flex-1" />
+
+        <div className="flex items-center gap-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {(profile?.name || user?.email)?.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{profile?.name || user?.email?.split('@')[0]}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {renderProfileMenu()}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
     </header>
   );
 }

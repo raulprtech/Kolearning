@@ -41,16 +41,11 @@ export function ProjectCompletionDialog({ isOpen, onClose, project, onFinish }: 
                 </DialogHeader>
                 <div className="my-6">
                     <h3 className="text-lg font-semibold text-center mb-4">Final Summary</h3>
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                        <div className="bg-card/50 p-4 rounded-lg">
-                            <Target className="mx-auto h-8 w-8 text-green-400 mb-2" />
-                            <p className="text-2xl font-bold">{accuracy}%</p>
-                            <p className="text-sm text-muted-foreground">Final Accuracy</p>
-                        </div>
-                        <div className="bg-card/50 p-4 rounded-lg">
-                            <BrainCircuit className="mx-auto h-8 w-8 text-blue-400 mb-2" />
-                            <p className="text-2xl font-bold">{project.bestStreak}</p>
-                            <p className="text-sm text-muted-foreground">Best Streak</p>
+                    <div className="flex justify-center">
+                        <div className="bg-card/50 p-6 rounded-2xl border min-w-[200px] text-center">
+                            <Target className="mx-auto h-12 w-12 text-green-400 mb-4" />
+                            <p className="text-4xl font-bold">{accuracy}%</p>
+                            <p className="text-sm text-muted-foreground mt-2">Final Accuracy</p>
                         </div>
                     </div>
                     <p className="text-sm text-muted-foreground text-center mt-6">

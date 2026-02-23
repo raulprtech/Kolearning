@@ -19,7 +19,7 @@ import {
     AlertCircle,
     Loader2
 } from 'lucide-react';
-import { AdvancedPaperSearch } from "./AdvancedPaperSearch";
+import { AdvancedDataSearch } from "./AdvancedDataSearch";
 import { Search as SearchIcon, Upload } from 'lucide-react';
 import { SearchResult } from "@/lib/paper-utils";
 import { downloadAndStorePdf, uploadLocalPdf } from '@/lib/paper-actions';
@@ -62,7 +62,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
-const PaperBoxPage = () => {
+const DataBoxPage = () => {
     const { toast } = useToast();
     const { papers, isLoading, projects, updatePaper, deletePaper, addPaper, classifyPaper } = useProjects();
     const [searchQuery, setSearchQuery] = useState('');
@@ -287,7 +287,7 @@ const PaperBoxPage = () => {
             <div className="flex-1 p-8 flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Cargando tu Paper Box...</p>
+                    <p className="text-muted-foreground">Cargando tu Caja de Datos...</p>
                 </div>
             </div>
         );
@@ -343,7 +343,7 @@ const PaperBoxPage = () => {
                         <DialogTrigger asChild>
                             <Button className="gap-2 rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 px-6 h-11 text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98]">
                                 <Plus className="h-5 w-5" />
-                                Agregar Paper
+                                Agregar Datos
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[900px] p-0 overflow-hidden border-none shadow-2xl">
@@ -353,14 +353,14 @@ const PaperBoxPage = () => {
                                         <div className="p-2 bg-primary/20 rounded-lg">
                                             <SearchIcon className="h-5 w-5 text-primary" />
                                         </div>
-                                        <DialogTitle className="text-2xl font-headline font-bold text-foreground">Importar a tu Paper Box</DialogTitle>
+                                        <DialogTitle className="text-2xl font-headline font-bold text-foreground">Importar a tu Caja de Datos</DialogTitle>
                                     </div>
                                     <DialogDescription className="text-base">
                                         Busca por título o DOI, importa archivos BibTeX o conecta tu cuenta de Zotero.
                                     </DialogDescription>
                                 </DialogHeader>
 
-                                <AdvancedPaperSearch
+                                <AdvancedDataSearch
                                     onAddPaper={(res) => {
                                         handleSearchResult(res);
                                     }}
@@ -391,9 +391,9 @@ const PaperBoxPage = () => {
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogContent className="sm:max-w-[525px] overflow-y-auto max-h-[90vh]">
                     <DialogHeader>
-                        <DialogTitle>Agregar nuevo paper</DialogTitle>
+                        <DialogTitle>Agregar nuevos datos</DialogTitle>
                         <DialogDescription>
-                            Ingresa los detalles del paper manualmente o impórtalo.
+                            Ingresa los detalles de los datos manualmente o impórtalos.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -443,7 +443,7 @@ const PaperBoxPage = () => {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleAddPaper} disabled={!newPaper.title}>Guardar Paper</Button>
+                        <Button onClick={handleAddPaper} disabled={!newPaper.title}>Guardar Datos</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -608,15 +608,15 @@ const PaperBoxPage = () => {
                             <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <FileText className="h-8 w-8 text-primary opacity-50" />
                             </div>
-                            <h3 className="text-xl font-bold mb-2">No se encontraron papers</h3>
+                            <h3 className="text-xl font-bold mb-2">No se encontraron datos</h3>
                             <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
                                 {searchQuery || statusFilter !== 'all' || priorityFilter !== 'all'
                                     ? 'Intenta ajustar tus filtros para encontrar lo que buscas.'
-                                    : 'Empieza agregando tu primer paper científico a tu biblioteca.'}
+                                    : 'Empieza agregando tus primeros datos a tu biblioteca.'}
                             </p>
                             <Button>
                                 <Plus className="h-4 w-4 mr-2" />
-                                Agregar Paper
+                                Agregar Datos
                             </Button>
                         </div>
                     )}
@@ -641,4 +641,4 @@ const PaperBoxPage = () => {
     );
 };
 
-export default PaperBoxPage;
+export default DataBoxPage;

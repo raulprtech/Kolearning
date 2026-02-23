@@ -12,20 +12,6 @@ export async function middleware(request: NextRequest) {
   const response = await updateSession(request)
   console.log('✅ Session updated');
 
-  // Check if user is accessing protected routes
-  if (request.nextUrl.pathname === '/' ||
-    request.nextUrl.pathname.startsWith('/new-project') ||
-    request.nextUrl.pathname.startsWith('/projects') ||
-    request.nextUrl.pathname.startsWith('/study') ||
-    request.nextUrl.pathname.startsWith('/explore')) {
-
-    console.log('🛡️ Protected route detected, allowing access for now');
-    // For now, we'll let all routes pass through
-    // Later you can add authentication checks here
-    return response
-  }
-
-  console.log('✅ Public route, returning response');
   return response
 }
 

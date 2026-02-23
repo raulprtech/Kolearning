@@ -74,7 +74,7 @@ const calibratePlanPrompt = ai.definePrompt({
     name: 'calibratePlanPrompt',
     input: { schema: CalibratePlanInputSchema },
     output: { schema: RawCalibratePlanOutputSchema },
-    model: 'googleai/gemini-2.5-flash',
+    model: 'googleai/gemini-2.5-flash-lite',
     config: {
         temperature: 0.1,
         maxOutputTokens: 8192

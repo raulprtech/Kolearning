@@ -92,6 +92,24 @@ export async function updateSession(request: NextRequest) {
     if (process.env.NODE_ENV === 'development' && session) {
       console.log('[Middleware] Valid session for user:', session.user.id)
     }
+
+    // Protection logic
+    const isProtectedRoute =
+      request.nextUrl.pathname === '/' ||
+      request.nextUrl.pathname.startsWith('/new-project') ||
+      request.nextUrl.pathname.startsWith('/projects') ||
+      request.nextUrl.pathname.startsWith('/study') ||
+      request.nextUrl.pathname.startsWith('/explore') ||
+      request.nextUrl.pathname.startsWith('/paper-box');
+
+    if (isProtectedRoute && !session) {
+      console.log('🛡️ Unauthenticated access to protected route, redirecting to /login');
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('next', request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+
   } catch (error) {
     console.error('[Middleware] Error checking session:', error)
     // Don't throw, just log and continue

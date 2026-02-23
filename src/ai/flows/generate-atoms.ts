@@ -1,3 +1,5 @@
+'use server';
+
 /**
  * @fileOverview Direct atom generation from document content with proper debugging.
  */

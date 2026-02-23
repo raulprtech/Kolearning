@@ -12,7 +12,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { useProjects } from '@/contexts/ProjectContext';
-import { Loader2, Star, Target, BrainCircuit, ChevronRight } from 'lucide-react';
+import { Loader2, Target, ChevronRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ProjectCompletionDialog } from '@/components/ui/project-completion-dialog';
 
@@ -21,7 +21,7 @@ function SessionSummaryContent() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
-    const { projects, completeSession, masteryPoints, sessionAnswers, cognitiveCredits, learnerRankInfo } = useProjects();
+    const { projects, completeSession, sessionAnswers, learnerRankInfo } = useProjects();
     const projectId = params.id as string;
     const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
 
@@ -33,9 +33,7 @@ function SessionSummaryContent() {
     const [stats, setStats] = useState({
         correctAnswers: 0,
         totalAnswers: 0,
-        accuracy: 0,
-        masteryPoints: 0,
-        cognitiveCredits: 0
+        accuracy: 0
     });
 
     const project = projects.find(p => p.id === projectId);
@@ -50,9 +48,7 @@ function SessionSummaryContent() {
             setStats({
                 correctAnswers: correct,
                 totalAnswers: total,
-                accuracy: total > 0 ? Math.round((correct / total) * 100) : 0,
-                masteryPoints: masteryPoints,
-                cognitiveCredits: cognitiveCredits
+                accuracy: total > 0 ? Math.round((correct / total) * 100) : 0
             });
         }
 
@@ -66,7 +62,7 @@ function SessionSummaryContent() {
             // Open the dialog automatically if the project is finished
             setShowCompletionDialog(true);
         }
-    }, [project, sessionIndex, sessionAnswers, masteryPoints, cognitiveCredits, stats.totalAnswers]);
+    }, [project, sessionIndex, sessionAnswers, stats.totalAnswers]);
 
 
     const handleFinish = async () => {
@@ -82,7 +78,7 @@ function SessionSummaryContent() {
         }
     };
 
-    const { accuracy, masteryPoints: sessionMastery, cognitiveCredits: sessionCredits } = stats;
+    const { accuracy } = stats;
 
     if (!project || !learnerRankInfo) {
         return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -104,34 +100,12 @@ function SessionSummaryContent() {
                             <CardDescription className="text-center">¡Gran trabajo! Revisa tu progreso.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-center">
-                                <div className="bg-card/50 p-4 rounded-lg">
-                                    <Star className="mx-auto h-8 w-8 text-yellow-400 mb-2" />
-                                    <p className="text-2xl font-bold">{sessionMastery}</p>
-                                    <p className="text-sm text-muted-foreground">Puntos de Dominio</p>
+                            <div className="flex justify-center mb-8 text-center text-center">
+                                <div className="bg-card/50 p-6 rounded-2xl border min-w-[200px]">
+                                    <Target className="mx-auto h-12 w-12 text-green-400 mb-4" />
+                                    <p className="text-4xl font-bold">{accuracy}%</p>
+                                    <p className="text-sm text-muted-foreground mt-2">Precisión</p>
                                 </div>
-                                <div className="bg-card/50 p-4 rounded-lg">
-                                    <Target className="mx-auto h-8 w-8 text-green-400 mb-2" />
-                                    <p className="text-2xl font-bold">{accuracy}%</p>
-                                    <p className="text-sm text-muted-foreground">Precisión</p>
-                                </div>
-                                <div className="bg-card/50 p-4 rounded-lg">
-                                    <BrainCircuit className="mx-auto h-8 w-8 text-blue-400 mb-2" />
-                                    <p className="text-2xl font-bold">{sessionCredits}</p>
-                                    <p className="text-sm text-muted-foreground">Créditos Cognitivos</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-card/50 p-4 rounded-lg text-center mb-8">
-                                <p className="text-5xl font-bold font-headline">{learnerRankInfo.rankName}</p>
-                                <p className="text-sm text-muted-foreground">Rango de Aprendedor</p>
-                                <Progress value={learnerRankInfo.progress} className="h-2 mt-2" />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {learnerRankInfo.nextRankName !== "S" || learnerRankInfo.pointsToNext > 0
-                                        ? `${learnerRankInfo.pointsToNext} pts para Rango ${learnerRankInfo.nextRankName}`
-                                        : "¡Rango Máximo!"
-                                    }
-                                </p>
                             </div>
 
                             <div className="mt-8 flex justify-center">
