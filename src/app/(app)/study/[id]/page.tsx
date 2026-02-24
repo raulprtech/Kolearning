@@ -56,11 +56,12 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2, Network } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2, Network, BrainCircuit } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Project, Atom, LearningPathItem, Source } from "@/contexts/ProjectContext";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
@@ -735,56 +736,191 @@ function ProjectDetails() {
                     </Card>
                 </div>
 
-                {isUserProject && project.sessions && (
-                    <div className="mb-8">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-semibold">Sesiones</h2>
-                            <Button variant="outline" onClick={() => setShowFullPlan(true)}>Ver hoja completa</Button>
+                <div className="space-y-8 animate-in fade-in zoom-in duration-300">
+                    {(searchParams.get('tab') === 'data') ? (
+                        <div className="space-y-8">
+                            <div>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-semibold">Tus Documentos y Papers</h2>
+                                    <Button size="sm">
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Añadir Documento
+                                    </Button>
+                                </div>
+                                <Card className="bg-card/50">
+                                    {project.sources && project.sources.length > 0 ? (
+                                        <Table>
+                                            <TableBody>
+                                                {project.sources.map((source, index) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell>
+                                                            <p className="font-medium">{source.name}</p>
+                                                            <p className="text-sm text-muted-foreground">{source.type}</p>
+                                                            <Badge variant="secondary" className="mt-1 text-xs">
+                                                                {source.content.length} caracteres disponibles
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Button variant="outline" size="sm" className="bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary" onClick={() => setIsRecalibrateDialogOpen(true)}>
+                                                                    <BrainCircuit className="h-4 w-4 mr-2" />
+                                                                    Mandar a Study Box
+                                                                </Button>
+                                                                <Button variant="ghost" size="sm" onClick={() => handleViewSource(source)}>
+                                                                    <Eye className="h-4 w-4 mr-2" />
+                                                                    Ver
+                                                                </Button>
+                                                                {isUserProject && (
+                                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteSource(source, index)}>
+                                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                                        Eliminar
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    ) : (
+                                        <CardContent className="text-center py-12">
+                                            <Archive className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                                            <p className="text-muted-foreground mb-2">No tienes documentos asignados</p>
+                                            <p className="text-sm text-muted-foreground mb-6">
+                                                Sube tus apuntes o papers para que Koli los procese y cree un plan de estudio personalizado.
+                                            </p>
+                                            <Button variant="outline">
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Añadir Fuente
+                                            </Button>
+                                        </CardContent>
+                                    )}
+                                </Card>
+                            </div>
                         </div>
-                        <Card className="bg-card/50">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Sesión</TableHead>
-                                        <TableHead>Tipo de Sesión</TableHead>
-                                        <TableHead>Preguntas</TableHead>
-                                        <TableHead>Estado</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {project.sessions.map((session, index) => {
-                                        let statusComponent;
-                                        switch (session.status) {
-                                            case 'Completed':
-                                                statusComponent = <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4" />Completado</div>;
-                                                break;
-                                            case 'Continue':
-                                                statusComponent = (
-                                                    <Button size="sm" onClick={() => handleSessionClick(index)}>
-                                                        Continuar
-                                                    </Button>
-                                                );
-                                                break;
-                                            case 'Locked':
-                                                statusComponent = <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4" /> Bloqueada</div>;
-                                                break;
-                                            default:
-                                                statusComponent = null;
-                                        }
-                                        return (
-                                            <TableRow key={session.session}>
-                                                <TableCell>{session.session}</TableCell>
-                                                <TableCell>{getSessionBadge(session.type)}</TableCell>
-                                                <TableCell>{session.questions || 'No especificado'}</TableCell>
-                                                <TableCell>{statusComponent}</TableCell>
+                    ) : (
+                        <div className="space-y-8">
+                            {isUserProject && project.sessions && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-xl font-semibold">Sesiones</h2>
+                                        <Button variant="outline" onClick={() => setShowFullPlan(true)}>Ver hoja completa</Button>
+                                    </div>
+                                    <Card className="bg-card/50">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Sesión</TableHead>
+                                                    <TableHead>Tipo de Sesión</TableHead>
+                                                    <TableHead>Preguntas</TableHead>
+                                                    <TableHead>Estado</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {project.sessions.map((session, index) => {
+                                                    let statusComponent;
+                                                    switch (session.status) {
+                                                        case 'Completed':
+                                                            statusComponent = <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4" />Completado</div>;
+                                                            break;
+                                                        case 'Continue':
+                                                            statusComponent = (
+                                                                <Button size="sm" onClick={() => handleSessionClick(index)}>
+                                                                    Continuar
+                                                                </Button>
+                                                            );
+                                                            break;
+                                                        case 'Locked':
+                                                            statusComponent = <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4" /> Bloqueada</div>;
+                                                            break;
+                                                        default:
+                                                            statusComponent = null;
+                                                    }
+                                                    return (
+                                                        <TableRow key={session.session}>
+                                                            <TableCell>{session.session}</TableCell>
+                                                            <TableCell>{getSessionBadge(session.type)}</TableCell>
+                                                            <TableCell>{session.questions || 'No especificado'}</TableCell>
+                                                            <TableCell>{statusComponent}</TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </Card>
+                                </div>
+                            )}
+
+                            <ConceptMapSection project={project} />
+
+                            <div>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                                        Átomos de conocimiento
+                                    </h2>
+                                    <div className="flex gap-2">
+                                        {isUserProject && (
+                                            <Button size="sm" onClick={() => setAtomAction({ mode: 'create', atom: { type: 'text_card', question: '', answer: '' }, index: null })}>
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Nuevo Átomo
+                                            </Button>
+                                        )}
+                                        <Button variant="outline" size="sm" onClick={() => setShowAllAtoms(!showAllAtoms)}>
+                                            {showAllAtoms ? "Ver menos" : `Ver todas (${project.atoms?.length || 0})`}
+                                        </Button>
+                                    </div>
+                                </div>
+                                <Card className="bg-card/50">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-16">Tipo</TableHead>
+                                                <TableHead>Término</TableHead>
+                                                <TableHead>Definición</TableHead>
+                                                <TableHead className="text-right">Acciones</TableHead>
                                             </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </Card>
-                    </div>
-                )}
+                                        </TableHeader>
+                                        <TableBody>
+                                            {displayedAtoms?.map((atom, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell className="align-top">
+                                                        {atom.type === 'video_review' ? (
+                                                            <div className="flex items-center justify-center p-2 bg-red-500/10 text-red-500 rounded-md" title="Revisión de Video"><Play className="h-4 w-4" /></div>
+                                                        ) : atom.type === 'mini_game' ? (
+                                                            <div className="flex items-center justify-center p-2 bg-purple-500/10 text-purple-500 rounded-md" title="Mini-Juego"><Target className="h-4 w-4" /></div>
+                                                        ) : (
+                                                            <div className="flex items-center justify-center p-2 bg-blue-500/10 text-blue-500 rounded-md" title="Tarjeta de Texto"><Book className="h-4 w-4" /></div>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
+                                                    <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
+                                                    <TableCell className="text-right align-top">
+                                                        <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'view', atom, index })}>
+                                                            <Eye className="h-4 w-4 mr-2" />
+                                                            Ver
+                                                        </Button>
+                                                        {isUserProject && (
+                                                            <>
+                                                                <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'edit', atom, index })}>
+                                                                    <Pencil className="h-4 w-4 mr-2" />
+                                                                    Editar
+                                                                </Button>
+                                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
+                                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                                    Eliminar
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </Card>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 <Dialog open={showFullPlan} onOpenChange={setShowFullPlan}>
                     <DialogContent className="max-w-3xl">
@@ -817,120 +953,6 @@ function ProjectDetails() {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
-
-                {/* Mapa Conceptual Section */}
-                <ConceptMapSection project={project} />
-
-                <div className="mb-8">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold flex items-center gap-2">
-                            Átomos de conocimiento
-                        </h2>
-                        <div className="flex gap-2">
-                            {isUserProject && (
-                                <Button size="sm" onClick={() => setAtomAction({ mode: 'create', atom: { type: 'text_card', question: '', answer: '' }, index: null })}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Nuevo Átomo
-                                </Button>
-                            )}
-                            <Button variant="outline" size="sm" onClick={() => setShowAllAtoms(!showAllAtoms)}>
-                                {showAllAtoms ? "Ver menos" : `Ver todas (${project.atoms?.length || 0})`}
-                            </Button>
-                        </div>
-                    </div>
-                    <Card className="bg-card/50">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-16">Tipo</TableHead>
-                                    <TableHead>Término</TableHead>
-                                    <TableHead>Definición</TableHead>
-                                    <TableHead className="text-right">Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {displayedAtoms?.map((atom, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell className="align-top">
-                                            {atom.type === 'video_review' ? (
-                                                <div className="flex items-center justify-center p-2 bg-red-500/10 text-red-500 rounded-md" title="Revisión de Video"><Play className="h-4 w-4" /></div>
-                                            ) : atom.type === 'mini_game' ? (
-                                                <div className="flex items-center justify-center p-2 bg-purple-500/10 text-purple-500 rounded-md" title="Mini-Juego"><Target className="h-4 w-4" /></div>
-                                            ) : (
-                                                <div className="flex items-center justify-center p-2 bg-blue-500/10 text-blue-500 rounded-md" title="Tarjeta de Texto"><Book className="h-4 w-4" /></div>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
-                                        <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
-                                        <TableCell className="text-right align-top">
-                                            <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'view', atom, index })}>
-                                                <Eye className="h-4 w-4 mr-2" />
-                                                Ver
-                                            </Button>
-                                            {isUserProject && (
-                                                <>
-                                                    <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'edit', atom, index })}>
-                                                        <Pencil className="h-4 w-4 mr-2" />
-                                                        Editar
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Eliminar
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </Card>
-                </div>
-
-                <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold">Fuentes</h2>
-                    </div>
-                    <Card className="bg-card/50">
-                        {project.sources && project.sources.length > 0 ? (
-                            <Table>
-                                <TableBody>
-                                    {project.sources.map((source, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell>
-                                                <p className="font-medium">{source.name}</p>
-                                                <p className="text-sm text-muted-foreground">{source.type}</p>
-                                                <Badge variant="secondary" className="mt-1 text-xs">
-                                                    {source.content.length} caracteres disponibles
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="sm" onClick={() => handleViewSource(source)}>
-                                                    <Eye className="h-4 w-4 mr-2" />
-                                                    Ver
-                                                </Button>
-                                                {isUserProject && (
-                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteSource(source, index)}>
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Eliminar
-                                                    </Button>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        ) : (
-                            <CardContent className="text-center py-8">
-                                <p className="text-muted-foreground mb-2">No hay fuentes disponibles</p>
-                                <p className="text-sm text-muted-foreground">
-                                    Las fuentes se agregarán automáticamente cuando crees nuevos proyectos
-                                </p>
-                            </CardContent>
-                        )}
-                    </Card>
-                </div>
-
             </div>
         </ScrollArea>
     );

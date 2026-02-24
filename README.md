@@ -15,6 +15,7 @@
   - **Cognitive Credits**: Earn rewards for studying that can be redeemed in the store.
   - **Learner Ranks**: Progress through different levels as you demonstrate mastery.
 - **☁️ Cloud Sync with Supabase**: Access your projects and progress from any device, at any time.
+- **🧩 Extensible Skill System**: A hook-based architecture (inspired by WordPress) that allows adding integrations (like Telegram) and community-driven AI personalities without modifying the core. [See Developer Guide](docs/SKILL_SYSTEM.md).
 - **📱 Responsive Design**: A smooth and consistent user experience on desktop and mobile devices.
 - **🔒 Secure Authentication**: Robust and secure user management through Supabase Auth, including Google sign-in.
 

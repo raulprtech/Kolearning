@@ -1,5 +1,6 @@
 import { ILLMService, GenerateAtomsPreferences } from '../../core/ports/outbound/ILLMService';
 import { Atom } from '../../core/domain/models/atom';
+import { HookRegistry } from '../../core/domain/services/HookRegistry';
 import { generateAtomsFromLargeContent } from '../../ai/flows/generate-atoms';
 import { classifyPaper } from '../../ai/flows/classify-paper';
 import { extractContentFromUrl } from '../../ai/flows/extract-content-from-url';
@@ -28,7 +29,13 @@ export class GenkitLLMService implements ILLMService {
             userPreferences: defaultPrefs,
         });
 
-        return result.atoms;
+        // Apply filters to the generated atoms
+        let atoms = HookRegistry.applyFilters<Atom[]>('filter_atoms_after_generation', result.atoms);
+
+        // Notify actions that atoms have been generated
+        HookRegistry.doAction('on_atoms_generated', atoms);
+
+        return atoms;
     }
 
     public async classifyDocument(

@@ -12,6 +12,7 @@ import { Send, Sparkles, User, Bot, ExternalLink, Plus, FileCheck, Rocket, Paper
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { HookRegistry } from '@/core/domain/services/HookRegistry';
 
 const ArticleCard = ({ article }: { article: any }) => (
     <Card className="p-4 mt-2 bg-muted/30 border-primary/20 hover:border-primary/50 transition-colors">
@@ -150,11 +151,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
 
     const handleSend = async () => {
         if ((!input.trim() && attachedFiles.length === 0) || isTyping) return;
-        const msg = input;
+
+        // Filter the user message before sending
+        let msg = HookRegistry.applyFilters('filter_user_message', input);
         const files = [...attachedFiles];
 
         setInput('');
         setAttachedFiles([]);
+
+        // Notify skills that a message is about to be sent
+        HookRegistry.doAction('on_message_sent', { content: msg, files });
 
         // For now, we'll just send the text. 
         // In a real scenario, we'd upload files and send their IDs/content.

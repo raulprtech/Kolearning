@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { usePlugins } from './PluginContext';
+import { HookRegistry } from '@/core/domain/services/HookRegistry';
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
@@ -29,15 +31,21 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isTyping, setIsTyping] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
     const { user, profile } = useAuth();
+    const { userPlugins } = usePlugins();
 
     const assistantConfig = React.useMemo(() => {
-        if (!profile?.additional_info) return null;
-        try {
-            const info = JSON.parse(profile.additional_info);
-            return info.assistant || null;
-        } catch (e) {
-            return null;
+        let config = null;
+        if (profile?.additional_info) {
+            try {
+                const info = JSON.parse(profile.additional_info);
+                config = info.assistant || null;
+            } catch (e) {
+                config = null;
+            }
         }
+
+        // Apply community skill filters to the assistant configuration
+        return HookRegistry.applyFilters('filter_assistant_config', config);
     }, [profile]);
 
     const sendMessage = useCallback(async (content: string) => {
@@ -65,7 +73,8 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
                     })),
                     userName: profile?.name || 'Student',
                     userId: user?.id,
-                    assistantConfig: assistantConfig
+                    assistantConfig: assistantConfig,
+                    enabledPlugins: userPlugins.filter(p => p.isEnabled).map(p => p.pluginId)
                 })
             });
 

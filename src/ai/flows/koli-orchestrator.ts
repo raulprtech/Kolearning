@@ -1,6 +1,8 @@
 import { ai } from '../genkit';
 import { z } from 'genkit';
 import { searchPapers } from '@/lib/paper-utils';
+import { HookRegistry } from '@/core/domain/services/HookRegistry';
+import { initializeSkills } from '@/infrastructure/skills';
 
 const searchArticlesTool = ai.defineTool(
     {
@@ -72,7 +74,8 @@ export const KoliOrchestratorInputSchema = z.object({
         avatar: z.string().optional(),
         personality: z.string().optional(),
         autonomy: z.string().optional()
-    }).nullable().optional()
+    }).nullable().optional(),
+    enabledPlugins: z.array(z.string()).optional().describe("List of active plugin IDs to bootstrap skills in this execution.")
 });
 
 export type KoliOrchestratorInput = z.infer<typeof KoliOrchestratorInputSchema>;
@@ -152,6 +155,11 @@ export const koliOrchestrator = ai.defineFlow(
         })
     },
     async (input, streamingCallback) => {
+        // Bootstrap skills if they are provided in the input
+        if (input.enabledPlugins) {
+            initializeSkills(input.enabledPlugins);
+        }
+
         const sendStatus = (status: string) => {
             if (streamingCallback) streamingCallback({ type: 'status', content: status });
         };
@@ -160,21 +168,19 @@ export const koliOrchestrator = ai.defineFlow(
         const personality = input.assistantConfig?.personality || 'motivator';
         const autonomy = input.assistantConfig?.autonomy || 'proactive';
 
-        const response = await ai.generate({
-            model: 'googleai/gemini-2.5-flash',
-            system: `You are ${assistantName}, the Learning Box Orchestrator. Your mission is to help ${input.userName} manage their learning journey with excellence.
+        const baseSystemPrompt = `You are ${assistantName}, the Learning Box Orchestrator. Your mission is to help ${input.userName} manage their learning journey with excellence.
             
             PERSONALITY (${personality}):
             - Your name is ${assistantName}. Always address the user as ${input.userName}.
             - You are professional, encouraging, and highly capable.
             - Style: ${personality === 'socratic' ? 'Ask leading questions to help the student find answers.' :
-                    personality === 'direct' ? 'Be concise and straightforward.' :
-                        personality === 'funny' ? 'Use humor and emojis to keep the student engaged.' :
-                            'Be very encouraging and motivating.'}
+                personality === 'direct' ? 'Be concise and straightforward.' :
+                    personality === 'funny' ? 'Use humor and emojis to keep the student engaged.' :
+                        'Be very encouraging and motivating.'}
             
             AUTONOMY (${autonomy}):
             - ${autonomy === 'proactive' ? 'Suggest tools and next steps even if not explicitly asked.' :
-                    'Wait for explicit requests before performing tool actions.'}
+                'Wait for explicit requests before performing tool actions.'}
 
             IMPORTANT: CLARIFICATION FIRST POLICY
             - DO NOT call a tool unless you have ALL the necessary information.
@@ -203,7 +209,13 @@ export const koliOrchestrator = ai.defineFlow(
             - If the student says "Cancel" or "Stop search", acknowledge politely and stop suggesting tools for that specific search.
             
             Language: Respond in the same language the student uses (default to Spanish if unsure).
-            `,
+            `;
+
+        const systemPrompt = HookRegistry.applyFilters('filter_system_prompt', baseSystemPrompt);
+
+        const response = await ai.generate({
+            model: 'googleai/gemini-2.5-flash',
+            system: systemPrompt,
             messages: input.chatHistory.map(h => ({
                 role: h.role as any,
                 content: [{ text: h.content }]

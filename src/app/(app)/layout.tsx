@@ -4,73 +4,13 @@
 import React, { useState } from "react";
 import { usePathname } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import {
-  Plus,
-  Settings,
-  PanelLeftClose,
-  PanelLeftOpen,
-  LayoutDashboard,
-  BrainCircuit,
-  Library,
-  Archive,
-} from "lucide-react";
-import Link from "next/link";
-import { Progress } from "@/components/ui/progress";
-import { useProjects } from "@/contexts/ProjectContext";
 import { Header } from "@/components/layout/header";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Sidebar } from "@/components/layout/Sidebar";
 import { OnboardingFlow } from "@/components/ui/onboarding-flow";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 
-const projectIcons: { [key: string]: React.ElementType } = {
-  Archive,
-};
-
-const SidebarContent = () => {
-  const pathname = usePathname();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { t } = useLanguage();
-  const { projects, completedProjects, learnerRankInfo, isLoading } = useProjects();
-
-  return (
-    <aside
-      className={`flex flex-col bg-card/30 transition-all duration-300 ${isSidebarOpen ? "w-72" : "w-20"
-        } p-4 border-r border-border`}
-    >
-      <div className={`flex items-center ${isSidebarOpen ? 'justify-end' : 'justify-center'} mb-8`}>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        >
-          {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-        </Button>
-      </div>
-
-      <nav className="flex flex-col gap-2 flex-1">
-        <Link href="/study" passHref>
-          <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'} ${pathname === '/study' ? 'bg-muted' : ''}`}>
-            <LayoutDashboard className="h-4 w-4" />
-            {isSidebarOpen && <span className="ml-2">{t('projects.title')}</span>}
-          </Button>
-        </Link>
-        <Link href="/data-box" passHref>
-          <Button variant="ghost" className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'} ${pathname === '/data-box' ? 'bg-muted' : ''}`}>
-            <Library className="h-4 w-4" />
-            {isSidebarOpen && <span className="ml-2">{t('header.data_box')}</span>}
-          </Button>
-        </Link>
-      </nav>
-
-      <div className="mt-auto flex flex-col gap-2">
-        {/* Learner rank display removed from here */}
-      </div>
-    </aside>
-  );
-};
 
 export default function DashboardLayout({
   children,
@@ -80,7 +20,10 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { profile, loading: authLoading } = useAuth();
   const [showOnboarding, setShowOnboarding] = React.useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const isHideNavigation = pathname.includes('/session');
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   React.useEffect(() => {
     if (!authLoading && profile) {
@@ -107,11 +50,13 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
-      {!isHideNavigation && <SidebarContent />}
-      <div className="flex-1 flex flex-col overflow-auto">
-        {!isHideNavigation && <Header />}
-        {children}
+    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+      {!isHideNavigation && <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />}
+      <div className="flex-1 flex flex-col min-w-0">
+        {!isHideNavigation && <Header onToggleSidebar={toggleSidebar} />}
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
       </div>
       <OnboardingFlow
         open={showOnboarding}

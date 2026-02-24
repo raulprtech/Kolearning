@@ -23,6 +23,10 @@ import {
     FileText,
     Paperclip,
     Link as LinkIcon,
+    Search,
+    Archive,
+    BrainCircuit,
+    Library
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
@@ -316,102 +320,6 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, t
     );
 };
 
-const DashboardView = ({ projects, profile, onStartNewProject }: { projects: Project[], profile: any, onStartNewProject: () => void }) => {
-    const { t } = useLanguage();
-    return (
-        <div className="flex-1 w-full max-w-7xl mx-auto p-6 space-y-8 overflow-y-auto">
-            {/* Header: User Stats */}
-            <header className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-card/30 p-6 rounded-3xl border backdrop-blur-sm">
-                <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/20">
-                        <KoliAvatar className="h-10 w-10 text-primary" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold font-headline">{t('dashboard.greeting', { name: profile?.name || t('common.student') })}</h1>
-                        <p className="text-muted-foreground">{t('dashboard.ask_learn')}</p>
-                    </div>
-                </div>
-            </header>
-
-            {/* Quick Actions / Featured */}
-            <div className="grid md:grid-cols-3 gap-6">
-                <Card className="col-span-2 bg-primary/5 border-primary/20 overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <BookOpen className="h-32 w-32" />
-                    </div>
-                    <CardHeader>
-                        <CardTitle className="text-xl">{t('dashboard.start_new')}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground mb-6 max-w-md">{t('dashboard.start_new_desc')}</p>
-                        <Button onClick={onStartNewProject} size="lg" className="rounded-xl">
-                            <Plus className="mr-2 h-5 w-5" /> {t('dashboard.create_project')}
-                        </Button>
-                    </CardContent>
-                </Card>
-
-                <Link href="/data-box" className="block h-full">
-                    <Card className="bg-card/50 border-dashed h-full flex flex-col items-center justify-center p-6 text-center group cursor-pointer hover:bg-card/80 transition-colors">
-                        <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <BookOpen className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <h3 className="font-semibold mb-1">{t('header.data_box')}</h3>
-                        <p className="text-xs text-muted-foreground">{t('dashboard.data_box_desc')}</p>
-                        <ArrowRight className="h-4 w-4 mt-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Card>
-                </Link>
-            </div>
-
-            {/* Active Projects Grid */}
-            <section className="space-y-4">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                    <GraduationCap className="h-5 w-5 text-primary" />
-                    {t('dashboard.active_projects')}
-                </h2>
-
-                {projects.length === 0 ? (
-                    <div className="bg-muted/30 border-2 border-dashed rounded-3xl p-12 text-center">
-                        <p className="text-muted-foreground">{t('dashboard.no_projects')}</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {projects.map((project) => (
-                            <Link href={`/study/${project.id}`} key={project.id}>
-                                <Card className="bg-card/50 hover:shadow-xl transition-all duration-300 border-primary/10 group cursor-pointer h-full">
-                                    <CardHeader className="pb-2">
-                                        <div className="flex justify-between items-start">
-                                            <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-xl">
-                                                {project.icon === 'Book' ? '📚' : project.icon === 'Science' ? '🔬' : '💡'}
-                                            </div>
-                                        </div>
-                                        <CardTitle className="mt-4 line-clamp-1">{project.title}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
-                                            {project.description || t('dashboard.no_description')}
-                                        </p>
-
-                                        <div className="pt-4 border-t flex items-center justify-between">
-                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                                <div className="flex items-center gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    <span>{project.atoms.length} {t('dashboard.atoms')}</span>
-                                                </div>
-                                            </div>
-                                            <Button size="sm" variant="ghost" className="rounded-full group-hover:bg-primary group-hover:text-primary-foreground">
-                                                {t('dashboard.study')} <ArrowRight className="ml-2 h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
-                )}
-            </section>
-        </div>
-    );
-};
 
 function NewProjectContent() {
     const router = useRouter();
@@ -982,33 +890,10 @@ function NewProjectContent() {
     }
 
     return (
-        <main className="flex-1 flex flex-col overflow-hidden bg-background">
-            <Tabs defaultValue="chat" className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-center p-2 border-b bg-card/10">
-                    <TabsList className="grid w-[400px] grid-cols-2">
-                        <TabsTrigger value="chat" className="gap-2">
-                            <MessageSquare className="h-4 w-4" />
-                            AI Chat Center
-                        </TabsTrigger>
-                        <TabsTrigger value="dashboard" className="gap-2">
-                            <LayoutDashboard className="h-4 w-4" />
-                            Dashboard
-                        </TabsTrigger>
-                    </TabsList>
-                </div>
-
-                <TabsContent value="chat" className="flex-1 overflow-hidden m-0 p-0 border-none">
-                    <ChatInterface onAction={handleChatAction} />
-                </TabsContent>
-
-                <TabsContent value="dashboard" className="flex-1 overflow-auto m-0 p-0 border-none">
-                    <DashboardView
-                        projects={projects}
-                        profile={profile}
-                        onStartNewProject={() => setIsForcedNewProject(true)}
-                    />
-                </TabsContent>
-            </Tabs>
+        <main className="flex-1 flex flex-col overflow-hidden bg-background h-full">
+            <div className="flex-1 overflow-hidden m-0 p-0 border-none h-full">
+                <ChatInterface onAction={handleChatAction} />
+            </div>
         </main>
     );
 }
