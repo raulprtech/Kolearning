@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { usePathname } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/header";
@@ -51,7 +51,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      {!isHideNavigation && <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />}
+      {!isHideNavigation && <Suspense fallback={null}><Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} /></Suspense>}
       <div className="flex-1 flex flex-col min-w-0">
         {!isHideNavigation && <Header onToggleSidebar={toggleSidebar} />}
         <main className="flex-1 overflow-auto">
