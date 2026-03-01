@@ -1,8 +1,6 @@
 [build]
   command = "npm run build"
-  # We intentionally DO NOT set 'publish'. 
-  # This forces Netlify to ignore the UI's incorrect "/opt/build/repo" setting
-  # and lets @netlify/plugin-nextjs automatically set the correct publish folder (.next)
+  publish = ".next"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
