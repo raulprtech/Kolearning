@@ -49,7 +49,7 @@ export function OnboardingFlow({ open, onComplete }: OnboardingFlowProps) {
     const [loading, setLoading] = useState(false);
 
     // Form states
-    const [assistantName, setAssistantName] = useState("Koli");
+    const [assistantName, setAssistantName] = useState("Kolearning");
     const [avatar, setAvatar] = useState("bot");
     const [personality, setPersonality] = useState("motivator");
     const [autonomy, setAutonomy] = useState("proactive");

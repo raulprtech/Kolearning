@@ -2,8 +2,10 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { usePlugins } from './PluginContext';
+import { useConectores } from './ConectorContext';
 import { HookRegistry } from '@/core/domain/services/HookRegistry';
+import { ProjectDatabase } from '@/lib/supabase/database';
+import { useEffect } from 'react';
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
@@ -20,8 +22,11 @@ interface AIContextType {
     messages: ChatMessage[];
     isTyping: boolean;
     status: string | null;
-    sendMessage: (content: string) => Promise<void>;
+    conversationId: string | null;
+    conversations: any[];
+    sendMessage: (content: string, attachments?: string[]) => Promise<void>;
     clearChat: () => void;
+    startNewChat: () => void;
 }
 
 const AIContext = createContext<AIContextType | undefined>(undefined);
@@ -30,8 +35,11 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [isTyping, setIsTyping] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
-    const { user, profile } = useAuth();
-    const { userPlugins } = usePlugins();
+    const [conversationId, setConversationId] = useState<string | null>(null);
+    const [conversations, setConversations] = useState<any[]>([]);
+    const { user, profile, session } = useAuth();
+    const { userConectores } = useConectores();
+    const db = React.useMemo(() => new ProjectDatabase(), []);
 
     const assistantConfig = React.useMemo(() => {
         let config = null;
@@ -48,21 +56,71 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         return HookRegistry.applyFilters('filter_assistant_config', config);
     }, [profile]);
 
-    const sendMessage = useCallback(async (content: string) => {
+    // Load conversations and initial messages
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const initChat = async () => {
+            try {
+                const convs = await db.getConversations(user.id);
+                setConversations(convs);
+
+                if (convs.length > 0) {
+                    const latest = convs[0];
+                    setConversationId(latest.id);
+                    const historicalMessages = await db.getMessages(latest.id);
+                    setMessages(historicalMessages.map((m: any) => ({
+                        id: m.id,
+                        role: m.role as MessageRole,
+                        content: m.content,
+                        timestamp: new Date(m.created_at),
+                        status: 'sent',
+                        metadata: m.metadata
+                    })));
+                } else {
+                    // Start a default conversation if none exists
+                    const newId = await db.createConversation(user.id, 'Nueva conversación');
+                    setConversationId(newId);
+                    setMessages([]);
+                    setConversations([{ id: newId, title: 'Nueva conversación' }]);
+                }
+            } catch (error) {
+                console.error("Failed to initialize chat history:", error);
+            }
+        };
+
+        initChat();
+    }, [user?.id, db]);
+
+    const sendMessage = useCallback(async (content: string, attachments?: string[]) => {
         const userMsg: ChatMessage = {
             id: Date.now().toString(),
             role: 'user',
             content,
             timestamp: new Date(),
-            status: 'sent'
+            status: 'sent',
+            metadata: attachments ? { attachedFiles: attachments } : undefined
         };
 
         const currentMessages = [...messages, userMsg];
         setMessages(currentMessages);
         setIsTyping(true);
-        setStatus('Koli está pensando...');
+        setStatus('Kolearning está pensando...');
 
         try {
+            let activeConvId = conversationId;
+
+            // Create conversation if none exists (fallback)
+            if (!activeConvId && user?.id) {
+                activeConvId = await db.createConversation(user.id, content.substring(0, 30) + '...');
+                setConversationId(activeConvId);
+            }
+
+            // Save user message to DB
+            if (activeConvId) {
+                await db.saveMessage(activeConvId, 'user', content, userMsg.metadata);
+            }
+
             const response = await fetch('/api/ai/orchestrator', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -74,7 +132,10 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
                     userName: profile?.name || 'Student',
                     userId: user?.id,
                     assistantConfig: assistantConfig,
-                    enabledPlugins: userPlugins.filter(p => p.isEnabled).map(p => p.pluginId)
+                    enabledConectores: userConectores.filter(p => p.isEnabled).map(p => p.conectorId),
+                    googleAccessToken: session?.provider_token,
+                    attachedFiles: attachments,
+                    conversationId: activeConvId
                 })
             });
 
@@ -148,8 +209,30 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         setMessages([]);
     }, []);
 
+    const startNewChat = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            const newId = await db.createConversation(user.id, 'Nueva conversación');
+            setConversationId(newId);
+            setMessages([]);
+            const convs = await db.getConversations(user.id);
+            setConversations(convs);
+        } catch (error) {
+            console.error("Failed to start new chat:", error);
+        }
+    }, [user?.id, db]);
+
     return (
-        <AIContext.Provider value={{ messages, isTyping, status, sendMessage, clearChat }}>
+        <AIContext.Provider value={{
+            messages,
+            isTyping,
+            status,
+            conversationId,
+            conversations,
+            sendMessage,
+            clearChat,
+            startNewChat
+        }}>
             {children}
         </AIContext.Provider>
     );

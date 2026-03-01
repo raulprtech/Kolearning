@@ -179,7 +179,7 @@ export function ZoteroImportDialog({ isOpen, onOpenChange, onImport }: ZoteroImp
                             <div>
                                 <h3 className="text-lg font-bold text-foreground">Conexión Segura</h3>
                                 <p className="text-sm text-muted-foreground max-w-[300px] mx-auto">
-                                    Te redirigiremos a Zotero.org para que autorices a Koli el acceso a tu biblioteca.
+                                    Te redirigiremos a Zotero.org para que autorices a Kolearning el acceso a tu biblioteca.
                                 </p>
                             </div>
                             <Button

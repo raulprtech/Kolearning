@@ -1,0 +1,91 @@
+
+> kolearning@0.1.0 build
+> npm run build:genkit && next build
+
+
+> kolearning@0.1.0 build:genkit
+> tsc -p tsconfig.ai.json
+
+🔧 Next.js config loading...
+📦 NODE_ENV: production
+🏗️ Build environment detected
+✅ Next.js configuration loaded successfully
+📋 Config summary: {
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
+  experimental: { serverActions: { bodySizeLimit: '50mb' } },
+  images: { remotePatterns: [ [Object] ] },
+  hasWebpackConfig: true
+}
+   ▲ Next.js 15.5.12
+   - Environments: .env
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+🔨 Webpack config processing...
+🖥️ Is server build: true
+📦 Server build detected, configuring externals...
+✅ pdf-parse and Supabase dependencies added to externals
+🔧 Webpack config completed
+🔨 Webpack config processing...
+🖥️ Is server build: true
+📦 Server build detected, configuring externals...
+✅ pdf-parse and Supabase dependencies added to externals
+🔧 Webpack config completed
+🔨 Webpack config processing...
+🖥️ Is server build: false
+🔧 Webpack config completed
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (108kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ ⚠ Compiled with warnings in 2.2min
+
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumentation.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumentation.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/index.js
+./node_modules/@opentelemetry/sdk-node/build/src/sdk.js
+./node_modules/@opentelemetry/sdk-node/build/src/index.js
+./node_modules/@genkit-ai/core/lib/tracing/node-telemetry-provider.js
+./node_modules/@genkit-ai/core/lib/node.js
+./node_modules/genkit/lib/common.js
+./node_modules/genkit/lib/index.mjs
+./src/ai/flows/extract-content-from-url.ts
+./src/app/api/extract/route.ts
+
+./node_modules/@supabase/supabase-js/dist/module/index.js
+A Node.js API is used (process.version at line: 24) which is not supported in the Edge Runtime.
+Learn more: https://nextjs.org/docs/api-reference/edge-runtime
+
+Import trace for requested module:
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/ssr/dist/module/createServerClient.js
+./node_modules/@supabase/ssr/dist/module/index.js
+./src/lib/supabase/middleware.ts
+
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+[Scheduler] Registered job morning-briefing (metadata only, no timer)
+[Scheduler] Loaded 1 jobs from /home/raulprtech/kolearning/kolearningMVP/cron-jobs.json
+   Generating static pages (0/27) ...
+   Generating static pages (6/27) 
+🏭 [LLM Factory] Init Genkit Service
+🏭 [LLM Factory] Init Genkit Service
+ ⨯ useSearchParams() should be wrapped in a suspense boundary at page "/profile". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at g (/home/raulprtech/kolearning/kolearningMVP/.next/server/chunks/9066.js:30:1908)
+    at m (/home/raulprtech/kolearning/kolearningMVP/.next/server/chunks/9066.js:93:16782)
+    at B (/home/raulprtech/kolearning/kolearningMVP/.next/server/chunks/5584.js:1:2665)
+    at n3 (/home/raulprtech/kolearning/kolearningMVP/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:2:82831)
+    at n6 (/home/raulprtech/kolearning/kolearningMVP/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:2:84601)
+    at n5 (/home/raulprtech/kolearning/kolearningMVP/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:2:104801)
+    at n7 (/home/raulprtech/kolearning/kolearningMVP/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:2:102219)
+    at ia (/home/raulprtech/kolearning/kolearningMVP/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:2:108211)
+    at ie (/home/raulprtech/kolearning/kolearningMVP/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:2:106833)
+    at n5 (/home/raulprtech/kolearning/kolearningMVP/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:2:105079)
+Error occurred prerendering page "/profile". Read more: https://nextjs.org/docs/messages/prerender-error
+Export encountered an error on /(app)/profile/page: /profile, exiting the build.
+ ⨯ Next.js build worker exited with code: 1 and signal: null

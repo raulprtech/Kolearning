@@ -1,6 +1,8 @@
 import { createClient } from './client'
 import { Database } from '@/lib/database.types'
-import { Atom, Project, Source, Session, LearningPathItem, Paper } from '@/contexts/ProjectContext'
+import { Atom } from '@/core/domain/models/atom'
+import { Project, Source, Session, LearningPathItem } from '@/core/domain/models/project'
+import { Paper } from '@/core/domain/models/paper'
 
 type Tables = Database['public']['Tables']
 type ProjectRow = Tables['projects']['Row']
@@ -826,5 +828,58 @@ export class ProjectDatabase {
       .eq('id', paperId);
 
     if (error) throw error;
+  }
+
+  // Chat Persistence Operations
+  async getConversations(userId: string): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .from('conversations')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getMessages(conversationId: string): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async createConversation(userId: string, title: string): Promise<string> {
+    const { data, error } = await this.supabase
+      .from('conversations')
+      .insert({ user_id: userId, title })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    return data.id;
+  }
+
+  async saveMessage(conversationId: string, role: string, content: string, metadata: any = {}): Promise<void> {
+    const { error } = await this.supabase
+      .from('chat_messages')
+      .insert({
+        conversation_id: conversationId,
+        role,
+        content,
+        metadata
+      });
+
+    if (error) throw error;
+
+    // Touch the conversation to update updated_at
+    await this.supabase
+      .from('conversations')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', conversationId);
   }
 }

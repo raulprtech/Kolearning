@@ -17,7 +17,7 @@ export function createClient() {
       },
       global: {
         headers: {
-          'x-client-info': 'learning-box-web',
+          'x-client-info': 'kolearning-web',
         },
       },
     }

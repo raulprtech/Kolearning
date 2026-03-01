@@ -1,0 +1,11 @@
+[
+  {
+    "id": "morning-briefing",
+    "schedule": "0 8 * * *",
+    "flowName": "koliOrchestrator",
+    "payload": {
+      "message": "Genera un resumen matutino de mis tareas pendientes."
+    },
+    "description": "Resumen matutino diario a las 8 AM"
+  }
+]

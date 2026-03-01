@@ -24,7 +24,7 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
     const [searchInitiated, setSearchInitiated] = useState(false);
     const [isZoteroOpen, setIsZoteroOpen] = useState(false);
 
-    // Plugin-like configuration
+    // Conector-like configuration
     const [enabledSources, setEnabledSources] = useState({
         semanticScholar: true,
         zotero: true,

@@ -64,7 +64,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Project, Atom, LearningPathItem, Source } from "@/contexts/ProjectContext";
-import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
+import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/kolearning-calibrate-plan";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInCalendarDays } from "date-fns";
 import { es } from 'date-fns/locale';
@@ -181,7 +181,7 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
             console.error("Error creating project plan:", error);
             toast({
                 title: "Error al crear el plan",
-                description: "Koli no pudo generar un plan de estudio. Intenta de nuevo.",
+                description: "Kolearning no pudo generar un plan de estudio. Intenta de nuevo.",
                 variant: "destructive"
             })
         } finally {
@@ -204,7 +204,7 @@ function AddProjectDialog({ isOpen, onClose, project, onCreate }: { isOpen: bool
                 <DialogHeader>
                     <DialogTitle>Personaliza tu nuevo proyecto</DialogTitle>
                     <DialogDescription>
-                        Cuéntale a Koli tus objetivos para adaptar "{project.title}" a tus necesidades.
+                        Cuéntale a Kolearning tus objetivos para adaptar "{project.title}" a tus necesidades.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -408,7 +408,7 @@ function ProjectDetails() {
             setIsRecalibrateDialogOpen(false);
             toast({
                 title: "¡Plan Recalibrado!",
-                description: "Koli ha generado una nueva hoja de ruta para tu proyecto.",
+                description: "Kolearning ha generado una nueva hoja de ruta para tu proyecto.",
             });
         } catch (error) {
             console.error("Error recalibrating plan:", error);
@@ -678,7 +678,7 @@ function ProjectDetails() {
                         <AlertTitle>¡Plan de estudio actualizado!</AlertTitle>
                         <AlertDescription>
                             {searchParams.get('planUpdated') === 'true'
-                                ? "Koli ha añadido nuevas sesiones a tu plan basándose en tu última sesión."
+                                ? "Kolearning ha añadido nuevas sesiones a tu plan basándose en tu última sesión."
                                 : "¡Felicidades por completar tu sesión! La siguiente ya está desbloqueada."
                             }
                         </AlertDescription>
@@ -787,7 +787,7 @@ function ProjectDetails() {
                                             <Archive className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
                                             <p className="text-muted-foreground mb-2">No tienes documentos asignados</p>
                                             <p className="text-sm text-muted-foreground mb-6">
-                                                Sube tus apuntes o papers para que Koli los procese y cree un plan de estudio personalizado.
+                                                Sube tus apuntes o papers para que Kolearning los procese y cree un plan de estudio personalizado.
                                             </p>
                                             <Button variant="outline">
                                                 <Plus className="h-4 w-4 mr-2" />
@@ -926,7 +926,7 @@ function ProjectDetails() {
                     <DialogContent className="max-w-3xl">
                         <DialogHeader>
                             <DialogTitle>Hoja de Ruta Completa</DialogTitle>
-                            <DialogDescription>Este es el plan de estudio completo generado por Koli.</DialogDescription>
+                            <DialogDescription>Este es el plan de estudio completo generado por Kolearning.</DialogDescription>
                         </DialogHeader>
                         <ScrollArea className="h-96 my-4 pr-4">
                             <Table>
@@ -1033,6 +1033,8 @@ function ConceptMapSection({ project }: { project: Project }) {
 
 export default function ProjectDetailsPage() {
     return (
-        <ProjectDetails />
+        <Suspense fallback={<div className="flex-1 flex items-center justify-center h-[calc(100vh-64px)]"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <ProjectDetails />
+        </Suspense>
     )
 }

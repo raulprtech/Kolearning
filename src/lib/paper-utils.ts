@@ -1,6 +1,6 @@
 "use server";
 
-import { Paper } from "@/contexts/ProjectContext";
+import { Paper } from "@/core/domain/models/paper";
 
 export type SearchResult = {
     title: string;
@@ -28,7 +28,7 @@ export async function searchPapers(query: string): Promise<SearchResult[]> {
             )}&limit=10&fields=title,authors,year,externalIds,url,openAccessPdf,abstract,venue`,
             {
                 next: { revalidate: 3600 }, // Cache search for 1 hour
-            }
+            } as any
         );
 
         if (!response.ok) {
@@ -167,7 +167,7 @@ export async function fetchPaperAbstract(title: string, doi?: string): Promise<s
 
         const response = await fetch(
             `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=1&fields=abstract`,
-            { next: { revalidate: 3600 } }
+            { next: { revalidate: 3600 } } as any
         );
 
         if (!response.ok) return null;

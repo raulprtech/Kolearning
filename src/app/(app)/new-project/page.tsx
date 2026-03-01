@@ -3,7 +3,7 @@
 import { Suspense, useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { KoliAvatar } from "@/components/icons/koli-avatar";
+import { KolearningAvatar } from "@/components/icons/kolearning-avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
     Plus,
@@ -16,7 +16,7 @@ import {
     ClipboardPaste,
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
-import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/koli-calibrate-plan";
+import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/kolearning-calibrate-plan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Project, useProjects, Atom } from "@/contexts/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +31,7 @@ const initialSteps = [
         description: "Usa el icono '+' para subir tus apuntes, PDFs, o enlaces."
     },
     {
-        title: "Koli Procesa Automáticamente",
+        title: "Kolearning Procesa Automáticamente",
         description: "Nuestra IA analiza tu contenido, infiere el título y descripción del proyecto, y descompone el material en conceptos clave."
     },
     {
@@ -175,7 +175,7 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, t
             <Card className="w-full max-w-4xl bg-card/50">
                 <CardHeader className="text-center">
                     <CardTitle className="text-3xl font-headline mb-2">Creando tu Proyecto</CardTitle>
-                    <p className="text-muted-foreground">Koli está procesando tu material para crear átomos de conocimiento</p>
+                    <p className="text-muted-foreground">Kolearning está procesando tu material para crear átomos de conocimiento</p>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {/* Current File Processing */}
@@ -268,7 +268,7 @@ const AtomizationProgress = ({ fileName, status, totalFiles, currentFileIndex, t
                                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
                                 <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
                             </div>
-                            <span className="text-zinc-500 text-xs ml-2">koli-ai-processor ~ /sys/context</span>
+                            <span className="text-zinc-500 text-xs ml-2">kolearning-ai-processor ~ /sys/context</span>
                         </div>
 
                         <div
@@ -376,7 +376,7 @@ function NewProjectContent() {
                         content = await file.text();
                         // If content is empty or very short, add some context
                         if (content.length < 50) {
-                            content = `Documento: ${file.name}\n\n${content}\n\nContenido procesado por Koli AI.`;
+                            content = `Documento: ${file.name}\n\n${content}\n\nContenido procesado por Kolearning AI.`;
                         }
                     }
 
@@ -390,7 +390,7 @@ function NewProjectContent() {
                     return {
                         name: file.name,
                         type: 'Documento',
-                        content: `Documento: ${file.name}\n\nArchivo procesado automáticamente por Koli AI.\n\nTamaño: ${Math.round(file.size / 1024)}KB`
+                        content: `Documento: ${file.name}\n\nArchivo procesado automáticamente por Kolearning AI.\n\nTamaño: ${Math.round(file.size / 1024)}KB`
                     };
                 }
             }));
@@ -713,7 +713,7 @@ function NewProjectContent() {
     const handleImportFromUrl = async (url: string) => {
         setIsUrlImportOpen(false);
         setIsLoading(true);
-        toast({ title: "Importando desde URL...", description: "Koli está extrayendo el contenido. Esto puede tardar un momento." });
+        toast({ title: "Importando desde URL...", description: "Kolearning está extrayendo el contenido. Esto puede tardar un momento." });
         try {
             const response = await fetch(`/api/extract?url=${encodeURIComponent(url)}`);
             if (!response.ok) throw new Error("Failed to fetch");

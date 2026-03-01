@@ -1,11 +1,11 @@
-# 🧠 Learning Box: Your AI-Powered Personal Tutor
+# 🧠 Kolearning: Your AI-Powered Personal Tutor
 
-**Learning Box** is a cutting-edge adaptive learning platform designed to revolutionize the way you study and retain knowledge. Using an AI engine based on the FSRS (Free Spaced Repetition System) algorithm and advanced language models, Learning Box personalizes your learning experience to maximize efficiency and material mastery.
+**Kolearning** is a cutting-edge adaptive learning platform designed to revolutionize the way you study and retain knowledge. Using an AI engine based on the FSRS (Free Spaced Repetition System) algorithm and advanced language models, Kolearning personalizes your learning experience to maximize efficiency and material mastery.
 
 ## ✨ Key Features
 
 - **🧠 Intelligent Content Atomization**: Automatically breaks down any study material (PDFs, URLs, or plain text) into digestible "knowledge atoms."
-- **📈 Adaptive Study Plan**: Our strategic AI tutor (Learning Box Tutor) analyzes your performance, behavioral metrics (response time, aids used), and the FSRS algorithm to create dynamic and optimized study plans.
+- **📈 Adaptive Study Plan**: Our strategic AI tutor (Kolearning Tutor) analyzes your performance, behavioral metrics (response time, aids used), and the FSRS algorithm to create dynamic and optimized study plans.
 - **❓ Diverse Question Generation**: Automatically creates a variety of question types to keep study sessions engaging and effective:
   - Open-Ended Questions
   - Multiple Choice (with AI-generated distractors)
@@ -30,7 +30,7 @@
 
 ## 🚀 Quick Start Guide
 
-Follow these steps to get an instance of Learning Box running on your local machine.
+Follow these steps to get an instance of Kolearning running on your local machine.
 
 ### 1. Prerequisites
 
@@ -120,7 +120,7 @@ Ready! Open [http://localhost:3000](http://localhost:3000) in your browser and s
 
 ## 🚀 Deployment
 
-The easiest way to deploy Learning Box is using **Vercel**.
+The easiest way to deploy Kolearning is using **Vercel**.
 
 1.  Fork this repository.
 2.  Create a new project in Vercel and import it from your GitHub account.
@@ -129,7 +129,7 @@ The easiest way to deploy Learning Box is using **Vercel**.
 
 ## 🤝 Contributions
 
-Contributions are welcome! If you want to improve Learning Box, please follow these steps:
+Contributions are welcome! If you want to improve Kolearning, please follow these steps:
 
 1.  Fork the project.
 2.  Create a new branch (`git checkout -b feature/AmazingFeature`).

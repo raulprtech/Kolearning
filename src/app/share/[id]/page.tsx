@@ -69,7 +69,7 @@ export default function SharedProjectPage() {
                 <div className="flex items-center gap-3">
                     <Logo className="h-8 w-8 text-primary" />
                     <h1 className="text-2xl font-bold font-headline">
-                        Learning Box
+                        Kolearning
                     </h1>
                 </div>
             </header>

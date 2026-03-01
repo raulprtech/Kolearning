@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import { CalibratePlanOutput } from '@/ai/flows/koli-calibrate-plan';
-import { dynamicLearningPathAdjustment } from '@/ai/flows/koli-strategic-tutor';
+import { CalibratePlanOutput } from '@/ai/flows/kolearning-calibrate-plan';
+import { dynamicLearningPathAdjustment } from '@/ai/flows/kolearning-strategic-tutor';
 import { differenceInDays } from 'date-fns';
 import { generateDistractors } from '@/ai/flows/generate-distractors';
 import { generateOrderingQuestion } from "@/ai/flows/generate-ordering-question";

@@ -1,0 +1,11 @@
+import { config } from 'dotenv';
+config();
+import '@/ai/flows/kolearning-calibrate-plan.ts';
+import '@/ai/flows/kolearning-explain-answer.ts';
+import '@/ai/flows/generate-atoms.ts';
+import '@/ai/flows/kolearning-strategic-tutor.ts';
+import '@/ai/flows/kolearning-study-aids.ts';
+import '@/ai/flows/kolearning-tutor-chat.ts';
+import '@/ai/flows/kolearning-verify-answer.ts';
+import '@/ai/flows/generate-distractors.ts';
+import '@/ai/flows/extract-content-from-url.ts';

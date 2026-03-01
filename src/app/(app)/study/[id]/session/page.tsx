@@ -12,21 +12,21 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { KoliAvatar } from "@/components/icons/koli-avatar";
+import { KolearningAvatar } from "@/components/icons/kolearning-avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, ListChecks, Send, RefreshCw, X, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProjects, Atom as ProjectAtom } from "@/contexts/ProjectContext";
-import { explainCorrectAnswer, ExplainCorrectAnswerOutput } from "@/ai/flows/koli-explain-answer";
-import { getStudyAid } from "@/ai/flows/koli-study-aids";
-import { koliTutorChat } from "@/ai/flows/koli-tutor-chat";
+import { explainCorrectAnswer, ExplainCorrectAnswerOutput } from "@/ai/flows/kolearning-explain-answer";
+import { getStudyAid } from "@/ai/flows/kolearning-study-aids";
+import { kolearningTutorChat } from "@/ai/flows/kolearning-tutor-chat";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { verifyAnswer, VerifyAnswerOutput } from "@/ai/flows/koli-verify-answer";
+import { verifyAnswer, VerifyAnswerOutput } from "@/ai/flows/kolearning-verify-answer";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -35,7 +35,7 @@ import { VariantProps } from "class-variance-authority";
 import AssociationQuestion from "@/components/ui/study/AssociationQuestion";
 import FillBlankQuestion from "@/components/ui/study/FillBlankQuestion";
 import ScenarioQuestion from "@/components/ui/study/ScenarioQuestion";
-import KoliIgnoranteChat from "@/components/ui/study/KoliIgnoranteChat";
+import KolearningIgnoranteChat from "@/components/ui/study/KolearningIgnoranteChat";
 import ZettelkastenNote from "@/components/ui/study/ZettelkastenNote";
 import { VideoReviewQuestion } from "@/components/ui/study/VideoReviewQuestion";
 import { MatchingGameQuestion } from "@/components/ui/study/MatchingGameQuestion";
@@ -289,8 +289,8 @@ type ChatMessage = {
     content: string;
 };
 
-// Correctly typed KoliTutorPanel
-type KoliTutorPanelProps = {
+// Correctly typed KolearningTutorPanel
+type KolearningTutorPanelProps = {
     isOpen: boolean;
     onClose: () => void;
     question: string;
@@ -298,7 +298,7 @@ type KoliTutorPanelProps = {
     onUseEnergy: (cost: number) => boolean;
 };
 
-const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: KoliTutorPanelProps) => {
+const KolearningTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: KolearningTutorPanelProps) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -328,14 +328,14 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: Koli
         setIsLoading(true);
 
         try {
-            const response = await koliTutorChat({
+            const response = await kolearningTutorChat({
                 questionContext: question,
                 answerContext: answer,
                 chatHistory: [...messages, userMessage],
             });
             setMessages(prev => [...prev, { role: 'model', content: response.response }]);
         } catch (error) {
-            console.error("Error chatting with Koli:", error);
+            console.error("Error chatting with Kolearning:", error);
             setMessages(prev => [...prev, { role: 'model', content: "Lo siento, tuve un problema para procesar tu pregunta. Inténtalo de nuevo." }]);
         } finally {
             setIsLoading(false);
@@ -346,7 +346,7 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: Koli
         <Sheet open={isOpen} onOpenChange={onClose}>
             <SheetContent className="w-full sm:w-[540px] flex flex-col">
                 <SheetHeader>
-                    <SheetTitle>Consulta a Koli</SheetTitle>
+                    <SheetTitle>Consulta a Kolearning</SheetTitle>
                     <SheetDescription>
                         Chatea con tu tutor de IA para resolver tus dudas sobre este tema.
                     </SheetDescription>
@@ -356,7 +356,7 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: Koli
                         <div className="space-y-4" ref={scrollAreaRef}>
                             {messages.map((msg, index) => (
                                 <div key={index} className={`flex gap-3 ${msg.role === 'model' ? '' : 'justify-end'}`}>
-                                    {msg.role === 'model' && <KoliAvatar className="h-8 w-8 flex-shrink-0" />}
+                                    {msg.role === 'model' && <KolearningAvatar className="h-8 w-8 flex-shrink-0" />}
                                     <div className={`p-3 rounded-lg max-w-sm ${msg.role === 'model' ? 'bg-muted' : 'bg-primary text-primary-foreground'}`}>
                                         <p className="text-sm">{msg.content}</p>
                                     </div>
@@ -364,7 +364,7 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: Koli
                             ))}
                             {isLoading && (
                                 <div className="flex gap-3">
-                                    <KoliAvatar className="h-8 w-8 flex-shrink-0" />
+                                    <KolearningAvatar className="h-8 w-8 flex-shrink-0" />
                                     <div className="p-3 rounded-lg bg-muted flex items-center">
                                         <Loader2 className="h-5 w-5 animate-spin" />
                                     </div>
@@ -399,7 +399,7 @@ const KoliTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: Koli
 };
 
 
-export default function StudySessionPage() {
+function StudySessionContent() {
     const params = useParams();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -762,13 +762,13 @@ export default function StudySessionPage() {
             );
         }
 
-        // Dominio phase: Koli Ignorante chat
+        // Dominio phase: Kolearning Ignorante chat
         if (sessionPhase === 'mastery') {
             return (
-                <KoliIgnoranteChat
+                <KolearningIgnoranteChat
                     concept={currentAtom.question}
                     expectedExplanation={currentAtom.answer}
-                    onComplete={(mastered) => {
+                    onComplete={(mastered: boolean) => {
                         handleRate(mastered ? 4 : 2);
                     }}
                     onAnswerSelect={setUserAnswer}
@@ -850,7 +850,7 @@ export default function StudySessionPage() {
                                 <Alert className="mb-4 bg-primary/10 border-primary/20 text-primary">
                                     <Lightbulb className="h-4 w-4 text-primary" />
                                     <AlertTitle className="flex justify-between items-center">
-                                        Pista de Koli
+                                        Pista de Kolearning
                                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setHint(null)}><X className="h-4 w-4" /></Button>
                                     </AlertTitle>
                                     <AlertDescription>{hint}</AlertDescription>
@@ -909,7 +909,7 @@ export default function StudySessionPage() {
                                     {!isMultipleChoice && !isConvertedToMc && !isOrdering && <TacticalButton icon={<ListChecks />} label="Convertir a Opción Múltiple" action={handleConvertToMc} disabled={viewState === 'answer'} />}
                                     <TacticalButton icon={<BrainCircuit />} label="Explicar Respuesta" action={handleExplainAnswer} disabled={viewState === 'question'} />
                                     <TacticalButton icon={<Repeat />} label="Reformular" action={() => handleGetStudyAid('rephrase')} disabled={viewState === 'answer' || !!rephrasedQuestion} isLoading={isAidLoading === 'rephrase'} />
-                                    <TacticalButton icon={<KoliAvatar className="h-6 w-6" />} label="Consultar a Koli" action={handleOpenTutorChat} />
+                                    <TacticalButton icon={<KolearningAvatar className="h-6 w-6" />} label="Consultar a Kolearning" action={handleOpenTutorChat} />
                                 </div>
                             </div>
 
@@ -922,7 +922,7 @@ export default function StudySessionPage() {
                         <DialogHeader>
                             <DialogTitle>Explicación de la Respuesta</DialogTitle>
                             <DialogDescription>
-                                Koli ha generado una explicación para ayudarte a entender mejor.
+                                Kolearning ha generado una explicación para ayudarte a entender mejor.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 max-h-[60vh] overflow-y-auto">
@@ -950,7 +950,7 @@ export default function StudySessionPage() {
                     </DialogContent>
                 </Dialog>
 
-                <KoliTutorPanel
+                <KolearningTutorPanel
                     isOpen={isTutorPanelOpen}
                     onClose={() => setIsTutorPanelOpen(false)}
                     question={currentAtom.question}
@@ -959,5 +959,12 @@ export default function StudySessionPage() {
                 />
             </main >
         </div >
+    );
+}
+export default function StudySessionPage() {
+    return (
+        <Suspense fallback={<div className="flex-1 flex items-center justify-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <StudySessionContent />
+        </Suspense>
     );
 }

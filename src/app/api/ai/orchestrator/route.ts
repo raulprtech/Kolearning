@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server';
-import { koliOrchestrator } from '@/ai/flows/koli-orchestrator';
+import { kolearningOrchestrator } from '@/ai/flows/kolearning-orchestrator';
+import { ProjectDatabase } from '@/lib/supabase/database';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { chatHistory, userName, userId, assistantConfig } = body;
+        const { chatHistory, userName, userId, assistantConfig, attachedFiles, conversationId, enabledConectores } = body;
 
         if (!chatHistory || !Array.isArray(chatHistory)) {
             return new Response(JSON.stringify({ error: 'Missing or invalid chatHistory' }), {
@@ -25,14 +26,16 @@ export async function POST(request: NextRequest) {
 
                 try {
                     // Start the streaming flow
-                    const { output, stream } = await koliOrchestrator.stream({
+                    const { output, stream } = await kolearningOrchestrator.stream({
                         chatHistory: chatHistory.map((m: any) => ({
                             role: m.role === 'assistant' ? 'model' : m.role,
                             content: m.content
                         })),
                         userName: userName || 'Student',
                         userId: userId,
-                        assistantConfig: assistantConfig
+                        assistantConfig: assistantConfig,
+                        attachedFiles: attachedFiles,
+                        enabledConectores: enabledConectores
                     });
 
                     // Forward status updates from the flow
@@ -45,6 +48,13 @@ export async function POST(request: NextRequest) {
                     // Once finished, send the final result
                     const finalResult = await output;
                     sendUpdate({ type: 'result', ...finalResult });
+
+                    // Save assistant message to DB if persistence is enabled
+                    if (conversationId && finalResult.response) {
+                        const db = new ProjectDatabase();
+                        await db.saveMessage(conversationId, 'assistant', finalResult.response);
+                    }
+
                     controller.close();
                 } catch (error: any) {
                     console.error('[API Orchestrator Stream Error]:', error);

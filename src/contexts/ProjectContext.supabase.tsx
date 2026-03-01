@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { CalibratePlanOutput } from '@/ai/flows/koli-calibrate-plan';
-import { dynamicLearningPathAdjustment } from '@/ai/flows/koli-strategic-tutor';
+import { CalibratePlanOutput } from '@/ai/flows/kolearning-calibrate-plan';
+import { dynamicLearningPathAdjustment } from '@/ai/flows/kolearning-strategic-tutor';
 import { differenceInDays, addDays } from 'date-fns';
 import { useAuth } from './AuthContext';
 import { ProjectDatabase } from '@/lib/supabase/database';

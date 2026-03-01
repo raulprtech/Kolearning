@@ -59,7 +59,7 @@ export default function ProfilePage() {
 
   const [parsedInfo, setParsedInfo] = useState<any>({
     assistant: {
-      name: 'Koli',
+      name: 'Kolearning',
       avatar: 'bot',
       personality: 'motivator',
       autonomy: 'proactive'
@@ -91,7 +91,7 @@ export default function ProfilePage() {
           const info = JSON.parse(currentUser.additionalInfo);
           // Handle legacy vs new structure
           const assistant = info.assistant || {
-            name: info.assistant_name || 'Koli',
+            name: info.assistant_name || 'Kolearning',
             avatar: info.assistant_avatar || 'bot',
             personality: info.personality || 'motivator',
             autonomy: info.autonomy_level || 'proactive'

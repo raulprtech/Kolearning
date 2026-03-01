@@ -4,18 +4,18 @@ import { ProjectProvider } from "./ProjectContext";
 import { AuthProvider } from "./AuthContext";
 import { LanguageProvider } from "./LanguageContext";
 import { AIProvider } from "./AIContext";
-import { PluginProvider } from "./PluginContext";
+import { ConectorProvider } from "./ConectorContext";
 
 export function ClientProvider({ children }: { children: React.ReactNode }) {
     return (
         <LanguageProvider>
             <AuthProvider>
                 <ProjectProvider>
-                    <PluginProvider>
+                    <ConectorProvider>
                         <AIProvider>
                             {children}
                         </AIProvider>
-                    </PluginProvider>
+                    </ConectorProvider>
                 </ProjectProvider>
             </AuthProvider>
         </LanguageProvider>

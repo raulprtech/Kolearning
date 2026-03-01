@@ -1,6 +1,6 @@
-# Supabase Configuration for Learning Box
+# Supabase Configuration for Kolearning
 
-This guide will help you configure Supabase as the database and authentication system for Learning Box.
+This guide will help you configure Supabase as the database and authentication system for Kolearning.
 
 ## Step 1: Create a Supabase Project
 
@@ -121,4 +121,4 @@ Once Supabase is configured:
 3. Public projects will be available to the entire community.
 4. FSRS metrics will be maintained persistently.
 
-Your Learning Box application is now ready for production with Supabase!
+Your Kolearning application is now ready for production with Supabase!

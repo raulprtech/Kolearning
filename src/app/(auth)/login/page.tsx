@@ -80,6 +80,11 @@ function LoginContent() {
         provider: 'google',
         options: {
           redirectTo: redirectTo,
+          scopes: 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/tasks.readonly',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       })
 

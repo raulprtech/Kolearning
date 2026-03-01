@@ -31,7 +31,7 @@ const classifyPaperPrompt = ai.definePrompt({
         temperature: 0.1,
         maxOutputTokens: 1024
     },
-    prompt: `You are Koli, the Learning Box Academic Assistant. Your expertise is in academic research and paper classification.
+    prompt: `You are Kolearning, the Kolearning Academic Assistant. Your expertise is in academic research and paper classification.
 
 **Your Objective:**
 Classify the following scientific paper context to help the user organize their library.

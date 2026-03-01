@@ -14,6 +14,8 @@ import {
     PanelLeft,
     BookOpen,
     Menu,
+    Clock,
+    Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -44,6 +46,18 @@ export function Sidebar({ isOpen, onToggle }: { isOpen: boolean; onToggle: () =>
             href: "/explore",
             icon: Search,
             active: pathname === "/explore"
+        },
+        {
+            label: "Tareas Cron",
+            href: "/scheduler",
+            icon: Clock,
+            active: pathname === "/scheduler"
+        },
+        {
+            label: "Conectores",
+            href: "/connectors",
+            icon: Zap,
+            active: pathname === "/connectors"
         }
     ];
 

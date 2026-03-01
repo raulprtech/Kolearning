@@ -226,7 +226,7 @@ The plan must be practical, personalized, and pedagogically sound, maximizing th
                 ]
             }
         ],
-        model: 'googleai/gemini-2.5-flash-lite',
+        model: 'googleai/gemini-2.5-flash',
         output: {
             schema: GenerateKolearningPlanOutputSchema,
             format: 'json'

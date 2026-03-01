@@ -32,7 +32,7 @@ const inferProjectMetadataPrompt = ai.definePrompt({
     temperature: 0.1,
     maxOutputTokens: 8192
   },
-  prompt: `You are the Learning Box Tutor, an AI tutor specializing in educational content analysis.
+  prompt: `You are the Kolearning Tutor, an AI tutor specializing in educational content analysis.
 All your responses must be in English.
 
 **Your Mission:**

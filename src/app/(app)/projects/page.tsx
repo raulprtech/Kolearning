@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { KoliAvatar } from "@/components/icons/koli-avatar";
+import { KolearningAvatar } from "@/components/icons/kolearning-avatar";
 import {
     GraduationCap,
     Clock,
@@ -24,7 +24,7 @@ export default function ProjectsPage() {
     const router = useRouter();
 
     const handleStartNewProject = () => {
-        router.push("/?startNew=true");
+        router.push("/new-project");
     };
 
     return (

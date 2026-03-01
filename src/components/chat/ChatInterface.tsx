@@ -112,13 +112,23 @@ interface ChatInterfaceProps {
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
-    const { messages, sendMessage, isTyping, status } = useAI();
+    const { messages, sendMessage, isTyping, status, startNewChat } = useAI();
     const { user, profile } = useAuth();
     const { t } = useLanguage();
     const [input, setInput] = useState('');
     const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to bottom
+    useEffect(() => {
+        if (scrollRef.current) {
+            const scrollArea = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            if (scrollArea) {
+                scrollArea.scrollTop = scrollArea.scrollHeight;
+            }
+        }
+    }, [messages, isTyping]);
 
     // Dynamic Assistant Icon mapping
     const assistantConfig = React.useMemo(() => {
@@ -131,7 +141,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
         }
     }, [profile]);
 
-    const assistantName = assistantConfig?.name || 'Koli';
+    const assistantName = assistantConfig?.name || 'Kolearning';
     const userName = profile?.name || 'Estudiante';
 
     // Icon mapping logic
@@ -159,12 +169,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
         setInput('');
         setAttachedFiles([]);
 
-        // Notify skills that a message is about to be sent
+        // Notify conectores that a message is about to be sent
         HookRegistry.doAction('on_message_sent', { content: msg, files });
 
-        // For now, we'll just send the text. 
-        // In a real scenario, we'd upload files and send their IDs/content.
-        await sendMessage(msg);
+        // Pass file names to give context to the orchestrator
+        const fileNames = files.map(f => f.name);
+        await sendMessage(msg, fileNames.length > 0 ? fileNames : undefined);
 
         if (files.length > 0) {
             // Signal file upload to the listener if needed
@@ -185,7 +195,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
     return (
         <Card className="flex flex-col h-full max-w-4xl mx-auto w-full border-none shadow-none bg-transparent">
             <div className="flex-1 overflow-hidden relative">
-                <ScrollArea className="h-full px-4 py-8">
+                {messages.length > 0 && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={startNewChat}
+                        className="absolute top-4 right-8 z-10 gap-2 bg-background/80 backdrop-blur border-primary/20 hover:bg-primary/10"
+                    >
+                        <Plus className="h-4 w-4" /> Nuevo Chat
+                    </Button>
+                )}
+                <ScrollArea ref={scrollRef} className="h-full px-4 py-8">
                     <div className="space-y-6 max-w-3xl mx-auto">
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
@@ -388,7 +408,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
                         </Button>
                     </div>
                     <p className="text-[10px] text-center text-muted-foreground">
-                        Koli AI can orchestrate your learning. Data Box and Study sections are always available in the sidebar.
+                        Kolearning AI can orchestrate your learning. Data Box and Study sections are always available in the sidebar.
                     </p>
                 </div>
             </div>
