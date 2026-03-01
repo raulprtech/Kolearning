@@ -29,12 +29,12 @@ const nextConfig: NextConfig = {
     ],
   },
   // Simplified config for Vercel
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, nextRuntime }) => {
     console.log('🔨 Webpack config processing...');
-    console.log('🖥️ Is server build:', isServer);
+    console.log(`🖥️ Is server build: ${isServer}, Runtime: ${nextRuntime || 'client'}`);
 
-    // Only run this for server-side bundling
-    if (isServer) {
+    // Only run this for server-side Node.js bundling (skip Edge runtime)
+    if (isServer && nextRuntime === 'nodejs') {
       console.log('📦 Server build detected, configuring externals...');
       // Mark these packages as external for server bundle
       config.externals = config.externals || [];
