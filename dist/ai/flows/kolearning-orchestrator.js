@@ -68,7 +68,7 @@ export const KolearningOrchestratorInputSchema = z.object({
         personality: z.string().optional(),
         autonomy: z.string().optional()
     }).nullable().optional(),
-    enabledPlugins: z.array(z.string()).optional().describe("List of active plugin IDs to bootstrap skills in this execution."),
+    enabledConectores: z.array(z.string()).optional().describe("List of active conector IDs to bootstrap in this execution."),
     googleAccessToken: z.string().optional().describe("Google OAuth access token (required for Tasks integration)"),
     attachedFiles: z.array(z.string()).optional().describe("List of file names that the user has already attached in the chat interface.")
 });
@@ -133,9 +133,9 @@ export const kolearningOrchestrator = ai.defineFlow({
     })
 }, async (input, streamingCallback) => {
     var _a, _b, _c, _d;
-    // Bootstrap skills if they are provided in the input
-    if (input.enabledPlugins) {
-        initializeConectores(input.enabledPlugins);
+    // Bootstrap connectors if they are provided in the input
+    if (input.enabledConectores) {
+        initializeConectores(input.enabledConectores);
     }
     const sendStatus = (status) => {
         if (streamingCallback)

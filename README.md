@@ -85,6 +85,28 @@ npm run dev
 
 Ready! Open [http://localhost:3000](http://localhost:3000) in your browser and start learning.
 
+## 🧪 Testing
+
+Kolearning uses **Vitest** and **React Testing Library** for its testing suite.
+
+To run the tests:
+
+```bash
+# Run all tests once
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests and generate coverage report
+npm run test:coverage
+```
+
+The tests cover:
+- **Unit Tests**: Critical utility functions and core business logic in `src/lib`, `src/core`, and `src/application/use-cases`.
+- **Integration Tests**: Core UI components like `ChatInterface`.
+- **Infrastructure Tests**: Connector management logic.
+
 ## 🏗️ Architecture and Data Flow
 
 1.  **Registration**: The user creates an account, accepting the Terms and Conditions. Their preferences (e.g., newsletter) are saved in the metadata.

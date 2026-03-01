@@ -5,7 +5,10 @@ import { ConectorMetadata, IUserConector } from '../core/ports/inbound/IConector
 import { ConectorService } from '../infrastructure/services/ConectorService';
 import { useAuth } from './AuthContext';
 import { initializeConectores } from '../infrastructure/connectors';
-import { ConectorManager } from '../infrastructure/services/ConectorManager';
+
+// Server-only connector IDs — these must NOT be initialized client-side.
+// They are initialized via the /api/connectors/initialize API route.
+const SERVER_ONLY_CONNECTORS = ['whatsapp_sync'];
 
 interface ConectorContextType {
     availableConectores: ConectorMetadata[];
@@ -16,6 +19,24 @@ interface ConectorContextType {
 }
 
 const ConectorContext = createContext<ConectorContextType | undefined>(undefined);
+
+/**
+ * Calls the server API to initialize/disable server-only connectors.
+ */
+async function toggleServerConnector(conectorId: string, enabled: boolean) {
+    try {
+        await fetch('/api/connectors/initialize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                conectorIds: [conectorId],
+                action: enabled ? 'enable' : 'disable'
+            })
+        });
+    } catch (error) {
+        console.error(`[ConectorContext] Failed to ${enabled ? 'enable' : 'disable'} server connector ${conectorId}:`, error);
+    }
+}
 
 export const ConectorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user } = useAuth();
@@ -35,9 +56,21 @@ export const ConectorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     const enabled = await conectorService.getUserConectores(user.id);
                     setUserConectores(enabled);
 
-                    // Bootstrap conectores based on enabled preferences
                     const activeIds = enabled.filter(p => p.isEnabled).map(p => p.conectorId);
-                    initializeConectores(activeIds);
+
+                    // Split into client-safe and server-only
+                    const clientIds = activeIds.filter(id => !SERVER_ONLY_CONNECTORS.includes(id));
+                    const serverIds = activeIds.filter(id => SERVER_ONLY_CONNECTORS.includes(id));
+
+                    // Initialize client-safe connectors directly
+                    if (clientIds.length > 0) {
+                        initializeConectores(clientIds);
+                    }
+
+                    // Initialize server-only connectors via API
+                    if (serverIds.length > 0) {
+                        toggleServerConnector(serverIds[0], true);
+                    }
                 }
             } catch (error) {
                 console.error("Error loading conectores:", error);
@@ -54,10 +87,19 @@ export const ConectorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         await conectorService.toggleConector(user.id, conectorId, enabled);
 
-        if (enabled) {
-            initializeConectores([conectorId]);
+        if (SERVER_ONLY_CONNECTORS.includes(conectorId)) {
+            // Delegate to the server API
+            await toggleServerConnector(conectorId, enabled);
         } else {
-            ConectorManager.unregisterConector(conectorId);
+            // Handle client-safe connectors directly
+            if (enabled) {
+                initializeConectores([conectorId]);
+            } else {
+                // For client connectors, we'd need a client-side unregister
+                // ConectorManager is safe to import since it doesn't use Node APIs
+                const { ConectorManager } = await import('../infrastructure/services/ConectorManager');
+                ConectorManager.unregisterConector(conectorId);
+            }
         }
 
         // Update local state

@@ -16,6 +16,21 @@ export class ConectorManager {
             console.error(`[ConectorManager] Error activating conector ${conector.metadata.id}:`, error);
         }
     }
+    static unregisterConector(conectorId) {
+        const conector = this.registeredConectores.get(conectorId);
+        if (!conector)
+            return;
+        try {
+            if (conector.unregister) {
+                conector.unregister();
+            }
+            this.registeredConectores.delete(conectorId);
+            console.log(`[ConectorManager] Conector unregistered and deactivated: ${conectorId}`);
+        }
+        catch (error) {
+            console.error(`[ConectorManager] Error deactivating conector ${conectorId}:`, error);
+        }
+    }
     static getActiveConectores() {
         return Array.from(this.registeredConectores.values());
     }

@@ -1,4 +1,4 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 console.log('🔧 Next.js config loading...');
 console.log('📦 NODE_ENV:', process.env.NODE_ENV);
@@ -39,13 +39,19 @@ const nextConfig: NextConfig = {
       // Mark these packages as external for server bundle
       config.externals = config.externals || [];
       config.externals.push('pdf-parse');
-      
+
+      // Externalize Node-only packages used by server-only connectors
+      config.externals.push('@whiskeysockets/baileys');
+      config.externals.push('sharp');
+      config.externals.push('pino');
+      config.externals.push('qrcode');
+
       // Also externalize Supabase realtime to avoid Edge Runtime issues
       config.externals.push({
         '@supabase/realtime-js': 'commonjs @supabase/realtime-js',
       });
-      
-      console.log('✅ pdf-parse and Supabase dependencies added to externals');
+
+      console.log('✅ pdf-parse, baileys, sharp, and Supabase dependencies added to externals');
     }
 
     console.log('🔧 Webpack config completed');

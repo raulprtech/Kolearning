@@ -401,6 +401,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
                         <Button
                             size="icon"
                             onClick={handleSend}
+                            aria-label="Send message"
                             disabled={(!input.trim() && attachedFiles.length === 0) || isTyping}
                             className="absolute right-2 top-2 h-10 w-10 rounded-xl shadow-lg shadow-primary/20"
                         >
