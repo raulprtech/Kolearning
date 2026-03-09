@@ -195,16 +195,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
     return (
         <Card className="flex flex-col h-full max-w-4xl mx-auto w-full border-none shadow-none bg-transparent">
             <div className="flex-1 overflow-hidden relative">
-                {messages.length > 0 && (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={startNewChat}
-                        className="absolute top-4 right-8 z-10 gap-2 bg-background/80 backdrop-blur border-primary/20 hover:bg-primary/10"
-                    >
-                        <Plus className="h-4 w-4" /> Nuevo Chat
-                    </Button>
-                )}
                 <ScrollArea ref={scrollRef} className="h-full px-4 py-8">
                     <div className="space-y-6 max-w-3xl mx-auto">
                         {messages.length === 0 && (

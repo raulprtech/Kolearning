@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { kolearningOrchestrator } from '@/ai/flows/kolearning-orchestrator';
 import { ProjectDatabase } from '@/lib/supabase/database';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+import { HookRegistry } from '@/core/domain/services/HookRegistry';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,19 +48,41 @@ export async function POST(request: NextRequest) {
                     }
 
                     // Once finished, send the final result
+                    // Once finished, send the final result
                     const finalResult = await output;
                     sendUpdate({ type: 'result', ...finalResult });
 
-                    // Save assistant message to DB if persistence is enabled
-                    if (conversationId && finalResult.response) {
-                        const db = new ProjectDatabase();
-                        await db.saveMessage(conversationId, 'assistant', finalResult.response);
+                    // Trigger mirroring for connectors (e.g. WhatsApp)
+                    if (finalResult.response) {
+                        console.log('[API Orchestrator] 📤 Disparando hook on_assistant_message...');
+                        try {
+                            HookRegistry.doAction('on_assistant_message', {
+                                message: finalResult.response,
+                                userId: userId
+                            });
+                            console.log('[API Orchestrator] ✅ Hook on_assistant_message disparado.');
+                        } catch (hookErr) {
+                            console.error('[API Orchestrator] ❌ Error mirroring to WhatsApp:', hookErr);
+                        }
                     }
 
+                    // Save assistant message to DB if persistence is enabled
+                    if (conversationId && finalResult.response) {
+                        try {
+                            const supabase = await createServerClient();
+                            const db = new ProjectDatabase(supabase);
+                            await db.saveMessage(conversationId, 'assistant', finalResult.response);
+                        } catch (saveErr) {
+                            console.error('[API Orchestrator] Error saving assistant message:', saveErr);
+                        }
+                    }
+
+                    console.log('[API Orchestrator] 🏁 Cerrando controlador de stream.');
                     controller.close();
                 } catch (error: any) {
                     console.error('[API Orchestrator Stream Error]:', error);
                     sendUpdate({ type: 'error', message: error.message });
+                    console.log('[API Orchestrator] 🏁 Cerrando controlador de stream tras error.');
                     controller.close();
                 }
             }

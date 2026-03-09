@@ -8,11 +8,34 @@ import { WhatsAppConector } from './WhatsAppConector';
  * 
  * Use this from API routes or server components only.
  */
-export const initializeServerConectores = (enabledConectorIds: string[]) => {
+export const initializeServerConectores = async (enabledConectorIds: string[]) => {
     console.log('[Conectores:Server] Initializing server-only conectores...', enabledConectorIds);
 
     if (enabledConectorIds.includes('whatsapp_sync')) {
-        const whatsapp = new WhatsAppConector();
-        ConectorManager.registerConector(whatsapp);
+        const existing = ConectorManager.getActiveConectores().find(c => c.metadata.id === 'whatsapp_sync');
+
+        if (existing) {
+            console.log('[Conectores:Server] Conector whatsapp_sync ya activo. Asegurando registro de hooks...');
+            existing.register(); // Re-registrar hooks si se perdieron
+            return;
+        }
+
+        try {
+            // Verificar dependencias críticas
+            console.log('[Conectores:Server] Verificando dependencias para WhatsApp...');
+            try {
+                require.resolve('jimp');
+                require.resolve('sharp');
+                console.log('[Conectores:Server] ✅ jimp y sharp están presentes.');
+            } catch (depErr) {
+                console.warn('[Conectores:Server] ⚠️ Advertencia: jimp o sharp no encontrados. Baileys podría fallar al procesar el QR.');
+            }
+
+            const whatsapp = new WhatsAppConector();
+            ConectorManager.registerConector(whatsapp);
+        } catch (error) {
+            console.error('[Conectores:Server] ❌ Error fatal inicializando WhatsAppConector:', error);
+            throw error; // Re-lanzar para que la API devuelva 500
+        }
     }
 };

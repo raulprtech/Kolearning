@@ -1,23 +1,37 @@
 import { IConector } from '../../core/domain/models/conector';
 
+declare global {
+    var conectorManager: Map<string, IConector> | undefined;
+}
+
 export class ConectorManager {
-    private static registeredConectores: Map<string, IConector> = new Map();
+    // Usar un Map global para persistir entre recargas en modo desarrollo
+    private static get registeredConectores(): Map<string, IConector> {
+        if (!globalThis.conectorManager) {
+            globalThis.conectorManager = new Map();
+        }
+        return globalThis.conectorManager;
+    }
 
     /**
      * Registers a conector in the manager and executes its register() method.
      */
     static registerConector(conector: IConector) {
         if (this.registeredConectores.has(conector.metadata.id)) {
-            console.warn(`[ConectorManager] Conector ${conector.metadata.id} is already registered.`);
-            return;
+            const existing = this.registeredConectores.get(conector.metadata.id);
+            console.log(`[ConectorManager] Conector ${conector.metadata.id} ya existe en memoria. Destruyendo instancia anterior y registrando nueva...`);
+            if (existing?.unregister) {
+                try { existing.unregister(); } catch (e) { }
+            }
+            this.registeredConectores.delete(conector.metadata.id);
         }
 
         try {
             conector.register();
             this.registeredConectores.set(conector.metadata.id, conector);
-            console.log(`[ConectorManager] Conector registered and activated: ${conector.metadata.name} (${conector.metadata.id})`);
+            console.log(`[ConectorManager] Conector registrado y activado: ${conector.metadata.name} (${conector.metadata.id})`);
         } catch (error) {
-            console.error(`[ConectorManager] Error activating conector ${conector.metadata.id}:`, error);
+            console.error(`[ConectorManager] Error activando conector ${conector.metadata.id}:`, error);
         }
     }
 
@@ -30,9 +44,9 @@ export class ConectorManager {
                 conector.unregister();
             }
             this.registeredConectores.delete(conectorId);
-            console.log(`[ConectorManager] Conector unregistered and deactivated: ${conectorId}`);
+            console.log(`[ConectorManager] Conector desautorizado y desactivado: ${conectorId}`);
         } catch (error) {
-            console.error(`[ConectorManager] Error deactivating conector ${conectorId}:`, error);
+            console.error(`[ConectorManager] Error desactivando conector ${conectorId}:`, error);
         }
     }
 
@@ -44,3 +58,4 @@ export class ConectorManager {
         return this.registeredConectores.has(conectorId);
     }
 }
+

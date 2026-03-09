@@ -14,6 +14,8 @@ import {
     Link as LinkIcon,
     ChevronLeft,
     ClipboardPaste,
+    BookOpen,
+    Library,
 } from "lucide-react";
 import { generateAtoms, GenerateAtomsOutput } from "@/ai/flows/generate-atoms";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/kolearning-calibrate-plan";
@@ -24,6 +26,9 @@ import { UrlImportDialog } from "@/components/ui/url-import-dialog";
 import { PasteTextDialog } from "@/components/ui/paste-text-dialog";
 import { Input } from "@/components/ui/input";
 import { AtomReviewList } from "@/components/ui/AtomReviewList";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sparkles, Layout, ArrowRight } from "lucide-react";
+import { AdvancedDataSearch } from "../data-box/AdvancedDataSearch";
 
 const initialSteps = [
     {
@@ -319,6 +324,10 @@ function NewProjectContent() {
     const [inferredMetadata, setInferredMetadata] = useState<{ title: string; description: string; categories: string[] } | null>(null);
     const [isReviewing, setIsReviewing] = useState(false);
     const [reviewData, setReviewData] = useState<{ atoms: GenerateAtomsOutput; metadata: any; files: File[] } | null>(null);
+    const [projectName, setProjectName] = useState("");
+    const [step, setStep] = useState<1 | 2>(1);
+    const [isAiNaming, setIsAiNaming] = useState(false);
+    const [selectedPapers, setSelectedPapers] = useState<any[]>([]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -456,6 +465,62 @@ function NewProjectContent() {
             setIsLoading(false);
         }
     }, [addProject, router, toast, selectedFiles, setProcessingStatus, setAtomizationError, setIsLoading]);
+
+    const handleQuickCreate = async () => {
+        if (!projectName.trim()) {
+            toast({ title: "Título necesario", description: "Por favor, ingresa un título para el proyecto.", variant: "destructive" });
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const slug = projectName
+                .normalize('NFD') // split an accented letter in the base letter and the acent
+                .replace(/[\u0300-\u036f]/g, '') // remove all previously split accents
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, '-') // replace spaces with -
+                .replace(/[^\w-]+/g, '') // remove all non-word chars
+                .replace(/--+/g, '-'); // replace multiple - with single -
+
+            const newProjectId = `${slug}-${Date.now()}`;
+
+            const newProject: Omit<Project, 'sessions'> = {
+                id: newProjectId,
+                title: projectName,
+                description: "Proyecto creado manualmente. Comienza a agregar material o sesiones.",
+                mastery: 0,
+                categories: ["General"],
+                icon: "Book",
+                atoms: [],
+                learningPath: [],
+                fullLearningPlanMarkdown: "# Plan de Aprendizaje\n\nAún no hay un plan definido. Añade material o crea sesiones manualmente.",
+                sources: [],
+            };
+
+            const realProjectId = await addProject(newProject as any, (msg: string) => {
+                setAiLogs(prev => [...prev].slice(-50).concat([msg]));
+            });
+
+            toast({
+                title: "¡Proyecto Creado!",
+                description: `${projectName} ha sido añadido a tu dashboard.`
+            });
+
+            try {
+                router.push(`/study/${realProjectId}`);
+            } catch (rErr) {
+                console.error('[NewProject] router.push threw:', rErr);
+                window.location.href = `/study/${realProjectId}`;
+            }
+        } catch (error: any) {
+            console.error("Error creating empty project:", error);
+            setAtomizationError(`Error al crear el proyecto: ${error.message || 'Error desconocido'}`);
+            toast({ title: "Error", description: "No se pudo crear el proyecto vacío.", variant: "destructive" });
+            setIsLoading(false);
+        }
+    };
 
     const processFiles = useCallback(async (filesToProcess: File[]) => {
         setIsLoading(true);
@@ -759,9 +824,24 @@ function NewProjectContent() {
     };
 
     const handleSendMessage = async () => {
-        if (selectedFiles.length === 0) return;
-        const filesToProcess = [...selectedFiles];
-        // setSelectedFiles([]);
+        if (selectedFiles.length === 0 && selectedPapers.length === 0) return;
+
+        let filesToProcess = [...selectedFiles];
+
+        // Convert selected papers to text files so the AI can process them
+        for (const paper of selectedPapers) {
+            let content = `Título: ${paper.title}\n`;
+            if (paper.authors && paper.authors.length > 0) content += `Autores: ${paper.authors.join(', ')}\n`;
+            if (paper.year) content += `Año: ${paper.year}\n`;
+            if (paper.venue) content += `Revista/Conferencia: ${paper.venue}\n`;
+            if (paper.doi) content += `DOI: ${paper.doi}\n`;
+            if (paper.abstract) content += `Resumen:\n${paper.abstract}\n`;
+            if (paper.url) content += `Enlace: ${paper.url}\n`;
+
+            const paperFile = new File([content], `paper-${paper.title.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '_')}.txt`, { type: 'text/plain' });
+            filesToProcess.push(paperFile);
+        }
+
         processFiles(filesToProcess);
     }
 
@@ -856,24 +936,150 @@ function NewProjectContent() {
                     <p className="text-lg text-muted-foreground">Transforma cualquier material de estudio en un plan de aprendizaje interactivo.</p>
                 </div>
 
-                <div className="w-full max-w-3xl">
-                    <Card className="bg-card/50">
-                        <CardContent className="p-6">
-                            <InputBar
-                                handleSendMessage={handleSendMessage}
-                                isLoading={isLoading}
-                                selectedFiles={selectedFiles}
-                                removeFile={removeFile}
-                                handleFileChange={handleFileChange}
-                                fileInputRef={fileInputRef}
-                                getFileIcon={getFileIcon}
-                                onImportFromUrl={() => setIsUrlImportOpen(true)}
-                                onPasteText={() => setIsPasteTextOpen(true)}
-                                isSourcePopoverOpen={isSourcePopoverOpen}
-                                setIsSourcePopoverOpen={setIsSourcePopoverOpen}
-                            />
-                        </CardContent>
-                    </Card>
+                <div className="w-full max-w-4xl">
+                    {step === 1 ? (
+                        <Card className="bg-card/50 shadow-lg border-primary/20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <CardHeader className="text-center pb-2">
+                                <CardTitle className="text-2xl font-headline">Paso 1: Nombra tu Proyecto</CardTitle>
+                                <p className="text-muted-foreground">O deja que la IA se encargue de ello revisando tu material.</p>
+                            </CardHeader>
+                            <CardContent className="p-8 flex flex-col gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Nombre del proyecto (Opcional)</label>
+                                    <Input
+                                        placeholder="Ej: Fundamentos de Física Cuántica"
+                                        value={projectName}
+                                        onChange={(e) => setProjectName(e.target.value)}
+                                        className="h-12 text-lg"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                setIsAiNaming(false);
+                                                setStep(2);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 h-12"
+                                        onClick={() => {
+                                            setProjectName('');
+                                            setIsAiNaming(true);
+                                            setStep(2);
+                                        }}
+                                    >
+                                        Saltar paso (IA generará título)
+                                    </Button>
+                                    <Button
+                                        className="flex-1 h-12 shadow-md gap-2"
+                                        disabled={!projectName.trim()}
+                                        onClick={() => {
+                                            setIsAiNaming(false);
+                                            setStep(2);
+                                        }}
+                                    >
+                                        Siguiente Paso
+                                        <ArrowRight className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        className="flex-1 h-12 shadow-sm gap-2"
+                                        disabled={!projectName.trim() || isLoading}
+                                        onClick={handleQuickCreate}
+                                    >
+                                        Crear Vacío
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500 space-y-6">
+                            <div className="flex items-center gap-4 mb-6">
+                                <Button variant="ghost" size="icon" onClick={() => setStep(1)} className="shrink-0">
+                                    <ChevronLeft className="h-5 w-5" />
+                                </Button>
+                                <div>
+                                    <h2 className="text-2xl font-bold font-headline">Paso 2: Sube tu Material</h2>
+                                    <p className="text-muted-foreground text-sm">
+                                        {isAiNaming
+                                            ? "Se generará un título automáticamente basado en lo que subas."
+                                            : `Añadiendo a proyecto: "${projectName}"`
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Card className="bg-card/50 shadow-lg border-primary/20">
+                                <CardHeader>
+                                    <CardTitle className="text-xl flex items-center gap-2">
+                                        <Library className="h-5 w-5 text-primary" />
+                                        Busca e Importa Datos (Data Box)
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground">Busca en Semantic Scholar, importa BibTeX o enlaza Zotero.</p>
+                                </CardHeader>
+                                <CardContent className="p-6 pt-0">
+                                    <AdvancedDataSearch
+                                        onAddPaper={(paper) => {
+                                            setSelectedPapers(prev => {
+                                                if (prev.find(p => p.title === paper.title)) return prev;
+                                                return [...prev, paper];
+                                            });
+                                            toast({ title: "Artículo seleccionado", description: paper.title });
+                                        }}
+                                    />
+
+                                    {selectedPapers.length > 0 && (
+                                        <div className="mt-4 flex flex-wrap gap-2 p-3 bg-muted/20 border rounded-xl">
+                                            {selectedPapers.map((paper, idx) => (
+                                                <div key={idx} className="bg-primary/10 text-primary-foreground text-xs rounded-full px-3 py-1.5 flex items-center gap-2 border border-primary/20">
+                                                    <BookOpen className="h-3 w-3 text-primary" />
+                                                    <span className="truncate max-w-[200px] text-foreground font-medium">{paper.title}</span>
+                                                    <button onClick={() => setSelectedPapers(prev => prev.filter((_, i) => i !== idx))}><X className="h-3 w-3 text-muted-foreground hover:text-destructive" /></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-card/50 shadow-md">
+                                <CardHeader>
+                                    <CardTitle className="text-xl flex items-center gap-2">
+                                        <Paperclip className="h-5 w-5 text-primary" />
+                                        Archivos Locales & Enlaces
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-6 pt-0">
+                                    <InputBar
+                                        handleSendMessage={handleSendMessage}
+                                        isLoading={isLoading}
+                                        selectedFiles={selectedFiles}
+                                        removeFile={removeFile}
+                                        handleFileChange={handleFileChange}
+                                        fileInputRef={fileInputRef}
+                                        getFileIcon={getFileIcon}
+                                        onImportFromUrl={() => setIsUrlImportOpen(true)}
+                                        onPasteText={() => setIsPasteTextOpen(true)}
+                                        isSourcePopoverOpen={isSourcePopoverOpen}
+                                        setIsSourcePopoverOpen={setIsSourcePopoverOpen}
+                                    />
+                                </CardContent>
+                            </Card>
+
+                            <div className="flex justify-end mt-8">
+                                <Button
+                                    size="lg"
+                                    className="h-14 px-8 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform"
+                                    onClick={handleSendMessage}
+                                    disabled={isLoading || (selectedFiles.length === 0 && selectedPapers.length === 0)}
+                                >
+                                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin mr-2" /> : <Sparkles className="h-6 w-6 mr-2" />}
+                                    Generar Proyecto ({(selectedFiles.length + selectedPapers.length)} fuentes)
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="mt-16 w-full max-w-5xl">

@@ -126,57 +126,6 @@ export function Sidebar({ isOpen, onToggle }: { isOpen: boolean; onToggle: () =>
                                 ))}
                             </nav>
                         </div>
-
-                        {isProjectPage && (
-                            <div className={cn("mt-4 px-4 py-2 border-t transition-all", !isOpen && "px-2")}>
-                                <h3 className={cn(
-                                    "text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-4 px-2 mt-4 transition-opacity duration-300",
-                                    !isOpen && "opacity-0 h-0 my-0 overflow-hidden"
-                                )}>
-                                    Proyecto Actual
-                                </h3>
-                                <nav className="space-y-2">
-                                    <Link
-                                        href={`/study/${projectId}?tab=study`}
-                                        title={!isOpen ? "Study Box" : undefined}
-                                        className={cn(
-                                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-                                            currentTab === 'study'
-                                                ? "bg-primary/10 text-primary"
-                                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                                            !isOpen && "justify-center px-0"
-                                        )}
-                                    >
-                                        <BrainCircuit className={cn("h-5 w-5 shrink-0", !isOpen && "scale-110")} />
-                                        <span className={cn(
-                                            "transition-all duration-200 whitespace-nowrap overflow-hidden",
-                                            isOpen ? "opacity-100 w-auto" : "opacity-0 w-0 md:hidden"
-                                        )}>
-                                            Study Box
-                                        </span>
-                                    </Link>
-                                    <Link
-                                        href={`/study/${projectId}?tab=data`}
-                                        title={!isOpen ? "Data Box" : undefined}
-                                        className={cn(
-                                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-                                            currentTab === 'data'
-                                                ? "bg-primary/10 text-primary"
-                                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                                            !isOpen && "justify-center px-0"
-                                        )}
-                                    >
-                                        <Library className={cn("h-5 w-5 shrink-0", !isOpen && "scale-110")} />
-                                        <span className={cn(
-                                            "transition-all duration-200 whitespace-nowrap overflow-hidden",
-                                            isOpen ? "opacity-100 w-auto" : "opacity-0 w-0 md:hidden"
-                                        )}>
-                                            Data Box
-                                        </span>
-                                    </Link>
-                                </nav>
-                            </div>
-                        )}
                     </div>
                 </div>
             </aside>

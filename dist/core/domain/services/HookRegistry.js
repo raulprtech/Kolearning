@@ -3,24 +3,39 @@
  * Inspired by WordPress Hooks (Actions and Filters).
  */
 export class HookRegistry {
+    static get actions() {
+        if (!globalThis.hookRegistryActions) {
+            globalThis.hookRegistryActions = new Map();
+        }
+        return globalThis.hookRegistryActions;
+    }
+    static get filters() {
+        if (!globalThis.hookRegistryFilters) {
+            globalThis.hookRegistryFilters = new Map();
+        }
+        return globalThis.hookRegistryFilters;
+    }
     /**
      * Action: Register a function to be executed when a specific event occurs.
      * Actions DO NOT return values to the caller.
      */
     static addAction(tag, handler) {
-        var _a;
         if (!this.actions.has(tag)) {
             this.actions.set(tag, []);
         }
-        (_a = this.actions.get(tag)) === null || _a === void 0 ? void 0 : _a.push(handler);
-        console.log(`[HookRegistry] Action registered for tag: ${tag}`);
+        const handlers = this.actions.get(tag);
+        // Evitar duplicados (comparación básica de referencia)
+        if (!handlers.includes(handler)) {
+            handlers.push(handler);
+            console.log(`[HookRegistry] Action registered for tag: ${tag} (${handlers.length} total)`);
+        }
     }
     /**
      * Trigger an action. All registered handlers for this tag will execute.
      */
     static doAction(tag, ...args) {
         const handlers = this.actions.get(tag);
-        if (handlers) {
+        if (handlers && handlers.length > 0) {
             console.log(`[HookRegistry] Executing actions for tag: ${tag} (${handlers.length} handlers)`);
             handlers.forEach(handler => {
                 try {
@@ -37,12 +52,14 @@ export class HookRegistry {
      * Filters MUST return a value.
      */
     static addFilter(tag, handler) {
-        var _a;
         if (!this.filters.has(tag)) {
             this.filters.set(tag, []);
         }
-        (_a = this.filters.get(tag)) === null || _a === void 0 ? void 0 : _a.push(handler);
-        console.log(`[HookRegistry] Filter registered for tag: ${tag}`);
+        const handlers = this.filters.get(tag);
+        if (!handlers.includes(handler)) {
+            handlers.push(handler);
+            console.log(`[HookRegistry] Filter registered for tag: ${tag} (${handlers.length} total)`);
+        }
     }
     /**
      * Apply filters to a value. The value passes through each handler sequentially.
@@ -64,5 +81,3 @@ export class HookRegistry {
         }, value);
     }
 }
-HookRegistry.actions = new Map();
-HookRegistry.filters = new Map();

@@ -3,7 +3,7 @@ export interface ConectorMetadata {
     name: string;
     description: string;
     icon: string;
-    category: 'Integrations' | 'Learning' | 'Tools' | 'Personalities';
+    category: 'Conectores de Datos' | 'Conectores de Canal' | 'Conectores de Voz' | 'Conectores de Exportación' | 'Conectores de LMS' | 'Módulos de Gamificación' | 'Módulos de Analytics' | 'Módulos de Estudio Alternativos' | 'Launchers';
 }
 
 export interface IUserConector {

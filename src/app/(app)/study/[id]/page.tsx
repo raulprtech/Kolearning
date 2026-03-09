@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,7 +56,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2, Network, BrainCircuit } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2, Network, BrainCircuit, Library, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
@@ -297,6 +297,7 @@ function ProjectDetails() {
     const [sourceToView, setSourceToView] = useState<Source | null>(null);
     const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
     const [isFetchingSource, setIsFetchingSource] = useState(false);
+    const [isSourcesMinimized, setIsSourcesMinimized] = useState(false);
 
     useEffect(() => {
         if (searchParams.get('planUpdated') === 'true' || searchParams.get('sessionCompleted') === 'true') {
@@ -555,298 +556,324 @@ function ProjectDetails() {
     }
 
     return (
-        <ScrollArea className="h-[calc(100vh-theme(space.16))]">
-            <div className="flex-1 flex flex-col p-6 bg-background">
-                <AddProjectDialog
-                    isOpen={isAddProjectDialogOpen}
-                    onClose={() => setIsAddProjectDialogOpen(false)}
-                    project={project}
-                    onCreate={handleCreateNewProject}
-                />
-                <EditProjectDialog
-                    isOpen={isEditDialogOpen}
-                    onClose={() => setIsEditDialogOpen(false)}
-                    project={project}
-                    onSave={handleSaveDetails}
-                />
-                <ShareDialog
-                    isOpen={isShareDialogOpen}
-                    onClose={() => setIsShareDialogOpen(false)}
-                    project={project}
-                    onTogglePublic={toggleProjectPublic}
-                />
-                <RecalibratePlanDialog
-                    isOpen={isRecalibrateDialogOpen}
-                    onClose={() => setIsRecalibrateDialogOpen(false)}
-                    onRecalibrate={handleRecalibratePlan}
-                />
-                <AlertDialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>¿Archivar este proyecto?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                "{project.title}" se moverá al archivo. Podrás restaurarlo más tarde.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleArchiveProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Archivar
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+        <div className="flex bg-background w-full min-h-0 min-w-0 overflow-hidden" style={{ height: "calc(100vh - 65px)" }}>
+            <AddProjectDialog
+                isOpen={isAddProjectDialogOpen}
+                onClose={() => setIsAddProjectDialogOpen(false)}
+                project={project}
+                onCreate={handleCreateNewProject}
+            />
+            <EditProjectDialog
+                isOpen={isEditDialogOpen}
+                onClose={() => setIsEditDialogOpen(false)}
+                project={project}
+                onSave={handleSaveDetails}
+            />
+            <ShareDialog
+                isOpen={isShareDialogOpen}
+                onClose={() => setIsShareDialogOpen(false)}
+                project={project}
+                onTogglePublic={toggleProjectPublic}
+            />
+            <RecalibratePlanDialog
+                isOpen={isRecalibrateDialogOpen}
+                onClose={() => setIsRecalibrateDialogOpen(false)}
+                onRecalibrate={handleRecalibratePlan}
+            />
+            <AlertDialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Archivar este proyecto?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            "{project.title}" se moverá al archivo. Podrás restaurarlo más tarde.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleArchiveProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Archivar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
-                <AlertDialog open={!!sourceToDelete} onOpenChange={() => setSourceToDelete(null)}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>¿Eliminar fuente?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                ¿Estás seguro de que quieres eliminar "{sourceToDelete?.source.name}"? Esta acción no se puede deshacer.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={confirmDeleteSource} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Eliminar
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+            <AlertDialog open={!!sourceToDelete} onOpenChange={() => setSourceToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Eliminar fuente?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            ¿Estás seguro de que quieres eliminar "{sourceToDelete?.source.name}"? Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDeleteSource} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
-                <Dialog open={!!sourceToView} onOpenChange={() => setSourceToView(null)}>
-                    <DialogContent className="max-w-4xl max-h-[80vh]">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <BookCopy className="h-5 w-5" />
-                                {sourceToView?.name}
-                            </DialogTitle>
-                            <DialogDescription>
-                                Fuente original: {sourceToView?.type}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <ScrollArea className="max-h-[60vh] my-4 pr-4">
-                            {sourceToView?.content.startsWith('data:application/pdf') ? (
-                                <iframe
-                                    src={sourceToView.content}
-                                    className="w-full min-h-[60vh] rounded-md border-0"
-                                    title={`PDF View - ${sourceToView.name}`}
-                                />
-                            ) : (
-                                <div className="prose prose-sm max-w-none dark:prose-invert">
-                                    {sourceToView?.content.split('\n').map((line, index) => {
-                                        if (line.startsWith('# ')) {
-                                            return <h1 key={index} className="text-2xl font-bold mb-4 mt-6 text-foreground">{line.slice(2)}</h1>;
-                                        } else if (line.startsWith('## ')) {
-                                            return <h2 key={index} className="text-xl font-semibold mb-3 mt-5 text-foreground">{line.slice(3)}</h2>;
-                                        } else if (line.startsWith('### ')) {
-                                            return <h3 key={index} className="text-lg font-medium mb-2 mt-4 text-foreground">{line.slice(4)}</h3>;
-                                        } else if (line.startsWith('#### ')) {
-                                            return <h4 key={index} className="text-base font-medium mb-2 mt-3 text-foreground">{line.slice(5)}</h4>;
-                                        } else if (line.startsWith('- ')) {
-                                            return <li key={index} className="ml-4 text-muted-foreground">{line.slice(2)}</li>;
-                                        } else if (line.startsWith('```')) {
-                                            const isClosing = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length % 2 === 1;
-                                            return isClosing ?
-                                                <div key={index} className="block"></div> :
-                                                <div key={index} className="bg-muted p-3 rounded-md overflow-x-auto text-sm mt-2 mb-2 block"></div>;
-                                        } else if (line.trim() === '') {
-                                            return <br key={index} />;
+            <Dialog open={!!sourceToView} onOpenChange={() => setSourceToView(null)}>
+                <DialogContent className="max-w-4xl max-h-[80vh]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <BookCopy className="h-5 w-5" />
+                            {sourceToView?.name}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Fuente original: {sourceToView?.type}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[60vh] my-4 pr-4">
+                        {sourceToView?.content.startsWith('data:application/pdf') ? (
+                            <iframe
+                                src={sourceToView.content}
+                                className="w-full min-h-[60vh] rounded-md border-0"
+                                title={`PDF View - ${sourceToView.name}`}
+                            />
+                        ) : (
+                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                                {sourceToView?.content.split('\n').map((line, index) => {
+                                    if (line.startsWith('# ')) {
+                                        return <h1 key={index} className="text-2xl font-bold mb-4 mt-6 text-foreground">{line.slice(2)}</h1>;
+                                    } else if (line.startsWith('## ')) {
+                                        return <h2 key={index} className="text-xl font-semibold mb-3 mt-5 text-foreground">{line.slice(3)}</h2>;
+                                    } else if (line.startsWith('### ')) {
+                                        return <h3 key={index} className="text-lg font-medium mb-2 mt-4 text-foreground">{line.slice(4)}</h3>;
+                                    } else if (line.startsWith('#### ')) {
+                                        return <h4 key={index} className="text-base font-medium mb-2 mt-3 text-foreground">{line.slice(5)}</h4>;
+                                    } else if (line.startsWith('- ')) {
+                                        return <li key={index} className="ml-4 text-muted-foreground">{line.slice(2)}</li>;
+                                    } else if (line.startsWith('```')) {
+                                        const isClosing = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length % 2 === 1;
+                                        return isClosing ?
+                                            <div key={index} className="block"></div> :
+                                            <div key={index} className="bg-muted p-3 rounded-md overflow-x-auto text-sm mt-2 mb-2 block"></div>;
+                                    } else if (line.trim() === '') {
+                                        return <br key={index} />;
+                                    } else {
+                                        // Check if we're inside a code block
+                                        const codeBlocksBefore = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length || 0;
+                                        const isInCodeBlock = codeBlocksBefore % 2 === 1;
+                                        if (isInCodeBlock) {
+                                            return <code key={index} className="block text-sm text-foreground">{line}</code>;
                                         } else {
-                                            // Check if we're inside a code block
-                                            const codeBlocksBefore = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length || 0;
-                                            const isInCodeBlock = codeBlocksBefore % 2 === 1;
-                                            if (isInCodeBlock) {
-                                                return <code key={index} className="block text-sm text-foreground">{line}</code>;
-                                            } else {
-                                                return <p key={index} className="mb-2 text-muted-foreground">{line}</p>;
-                                            }
+                                            return <p key={index} className="mb-2 text-muted-foreground">{line}</p>;
                                         }
-                                    })}
-                                </div>
-                            )}
-                        </ScrollArea>
-                        <DialogFooter>
-                            <Button onClick={() => setSourceToView(null)}>Cerrar</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                                    }
+                                })}
+                            </div>
+                        )}
+                    </ScrollArea>
+                    <DialogFooter>
+                        <Button onClick={() => setSourceToView(null)}>Cerrar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
-                {showUpdateAlert && (
-                    <Alert className="mb-6 bg-primary/10 border-primary/20">
-                        <Info className="h-4 w-4 text-primary" />
-                        <AlertTitle>¡Plan de estudio actualizado!</AlertTitle>
-                        <AlertDescription>
-                            {searchParams.get('planUpdated') === 'true'
-                                ? "Kolearning ha añadido nuevas sesiones a tu plan basándose en tu última sesión."
-                                : "¡Felicidades por completar tu sesión! La siguiente ya está desbloqueada."
-                            }
-                        </AlertDescription>
-                    </Alert>
-                )}
 
-                <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-start gap-4 flex-1">
-                        <button onClick={() => isUserProject && setIsIconSelectorOpen(true)} className={`p-2 rounded-lg ${isUserProject && 'hover:bg-muted'} transition-colors mt-1`}>
-                            <Icon className="w-8 h-8 text-primary" />
-                        </button>
-                        <div className="flex-1">
-                            <h1 className="text-2xl font-bold font-headline text-foreground max-w-2xl">{project.title}</h1>
-                            <p className="text-sm text-muted-foreground">{project.description}</p>
-                        </div>
+            <Dialog open={isIconSelectorOpen} onOpenChange={setIsIconSelectorOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Elige un icono para tu proyecto</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-4 gap-4 py-4">
+                        {Object.entries(projectIcons).map(([key, IconComponent]) => (
+                            <Button
+                                key={key}
+                                variant="outline"
+                                className="flex flex-col h-24 gap-2 items-center justify-center"
+                                onClick={() => handleIconChange(key)}
+                            >
+                                <IconComponent className="h-8 w-8 text-primary" />
+                                <span className="text-xs">{key}</span>
+                            </Button>
+                        ))}
                     </div>
-                    {renderActionButtons()}
+                </DialogContent>
+            </Dialog>
+
+            <AtomActionDialog
+                isOpen={!!atomAction.mode}
+                mode={atomAction.mode}
+                atom={atomAction.atom}
+                onClose={() => setAtomAction({ mode: null, atom: null, index: null })}
+                onConfirm={handleAtomActionConfirm}
+            />
+
+            {/* Left Panel: Data Box (Sources) */}
+            <aside className={cn("border-r bg-muted/10 flex flex-col h-full shrink-0 transition-all duration-300", isSourcesMinimized ? "w-16" : "w-1/3")}>
+                <div className={cn("p-4 border-b bg-background/50 backdrop-blur-sm sticky top-0 z-10 flex items-center", isSourcesMinimized ? "justify-center" : "justify-between")}>
+                    {!isSourcesMinimized && (
+                        <h2 className="text-lg font-semibold flex items-center gap-2">
+                            <Library className="h-4 w-4 text-primary" />
+                            Fuentes
+                        </h2>
+                    )}
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        className={cn("h-8 w-8 p-0 shrink-0", isSourcesMinimized && "w-10 h-10")}
+                        onClick={() => setIsSourcesMinimized(!isSourcesMinimized)}
+                        title={isSourcesMinimized ? "Expandir fuentes" : "Minimizar fuentes"}
+                    >
+                        {isSourcesMinimized ? <PanelLeftOpen className="h-5 w-5 text-primary" /> : <PanelLeftClose className="h-5 w-5 text-muted-foreground hover:text-foreground" />}
+                    </Button>
                 </div>
 
-                <Dialog open={isIconSelectorOpen} onOpenChange={setIsIconSelectorOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Elige un icono para tu proyecto</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid grid-cols-4 gap-4 py-4">
-                            {Object.entries(projectIcons).map(([key, IconComponent]) => (
-                                <Button
-                                    key={key}
-                                    variant="outline"
-                                    className="flex flex-col h-24 gap-2 items-center justify-center"
-                                    onClick={() => handleIconChange(key)}
-                                >
-                                    <IconComponent className="h-8 w-8 text-primary" />
-                                    <span className="text-xs">{key}</span>
-                                </Button>
+                <ScrollArea className="flex-1 p-4">
+                    {project.sources && project.sources.length > 0 ? (
+                        <div className="space-y-3">
+                            {project.sources.map((source, index) => (
+                                <div key={index} className={cn("group relative bg-card hover:bg-muted/50 border rounded-lg transition-colors cursor-pointer", isSourcesMinimized ? "p-2 flex justify-center" : "p-3")} onClick={() => handleViewSource(source)} title={isSourcesMinimized ? source.name : undefined}>
+                                    <div className="flex items-start gap-3">
+                                        <div className={cn("p-1.5 bg-primary/10 rounded-md shrink-0", !isSourcesMinimized && "mt-0.5")}>
+                                            <BookCopy className="h-4 w-4 text-primary" />
+                                        </div>
+                                        {!isSourcesMinimized && (
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium truncate">{source.name}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <Badge variant="secondary" className="text-[10px] px-1.5 h-4">
+                                                        {source.type}
+                                                    </Badge>
+                                                    <span className="text-xs text-muted-foreground truncate">
+                                                        {(source.content.length / 1000).toFixed(1)}k chars
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Hover Actions */}
+                                    {!isSourcesMinimized && (
+                                        <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-background/80 backdrop-blur-sm p-1 rounded-md border shadow-sm">
+                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsRecalibrateDialogOpen(true); }} title="Mandar a Study Box">
+                                                <BrainCircuit className="h-3 w-3 text-primary" />
+                                            </Button>
+                                            {isUserProject && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); handleDeleteSource(source, index); }} title="Eliminar">
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             ))}
                         </div>
-                    </DialogContent>
-                </Dialog>
-
-                <AtomActionDialog
-                    isOpen={!!atomAction.mode}
-                    mode={atomAction.mode}
-                    atom={atomAction.atom}
-                    onClose={() => setAtomAction({ mode: null, atom: null, index: null })}
-                    onConfirm={handleAtomActionConfirm}
-                />
-
-                <div className="flex justify-center mb-8">
-                    <Card className="bg-card/50 min-w-[200px]">
-                        <CardContent className="pt-6 text-center">
-                            <p className="text-sm text-muted-foreground mb-2">Precisión</p>
-                            <p className="text-4xl font-bold">{isUserProject ? `${accuracy}%` : 'N/A'}</p>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="space-y-8 animate-in fade-in zoom-in duration-300">
-                    {(searchParams.get('tab') === 'data') ? (
-                        <div className="space-y-8">
-                            <div>
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-semibold">Tus Documentos y Papers</h2>
-                                    <Button size="sm">
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Añadir Documento
+                    ) : (
+                        <div className="text-center py-8 px-2">
+                            <Archive className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+                            {!isSourcesMinimized && (
+                                <>
+                                    <p className="text-sm font-medium mb-1">Sin fuentes</p>
+                                    <p className="text-xs text-muted-foreground mb-4">
+                                        Sube apuntes para generar tu plan.
+                                    </p>
+                                    <Button size="sm" variant="outline" className="w-full">
+                                        <Plus className="h-3 w-3 mr-2" />
+                                        Añadir
                                     </Button>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </ScrollArea>
+            </aside>
+
+            {/* Main Area: Study Box */}
+            <main className="flex-1 flex flex-col h-full bg-background min-w-0 overflow-hidden relative">
+                <ScrollArea className="flex-1 h-full w-full">
+                    <div className="p-8 w-full space-y-10">
+
+                        {/* Header Section (Moved inside ScrollArea) */}
+                        <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-4 flex-1">
+                                <button onClick={() => isUserProject && setIsIconSelectorOpen(true)} className={`p-2 rounded-lg ${isUserProject ? 'hover:bg-muted' : ''} transition-colors mt-1 shrink-0`}>
+                                    <Icon className="w-10 h-10 text-primary" />
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                    <h1 className="text-3xl font-bold font-headline text-foreground truncate">{project.title}</h1>
+                                    <p className="text-base text-muted-foreground line-clamp-2 mt-1">{project.description}</p>
                                 </div>
-                                <Card className="bg-card/50">
-                                    {project.sources && project.sources.length > 0 ? (
-                                        <Table>
-                                            <TableBody>
-                                                {project.sources.map((source, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell>
-                                                            <p className="font-medium">{source.name}</p>
-                                                            <p className="text-sm text-muted-foreground">{source.type}</p>
-                                                            <Badge variant="secondary" className="mt-1 text-xs">
-                                                                {source.content.length} caracteres disponibles
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex items-center justify-end gap-2">
-                                                                <Button variant="outline" size="sm" className="bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary" onClick={() => setIsRecalibrateDialogOpen(true)}>
-                                                                    <BrainCircuit className="h-4 w-4 mr-2" />
-                                                                    Mandar a Study Box
-                                                                </Button>
-                                                                <Button variant="ghost" size="sm" onClick={() => handleViewSource(source)}>
-                                                                    <Eye className="h-4 w-4 mr-2" />
-                                                                    Ver
-                                                                </Button>
-                                                                {isUserProject && (
-                                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteSource(source, index)}>
-                                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                                        Eliminar
-                                                                    </Button>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    ) : (
-                                        <CardContent className="text-center py-12">
-                                            <Archive className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                                            <p className="text-muted-foreground mb-2">No tienes documentos asignados</p>
-                                            <p className="text-sm text-muted-foreground mb-6">
-                                                Sube tus apuntes o papers para que Kolearning los procese y cree un plan de estudio personalizado.
-                                            </p>
-                                            <Button variant="outline">
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Añadir Fuente
-                                            </Button>
-                                        </CardContent>
-                                    )}
-                                </Card>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0 ml-4">
+                                {renderActionButtons()}
                             </div>
                         </div>
-                    ) : (
-                        <div className="space-y-8">
+
+                        {/* Alert Area */}
+                        {showUpdateAlert && (
+                            <Alert className="bg-primary/5 border-primary/20">
+                                <Info className="h-4 w-4 text-primary" />
+                                <AlertTitle>¡Plan actualizado!</AlertTitle>
+                                <AlertDescription>
+                                    {searchParams.get('planUpdated') === 'true'
+                                        ? "Se han añadido nuevas sesiones a tu plan basadas en tu aprendizaje continuo."
+                                        : "¡Felicidades por completar tu sesión!"
+                                    }
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
+                        {/* Study Content Section (Sessions, Map, Atoms) */}
+                        <div className="space-y-10 animate-in fade-in zoom-in duration-300">
                             {isUserProject && project.sessions && (
                                 <div>
                                     <div className="flex justify-between items-center mb-4">
                                         <h2 className="text-xl font-semibold">Sesiones</h2>
                                         <Button variant="outline" onClick={() => setShowFullPlan(true)}>Ver hoja completa</Button>
                                     </div>
-                                    <Card className="bg-card/50">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Sesión</TableHead>
-                                                    <TableHead>Tipo de Sesión</TableHead>
-                                                    <TableHead>Preguntas</TableHead>
-                                                    <TableHead>Estado</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {project.sessions.map((session, index) => {
-                                                    let statusComponent;
-                                                    switch (session.status) {
-                                                        case 'Completed':
-                                                            statusComponent = <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4" />Completado</div>;
-                                                            break;
-                                                        case 'Continue':
-                                                            statusComponent = (
-                                                                <Button size="sm" onClick={() => handleSessionClick(index)}>
-                                                                    Continuar
-                                                                </Button>
-                                                            );
-                                                            break;
-                                                        case 'Locked':
-                                                            statusComponent = <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4" /> Bloqueada</div>;
-                                                            break;
-                                                        default:
-                                                            statusComponent = null;
-                                                    }
-                                                    return (
-                                                        <TableRow key={session.session}>
-                                                            <TableCell>{session.session}</TableCell>
-                                                            <TableCell>{getSessionBadge(session.type)}</TableCell>
-                                                            <TableCell>{session.questions || 'No especificado'}</TableCell>
-                                                            <TableCell>{statusComponent}</TableCell>
+                                    <Card className="bg-card/50 overflow-hidden">
+                                        <div className="overflow-x-auto w-full">
+                                            {project.sessions.length > 0 ? (
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Sesión</TableHead>
+                                                            <TableHead>Tipo de Sesión</TableHead>
+                                                            <TableHead>Preguntas</TableHead>
+                                                            <TableHead>Estado</TableHead>
                                                         </TableRow>
-                                                    );
-                                                })}
-                                            </TableBody>
-                                        </Table>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {project.sessions.map((session, index) => {
+                                                            let statusComponent;
+                                                            switch (session.status) {
+                                                                case 'Completed':
+                                                                    statusComponent = <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4" />Completado</div>;
+                                                                    break;
+                                                                case 'Continue':
+                                                                    statusComponent = (
+                                                                        <Button size="sm" onClick={() => handleSessionClick(index)}>
+                                                                            Continuar
+                                                                        </Button>
+                                                                    );
+                                                                    break;
+                                                                case 'Locked':
+                                                                    statusComponent = <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4" /> Bloqueada</div>;
+                                                                    break;
+                                                                default:
+                                                                    statusComponent = null;
+                                                            }
+                                                            return (
+                                                                <TableRow key={session.session}>
+                                                                    <TableCell>{session.session}</TableCell>
+                                                                    <TableCell>{getSessionBadge(session.type)}</TableCell>
+                                                                    <TableCell>{session.questions || 'No especificado'}</TableCell>
+                                                                    <TableCell>{statusComponent}</TableCell>
+                                                                </TableRow>
+                                                            );
+                                                        })}
+                                                    </TableBody>
+                                                </Table>
+                                            ) : (
+                                                <CardContent className="text-center py-8">
+                                                    <p className="text-muted-foreground mb-4">Tu proyecto aún no tiene sesiones.</p>
+                                                    <Button onClick={() => setIsRecalibrateDialogOpen(true)}>Generar Plan de Estudio</Button>
+                                                </CardContent>
+                                            )}
+                                        </div>
                                     </Card>
                                 </div>
                             )}
@@ -871,90 +898,102 @@ function ProjectDetails() {
                                     </div>
                                 </div>
                                 <Card className="bg-card/50">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="w-16">Tipo</TableHead>
-                                                <TableHead>Término</TableHead>
-                                                <TableHead>Definición</TableHead>
-                                                <TableHead className="text-right">Acciones</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {displayedAtoms?.map((atom, index) => (
-                                                <TableRow key={index}>
-                                                    <TableCell className="align-top">
-                                                        {atom.type === 'video_review' ? (
-                                                            <div className="flex items-center justify-center p-2 bg-red-500/10 text-red-500 rounded-md" title="Revisión de Video"><Play className="h-4 w-4" /></div>
-                                                        ) : atom.type === 'mini_game' ? (
-                                                            <div className="flex items-center justify-center p-2 bg-purple-500/10 text-purple-500 rounded-md" title="Mini-Juego"><Target className="h-4 w-4" /></div>
-                                                        ) : (
-                                                            <div className="flex items-center justify-center p-2 bg-blue-500/10 text-blue-500 rounded-md" title="Tarjeta de Texto"><Book className="h-4 w-4" /></div>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
-                                                    <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
-                                                    <TableCell className="text-right align-top">
-                                                        <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'view', atom, index })}>
-                                                            <Eye className="h-4 w-4 mr-2" />
-                                                            Ver
-                                                        </Button>
-                                                        {isUserProject && (
-                                                            <>
-                                                                <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'edit', atom, index })}>
-                                                                    <Pencil className="h-4 w-4 mr-2" />
-                                                                    Editar
-                                                                </Button>
-                                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
-                                                                    <Trash2 className="h-4 w-4 mr-2" />
-                                                                    Eliminar
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                    </TableCell>
+                                    {displayedAtoms && displayedAtoms.length > 0 ? (
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-16">Tipo</TableHead>
+                                                    <TableHead>Término</TableHead>
+                                                    <TableHead>Definición</TableHead>
+                                                    <TableHead className="text-right">Acciones</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {displayedAtoms.map((atom, index) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell className="align-top">
+                                                            {atom.type === 'video_review' ? (
+                                                                <div className="flex items-center justify-center p-2 bg-red-500/10 text-red-500 rounded-md" title="Revisión de Video"><Play className="h-4 w-4" /></div>
+                                                            ) : atom.type === 'mini_game' ? (
+                                                                <div className="flex items-center justify-center p-2 bg-purple-500/10 text-purple-500 rounded-md" title="Mini-Juego"><Target className="h-4 w-4" /></div>
+                                                            ) : (
+                                                                <div className="flex items-center justify-center p-2 bg-blue-500/10 text-blue-500 rounded-md" title="Tarjeta de Texto"><Book className="h-4 w-4" /></div>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
+                                                        <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
+                                                        <TableCell className="text-right align-top">
+                                                            <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'view', atom, index })}>
+                                                                <Eye className="h-4 w-4 mr-2" />
+                                                                Ver
+                                                            </Button>
+                                                            {isUserProject && (
+                                                                <>
+                                                                    <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'edit', atom, index })}>
+                                                                        <Pencil className="h-4 w-4 mr-2" />
+                                                                        Editar
+                                                                    </Button>
+                                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
+                                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                                        Eliminar
+                                                                    </Button>
+                                                                </>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    ) : (
+                                        <CardContent className="text-center py-8">
+                                            <p className="text-muted-foreground mb-4">No hay átomos en este proyecto.</p>
+                                            {isUserProject && (
+                                                <Button onClick={() => setAtomAction({ mode: 'create', atom: { type: 'text_card', question: '', answer: '' }, index: null })}>
+                                                    <Plus className="h-4 w-4 mr-2" />
+                                                    Crear primer átomo
+                                                </Button>
+                                            )}
+                                        </CardContent>
+                                    )}
                                 </Card>
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                </ScrollArea>
+            </main>
 
-                <Dialog open={showFullPlan} onOpenChange={setShowFullPlan}>
-                    <DialogContent className="max-w-3xl">
-                        <DialogHeader>
-                            <DialogTitle>Hoja de Ruta Completa</DialogTitle>
-                            <DialogDescription>Este es el plan de estudio completo generado por Kolearning.</DialogDescription>
-                        </DialogHeader>
-                        <ScrollArea className="h-96 my-4 pr-4">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-20">Sesión</TableHead>
-                                        <TableHead>Tema</TableHead>
-                                        <TableHead>Tipo de Sesión</TableHead>
+            <Dialog open={showFullPlan} onOpenChange={setShowFullPlan}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Hoja de Ruta Completa</DialogTitle>
+                        <DialogDescription>Este es el plan de estudio completo generado por Kolearning.</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="h-96 my-4 pr-4">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-20">Sesión</TableHead>
+                                    <TableHead>Tema</TableHead>
+                                    <TableHead>Tipo de Sesión</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {project.learningPath.map((item) => (
+                                    <TableRow key={item.session}>
+                                        <TableCell className="font-medium">{item.session}</TableCell>
+                                        <TableCell>{item.topic}</TableCell>
+                                        <TableCell>{getSessionBadge(item.sessionType)}</TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {project.learningPath.map((item) => (
-                                        <TableRow key={item.session}>
-                                            <TableCell className="font-medium">{item.session}</TableCell>
-                                            <TableCell>{item.topic}</TableCell>
-                                            <TableCell>{getSessionBadge(item.sessionType)}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </ScrollArea>
-                        <DialogFooter>
-                            <Button onClick={() => setShowFullPlan(false)}>Cerrar</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </div>
-        </ScrollArea>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                    <DialogFooter>
+                        <Button onClick={() => setShowFullPlan(false)}>Cerrar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 }
 

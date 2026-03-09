@@ -174,8 +174,11 @@ export const convertLearningPathItemFromDB = (lpRow) => ({
 });
 // Database operations
 export class ProjectDatabase {
-    constructor() {
-        this.supabase = createClient();
+    constructor(supabaseClient) {
+        this.supabase = supabaseClient || createClient();
+    }
+    getClient() {
+        return this.supabase;
     }
     async getProjects(userId) {
         console.log('[DB] Getting projects for user:', userId);
@@ -191,7 +194,7 @@ export class ProjectDatabase {
             throw error;
         }
         console.log(`[DB] ✅ Found ${data.length} projects in database`);
-        const projects = (data || []).map(project => convertProjectFromDBSync(project));
+        const projects = (data || []).map((project) => convertProjectFromDBSync(project));
         console.log(`[DB] ✅ Converted ${projects.length} projects`);
         return projects;
     }
@@ -216,7 +219,7 @@ export class ProjectDatabase {
             .order('updated_at', { ascending: false });
         if (error)
             throw error;
-        return (data || []).map(project => convertProjectFromDBSync(project));
+        return (data || []).map((project) => convertProjectFromDBSync(project));
     }
     async getArchivedProjects(userId) {
         const { data, error } = await this.supabase
@@ -227,7 +230,7 @@ export class ProjectDatabase {
             .order('updated_at', { ascending: false });
         if (error)
             throw error;
-        return (data || []).map(project => convertProjectFromDBSync(project));
+        return (data || []).map((project) => convertProjectFromDBSync(project));
     }
     async getSourceContent(sourceId) {
         const { data, error } = await this.supabase
@@ -298,7 +301,7 @@ export class ProjectDatabase {
             logDb(`✅ ${createdAtoms === null || createdAtoms === void 0 ? void 0 : createdAtoms.length} atoms inserted`);
             // Store created atoms for mapping to sessions
             const atomMap = new Map();
-            createdAtoms === null || createdAtoms === void 0 ? void 0 : createdAtoms.forEach(a => {
+            createdAtoms === null || createdAtoms === void 0 ? void 0 : createdAtoms.forEach((a) => {
                 atomMap.set(a.question, a.id);
             });
             // Create sessions
@@ -325,7 +328,7 @@ export class ProjectDatabase {
                 // Create session-atom relationships
                 const sessionAtomInserts = [];
                 project.sessions.forEach(session => {
-                    const sessionData = sessionsData === null || sessionsData === void 0 ? void 0 : sessionsData.find(s => s.session_number === session.session);
+                    const sessionData = sessionsData === null || sessionsData === void 0 ? void 0 : sessionsData.find((s) => s.session_number === session.session);
                     if (sessionData && session.atoms.length > 0) {
                         session.atoms.forEach(atom => {
                             const atomId = atomMap.get(atom.question);
@@ -420,7 +423,7 @@ export class ProjectDatabase {
         if (atomsError)
             throw new Error(`Failed to fetch atoms for re-linking: ${atomsError.message}`);
         const atomMap = new Map();
-        atomsData.forEach(a => atomMap.set(a.question, a.id));
+        atomsData.forEach((a) => atomMap.set(a.question, a.id));
         // 2. Transactional operation: delete old items, then insert new ones
         // Delete old learning path items
         const { error: deleteLpError } = await this.supabase
@@ -471,7 +474,7 @@ export class ProjectDatabase {
             // 5. Re-link atoms to the newly inserted sessions
             const sessionAtomInserts = [];
             sessions.forEach(session => {
-                const sessionRow = insertedSessions === null || insertedSessions === void 0 ? void 0 : insertedSessions.find(s => s.session_number === session.session);
+                const sessionRow = insertedSessions === null || insertedSessions === void 0 ? void 0 : insertedSessions.find((s) => s.session_number === session.session);
                 if (sessionRow && session.atoms && session.atoms.length > 0) {
                     session.atoms.forEach(atom => {
                         const atomId = atomMap.get(atom.question);

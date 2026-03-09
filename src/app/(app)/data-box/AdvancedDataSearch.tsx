@@ -10,6 +10,7 @@ import { searchPapers, SearchResult } from '@/lib/paper-utils';
 import { uploadLocalPdf } from '@/lib/paper-actions';
 import { useToast } from '@/hooks/use-toast';
 import { ZoteroImportDialog } from './ZoteroImportDialog';
+import { useConectores } from '@/contexts/ConectorContext';
 
 interface AdvancedDataSearchProps {
     onAddPaper: (paper: any) => void;
@@ -24,10 +25,12 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
     const [searchInitiated, setSearchInitiated] = useState(false);
     const [isZoteroOpen, setIsZoteroOpen] = useState(false);
 
-    // Conector-like configuration
+    const { isConectorEnabled, toggleConector } = useConectores();
+    const isSemanticScholarEnabled = isConectorEnabled('semantic_scholar');
+    const isZoteroEnabled = isConectorEnabled('zotero_sync');
+
+    // Conector-like configuration for local-only sources
     const [enabledSources, setEnabledSources] = useState({
-        semanticScholar: true,
-        zotero: true,
         bibtex: true,
         arxiv: true
     });
@@ -35,8 +38,14 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
     const { toast } = useToast();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-    const toggleSource = (source: keyof typeof enabledSources) => {
-        setEnabledSources(prev => ({ ...prev, [source]: !prev[source] }));
+    const toggleSource = async (source: string) => {
+        if (source === 'semantic_scholar') {
+            await toggleConector('semantic_scholar', !isSemanticScholarEnabled);
+        } else if (source === 'zotero_sync') {
+            await toggleConector('zotero_sync', !isZoteroEnabled);
+        } else {
+            setEnabledSources(prev => ({ ...prev, [source]: !prev[source as keyof typeof enabledSources] }));
+        }
     };
 
     const handleSearch = async () => {
@@ -204,7 +213,7 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                         <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     </div>
-                    {enabledSources.semanticScholar ? (
+                    {isSemanticScholarEnabled ? (
                         <Input
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
@@ -224,7 +233,7 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
                     <div className="absolute inset-y-1.5 right-1.5 flex items-center">
                         <Button
                             onClick={handleSearch}
-                            disabled={isSearching || !enabledSources.semanticScholar}
+                            disabled={isSearching || !isSemanticScholarEnabled}
                             className="rounded-full bg-[#C8B6FF] hover:bg-[#B8A6EF] text-black h-9 px-6 font-medium"
                         >
                             {isSearching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Buscar'}
@@ -232,7 +241,7 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
                     </div>
                 </div>
                 <div className="flex items-center gap-2 px-2">
-                    {enabledSources.zotero && (
+                    {isZoteroEnabled && (
                         <Button
                             variant="outline"
                             onClick={() => setIsZoteroOpen(true)}
@@ -266,18 +275,18 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
             <div className="flex flex-wrap gap-2 items-center text-xs text-muted-foreground bg-muted/20 p-3 rounded-xl border border-border/50">
                 <span className="font-bold mr-2">Fuentes:</span>
                 <Badge
-                    variant={enabledSources.semanticScholar ? "default" : "outline"}
+                    variant={isSemanticScholarEnabled ? "default" : "outline"}
                     className="cursor-pointer transition-all hover:scale-105"
-                    onClick={() => toggleSource('semanticScholar')}
+                    onClick={() => toggleSource('semantic_scholar')}
                 >
-                    Semantic Scholar {enabledSources.semanticScholar ? 'ON' : 'OFF'}
+                    Semantic Scholar {isSemanticScholarEnabled ? 'ON' : 'OFF'}
                 </Badge>
                 <Badge
-                    variant={enabledSources.zotero ? "default" : "outline"}
+                    variant={isZoteroEnabled ? "default" : "outline"}
                     className="cursor-pointer transition-all hover:scale-105"
-                    onClick={() => toggleSource('zotero')}
+                    onClick={() => toggleSource('zotero_sync')}
                 >
-                    Zotero {enabledSources.zotero ? 'ON' : 'OFF'}
+                    Zotero {isZoteroEnabled ? 'ON' : 'OFF'}
                 </Badge>
                 <Badge
                     variant={enabledSources.arxiv ? "default" : "outline"}

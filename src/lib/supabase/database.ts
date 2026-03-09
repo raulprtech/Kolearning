@@ -213,7 +213,15 @@ export const convertLearningPathItemFromDB = (lpRow: LearningPathRow): LearningP
 
 // Database operations
 export class ProjectDatabase {
-  private supabase = createClient()
+  private supabase;
+
+  constructor(supabaseClient?: any) {
+    this.supabase = supabaseClient || createClient();
+  }
+
+  public getClient() {
+    return this.supabase;
+  }
 
   async getProjects(userId: string): Promise<Project[]> {
     console.log('[DB] Getting projects for user:', userId);
@@ -231,7 +239,7 @@ export class ProjectDatabase {
     }
 
     console.log(`[DB] ✅ Found ${data.length} projects in database`);
-    const projects = (data || []).map(project => convertProjectFromDBSync(project));
+    const projects = (data || []).map((project: any) => convertProjectFromDBSync(project));
     console.log(`[DB] ✅ Converted ${projects.length} projects`);
     return projects;
   }
@@ -261,7 +269,7 @@ export class ProjectDatabase {
 
     if (error) throw error
 
-    return (data || []).map(project => convertProjectFromDBSync(project));
+    return (data || []).map((project: any) => convertProjectFromDBSync(project));
   }
 
   async getArchivedProjects(userId: string): Promise<Project[]> {
@@ -274,7 +282,7 @@ export class ProjectDatabase {
 
     if (error) throw error
 
-    return (data || []).map(project => convertProjectFromDBSync(project));
+    return (data || []).map((project: any) => convertProjectFromDBSync(project));
   }
 
   async getSourceContent(sourceId: string): Promise<string> {
@@ -324,6 +332,7 @@ export class ProjectDatabase {
     logDb(`✅ Project created with ID: ${projectId}`);
 
     // Create atoms
+    const atomMap = new Map();
     if (project.atoms.length > 0) {
       logDb(`Inserting ${project.atoms.length} atoms...`);
       const { data: createdAtoms, error: atomsError } = await this.supabase
@@ -354,63 +363,62 @@ export class ProjectDatabase {
       logDb(`✅ ${createdAtoms?.length} atoms inserted`);
 
       // Store created atoms for mapping to sessions
-      const atomMap = new Map();
-      createdAtoms?.forEach(a => {
+      createdAtoms?.forEach((a: any) => {
         atomMap.set(a.question, a.id);
       });
+    }
 
-      // Create sessions
-      if (project.sessions && project.sessions.length > 0) {
-        logDb(`Inserting ${project.sessions.length} sessions...`);
-        const { data: sessionsData, error: sessionsError } = await this.supabase
-          .from('sessions')
-          .insert(
-            project.sessions.map(session => ({
-              project_id: projectId,
-              session_number: session.session,
-              type: session.type,
-              questions: session.questions,
-              duration: session.duration,
-              status: session.status,
-              phase: session.phase || 'calibration',
-              question_formats: session.questionFormats,
-            }))
-          )
-          .select('id, session_number');
+    // Create sessions
+    if (project.sessions && project.sessions.length > 0) {
+      logDb(`Inserting ${project.sessions.length} sessions...`);
+      const { data: sessionsData, error: sessionsError } = await this.supabase
+        .from('sessions')
+        .insert(
+          project.sessions.map(session => ({
+            project_id: projectId,
+            session_number: session.session,
+            type: session.type,
+            questions: session.questions,
+            duration: session.duration,
+            status: session.status,
+            phase: session.phase || 'calibration',
+            question_formats: session.questionFormats,
+          }))
+        )
+        .select('id, session_number');
 
-        if (sessionsError) {
-          logDb(`❌ Failed to insert sessions: ${sessionsError.message}`);
-          throw sessionsError;
+      if (sessionsError) {
+        logDb(`❌ Failed to insert sessions: ${sessionsError.message}`);
+        throw sessionsError;
+      }
+      logDb(`✅ Sessions inserted`);
+
+      // Create session-atom relationships
+      const sessionAtomInserts: any[] = [];
+      project.sessions.forEach(session => {
+        const sessionData = sessionsData?.find((s: any) => s.session_number === session.session);
+        if (sessionData && session.atoms.length > 0) {
+          session.atoms.forEach(atom => {
+            const atomId = atomMap.get(atom.question);
+            if (atomId) {
+              sessionAtomInserts.push({
+                session_id: sessionData.id,
+                atom_id: atomId,
+              });
+            }
+          });
         }
-        logDb(`✅ Sessions inserted`);
+      });
 
-        // Create session-atom relationships
-        const sessionAtomInserts: any[] = [];
-        project.sessions.forEach(session => {
-          const sessionData = sessionsData?.find(s => s.session_number === session.session);
-          if (sessionData && session.atoms.length > 0) {
-            session.atoms.forEach(atom => {
-              const atomId = atomMap.get(atom.question);
-              if (atomId) {
-                sessionAtomInserts.push({
-                  session_id: sessionData.id,
-                  atom_id: atomId,
-                });
-              }
-            });
-          }
-        });
-
-        if (sessionAtomInserts.length > 0) {
-          logDb(`Linking ${sessionAtomInserts.length} atoms to sessions...`);
-          const { error: linkError } = await this.supabase
-            .from('session_atoms')
-            .insert(sessionAtomInserts);
-          if (linkError) {
-            logDb(`⚠️ Failed to link atoms to sessions: ${linkError.message}`);
-          } else {
-            logDb(`✅ Atoms linked to sessions`);
-          }
+      if (sessionAtomInserts.length > 0) {
+        logDb(`Linking ${sessionAtomInserts.length} atoms to sessions...`);
+        const { error: linkError } = await this.supabase
+          .from('session_atoms')
+          .insert(sessionAtomInserts);
+        if (linkError) {
+          logDb(`⚠️ Failed to link atoms to sessions: ${linkError.message}`);
+        } else {
+          logDb(`✅ Atoms linked to sessions`);
         }
       }
     }
@@ -493,7 +501,7 @@ export class ProjectDatabase {
     if (atomsError) throw new Error(`Failed to fetch atoms for re-linking: ${atomsError.message}`);
 
     const atomMap = new Map();
-    atomsData.forEach(a => atomMap.set(a.question, a.id));
+    atomsData.forEach((a: any) => atomMap.set(a.question, a.id));
 
     // 2. Transactional operation: delete old items, then insert new ones
     // Delete old learning path items
@@ -546,7 +554,7 @@ export class ProjectDatabase {
       // 5. Re-link atoms to the newly inserted sessions
       const sessionAtomInserts: any[] = [];
       sessions.forEach(session => {
-        const sessionRow = insertedSessions?.find(s => s.session_number === session.session);
+        const sessionRow = insertedSessions?.find((s: any) => s.session_number === session.session);
         if (sessionRow && session.atoms && session.atoms.length > 0) {
           session.atoms.forEach(atom => {
             const atomId = atomMap.get(atom.question);

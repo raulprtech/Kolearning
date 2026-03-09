@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeServerConectores } from '@/infrastructure/connectors/index.server';
 import { ConectorManager } from '@/infrastructure/services/ConectorManager';
+import { ConectorService } from '@/infrastructure/services/ConectorService';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,8 +25,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const conectorService = new ConectorService();
+        const userId = 'user-any'; // En MVP el storage es global, pero logueamos algo.
+
         if (action === 'enable') {
-            initializeServerConectores(conectorIds);
+            for (const id of conectorIds) {
+                await conectorService.toggleConector(userId, id, true);
+            }
+            await initializeServerConectores(conectorIds);
             return NextResponse.json({
                 success: true,
                 message: `Server connectors initialized: ${conectorIds.join(', ')}`

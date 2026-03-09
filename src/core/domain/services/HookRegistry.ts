@@ -1,12 +1,28 @@
 type HookHandler = (...args: any[]) => any;
 
+declare global {
+    var hookRegistryActions: Map<string, HookHandler[]> | undefined;
+    var hookRegistryFilters: Map<string, HookHandler[]> | undefined;
+}
+
 /**
  * HookRegistry: A centralized event and data modification system.
  * Inspired by WordPress Hooks (Actions and Filters).
  */
 export class HookRegistry {
-    private static actions: Map<string, HookHandler[]> = new Map();
-    private static filters: Map<string, HookHandler[]> = new Map();
+    private static get actions(): Map<string, HookHandler[]> {
+        if (!globalThis.hookRegistryActions) {
+            globalThis.hookRegistryActions = new Map();
+        }
+        return globalThis.hookRegistryActions;
+    }
+
+    private static get filters(): Map<string, HookHandler[]> {
+        if (!globalThis.hookRegistryFilters) {
+            globalThis.hookRegistryFilters = new Map();
+        }
+        return globalThis.hookRegistryFilters;
+    }
 
     /**
      * Action: Register a function to be executed when a specific event occurs.
@@ -16,8 +32,12 @@ export class HookRegistry {
         if (!this.actions.has(tag)) {
             this.actions.set(tag, []);
         }
-        this.actions.get(tag)?.push(handler);
-        console.log(`[HookRegistry] Action registered for tag: ${tag}`);
+        const handlers = this.actions.get(tag)!;
+        // Evitar duplicados (comparación básica de referencia)
+        if (!handlers.includes(handler)) {
+            handlers.push(handler);
+            console.log(`[HookRegistry] Action registered for tag: ${tag} (${handlers.length} total)`);
+        }
     }
 
     /**
@@ -25,7 +45,7 @@ export class HookRegistry {
      */
     static doAction(tag: string, ...args: any[]) {
         const handlers = this.actions.get(tag);
-        if (handlers) {
+        if (handlers && handlers.length > 0) {
             console.log(`[HookRegistry] Executing actions for tag: ${tag} (${handlers.length} handlers)`);
             handlers.forEach(handler => {
                 try {
@@ -45,8 +65,11 @@ export class HookRegistry {
         if (!this.filters.has(tag)) {
             this.filters.set(tag, []);
         }
-        this.filters.get(tag)?.push(handler);
-        console.log(`[HookRegistry] Filter registered for tag: ${tag}`);
+        const handlers = this.filters.get(tag)!;
+        if (!handlers.includes(handler)) {
+            handlers.push(handler);
+            console.log(`[HookRegistry] Filter registered for tag: ${tag} (${handlers.length} total)`);
+        }
     }
 
     /**

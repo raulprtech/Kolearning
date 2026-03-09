@@ -78,7 +78,6 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
                         metadata: m.metadata
                     })));
                 } else {
-                    // Start a default conversation if none exists
                     const newId = await db.createConversation(user.id, 'Nueva conversación');
                     setConversationId(newId);
                     setMessages([]);
@@ -91,6 +90,56 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
         initChat();
     }, [user?.id, db]);
+
+    // REALTIME SUBSCRIPTION
+    useEffect(() => {
+        if (!conversationId) return;
+
+        console.log(`[AIContext] 🔔 Suscribiéndose a Realtime para: ${conversationId}`);
+        const supabase = db.getClient();
+
+        const channel = supabase
+            .channel(`chat:${conversationId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'chat_messages',
+                    filter: `conversation_id=eq.${conversationId}`
+                },
+                (payload: any) => {
+                    const newMessage = payload.new;
+                    console.log("[AIContext] 📩 Mensaje recibido vía Realtime:", newMessage);
+
+                    setMessages(prev => {
+                        // Evitar duplicados si el mensaje ya fue añadido por el flujo optimista del cliente
+                        // Pero para mensajes externos (model/wa), siempre añadirlos
+                        const alreadyExists = prev.some(m => m.id === newMessage.id || (m.content === newMessage.content && m.role === newMessage.role && (Date.now() - m.timestamp.getTime() < 5000)));
+
+                        if (alreadyExists) return prev;
+
+                        const msg: ChatMessage = {
+                            id: newMessage.id,
+                            role: newMessage.role as MessageRole,
+                            content: newMessage.content,
+                            timestamp: new Date(newMessage.created_at),
+                            status: 'sent',
+                            metadata: newMessage.metadata
+                        };
+                        return [...prev, msg];
+                    });
+                }
+            )
+            .subscribe((status: string) => {
+                console.log(`[AIContext] 📡 Realtime status: ${status}`);
+            });
+
+        return () => {
+            console.log(`[AIContext] 🔕 Cancelando suscripción Realtime: ${conversationId}`);
+            supabase.removeChannel(channel);
+        };
+    }, [conversationId, db]);
 
     const sendMessage = useCallback(async (content: string, attachments?: string[]) => {
         const userMsg: ChatMessage = {
