@@ -24,6 +24,8 @@ export interface IProjectRepository {
 
     // Sources
     getSourceContent(sourceId: string): Promise<string>;
+    updateSourceStatus(sourceId: string, status: string): Promise<void>;
+    addSource(projectId: string, source: Omit<Source, 'id'>): Promise<string>;
 
     // Paper Box operations
     getPapers(userId: string): Promise<Paper[]>;

@@ -1,20 +1,23 @@
-import { IConector, ConectorMetadata } from '../../core/domain/models/conector';
+import { ConectorMetadata } from '../../core/domain/models/conector';
 import { HookRegistry } from '../../core/domain/services/HookRegistry';
 import { TelegramAdapter } from '../messaging/TelegramAdapter';
+import { BaseConector } from '../../core/sdk/ConectorSDK';
 
-export class TelegramConector implements IConector {
+export class TelegramConector extends BaseConector {
     public metadata: ConectorMetadata = {
         id: 'telegram_sync',
         name: 'Telegram Sync',
         description: 'Sincroniza tus repasos con Telegram y permite responder desde allí.',
         icon: 'MessageSquareShare',
         version: '1.0.0',
-        author: 'Kolearning Team'
+        author: 'Kolearning Team',
+        category: 'Conectores de Canal'
     };
 
     private adapter: TelegramAdapter;
 
     constructor(botToken: string) {
+        super();
         this.adapter = new TelegramAdapter(botToken);
     }
 

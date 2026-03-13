@@ -1,10 +1,4 @@
-export interface ConectorMetadata {
-    id: string;
-    name: string;
-    description: string;
-    icon: string;
-    category: 'Conectores de Datos' | 'Conectores de Canal' | 'Conectores de Voz' | 'Conectores de Exportación' | 'Conectores de LMS' | 'Módulos de Gamificación' | 'Módulos de Analytics' | 'Módulos de Estudio Alternativos' | 'Launchers';
-}
+import { ConectorMetadata } from '../../domain/models/conector';
 
 export interface IUserConector {
     conectorId: string;

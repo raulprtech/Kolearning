@@ -1,29 +1,36 @@
 import { ConectorManager } from '../services/ConectorManager';
-import { TelegramConector } from './TelegramConector';
 import { SocratesConector } from './SocratesConector';
 import { WebNotificationConector } from './WebNotificationConector';
-import { GoogleTasksConector } from './GoogleTasksConector';
-// NOTE: WhatsAppConector is NOT imported here because it depends on
-// Node-only modules (baileys, sharp, fs, child_process, node:crypto).
-// It must only be initialized server-side via API routes.
-// See: src/infrastructure/connectors/index.server.ts
+import { SandboxConectorProxy } from '../../core/sandbox/SandboxProxy';
+import path from 'path';
 
 /**
  * initializeConectores: Bootstraps the active conectores based on user preferences.
- * Only initializes CLIENT-SAFE connectors. Server-only connectors (WhatsApp)
- * must be initialized via the /api/connectors/initialize API route.
+ * Now using SandboxConectorProxy for isolated execution where possible.
  */
 export const initializeConectores = (enabledConectorIds: string[]) => {
-    console.log('[Conectores] Initializing client-safe conectores...', enabledConectorIds);
+    console.log('[Conectores] Initializing conectores (with Sandboxing support)...', enabledConectorIds);
 
     if (enabledConectorIds.includes('telegram_sync')) {
-        const telegram = new TelegramConector('MOCK_TOKEN');
-        ConectorManager.registerConector(telegram);
+        const telegramProxy = new SandboxConectorProxy({
+            id: 'telegram_sync',
+            name: 'Telegram Sync',
+            description: 'Aislado en Sandbox para mayor seguridad.',
+            icon: 'MessageSquareShare',
+            category: 'Conectores de Canal'
+        }, path.resolve('src/infrastructure/connectors/sandboxed/TelegramWorker.ts'));
+        ConectorManager.registerConector(telegramProxy);
     }
 
     if (enabledConectorIds.includes('persona_socrates')) {
-        const socrates = new SocratesConector();
-        ConectorManager.registerConector(socrates);
+        const socratesProxy = new SandboxConectorProxy({
+            id: 'persona_socrates',
+            name: 'Sócrates',
+            description: 'Tutor filosófico aislado en Sandbox.',
+            icon: 'Brain',
+            category: 'Módulos de Estudio Alternativos'
+        }, path.resolve('src/infrastructure/connectors/sandboxed/SocratesWorker.ts'));
+        ConectorManager.registerConector(socratesProxy);
     }
 
     if (enabledConectorIds.includes('web_notifications')) {
@@ -32,8 +39,19 @@ export const initializeConectores = (enabledConectorIds: string[]) => {
     }
 
     if (enabledConectorIds.includes('google_tasks_sync')) {
-        const googleTasks = new GoogleTasksConector();
-        ConectorManager.registerConector(googleTasks);
+        const googleProxy = new SandboxConectorProxy({
+            id: 'google_tasks_sync',
+            name: 'Google Tasks Sync',
+            description: 'Sincronización aislada de tareas.',
+            icon: 'CheckSquare',
+            category: 'Conectores de Exportación'
+        }, path.resolve('src/infrastructure/connectors/sandboxed/GoogleTasksWorker.ts'));
+        ConectorManager.registerConector(googleProxy);
+    }
+
+    if (enabledConectorIds.includes('semantic_scholar')) {
+        const ss = new (require('./SemanticScholarConector').SemanticScholarConector)();
+        ConectorManager.registerConector(ss);
     }
 
     // WhatsApp is skipped here — it's server-only.

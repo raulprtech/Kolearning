@@ -1,3 +1,4 @@
+import { DynamicLoaderService } from './DynamicLoaderService';
 export class ConectorManager {
     // Usar un Map global para persistir entre recargas en modo desarrollo
     static get registeredConectores() {
@@ -28,6 +29,20 @@ export class ConectorManager {
         }
         catch (error) {
             console.error(`[ConectorManager] Error activando conector ${conector.metadata.id}:`, error);
+        }
+    }
+    /**
+     * loadAndRegisterConector: Dynamically loads a conector from a path and registers it.
+     */
+    static async loadAndRegisterConector(modulePath) {
+        try {
+            const conector = await DynamicLoaderService.loadFromPath(modulePath);
+            this.registerConector(conector);
+            return conector;
+        }
+        catch (error) {
+            console.error(`[ConectorManager] Failed to load and register conector from ${modulePath}:`, error);
+            throw error;
         }
     }
     static unregisterConector(conectorId) {

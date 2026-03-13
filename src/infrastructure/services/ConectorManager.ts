@@ -1,4 +1,5 @@
 import { IConector } from '../../core/domain/models/conector';
+import { DynamicLoaderService } from './DynamicLoaderService';
 
 declare global {
     var conectorManager: Map<string, IConector> | undefined;
@@ -32,6 +33,20 @@ export class ConectorManager {
             console.log(`[ConectorManager] Conector registrado y activado: ${conector.metadata.name} (${conector.metadata.id})`);
         } catch (error) {
             console.error(`[ConectorManager] Error activando conector ${conector.metadata.id}:`, error);
+        }
+    }
+
+    /**
+     * loadAndRegisterConector: Dynamically loads a conector from a path and registers it.
+     */
+    static async loadAndRegisterConector(modulePath: string): Promise<IConector> {
+        try {
+            const conector = await DynamicLoaderService.loadFromPath(modulePath);
+            this.registerConector(conector);
+            return conector;
+        } catch (error) {
+            console.error(`[ConectorManager] Failed to load and register conector from ${modulePath}:`, error);
+            throw error;
         }
     }
 

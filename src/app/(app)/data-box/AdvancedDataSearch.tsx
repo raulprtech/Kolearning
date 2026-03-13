@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Search, Loader2, Upload, BookOpen, AlertCircle, Check, Download, ExternalLink } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { searchPapers, SearchResult } from '@/lib/paper-utils';
+import { SearchResult } from '@/lib/paper-utils';
 import { uploadLocalPdf } from '@/lib/paper-actions';
 import { useToast } from '@/hooks/use-toast';
 import { ZoteroImportDialog } from './ZoteroImportDialog';
 import { useConectores } from '@/contexts/ConectorContext';
+import { DataRegistry } from '../../../core/sdk/ConectorSDK';
+import { UISlot } from '@/components/connectors/UISlot';
 
 interface AdvancedDataSearchProps {
     onAddPaper: (paper: any) => void;
@@ -36,7 +38,7 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
     });
 
     const { toast } = useToast();
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const toggleSource = async (source: string) => {
         if (source === 'semantic_scholar') {
@@ -52,18 +54,46 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
         if (!query.trim()) return;
         setIsSearching(true);
         setSearchInitiated(true);
-        try {
-            const searchResults = await searchPapers(query);
-            setResults(searchResults);
-        } catch (error) {
-            toast({
-                title: "Error de búsqueda",
-                description: "No se pudieron obtener resultados de Semantic Scholar.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsSearching(false);
+        
+        const allResults: SearchResult[] = [];
+        const providerPairs = DataRegistry.getAllProviders();
+
+        for (const [id, provider] of providerPairs) {
+            let isProviderEnabled = false;
+            
+            if (id === 'semantic_scholar' || id === 'zotero_sync') {
+                isProviderEnabled = isConectorEnabled(id);
+            } else if (id in enabledSources) {
+                isProviderEnabled = enabledSources[id as keyof typeof enabledSources];
+            }
+
+            if (isProviderEnabled) {
+                try {
+                    const providerResults = await provider.search(query);
+                    allResults.push(...providerResults);
+                } catch (error) {
+                    console.error(`Error searching with provider ${id}:`, error);
+                    toast({
+                        title: `Error en ${id}`,
+                        description: `No se pudieron obtener resultados de esta fuente.`,
+                        variant: "destructive",
+                    });
+                }
+            }
         }
+
+        // Add ArXiv fallback if no dynamic provider handled it yet 
+        // (In a future step, ArXiv should also be a dynamic connector)
+        if (enabledSources.arxiv && !allResults.some(r => r.source === 'ArXiv')) {
+            try {
+                const { searchArxiv } = await import('@/lib/paper-utils');
+                const arxivResults = await searchArxiv(query);
+                allResults.push(...arxivResults);
+            } catch (e) {}
+        }
+
+        setResults(allResults);
+        setIsSearching(false);
     };
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -201,7 +231,6 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
         if (e.target.files) {
             const files = Array.from(e.target.files);
             await processFiles(files);
-            // Reset input so the same file can be selected again
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     }, [processFiles]);
@@ -247,7 +276,7 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
                             onClick={() => setIsZoteroOpen(true)}
                             className="rounded-full h-10 gap-2 border-border/50 hover:bg-muted text-sm px-4 text-orange-600 border-orange-200 bg-orange-50/30 transition-all active:scale-95"
                         >
-                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M22,5.26c0-0.41-0.34-0.75-0.75-0.75H2.74C2.33,4.52,2,4.86,2,5.26v1.49c0,0.41,0.33,0.75,0.74,0.75h18.52 c0.41,0,0.74-0.33,0.74-0.75V5.26z M3.8,19.48c0,0.41,0.33,0.74,0.74,0.74h14.91c0.41,0,0.74-0.33,0.74-0.74V8.49H3.8V19.48z" /></svg>
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M22,5.26c0-0.41-0.34-0.75-0.75-0.75H2.74C2.33,4.52,2,4.86,2,5.26v1.49c0,0.41,0.33,0.75,0.74,0.75h18.52 c0.41,0,0.74-0.33,0.74-0.75V5.26z M3.8,19.48c0,0.41,0.33,0.74,0.74,0.74h14.91c0.41,0,0.74-0.74,0.74-0.74V8.49H3.8V19.48z" /></svg>
                             Zotero
                         </Button>
                     )}
@@ -301,6 +330,11 @@ export function AdvancedDataSearch({ onAddPaper, onPrefillManual }: AdvancedData
                 >
                     Carga Manual (Obligatorio)
                 </Badge>
+
+                {/* DataBox Toolbar Slot */}
+                <div className="ml-auto border-l border-border/50 pl-2">
+                    <UISlot slotId="databox_toolbar" />
+                </div>
             </div>
 
             <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest mt-2 bg-gradient-to-r from-transparent via-muted-foreground/20 to-transparent py-1">

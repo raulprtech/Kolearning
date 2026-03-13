@@ -1,13 +1,16 @@
 import { HookRegistry } from '../../core/domain/services/HookRegistry';
-export class GoogleTasksConector {
+import { BaseConector } from '../../core/sdk/ConectorSDK';
+export class GoogleTasksConector extends BaseConector {
     constructor() {
+        super(...arguments);
         this.metadata = {
             id: 'google_tasks_sync',
             name: 'Google Tasks Sync',
             description: 'Sincroniza los resultados de tus tareas con Google Tasks.',
             icon: 'CheckSquare',
             version: '1.0.0',
-            author: 'Kolearning Team'
+            author: 'Kolearning Team',
+            category: 'Conectores de Exportación'
         };
     }
     register() {

@@ -296,6 +296,15 @@ export class ProjectDatabase {
     return data.content || '';
   }
 
+  async updateSourceStatus(sourceId: string, status: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('sources')
+      .update({ status })
+      .eq('id', sourceId);
+
+    if (error) throw error;
+  }
+
   async createProject(userId: string, project: Omit<Project, 'id'>, log?: (msg: string) => void): Promise<string> {
     const logDb = (msg: string) => {
       console.log(`[DB] ${msg}`);

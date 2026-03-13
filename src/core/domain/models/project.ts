@@ -20,11 +20,14 @@ export type LearningPathItem = {
     questionFormats?: string;
 };
 
+export type SourceStatus = 'not_started' | 'reading' | 'processed' | 'mastered';
+
 export type Source = {
     id?: string;
     name: string;
     type: string;
     content: string;
+    status: SourceStatus;
 };
 
 export type Project = {

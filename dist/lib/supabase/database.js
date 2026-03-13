@@ -274,6 +274,7 @@ export class ProjectDatabase {
         const projectId = projectData.id;
         logDb(`✅ Project created with ID: ${projectId}`);
         // Create atoms
+        const atomMap = new Map();
         if (project.atoms.length > 0) {
             logDb(`Inserting ${project.atoms.length} atoms...`);
             const { data: createdAtoms, error: atomsError } = await this.supabase
@@ -300,58 +301,57 @@ export class ProjectDatabase {
             }
             logDb(`✅ ${createdAtoms === null || createdAtoms === void 0 ? void 0 : createdAtoms.length} atoms inserted`);
             // Store created atoms for mapping to sessions
-            const atomMap = new Map();
             createdAtoms === null || createdAtoms === void 0 ? void 0 : createdAtoms.forEach((a) => {
                 atomMap.set(a.question, a.id);
             });
-            // Create sessions
-            if (project.sessions && project.sessions.length > 0) {
-                logDb(`Inserting ${project.sessions.length} sessions...`);
-                const { data: sessionsData, error: sessionsError } = await this.supabase
-                    .from('sessions')
-                    .insert(project.sessions.map(session => ({
-                    project_id: projectId,
-                    session_number: session.session,
-                    type: session.type,
-                    questions: session.questions,
-                    duration: session.duration,
-                    status: session.status,
-                    phase: session.phase || 'calibration',
-                    question_formats: session.questionFormats,
-                })))
-                    .select('id, session_number');
-                if (sessionsError) {
-                    logDb(`❌ Failed to insert sessions: ${sessionsError.message}`);
-                    throw sessionsError;
+        }
+        // Create sessions
+        if (project.sessions && project.sessions.length > 0) {
+            logDb(`Inserting ${project.sessions.length} sessions...`);
+            const { data: sessionsData, error: sessionsError } = await this.supabase
+                .from('sessions')
+                .insert(project.sessions.map(session => ({
+                project_id: projectId,
+                session_number: session.session,
+                type: session.type,
+                questions: session.questions,
+                duration: session.duration,
+                status: session.status,
+                phase: session.phase || 'calibration',
+                question_formats: session.questionFormats,
+            })))
+                .select('id, session_number');
+            if (sessionsError) {
+                logDb(`❌ Failed to insert sessions: ${sessionsError.message}`);
+                throw sessionsError;
+            }
+            logDb(`✅ Sessions inserted`);
+            // Create session-atom relationships
+            const sessionAtomInserts = [];
+            project.sessions.forEach(session => {
+                const sessionData = sessionsData === null || sessionsData === void 0 ? void 0 : sessionsData.find((s) => s.session_number === session.session);
+                if (sessionData && session.atoms.length > 0) {
+                    session.atoms.forEach(atom => {
+                        const atomId = atomMap.get(atom.question);
+                        if (atomId) {
+                            sessionAtomInserts.push({
+                                session_id: sessionData.id,
+                                atom_id: atomId,
+                            });
+                        }
+                    });
                 }
-                logDb(`✅ Sessions inserted`);
-                // Create session-atom relationships
-                const sessionAtomInserts = [];
-                project.sessions.forEach(session => {
-                    const sessionData = sessionsData === null || sessionsData === void 0 ? void 0 : sessionsData.find((s) => s.session_number === session.session);
-                    if (sessionData && session.atoms.length > 0) {
-                        session.atoms.forEach(atom => {
-                            const atomId = atomMap.get(atom.question);
-                            if (atomId) {
-                                sessionAtomInserts.push({
-                                    session_id: sessionData.id,
-                                    atom_id: atomId,
-                                });
-                            }
-                        });
-                    }
-                });
-                if (sessionAtomInserts.length > 0) {
-                    logDb(`Linking ${sessionAtomInserts.length} atoms to sessions...`);
-                    const { error: linkError } = await this.supabase
-                        .from('session_atoms')
-                        .insert(sessionAtomInserts);
-                    if (linkError) {
-                        logDb(`⚠️ Failed to link atoms to sessions: ${linkError.message}`);
-                    }
-                    else {
-                        logDb(`✅ Atoms linked to sessions`);
-                    }
+            });
+            if (sessionAtomInserts.length > 0) {
+                logDb(`Linking ${sessionAtomInserts.length} atoms to sessions...`);
+                const { error: linkError } = await this.supabase
+                    .from('session_atoms')
+                    .insert(sessionAtomInserts);
+                if (linkError) {
+                    logDb(`⚠️ Failed to link atoms to sessions: ${linkError.message}`);
+                }
+                else {
+                    logDb(`✅ Atoms linked to sessions`);
                 }
             }
         }

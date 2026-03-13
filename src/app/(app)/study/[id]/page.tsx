@@ -61,6 +61,7 @@ import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { UISlot } from "@/components/connectors/UISlot";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Project, Atom, LearningPathItem, Source } from "@/contexts/ProjectContext";
@@ -276,7 +277,7 @@ function ProjectDetails() {
     const router = useRouter();
     const { toast } = useToast();
     const slug = params.id as string;
-    const { projects, completedProjects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, deleteSource, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan, getSourceContent } = useProjects();
+    const { projects, completedProjects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, deleteSource, updateSourceStatus, addSource, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan, getSourceContent } = useProjects();
     const { user } = useAuth();
     const isAuthenticated = !!user;
 
@@ -470,6 +471,52 @@ function ProjectDetails() {
                 description: `"${sourceToDelete.source.name}" ha sido eliminada del proyecto.`
             });
             setSourceToDelete(null);
+        }
+    };
+
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const isPdf = file.type === 'application/pdf';
+        const isText = file.type === 'text/plain' || file.name.endsWith('.md');
+
+        if (!isPdf && !isText) {
+            toast({
+                title: "Formato no soportated",
+                description: "Por ahora solo soportamos archivos .pdf, .txt o .md",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            let content = "";
+            if (isText) {
+                content = await file.text();
+            } else {
+                // PDF processing would normally happen via a service, 
+                // for MVP we'll treat it as a placeholder or use a simple extractor if available.
+                content = `CONTENIDO DEL PDF: ${file.name} (Procesamiento pendiente)`;
+            }
+
+            const newSource: Omit<Source, 'id'> = {
+                name: file.name,
+                type: isPdf ? 'pdf' : 'text',
+                content,
+                status: 'not_started'
+            };
+
+            await addSource(project.id, newSource);
+        } catch (error) {
+            console.error("Error extraiendo contenido del archivo:", error);
+            toast({
+                title: "Error",
+                description: "No se pudo leer el archivo.",
+                variant: "destructive"
+            });
+        } finally {
+            event.target.value = '';
         }
     };
 
@@ -704,22 +751,45 @@ function ProjectDetails() {
 
             {/* Left Panel: Data Box (Sources) */}
             <aside className={cn("border-r bg-muted/10 flex flex-col h-full shrink-0 transition-all duration-300", isSourcesMinimized ? "w-16" : "w-1/3")}>
+                <input 
+                    type="file" 
+                    id="source-file-upload" 
+                    className="hidden" 
+                    accept=".pdf,.txt,.md"
+                    onChange={handleFileUpload}
+                />
                 <div className={cn("p-4 border-b bg-background/50 backdrop-blur-sm sticky top-0 z-10 flex items-center", isSourcesMinimized ? "justify-center" : "justify-between")}>
                     {!isSourcesMinimized && (
-                        <h2 className="text-lg font-semibold flex items-center gap-2">
-                            <Library className="h-4 w-4 text-primary" />
-                            Fuentes
-                        </h2>
+                        <div className="flex flex-col gap-1">
+                            <h2 className="text-lg font-semibold flex items-center gap-2">
+                                <Library className="h-4 w-4 text-primary" />
+                                Fuentes
+                            </h2>
+                            <UISlot slotId="project_sources_sidebar" className="mt-1" />
+                        </div>
                     )}
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        className={cn("h-8 w-8 p-0 shrink-0", isSourcesMinimized && "w-10 h-10")}
-                        onClick={() => setIsSourcesMinimized(!isSourcesMinimized)}
-                        title={isSourcesMinimized ? "Expandir fuentes" : "Minimizar fuentes"}
-                    >
-                        {isSourcesMinimized ? <PanelLeftOpen className="h-5 w-5 text-primary" /> : <PanelLeftClose className="h-5 w-5 text-muted-foreground hover:text-foreground" />}
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        {!isSourcesMinimized && (
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 gap-2"
+                                onClick={() => document.getElementById('source-file-upload')?.click()}
+                            >
+                                <Plus className="h-3 w-3" />
+                                Añadir
+                            </Button>
+                        )}
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className={cn("h-8 w-8 p-0 shrink-0", isSourcesMinimized && "w-10 h-10")}
+                            onClick={() => setIsSourcesMinimized(!isSourcesMinimized)}
+                            title={isSourcesMinimized ? "Expandir fuentes" : "Minimizar fuentes"}
+                        >
+                            {isSourcesMinimized ? <PanelLeftOpen className="h-5 w-5 text-primary" /> : <PanelLeftClose className="h-5 w-5 text-muted-foreground hover:text-foreground" />}
+                        </Button>
+                    </div>
                 </div>
 
                 <ScrollArea className="flex-1 p-4">
@@ -744,6 +814,36 @@ function ProjectDetails() {
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
+                                    <div className="flex flex-col gap-2 mt-2">
+                                        <div className="flex items-center justify-between px-1">
+                                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Estado</span>
+                                            <Select 
+                                              value={source.status || 'not_started'} 
+                                              onValueChange={(val) => updateSourceStatus(project.id, index, val as any)}
+                                            >
+                                              <SelectTrigger className="h-6 w-24 text-[10px] px-2 bg-background/50">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="not_started">Pendiente</SelectItem>
+                                                <SelectItem value="reading">Leyendo</SelectItem>
+                                                <SelectItem value="processed">Procesado</SelectItem>
+                                                <SelectItem value="mastered">Dominado</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="grid grid-cols-4 gap-1">
+                                            {(['not_started', 'reading', 'processed', 'mastered'] as const).map((s) => (
+                                              <div 
+                                                key={s} 
+                                                className={cn(
+                                                  "h-1 rounded-full",
+                                                  (source.status === s || (!source.status && s === 'not_started')) ? "bg-primary" : "bg-muted"
+                                                )}
+                                              />
+                                            ))}
+                                        </div>
                                     </div>
                                     {/* Hover Actions */}
                                     {!isSourcesMinimized && (
@@ -777,6 +877,47 @@ function ProjectDetails() {
                                 </>
                             )}
                         </div>
+                    )}
+                    
+                    {!isSourcesMinimized && (
+                      <div className="mt-8 pt-8 border-t border-border/50">
+                         <div className="flex justify-between items-center mb-4 px-2">
+                              <h3 className="text-sm font-semibold flex items-center gap-2">
+                                  <BrainCircuit className="h-4 w-4 text-primary" />
+                                  Átomos
+                              </h3>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowAllAtoms(!showAllAtoms)} title={showAllAtoms ? "Ver menos" : "Ver todos"}>
+                                  <MoreVertical className="h-4 w-4" />
+                              </Button>
+                          </div>
+                          <div className="space-y-2">
+                              {displayedAtoms && displayedAtoms.length > 0 ? (
+                                displayedAtoms.map((atom, idx) => (
+                                  <div key={idx} className="p-2 bg-card/30 border rounded-md text-xs group relative hover:border-primary/50 transition-colors">
+                                      <p className="font-medium line-clamp-1">{atom.question}</p>
+                                      <p className="text-muted-foreground line-clamp-1 mt-0.5">{atom.answer}</p>
+                                      <div className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5 bg-background/80 backdrop-blur-sm p-0.5 rounded border">
+                                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setAtomAction({ mode: 'view', atom, index: idx })}>
+                                              <Eye className="h-3 w-3" />
+                                          </Button>
+                                          {isUserProject && (
+                                              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setAtomAction({ mode: 'edit', atom, index: idx })}>
+                                                  <Pencil className="h-3 w-3" />
+                                              </Button>
+                                          )}
+                                      </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-center text-[10px] text-muted-foreground py-4 italic">No hay átomos generados</p>
+                              )}
+                              {isUserProject && (
+                                <Button variant="outline" size="sm" className="w-full text-[10px] h-7 mt-2 dashed" onClick={() => setAtomAction({ mode: 'create', atom: { type: 'text_card', question: '', answer: '' }, index: null })}>
+                                    <Plus className="h-3 w-3 mr-1" /> Nuevo Átomo
+                                </Button>
+                              )}
+                          </div>
+                      </div>
                     )}
                 </ScrollArea>
             </aside>
@@ -880,83 +1021,6 @@ function ProjectDetails() {
 
                             <ConceptMapSection project={project} />
 
-                            <div>
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-semibold flex items-center gap-2">
-                                        Átomos de conocimiento
-                                    </h2>
-                                    <div className="flex gap-2">
-                                        {isUserProject && (
-                                            <Button size="sm" onClick={() => setAtomAction({ mode: 'create', atom: { type: 'text_card', question: '', answer: '' }, index: null })}>
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Nuevo Átomo
-                                            </Button>
-                                        )}
-                                        <Button variant="outline" size="sm" onClick={() => setShowAllAtoms(!showAllAtoms)}>
-                                            {showAllAtoms ? "Ver menos" : `Ver todas (${project.atoms?.length || 0})`}
-                                        </Button>
-                                    </div>
-                                </div>
-                                <Card className="bg-card/50">
-                                    {displayedAtoms && displayedAtoms.length > 0 ? (
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead className="w-16">Tipo</TableHead>
-                                                    <TableHead>Término</TableHead>
-                                                    <TableHead>Definición</TableHead>
-                                                    <TableHead className="text-right">Acciones</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {displayedAtoms.map((atom, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell className="align-top">
-                                                            {atom.type === 'video_review' ? (
-                                                                <div className="flex items-center justify-center p-2 bg-red-500/10 text-red-500 rounded-md" title="Revisión de Video"><Play className="h-4 w-4" /></div>
-                                                            ) : atom.type === 'mini_game' ? (
-                                                                <div className="flex items-center justify-center p-2 bg-purple-500/10 text-purple-500 rounded-md" title="Mini-Juego"><Target className="h-4 w-4" /></div>
-                                                            ) : (
-                                                                <div className="flex items-center justify-center p-2 bg-blue-500/10 text-blue-500 rounded-md" title="Tarjeta de Texto"><Book className="h-4 w-4" /></div>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="font-medium align-top max-w-xs truncate">{atom.question}</TableCell>
-                                                        <TableCell className="text-muted-foreground align-top max-w-sm truncate">{atom.answer}</TableCell>
-                                                        <TableCell className="text-right align-top">
-                                                            <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'view', atom, index })}>
-                                                                <Eye className="h-4 w-4 mr-2" />
-                                                                Ver
-                                                            </Button>
-                                                            {isUserProject && (
-                                                                <>
-                                                                    <Button variant="ghost" size="sm" onClick={() => setAtomAction({ mode: 'edit', atom, index })}>
-                                                                        <Pencil className="h-4 w-4 mr-2" />
-                                                                        Editar
-                                                                    </Button>
-                                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setAtomAction({ mode: 'delete', atom, index })}>
-                                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                                        Eliminar
-                                                                    </Button>
-                                                                </>
-                                                            )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    ) : (
-                                        <CardContent className="text-center py-8">
-                                            <p className="text-muted-foreground mb-4">No hay átomos en este proyecto.</p>
-                                            {isUserProject && (
-                                                <Button onClick={() => setAtomAction({ mode: 'create', atom: { type: 'text_card', question: '', answer: '' }, index: null })}>
-                                                    <Plus className="h-4 w-4 mr-2" />
-                                                    Crear primer átomo
-                                                </Button>
-                                            )}
-                                        </CardContent>
-                                    )}
-                                </Card>
-                            </div>
                         </div>
                     </div>
                 </ScrollArea>

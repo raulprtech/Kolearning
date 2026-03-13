@@ -1,13 +1,16 @@
 import { HookRegistry } from '../../core/domain/services/HookRegistry';
-export class WebNotificationConector {
+import { BaseConector } from '../../core/sdk/ConectorSDK';
+export class WebNotificationConector extends BaseConector {
     constructor() {
+        super(...arguments);
         this.metadata = {
             id: 'web_notifications',
             name: 'Notificaciones Web',
             description: 'Recibe alertas en tu navegador cuando Kolearning complete una tarea.',
             icon: 'Bell',
             version: '1.0.0',
-            author: 'Kolearning Team'
+            author: 'Kolearning Team',
+            category: 'Conectores de Canal'
         };
     }
     register() {

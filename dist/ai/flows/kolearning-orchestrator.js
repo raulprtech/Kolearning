@@ -4,6 +4,8 @@ import { searchPapers } from '@/lib/paper-utils';
 import { HookRegistry } from '@/core/domain/services/HookRegistry';
 import { initializeConectores } from '@/infrastructure/connectors';
 import { listGoogleTasksTool, createGoogleTaskTool } from '../tools/google-tasks';
+import { scheduleTaskTool } from '../tools/scheduler-tools';
+import { searchDeepMemoryTool } from '../tools/memory-tools';
 const searchArticlesTool = ai.defineTool({
     name: 'searchArticles',
     description: 'Searches for academic articles and papers based on a query.',
@@ -176,6 +178,12 @@ export const kolearningOrchestrator = ai.defineFlow({
             - createProject: Use this when the user provides a SPECIFIC source (URL or text).
             - searchDataBox: Searches your existing projects. YOU MUST pass the userId provided below to this tool.
             - startStudySession: Use this when the user specifies a project they want to study.
+            - searchDeepMemory: Use this to find specific facts or concepts across all user projects. 
+              Very useful for finding connections between different subjects.
+            
+            TRANSVERSAL LEARNING (Skills & Memory):
+            - If a user asks about a concept that might be related to other things they've studied, use 'searchDeepMemory'.
+            - Goal: Remind the user of connections. "This is similar to what you studied in [Project Name] regarding [Concept]."
             
             RESPONSE FORMATTING:
             - IMPORTANT: When you use the 'searchArticles' tool, DO NOT list the articles yourself in the text response (title, authors, etc.). 
@@ -222,7 +230,9 @@ export const kolearningOrchestrator = ai.defineFlow({
             searchDataBoxTool,
             startStudySessionTool,
             listGoogleTasksTool,
-            createGoogleTaskTool
+            createGoogleTaskTool,
+            scheduleTaskTool,
+            searchDeepMemoryTool
         ],
         onChunk: (chunk) => {
             if (chunk.toolRequests && chunk.toolRequests.length > 0) {

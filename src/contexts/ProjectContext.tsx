@@ -50,6 +50,8 @@ type ProjectContextType = {
   updateAtom: (projectId: string, atomIndex: number, updatedAtom: Atom) => void;
   deleteAtom: (projectId: string, atomIndex: number) => void;
   deleteSource: (projectId: string, sourceIndex: number) => void;
+  updateSourceStatus: (projectId: string, sourceIndex: number, status: SourceStatus) => void;
+  addSource: (projectId: string, source: Omit<Source, 'id'>) => Promise<void>;
   completeSession: (projectId: string, sessionIndex: number) => Promise<void>;
   archiveProject: (projectId: string) => Promise<boolean>;
   unarchiveProject: (projectId: string) => Promise<void>;
@@ -697,6 +699,50 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     );
   }, []);
 
+  const updateSourceStatus = useCallback(async (projectId: string, sourceIndex: number, status: SourceStatus) => {
+    let sourceId: string | undefined;
+
+    setProjects(prevProjects =>
+      prevProjects.map(p => {
+        if (p.id === projectId) {
+          const newSources = [...p.sources];
+          sourceId = newSources[sourceIndex]?.id;
+          newSources[sourceIndex] = { ...newSources[sourceIndex], status };
+          return { ...p, sources: newSources };
+        }
+        return p;
+      })
+    );
+
+    // Sync to Supabase
+    if (user && projectDb && sourceId) {
+      try {
+        await projectDb.updateSourceStatus(sourceId, status);
+        console.log(`✅ Source ${sourceId} status updated to ${status} in Supabase`);
+      } catch (error) {
+        console.error('❌ Failed to update source status in Supabase:', error);
+        toast({
+          title: "Error de Sincronización",
+          description: "No se pudo actualizar el estado de la fuente en la nube.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [user, projectDb, toast]);
+
+  const addSource = useCallback(async (projectId: string, source: Omit<Source, 'id'>) => {
+    if (user && projectDb) {
+      try {
+        const sourceId = await projectDb.addSource(projectId, source);
+        const newSource = { ...source, id: sourceId };
+        setProjects(prevProjects => prevProjects.map(p => p.id === projectId ? { ...p, sources: [...p.sources, newSource] } : p));
+        toast({ title: "Fuente Añadida", description: `"${source.name}" se ha añadido correctamente.` });
+      } catch (error) {
+        toast({ title: "Error", description: "No se pudo añadir la fuente.", variant: "destructive" });
+      }
+    }
+  }, [user, projectDb, toast]);
+
   const resetSessionStats = useCallback(() => {
     setSessionStreak(0);
     setCognitiveCredits(0);
@@ -951,6 +997,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     updateAtom,
     deleteAtom,
     deleteSource,
+    updateSourceStatus,
+    addSource,
     completeSession,
     archiveProject,
     unarchiveProject,

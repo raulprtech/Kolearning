@@ -1,14 +1,16 @@
-import { IConector, ConectorMetadata } from '../../core/domain/models/conector';
+import { ConectorMetadata } from '../../core/domain/models/conector';
 import { HookRegistry } from '../../core/domain/services/HookRegistry';
+import { BaseConector } from '../../core/sdk/ConectorSDK';
 
-export class WebNotificationConector implements IConector {
+export class WebNotificationConector extends BaseConector {
     public metadata: ConectorMetadata = {
         id: 'web_notifications',
         name: 'Notificaciones Web',
         description: 'Recibe alertas en tu navegador cuando Kolearning complete una tarea.',
         icon: 'Bell',
         version: '1.0.0',
-        author: 'Kolearning Team'
+        author: 'Kolearning Team',
+        category: 'Conectores de Canal'
     };
 
     register(): void {

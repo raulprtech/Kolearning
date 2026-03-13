@@ -65,6 +65,14 @@ export class SupabaseProjectRepository implements IProjectRepository {
         return this.db.getSourceContent(sourceId);
     }
 
+    async updateSourceStatus(sourceId: string, status: string): Promise<void> {
+        return this.db.updateSourceStatus(sourceId, status);
+    }
+
+    async addSource(projectId: string, source: Omit<Source, 'id'>): Promise<string> {
+        return this.db.addSource(projectId, source);
+    }
+
     async archiveProject(projectId: string): Promise<boolean> {
         await this.db.archiveProject(projectId);
         return true;

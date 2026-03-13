@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { UISlot } from "@/components/connectors/UISlot";
 
 export function Sidebar({ isOpen, onToggle }: { isOpen: boolean; onToggle: () => void }) {
     const pathname = usePathname();
@@ -63,7 +64,6 @@ export function Sidebar({ isOpen, onToggle }: { isOpen: boolean; onToggle: () =>
 
     return (
         <>
-            {/* Background overlay for mobile logic can go here */}
             <aside
                 className={cn(
                     "fixed inset-y-0 left-0 z-50 bg-card border-r transition-all duration-300 ease-in-out md:relative md:translate-x-0 shadow-xl md:shadow-none",
@@ -71,23 +71,10 @@ export function Sidebar({ isOpen, onToggle }: { isOpen: boolean; onToggle: () =>
                 )}
             >
                 <div className="flex flex-col h-full">
-                    {/* Sidebar Header with Logo & Toggle */}
                     <div className={cn(
                         "p-4 flex items-center transition-all duration-300",
                         isOpen ? "justify-between" : "justify-center"
                     )}>
-                        {/* {isOpen && (
-                            <Link href="/" className="flex items-center gap-2 overflow-hidden transition-all duration-300">
-                                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-                                    <BookOpen className="h-5 w-5 text-primary-foreground" />
-                                </div>
-                            </Link>
-                        )}
-                        {!isOpen && (
-                            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0 md:hidden">
-                                <BookOpen className="h-5 w-5 text-primary-foreground" />
-                            </div>
-                        )} */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -125,6 +112,11 @@ export function Sidebar({ isOpen, onToggle }: { isOpen: boolean; onToggle: () =>
                                     </Link>
                                 ))}
                             </nav>
+                        </div>
+                        
+                        {/* Global Sidebar Slot for connectors */}
+                        <div className={cn("mt-4 px-4 transition-all", !isOpen && "px-0 flex justify-center")}>
+                            <UISlot slotId="global_sidebar" className={cn("flex-col items-start gap-1", !isOpen && "items-center")} />
                         </div>
                     </div>
                 </div>

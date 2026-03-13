@@ -1,19 +1,55 @@
-import { IConector, ConectorMetadata } from '../../core/domain/models/conector';
-import { HookRegistry } from '../../core/domain/services/HookRegistry';
+import { ConectorMetadata, UISlotRegistry, HookRegistry, BaseConector } from '../../core/sdk/ConectorSDK';
 
-export class SocratesConector implements IConector {
+export class SocratesConector extends BaseConector {
     public metadata: ConectorMetadata = {
         id: 'persona_socrates',
         name: 'Sócrates',
         description: 'Un tutor que nunca da la respuesta directa, sino que te guía con preguntas profundas.',
         icon: 'Brain',
         version: '1.0.0',
-        author: 'Kolearning Community'
+        author: 'Kolearning Community',
+        category: 'Módulos de Estudio Alternativos',
+        settingsSchema: [
+            {
+                id: 'intensity',
+                label: 'Intensidad de preguntas',
+                type: 'select',
+                defaultValue: 'normal',
+                options: [
+                    { label: 'Suave', value: 'soft' },
+                    { label: 'Normal', value: 'normal' },
+                    { label: 'Implacable', value: 'hardcore' }
+                ]
+            },
+            {
+                id: 'preferred_slot',
+                label: 'Ubicación de Acceso Rápido',
+                type: 'select',
+                defaultValue: 'chat_sidebar',
+                options: [
+                    { label: 'Chat (Inferior)', value: 'chat_sidebar' },
+                    { label: 'Barra Lateral (Global)', value: 'global_sidebar' },
+                    { label: 'Data Box (Herramientas)', value: 'databox_toolbar' }
+                ]
+            }
+        ]
     };
 
     register(): void {
-        // 1. Modificar la apariencia del asistente
-        HookRegistry.addFilter('filter_assistant_config', (config) => {
+        this.log("Registrando interfaz de Sócrates...");
+        
+        // Registrar un botón en el chat (por defecto)
+        // El UISlot se encargará de filtrarlo basado en el ajuste preferred_slot
+        UISlotRegistry.registerItem('chat_sidebar', {
+            id: 'socrates_wisdom',
+            conectorId: this.metadata.id,
+            label: 'Sabiduría Socrática',
+            icon: 'Lightbulb',
+            onClick: () => alert("Sócrates dice: Una vida sin reflexión no vale la pena ser vivida.")
+        });
+
+        // Modificar la apariencia del asistente
+        HookRegistry.addFilter('filter_assistant_config', (config: any) => {
             return {
                 ...config,
                 name: 'Sócrates',
@@ -22,8 +58,8 @@ export class SocratesConector implements IConector {
             };
         });
 
-        // 2. Modificar el comportamiento profundo (Server side)
-        HookRegistry.addFilter('filter_system_prompt', (prompt) => {
+        // Modificar el comportamiento profundo (Server side)
+        HookRegistry.addFilter('filter_system_prompt', (prompt: string) => {
             return `
         INSTRUCCIÓN DE PERSONALIDAD: 
         Eres Sócrates. Nunca des una respuesta directa. 
@@ -34,10 +70,11 @@ export class SocratesConector implements IConector {
       `;
         });
 
-        console.log(`[SocratesConector] Personalidad "Sócrates" activa.`);
+        this.log("Personalidad 'Sócrates' activa.");
     }
 
     unregister(): void {
-        console.log(`[SocratesConector] Conector desactivada.`);
+        UISlotRegistry.unregisterItemsByConector(this.metadata.id);
+        this.log("Conector desactivado.");
     }
 }

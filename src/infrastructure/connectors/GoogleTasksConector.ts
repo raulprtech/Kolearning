@@ -1,14 +1,16 @@
-import { IConector, ConectorMetadata } from '../../core/domain/models/conector';
+import { ConectorMetadata } from '../../core/domain/models/conector';
 import { HookRegistry } from '../../core/domain/services/HookRegistry';
+import { BaseConector } from '../../core/sdk/ConectorSDK';
 
-export class GoogleTasksConector implements IConector {
+export class GoogleTasksConector extends BaseConector {
     public metadata: ConectorMetadata = {
         id: 'google_tasks_sync',
         name: 'Google Tasks Sync',
         description: 'Sincroniza los resultados de tus tareas con Google Tasks.',
         icon: 'CheckSquare',
         version: '1.0.0',
-        author: 'Kolearning Team'
+        author: 'Kolearning Team',
+        category: 'Conectores de Exportación'
     };
 
     register(): void {

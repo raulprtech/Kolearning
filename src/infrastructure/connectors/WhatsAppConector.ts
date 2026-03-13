@@ -1,5 +1,6 @@
-import { IConector, ConectorMetadata } from '../../core/domain/models/conector';
+import { ConectorMetadata } from '../../core/domain/models/conector';
 import { HookRegistry } from '../../core/domain/services/HookRegistry';
+import { BaseConector } from '../../core/sdk/ConectorSDK';
 import makeWASocket, {
     DisconnectReason,
     useMultiFileAuthState,
@@ -14,14 +15,15 @@ import * as fs from 'fs';
 import pino from 'pino';
 import * as QRCodeImage from 'qrcode';
 
-export class WhatsAppConector implements IConector {
+export class WhatsAppConector extends BaseConector {
     public metadata: ConectorMetadata = {
         id: 'whatsapp_sync',
         name: 'WhatsApp Sync',
         description: 'Recibe tus resultados y chatea con Kolearning por WhatsApp.',
         icon: 'MessageCircle',
         version: '1.2.0',
-        author: 'Kolearning Team'
+        author: 'Kolearning Team',
+        category: 'Conectores de Canal'
     };
 
     private socket: any = null;
@@ -36,6 +38,7 @@ export class WhatsAppConector implements IConector {
     }
 
     constructor() {
+        super();
         try {
             this.logger = pino({ level: 'info' });
         } catch (e) {

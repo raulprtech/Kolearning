@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { HookRegistry } from '@/core/domain/services/HookRegistry';
+import { UISlot } from '@/components/connectors/UISlot';
 
 const ArticleCard = ({ article }: { article: any }) => (
     <Card className="p-4 mt-2 bg-muted/30 border-primary/20 hover:border-primary/50 transition-colors">
@@ -104,6 +105,22 @@ const ProjectCard = ({ project, onStudy }: { project: any, onStudy: () => void }
                 Estudiar <ChevronRight className="h-4 w-4" />
             </Button>
         </div>
+    </Card>
+);
+
+const ScheduledTaskCard = ({ task }: { task: any }) => (
+    <Card className="p-4 mt-2 bg-primary/5 border-dashed border-primary/40 flex items-center gap-4">
+        <div className="p-2 bg-primary/20 rounded-full animate-pulse">
+            <Bot className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1">
+            <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-primary">Acción Agéntica</span>
+                <Badge variant="outline" className="text-[9px] h-4">{task.schedule}</Badge>
+            </div>
+            <p className="text-sm font-medium mt-0.5">{task.description || 'Tarea programada'}</p>
+        </div>
+        <Badge className="bg-green-500/10 text-green-600 border-green-200 text-[10px]">Agendado</Badge>
     </Card>
 );
 
@@ -319,6 +336,28 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
                                                 </div>
                                             );
                                         }
+
+                                        if (tool.toolName === 'scheduleTask') {
+                                            return <ScheduledTaskCard key={idx} task={tool.input} />;
+                                        }
+
+                                        if (tool.toolName === 'searchDeepMemory') {
+                                            return (
+                                                <div key={idx} className="mt-4 space-y-2 bg-muted/20 p-3 rounded-lg border border-primary/10">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Sparkles className="h-3 w-3 text-primary" />
+                                                        <span className="text-[10px] font-bold text-primary uppercase">Conexión de Aprendizaje Transversal</span>
+                                                    </div>
+                                                    {tool.output?.map((atom: any, aIdx: number) => (
+                                                        <div key={aIdx} className="text-xs border-l-2 border-primary/30 pl-3 py-1 mb-2">
+                                                            <p className="font-bold text-primary/80">{atom.projectName}</p>
+                                                            <p className="text-muted-foreground italic">"{atom.question}"</p>
+                                                            {atom.similarity && <span className="text-[9px] text-primary/50">Similitud: {Math.round(atom.similarity * 100)}%</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
                                         return null;
                                     })}
                                 </div>
@@ -352,6 +391,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
 
             <div className="p-4 bg-background/80 backdrop-blur pb-8">
                 <div className="max-w-3xl mx-auto space-y-4">
+                    {/* UI Injected from Connectors */}
+                    <UISlot slotId="chat_sidebar" className="px-2" />
+
                     {attachedFiles.length > 0 && (
                         <div className="flex flex-wrap gap-2 px-2">
                             {attachedFiles.map((file, idx) => (
