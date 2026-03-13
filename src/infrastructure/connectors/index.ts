@@ -1,8 +1,5 @@
 import { ConectorManager } from '../services/ConectorManager';
-import { SocratesConector } from './SocratesConector';
 import { WebNotificationConector } from './WebNotificationConector';
-import { SandboxConectorProxy } from '../../core/sandbox/SandboxProxy';
-import path from 'path';
 
 /**
  * initializeConectores: Bootstraps the active conectores based on user preferences.
@@ -11,26 +8,9 @@ import path from 'path';
 export const initializeConectores = (enabledConectorIds: string[]) => {
     console.log('[Conectores] Initializing conectores (with Sandboxing support)...', enabledConectorIds);
 
-    if (enabledConectorIds.includes('telegram_sync')) {
-        const telegramProxy = new SandboxConectorProxy({
-            id: 'telegram_sync',
-            name: 'Telegram Sync',
-            description: 'Aislado en Sandbox para mayor seguridad.',
-            icon: 'MessageSquareShare',
-            category: 'Conectores de Canal'
-        }, path.resolve('src/infrastructure/connectors/sandboxed/TelegramWorker.ts'));
-        ConectorManager.registerConector(telegramProxy);
-    }
-
-    if (enabledConectorIds.includes('persona_socrates')) {
-        const socratesProxy = new SandboxConectorProxy({
-            id: 'persona_socrates',
-            name: 'Sócrates',
-            description: 'Tutor filosófico aislado en Sandbox.',
-            icon: 'Brain',
-            category: 'Módulos de Estudio Alternativos'
-        }, path.resolve('src/infrastructure/connectors/sandboxed/SocratesWorker.ts'));
-        ConectorManager.registerConector(socratesProxy);
+    // telegram_sync and persona_socrates are server-only due to Sandbox Worker Node APIs
+    if (enabledConectorIds.includes('telegram_sync') || enabledConectorIds.includes('persona_socrates')) {
+        console.log('[Conectores] Some conectores are server-only. Use /api/connectors/initialize to start them.');
     }
 
     if (enabledConectorIds.includes('web_notifications')) {
@@ -38,15 +18,9 @@ export const initializeConectores = (enabledConectorIds: string[]) => {
         ConectorManager.registerConector(webNotify);
     }
 
+    // google_tasks_sync is also server-only
     if (enabledConectorIds.includes('google_tasks_sync')) {
-        const googleProxy = new SandboxConectorProxy({
-            id: 'google_tasks_sync',
-            name: 'Google Tasks Sync',
-            description: 'Sincronización aislada de tareas.',
-            icon: 'CheckSquare',
-            category: 'Conectores de Exportación'
-        }, path.resolve('src/infrastructure/connectors/sandboxed/GoogleTasksWorker.ts'));
-        ConectorManager.registerConector(googleProxy);
+        console.log('[Conectores] google_tasks_sync is server-only.');
     }
 
     if (enabledConectorIds.includes('semantic_scholar')) {

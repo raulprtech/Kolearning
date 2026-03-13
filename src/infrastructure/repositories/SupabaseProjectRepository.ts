@@ -1,5 +1,5 @@
 import { IProjectRepository } from '../../core/ports/outbound/IProjectRepository';
-import { Project, Session, LearningPathItem } from '../../core/domain/models/project';
+import { Project, Session, LearningPathItem, Source } from '../../core/domain/models/project';
 import { Paper } from '../../core/domain/models/paper';
 import { Atom } from '../../core/domain/models/atom';
 import { ProjectDatabase } from '../../lib/supabase/database';

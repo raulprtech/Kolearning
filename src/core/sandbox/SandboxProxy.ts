@@ -2,6 +2,7 @@ import { IConector, ConectorMetadata } from '../domain/models/conector';
 import { HookRegistry } from '../domain/services/HookRegistry';
 import { SandboxMessage, ExecuteHookPayload, HookResultPayload, RegisterHookPayload } from './types';
 import path from 'path';
+import { Worker } from 'worker_threads';
 
 export class SandboxConectorProxy implements IConector {
     private worker: Worker | null = null;
@@ -27,11 +28,11 @@ export class SandboxConectorProxy implements IConector {
             this.handleWorkerMessage(msg);
         });
 
-        this.worker.on('error', (err) => {
+        this.worker.on('error', (err: Error) => {
             console.error(`[SandboxProxy] Worker error in ${this.metadata.id}:`, err);
         });
 
-        this.worker.on('exit', (code) => {
+        this.worker.on('exit', (code: number) => {
             if (code !== 0) {
                 console.error(`[SandboxProxy] Worker stopped with exit code ${code}`);
             }

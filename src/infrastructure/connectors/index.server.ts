@@ -1,5 +1,7 @@
 import { ConectorManager } from '../services/ConectorManager';
 import { WhatsAppConector } from './WhatsAppConector';
+import { SandboxConectorProxy } from '../../core/sandbox/SandboxProxy';
+import path from 'path';
 
 /**
  * Server-only connector initializer.
@@ -36,6 +38,45 @@ export const initializeServerConectores = async (enabledConectorIds: string[]) =
         } catch (error) {
             console.error('[Conectores:Server] ❌ Error fatal inicializando WhatsAppConector:', error);
             throw error; // Re-lanzar para que la API devuelva 500
+        }
+    }
+
+    if (enabledConectorIds.includes('telegram_sync')) {
+        if (!ConectorManager.getActiveConectores().find(c => c.metadata.id === 'telegram_sync')) {
+            const telegramProxy = new SandboxConectorProxy({
+                id: 'telegram_sync',
+                name: 'Telegram Sync',
+                description: 'Aislado en Sandbox para mayor seguridad.',
+                icon: 'MessageSquareShare',
+                category: 'Conectores de Canal'
+            }, path.resolve('src/infrastructure/connectors/sandboxed/TelegramWorker.ts'));
+            ConectorManager.registerConector(telegramProxy);
+        }
+    }
+
+    if (enabledConectorIds.includes('persona_socrates')) {
+        if (!ConectorManager.getActiveConectores().find(c => c.metadata.id === 'persona_socrates')) {
+            const socratesProxy = new SandboxConectorProxy({
+                id: 'persona_socrates',
+                name: 'Sócrates',
+                description: 'Tutor filosófico aislado en Sandbox.',
+                icon: 'Brain',
+                category: 'Módulos de Estudio Alternativos'
+            }, path.resolve('src/infrastructure/connectors/sandboxed/SocratesWorker.ts'));
+            ConectorManager.registerConector(socratesProxy);
+        }
+    }
+
+    if (enabledConectorIds.includes('google_tasks_sync')) {
+        if (!ConectorManager.getActiveConectores().find(c => c.metadata.id === 'google_tasks_sync')) {
+            const googleProxy = new SandboxConectorProxy({
+                id: 'google_tasks_sync',
+                name: 'Google Tasks Sync',
+                description: 'Sincronización aislada de tareas.',
+                icon: 'CheckSquare',
+                category: 'Conectores de Exportación'
+            }, path.resolve('src/infrastructure/connectors/sandboxed/GoogleTasksWorker.ts'));
+            ConectorManager.registerConector(googleProxy);
         }
     }
 };

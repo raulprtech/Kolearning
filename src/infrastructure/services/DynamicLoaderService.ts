@@ -18,7 +18,7 @@ export class DynamicLoaderService {
             // 2. A fetch + eval (or similar) for remote JS if in a sandbox
             // For now, we'll assume it's a dynamic import of a local path.
             
-            const module = await import(modulePath);
+            const module = await import(/* webpackIgnore: true */ modulePath);
             
             // Expected export: a class or a factory function
             const ConectorClass = module.default || module.Conector;

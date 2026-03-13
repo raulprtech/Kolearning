@@ -365,23 +365,30 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAction }) => {
                         ))}
 
                         {isTyping && (
-                            <div className="flex items-start gap-4">
-                                <Avatar className="h-8 w-8 bg-muted">
-                                    <AvatarFallback><AssistantIcon className="w-4 h-4 text-primary" /></AvatarFallback>
+                            <div className="flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2">
+                                <Avatar className="h-8 w-8 bg-primary/10 border border-primary/20">
+                                    <AvatarFallback><Bot className="w-4 h-4 text-primary animate-pulse" /></AvatarFallback>
                                 </Avatar>
-                                <div className="space-y-2">
-                                    <div className="bg-card border p-4 rounded-2xl rounded-tl-none">
-                                        <div className="flex gap-1">
-                                            <span className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-bounce" />
-                                            <span className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-bounce [animation-delay:0.2s]" />
-                                            <span className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-bounce [animation-delay:0.4s]" />
+                                <div className="space-y-2 flex-1">
+                                    <div className="bg-card border p-4 rounded-2xl rounded-tl-none flex items-center gap-3">
+                                        <div className="flex gap-1 shrink-0">
+                                            <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" />
+                                            <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.2s]" />
+                                            <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.4s]" />
                                         </div>
+                                        {status ? (
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="secondary" className="text-[9px] py-0 px-1.5 font-bold bg-primary/10 text-primary border-none uppercase tracking-tighter">
+                                                    Council Active
+                                                </Badge>
+                                                <p className="text-xs font-medium text-foreground/80 italic">
+                                                    {status}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground italic">El Consejo está razonando...</p>
+                                        )}
                                     </div>
-                                    {status && (
-                                        <p className="text-[10px] text-muted-foreground px-1 animate-pulse italic">
-                                            {status}
-                                        </p>
-                                    )}
                                 </div>
                             </div>
                         )}

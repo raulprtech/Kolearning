@@ -119,6 +119,7 @@ export interface Database {
           name: string
           type: string
           content: string
+          status: string
           created_at: string
         }
         Insert: {
@@ -127,6 +128,7 @@ export interface Database {
           name: string
           type: string
           content: string
+          status?: string
           created_at?: string
         }
         Update: {
@@ -135,6 +137,7 @@ export interface Database {
           name?: string
           type?: string
           content?: string
+          status?: string
           created_at?: string
         }
       }

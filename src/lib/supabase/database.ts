@@ -199,7 +199,12 @@ export const convertSourceFromDB = (sourceRow: SourceRow): Source => ({
   id: sourceRow.id,
   name: sourceRow.name,
   type: sourceRow.type,
-  content: (sourceRow as any).content || 'FETCH_REQUIRED', // content is excluded from main query to prevent memory crash
+  content: (sourceRow as any).content || 'FETCH_REQUIRED',
+  status: (sourceRow as any).status || 'pending',
+  inStudyBox: (sourceRow as any).in_study_box || false,
+  bloomLevel: (sourceRow as any).bloom_level || undefined,
+  atomCount: (sourceRow as any).atom_count || 0,
+  errorMessage: (sourceRow as any).error_message || undefined,
 })
 
 export const convertLearningPathItemFromDB = (lpRow: LearningPathRow): LearningPathItem => ({
@@ -213,6 +218,31 @@ export const convertLearningPathItemFromDB = (lpRow: LearningPathRow): LearningP
 
 // Database operations
 export class ProjectDatabase {
+  async addSource(projectId: string, source: Omit<Source, 'id'>): Promise<string> {
+    const payload: Record<string, any> = {
+      project_id: projectId,
+      name: source.name,
+      type: source.type,
+      content: source.content,
+      status: source.status || 'pending',
+      in_study_box: source.inStudyBox || false,
+      bloom_level: source.bloomLevel || null,
+      atom_count: source.atomCount || 0,
+      error_message: source.errorMessage || null,
+    };
+
+    const { data, error } = await this.supabase
+      .from('sources')
+      .insert(payload)
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[DB] addSource error:', error.message, error.code);
+      throw error;
+    }
+    return data.id;
+  }
   private supabase;
 
   constructor(supabaseClient?: any) {
@@ -227,7 +257,7 @@ export class ProjectDatabase {
     console.log('[DB] Getting projects for user:', userId);
     const { data, error } = await this.supabase
       .from('projects')
-      .select('*, atoms(*), sources(id, name, type), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
+      .select('*, atoms(*), sources(id, name, type, status, in_study_box, bloom_level, atom_count, error_message), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
       .eq('user_id', userId)
       .eq('is_archived', false)
       .eq('is_completed', false)
@@ -247,7 +277,7 @@ export class ProjectDatabase {
   async getProjectById(projectId: string): Promise<Project | null> {
     const { data, error } = await this.supabase
       .from('projects')
-      .select('*, atoms(*), sources(id, name, type), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
+      .select('*, atoms(*), sources(id, name, type, status, in_study_box, bloom_level, atom_count, error_message), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
       .eq('id', projectId)
       .single()
 
@@ -262,7 +292,7 @@ export class ProjectDatabase {
   async getCompletedProjects(userId: string): Promise<Project[]> {
     const { data, error } = await this.supabase
       .from('projects')
-      .select('*, atoms(*), sources(id, name, type), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
+      .select('*, atoms(*), sources(id, name, type, status, in_study_box, bloom_level, atom_count, error_message), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
       .eq('user_id', userId)
       .eq('is_completed', true)
       .order('updated_at', { ascending: false })
@@ -275,7 +305,7 @@ export class ProjectDatabase {
   async getArchivedProjects(userId: string): Promise<Project[]> {
     const { data, error } = await this.supabase
       .from('projects')
-      .select('*, atoms(*), sources(id, name, type), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
+      .select('*, atoms(*), sources(id, name, type, status, in_study_box, bloom_level, atom_count, error_message), sessions(*, session_atoms(atom_id)), learning_path_items(*)')
       .eq('user_id', userId)
       .eq('is_archived', true)
       .order('updated_at', { ascending: false })
@@ -296,13 +326,18 @@ export class ProjectDatabase {
     return data.content || '';
   }
 
-  async updateSourceStatus(sourceId: string, status: string): Promise<void> {
+  async updateSourceFields(sourceId: string, updates: Partial<{ status: string; in_study_box: boolean; bloom_level: string; atom_count: number; error_message: string | null }>): Promise<void> {
     const { error } = await this.supabase
       .from('sources')
-      .update({ status })
+      .update(updates)
       .eq('id', sourceId);
 
     if (error) throw error;
+  }
+
+  // Backward compat alias
+  async updateSourceStatus(sourceId: string, status: string): Promise<void> {
+    return this.updateSourceFields(sourceId, { status });
   }
 
   async createProject(userId: string, project: Omit<Project, 'id'>, log?: (msg: string) => void): Promise<string> {

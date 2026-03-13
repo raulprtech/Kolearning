@@ -1,14 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ConectorMetadata, IUserConector } from '../core/ports/inbound/IConectorService';
+import { IUserConector } from '../core/ports/inbound/IConectorService';
+import { ConectorMetadata } from '../core/domain/models/conector';
 import { ConectorService } from '../infrastructure/services/ConectorService';
 import { useAuth } from './AuthContext';
 import { initializeConectores } from '../infrastructure/connectors';
 
 // Server-only connector IDs — these must NOT be initialized client-side.
 // They are initialized via the /api/connectors/initialize API route.
-const SERVER_ONLY_CONNECTORS = ['whatsapp_sync'];
+const SERVER_ONLY_CONNECTORS = ['whatsapp_sync', 'telegram_sync', 'persona_socrates', 'google_tasks_sync'];
 
 interface ConectorContextType {
     availableConectores: ConectorMetadata[];

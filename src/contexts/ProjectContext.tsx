@@ -51,6 +51,7 @@ type ProjectContextType = {
   deleteAtom: (projectId: string, atomIndex: number) => void;
   deleteSource: (projectId: string, sourceIndex: number) => void;
   updateSourceStatus: (projectId: string, sourceIndex: number, status: SourceStatus) => void;
+  updateSourceFields: (projectId: string, sourceIndex: number, updates: Partial<Source>) => Promise<void>;
   addSource: (projectId: string, source: Omit<Source, 'id'>) => Promise<void>;
   completeSession: (projectId: string, sessionIndex: number) => Promise<void>;
   archiveProject: (projectId: string) => Promise<boolean>;
@@ -730,6 +731,39 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, projectDb, toast]);
 
+  const updateSourceFields = useCallback(async (projectId: string, sourceIndex: number, updates: Partial<Source>) => {
+    let sourceId: string | undefined;
+
+    setProjects(prevProjects =>
+      prevProjects.map(p => {
+        if (p.id === projectId) {
+          const newSources = [...p.sources];
+          sourceId = newSources[sourceIndex]?.id;
+          newSources[sourceIndex] = { ...newSources[sourceIndex], ...updates };
+          return { ...p, sources: newSources };
+        }
+        return p;
+      })
+    );
+
+    if (user && projectDb && sourceId) {
+      try {
+        const dbUpdates: Record<string, any> = {};
+        if (updates.status !== undefined) dbUpdates.status = updates.status;
+        if (updates.inStudyBox !== undefined) dbUpdates.in_study_box = updates.inStudyBox;
+        if (updates.bloomLevel !== undefined) dbUpdates.bloom_level = updates.bloomLevel;
+        if (updates.atomCount !== undefined) dbUpdates.atom_count = updates.atomCount;
+        if (updates.errorMessage !== undefined) dbUpdates.error_message = updates.errorMessage;
+        
+        if (Object.keys(dbUpdates).length > 0) {
+          await projectDb.updateSourceFields(sourceId, dbUpdates);
+        }
+      } catch (error) {
+        console.error('❌ Failed to update source fields in Supabase:', error);
+      }
+    }
+  }, [user, projectDb]);
+
   const addSource = useCallback(async (projectId: string, source: Omit<Source, 'id'>) => {
     if (user && projectDb) {
       try {
@@ -737,8 +771,19 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         const newSource = { ...source, id: sourceId };
         setProjects(prevProjects => prevProjects.map(p => p.id === projectId ? { ...p, sources: [...p.sources, newSource] } : p));
         toast({ title: "Fuente Añadida", description: `"${source.name}" se ha añadido correctamente.` });
-      } catch (error) {
-        toast({ title: "Error", description: "No se pudo añadir la fuente.", variant: "destructive" });
+      } catch (error: any) {
+        console.error('❌ Error adding source:', {
+          message: error?.message,
+          details: error?.details,
+          hint: error?.hint,
+          code: error?.code
+        });
+        const errMsg = error?.message || (error instanceof Error ? error.message : String(error));
+        toast({
+          title: "Error de Base de Datos",
+          description: `No se pudo añadir la fuente: ${errMsg}`,
+          variant: "destructive",
+        });
       }
     }
   }, [user, projectDb, toast]);
@@ -998,6 +1043,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     deleteAtom,
     deleteSource,
     updateSourceStatus,
+    updateSourceFields,
     addSource,
     completeSession,
     archiveProject,

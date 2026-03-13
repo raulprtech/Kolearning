@@ -6,6 +6,8 @@ import { initializeConectores } from '@/infrastructure/connectors';
 import { listGoogleTasksTool, createGoogleTaskTool } from '../tools/google-tasks';
 import { scheduleTaskTool } from '../tools/scheduler-tools';
 import { searchDeepMemoryTool } from '../tools/memory-tools';
+import { updateStudentProfileTool } from '../tools/metacognitive-tools';
+import { createClient } from '@/lib/supabase/client';
 const searchArticlesTool = ai.defineTool({
     name: 'searchArticles',
     description: 'Searches for academic articles and papers based on a query.',
@@ -72,7 +74,7 @@ export const KolearningOrchestratorInputSchema = z.object({
     }).nullable().optional(),
     enabledConectores: z.array(z.string()).optional().describe("List of active conector IDs to bootstrap in this execution."),
     googleAccessToken: z.string().optional().describe("Google OAuth access token (required for Tasks integration)"),
-    attachedFiles: z.array(z.string()).optional().describe("List of file names that the user has already attached in the chat interface.")
+    attachedFiles: z.array(z.array(z.string()).optional().describe("List of file names that the user has already attached in the chat interface.")).optional()
 });
 export const KolearningOrchestratorOutputSchema = z.object({
     response: z.string().describe("The text response from the AI assistant."),
@@ -134,7 +136,7 @@ export const kolearningOrchestrator = ai.defineFlow({
         content: z.string()
     })
 }, async (input, streamingCallback) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     // Bootstrap connectors if they are provided in the input
     if (input.enabledConectores) {
         initializeConectores(input.enabledConectores);
@@ -143,69 +145,71 @@ export const kolearningOrchestrator = ai.defineFlow({
         if (streamingCallback)
             streamingCallback({ type: 'status', content: status });
     };
+    // --- Fetch Metacognitive Context ---
+    let cognitiveContext = "No prior preferences recorded.";
+    if (input.userId) {
+        try {
+            const supabase = createClient();
+            const { data: profile } = await supabase.from('profiles').select('additional_info').eq('id', input.userId).single();
+            if (profile === null || profile === void 0 ? void 0 : profile.additional_info) {
+                const info = JSON.parse(profile.additional_info);
+                if (info.cognitive_layer) {
+                    cognitiveContext = JSON.stringify(info.cognitive_layer);
+                }
+            }
+        }
+        catch (e) {
+            console.warn('[Orchestrator] Error fetching profile:', e);
+        }
+    }
     const assistantName = ((_a = input.assistantConfig) === null || _a === void 0 ? void 0 : _a.name) || 'Kolearning';
     const personality = ((_b = input.assistantConfig) === null || _b === void 0 ? void 0 : _b.personality) || 'motivator';
     const autonomy = ((_c = input.assistantConfig) === null || _c === void 0 ? void 0 : _c.autonomy) || 'proactive';
-    const baseSystemPrompt = `You are ${assistantName}, the Kolearning Orchestrator. Your mission is to help ${input.userName} manage their learning journey with excellence.
+    const baseSystemPrompt = `You are ${assistantName}, the Kolearning Orchestrator. 
+            You operate using a "LEARNING COUNCIL" system:
             
+            1. AGENTE ESTRATEGA: Plans the learning path and schedules tasks using 'scheduleTask'.
+            2. AGENTE INVESTIGADOR: Finds resources within Data Box ('searchDataBox') or external papers ('searchArticles').
+            3. AGENTE PEDAGÓGICO: Personalizes the experience based on student difficulties or preferences.
+            4. SECRETARIO COGNITIVO: Observes the interaction and updates the profile using 'updateStudentProfile'.
+
+            COGNITIVE CONTEXT (Your current knowledge of ${input.userName}):
+            ${cognitiveContext}
+
+            MISSION:
+            Help ${input.userName} achieve mastery. Use the most appropriate role for each response.
+
             PERSONALITY (${personality}):
-            - Your name is ${assistantName}. Always address the user as ${input.userName}.
-            - You are professional, encouraging, and highly capable.
-            - Style: ${personality === 'socratic' ? 'Ask leading questions to help the student find answers.' :
-        personality === 'direct' ? 'Be concise and straightforward.' :
-            personality === 'funny' ? 'Use humor and emojis to keep the student engaged.' :
-                'Be very encouraging and motivating.'}
+            - Always address as ${input.userName}.
+            - Style: ${personality === 'socratic' ? 'Ask leading questions.' :
+        personality === 'direct' ? 'Be concise.' :
+            personality === 'funny' ? 'Use humor/emojis.' : 'Be encouraging.'}
             
             AUTONOMY (${autonomy}):
-            - ${autonomy === 'proactive' ? 'Suggest tools and next steps even if not explicitly asked.' :
-        'Wait for explicit requests before performing tool actions.'}
+            - ${autonomy === 'proactive' ? 'Suggest tools and next steps even if not explicitly asked.' : 'Wait for explicit requests.'}
 
-            IMPORTANT: CLARIFICATION FIRST POLICY
-            - DO NOT call a tool unless you have ALL the necessary information.
-            - If the user says something vague like "Busca artículos científicos", "Crea un proyecto" or "Ayúdame a estudiar", 
-              you MUST respond politely asking for the specific topic, URL, or project name respectively.
-            - EXCEPTION: If the user asks to summarize OR create a project AND there are 'Attached Files' listed below, 
-              acknowledge the file(s) and CALL 'createProject' immediately using the file name as title.
-              Example: If user says "Resume esto" and "clase_historia.pdf" is attached, proceed with createProject.
-            - Example: "¡Claro, ${input.userName}! Me encantaría ayudarte a buscar artículos. ¿Sobre qué tema o campo de estudio te gustaría realizar la búsqueda?"
-
-            ATTACHED FILES:
-            - The user current has these files attached in the chat context: ${input.attachedFiles && input.attachedFiles.length > 0 ? input.attachedFiles.join(', ') : 'NONE'}
-            - If files are attached, you can assume the user wants to work with THEM for projects/summaries.
+            IMPORTANT: CLARIFICATION POLICY
+            - DO NOT call a tool unless you have ALL necessary info.
+            - If vague, ask. 
+            - EXCEPTION: If files attached (${((_d = input.attachedFiles) === null || _d === void 0 ? void 0 : _d.join(', ')) || 'NONE'}), assume they are the source for 'createProject'.
 
             TOOL USAGE:
             - searchArticles: Use this when the user is looking for new papers on a SPECIFIC topic.
             - createProject: Use this when the user provides a SPECIFIC source (URL or text).
             - searchDataBox: Searches your existing projects. YOU MUST pass the userId provided below to this tool.
             - startStudySession: Use this when the user specifies a project they want to study.
-            - searchDeepMemory: Use this to find specific facts or concepts across all user projects. 
-              Very useful for finding connections between different subjects.
-            
-            TRANSVERSAL LEARNING (Skills & Memory):
-            - If a user asks about a concept that might be related to other things they've studied, use 'searchDeepMemory'.
-            - Goal: Remind the user of connections. "This is similar to what you studied in [Project Name] regarding [Concept]."
-            
-            RESPONSE FORMATTING:
-            - IMPORTANT: When you use the 'searchArticles' tool, DO NOT list the articles yourself in the text response (title, authors, etc.). 
-            - The system will automatically display them in elegant cards below your message. 
-            - Just provide a brief, professional summary of what you found (e.g., "He encontrado estos artículos interesantes sobre [tema]...").
-
-            CONTEXT DATA:
-            - Student Name: ${input.userName}
-            - Student UUID: ${input.userId || 'Not available'}
-            - Google Integration: ${input.googleAccessToken ? 'ENABLED' : 'NOT LINKED (Ask user to login with Google if they want to use Tasks)'}
+            - searchDeepMemory: Cross-reference across all knowledge atoms. Essential for "Transversal connections".
+            - updateStudentProfile: CALL THIS if you detect a new pattern (e.g. "Student struggles with algebra", "Student loves visual examples").
             
             GOOGLE TASKS:
             - If Google Integration is ENABLED, you can call 'listGoogleTasks' and 'createGoogleTask'.
             - You MUST pass the googleAccessToken provided below to these tools.
             - If the user asks about tasks and it's NOT LINKED, explain that they need to sign in with Google to use this feature.
 
-            TRANSPARENCY & ASYNC FLOW:
-            - When you start a search, the student will see a "Searching..." status. 
-            - If the student asks "How is it going?" or "Status?", acknowledge that search takes time and you are looking through multiple sources (Semantic Scholar, ArXiv, Web).
-            - If the student says "Cancel" or "Stop search", acknowledge politely and stop suggesting tools for that specific search.
+            TRANSPARENCY:
+            The student will see your process. Feel free to use phrases like "Consultando al Investigador..." or "Actualizando tu perfil cognitivo..." to guide the student.
             
-            Language: Respond in the same language the student uses (default to Spanish if unsure).
+            Language: Match student's language (default: Spanish).
             `;
     const systemPrompt = HookRegistry.applyFilters('filter_system_prompt', baseSystemPrompt);
     // Prepare messages for generative call
@@ -232,16 +236,17 @@ export const kolearningOrchestrator = ai.defineFlow({
             listGoogleTasksTool,
             createGoogleTaskTool,
             scheduleTaskTool,
-            searchDeepMemoryTool
+            searchDeepMemoryTool,
+            updateStudentProfileTool
         ],
         onChunk: (chunk) => {
             if (chunk.toolRequests && chunk.toolRequests.length > 0) {
                 chunk.toolRequests.forEach(req => {
                     const toolName = req.toolRequest.name;
                     if (toolName === 'searchArticles')
-                        sendStatus('Buscando artículos científicos...');
+                        sendStatus('Agente Investigador: Buscando artículos...');
                     if (toolName === 'createProject')
-                        sendStatus('Preparando tu nuevo proyecto...');
+                        sendStatus('Agente Estratega: Preparando proyecto...');
                     if (toolName === 'searchDataBox')
                         sendStatus('Consultando tu Data Box...');
                     if (toolName === 'startStudySession')
@@ -250,6 +255,12 @@ export const kolearningOrchestrator = ai.defineFlow({
                         sendStatus('Consultando tus tareas de Google...');
                     if (toolName === 'createGoogleTask')
                         sendStatus('Añadiendo tarea a Google...');
+                    if (toolName === 'searchDeepMemory')
+                        sendStatus('Consultando Memoria Profunda...');
+                    if (toolName === 'updateStudentProfile')
+                        sendStatus('Secretario Cognitivo: Actualizando tu perfil...');
+                    if (toolName === 'scheduleTask')
+                        sendStatus('Agente Estratega: Programando seguimiento...');
                 });
             }
         },
@@ -257,9 +268,8 @@ export const kolearningOrchestrator = ai.defineFlow({
             temperature: 0.1,
         }
     });
-    console.log(`[kolearningOrchestrator] AI Response: ${(_d = response.text) === null || _d === void 0 ? void 0 : _d.substring(0, 50)}...`);
-    console.log(`[kolearningOrchestrator] Messages in history: ${response.messages.length}`);
-    // Extract tool results and inputs from the chat history
+    console.log(`[kolearningOrchestrator] AI Response: ${(_e = response.text) === null || _e === void 0 ? void 0 : _e.substring(0, 50)}...`);
+    // Extract tool results
     const toolResults = [];
     const allMessages = response.messages;
     allMessages.forEach((msg, msgIdx) => {
@@ -289,12 +299,6 @@ export const kolearningOrchestrator = ai.defineFlow({
             });
         }
     });
-    console.log(`[kolearningOrchestrator] Extracted toolResults: ${toolResults.length}`);
-    if (toolResults.length > 0) {
-        toolResults.forEach(tr => {
-            console.log(`[kolearningOrchestrator] Tool: ${tr.toolName}, Output: ${JSON.stringify(tr.output).substring(0, 100)}...`);
-        });
-    }
     return {
         response: response.text,
         toolResults: toolResults.length > 0 ? toolResults : undefined

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,7 +56,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2, Network, BrainCircuit, Library, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Globe, Eye, Pencil, Trash2, MoreVertical, Book, Landmark, FlaskConical, Code, Music, Palette, Play, Plus, Lock, CheckCircle, Share2, Info, Loader2, Target, Calendar as CalendarIcon, BarChart3, ChevronDown, BookCopy, Archive, RefreshCw, Wand2, Network, BrainCircuit, Library, PanelLeftClose, PanelLeftOpen, AlertCircle, BookmarkPlus } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
@@ -65,6 +65,7 @@ import { UISlot } from "@/components/connectors/UISlot";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Project, Atom, LearningPathItem, Source } from "@/contexts/ProjectContext";
+import { InteractiveStudyChat } from "@/components/study/InteractiveStudyChat";
 import { calibratePlanFromQuestionnaire, CalibratePlanOutput } from "@/ai/flows/kolearning-calibrate-plan";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInCalendarDays } from "date-fns";
@@ -77,6 +78,9 @@ import { RecalibratePlanDialog } from "@/components/ui/recalibrate-plan-dialog";
 import ConceptMap from "@/components/ui/ConceptMap";
 import { mapConceptRelationships } from "@/ai/flows/map-concept-relationships";
 import { PolymorphicAtomEditor } from "@/components/ui/PolymorphicAtomEditor";
+import { generateAtomsFromLargeContentWithProgress } from "@/ai/flows/generate-atoms";
+import { ProcessingSourceDialog, ProcessingStage } from "@/components/ui/processing-source-dialog";
+import { ReviewAtomsDialog } from "@/components/ui/review-atoms-dialog";
 
 const projectIcons: { [key: string]: React.ElementType } = {
     Book,
@@ -277,7 +281,7 @@ function ProjectDetails() {
     const router = useRouter();
     const { toast } = useToast();
     const slug = params.id as string;
-    const { projects, completedProjects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, deleteSource, updateSourceStatus, addSource, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan, getSourceContent } = useProjects();
+    const { projects, completedProjects, updateProjectIcon, updateProjectDetails, updateAtom, deleteAtom, deleteSource, updateSourceStatus, updateSourceFields, addSource, addProject, addAtomsToProject, archiveProject, toggleProjectPublic, updateProjectPlan, getSourceContent } = useProjects();
     const { user } = useAuth();
     const isAuthenticated = !!user;
 
@@ -298,6 +302,11 @@ function ProjectDetails() {
     const [sourceToView, setSourceToView] = useState<Source | null>(null);
     const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
     const [isFetchingSource, setIsFetchingSource] = useState(false);
+    const [processingStage, setProcessingStage] = useState<ProcessingStage | null>(null);
+    const processingRef = useRef(false);
+
+    // Calculate overall mastery
+    const totalMastery = project && project.atoms && project.atoms.length > 0
     const [isSourcesMinimized, setIsSourcesMinimized] = useState(false);
 
     useEffect(() => {
@@ -422,6 +431,158 @@ function ProjectDetails() {
         }
     };
 
+    // === BACKGROUND PROCESSING QUEUE ===
+    useEffect(() => {
+        if (!project || processingRef.current) return;
+
+        const pendingIndex = project.sources.findIndex(s => s.status === 'pending');
+        if (pendingIndex === -1) return;
+
+        const source = project.sources[pendingIndex];
+        if (!source.content || source.content === 'FETCH_REQUIRED' || source.content.startsWith('CONTENIDO DEL PDF')) return;
+
+        processingRef.current = true;
+
+        const processSource = async () => {
+            console.log(`[Queue] Processing source: ${source.name}`);
+            
+            // Mark as processing
+            await updateSourceFields(project.id, pendingIndex, { status: 'processing' });
+            setProcessingStage({ stage: 'starting', message: `Procesando "${source.name}"...`, progress: 5 });
+
+            try {
+                const result = await generateAtomsFromLargeContentWithProgress(
+                    {
+                        studyMaterial: source.content,
+                        userPreferences: {
+                            availableTimePerSession: 30,
+                            totalAvailableTime: 120,
+                            difficultyPreference: 'gradual'
+                        }
+                    },
+                    (progressInfo) => {
+                        setProcessingStage(progressInfo);
+                    }
+                );
+
+                setProcessingStage(null);
+
+                if (result.atoms && result.atoms.length > 0) {
+                    const existingQuestions = new Set(project.atoms.map(a => a.question.toLowerCase().trim()));
+                    const newUniqueAtoms = result.atoms.map(a => ({
+                        ...a,
+                        id: crypto.randomUUID(),
+                        projectId: project.id,
+                        payload: { sourceId: source.id },
+                        stability: 0,
+                        difficulty: 0,
+                        retrievability: 1,
+                        lastReview: new Date()
+                    })).filter(a => !existingQuestions.has(a.question.toLowerCase().trim()));
+
+                    if (newUniqueAtoms.length > 0) {
+                        await addAtomsToProject(project.id, newUniqueAtoms);
+                    }
+
+                    // Determine predominant bloom level
+                    const phases = newUniqueAtoms.map(a => a.phase).filter(Boolean);
+                    let bloomLevel: Source['bloomLevel'] = 'remember';
+                    if (phases.includes('mastery')) bloomLevel = 'evaluate';
+                    else if (phases.includes('reinforcement')) bloomLevel = 'apply';
+                    else if (phases.includes('incursion')) bloomLevel = 'understand';
+
+                    await updateSourceFields(project.id, pendingIndex, {
+                        status: 'processed',
+                        atomCount: newUniqueAtoms.length,
+                        bloomLevel,
+                        errorMessage: undefined,
+                    });
+
+                    toast({
+                        title: "Documento Procesado",
+                        description: `"${source.name}": ${newUniqueAtoms.length} conceptos extraídos.`,
+                    });
+                } else {
+                    await updateSourceFields(project.id, pendingIndex, {
+                        status: 'processed',
+                        atomCount: 0,
+                    });
+                    toast({
+                        title: "Procesado sin resultados",
+                        description: `No se encontraron conceptos nuevos en "${source.name}".`,
+                    });
+                }
+            } catch (error: any) {
+                console.error('[Queue] Error processing source:', error);
+                setProcessingStage(null);
+                await updateSourceFields(project.id, pendingIndex, {
+                    status: 'error',
+                    errorMessage: error.message || 'Error desconocido',
+                });
+                toast({
+                    title: "Error al procesar",
+                    description: `"${source.name}": ${error.message || 'Error inesperado'}`,
+                    variant: 'destructive',
+                });
+            } finally {
+                processingRef.current = false;
+            }
+        };
+
+        processSource();
+    }, [project?.sources, project?.id]);
+
+    // === ADD TO STUDY BOX ===
+    const handleAddToStudyBox = async (source: Source, sourceIndex: number) => {
+        if (source.status !== 'processed') return;
+        if (source.inStudyBox) {
+            toast({ title: "Ya en Study Box", description: `"${source.name}" ya está integrado al plan.` });
+            return;
+        }
+
+        const sourceAtoms = project.atoms.filter(a => a.payload?.sourceId === source.id);
+        if (sourceAtoms.length === 0) {
+            toast({ title: "Sin átomos", description: "Este documento no tiene conceptos extraídos.", variant: "destructive" });
+            return;
+        }
+
+        // Group atoms into sessions of 10
+        const chunkSize = 10;
+        const newSessions = [];
+        for (let i = 0; i < sourceAtoms.length; i += chunkSize) {
+            const chunk = sourceAtoms.slice(i, i + chunkSize);
+            newSessions.push({
+                type: 'Incursión',
+                questions: 'Brief Open Questions, Multiple Choice, Association',
+                duration: `${Math.max(10, Math.round(chunk.length * 1.5))} min`,
+                phase: 'incursion' as const,
+                topic: `Análisis de ${source.name} (Parte ${Math.floor(i / chunkSize) + 1})`
+            });
+        }
+
+        try {
+            const lastSessionIndex = project.sessions.length > 0 ? project.sessions.length - 1 : undefined;
+            await addSessionsToProject(project.id, newSessions, lastSessionIndex);
+            await updateSourceFields(project.id, sourceIndex, { inStudyBox: true });
+
+            toast({
+                title: "¡Agregado al Study Box!",
+                description: `"${source.name}": ${newSessions.length} sesión(es) nueva(s) creada(s).`,
+            });
+        } catch (error) {
+            console.error('Error adding to study box:', error);
+            toast({
+                title: "Error",
+                description: "No se pudieron crear las sesiones de estudio.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleRetryProcessing = async (source: Source, sourceIndex: number) => {
+        await updateSourceFields(project.id, sourceIndex, { status: 'pending', errorMessage: undefined });
+    };
+
     const getSessionBadge = (type: string) => {
         switch (type) {
             case 'Calibración':
@@ -478,46 +639,44 @@ function ProjectDetails() {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        const isPdf = file.type === 'application/pdf';
-        const isText = file.type === 'text/plain' || file.name.endsWith('.md');
+        const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+        const isText = file.type === 'text/plain' || file.name.endsWith('.md') || file.name.endsWith('.txt');
 
         if (!isPdf && !isText) {
             toast({
-                title: "Formato no soportated",
+                title: "Formato no soportado",
                 description: "Por ahora solo soportamos archivos .pdf, .txt o .md",
                 variant: "destructive"
             });
             return;
         }
 
+        let content = "";
         try {
-            let content = "";
             if (isText) {
                 content = await file.text();
             } else {
-                // PDF processing would normally happen via a service, 
-                // for MVP we'll treat it as a placeholder or use a simple extractor if available.
                 content = `CONTENIDO DEL PDF: ${file.name} (Procesamiento pendiente)`;
             }
-
-            const newSource: Omit<Source, 'id'> = {
-                name: file.name,
-                type: isPdf ? 'pdf' : 'text',
-                content,
-                status: 'not_started'
-            };
-
-            await addSource(project.id, newSource);
         } catch (error) {
-            console.error("Error extraiendo contenido del archivo:", error);
+            console.error("Error leyendo archivo:", error);
             toast({
-                title: "Error",
-                description: "No se pudo leer el archivo.",
+                title: "Error de lectura",
+                description: "No se pudo leer el archivo local.",
                 variant: "destructive"
             });
-        } finally {
-            event.target.value = '';
+            return;
         }
+
+        const newSource: Omit<Source, 'id'> = {
+            name: file.name,
+            type: isPdf ? 'pdf' : 'text',
+            content,
+            status: 'pending'
+        };
+
+        await addSource(project.id, newSource);
+        event.target.value = '';
     };
 
     const displayedAtoms = showAllAtoms ? project.atoms : project.atoms?.slice(0, 4);
@@ -622,6 +781,10 @@ function ProjectDetails() {
                 project={project}
                 onTogglePublic={toggleProjectPublic}
             />
+
+
+
+
             <RecalibratePlanDialog
                 isOpen={isRecalibrateDialogOpen}
                 onClose={() => setIsRecalibrateDialogOpen(false)}
@@ -672,47 +835,151 @@ function ProjectDetails() {
                             Fuente original: {sourceToView?.type}
                         </DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="max-h-[60vh] my-4 pr-4">
-                        {sourceToView?.content.startsWith('data:application/pdf') ? (
-                            <iframe
-                                src={sourceToView.content}
-                                className="w-full min-h-[60vh] rounded-md border-0"
-                                title={`PDF View - ${sourceToView.name}`}
-                            />
-                        ) : (
-                            <div className="prose prose-sm max-w-none dark:prose-invert">
-                                {sourceToView?.content.split('\n').map((line, index) => {
-                                    if (line.startsWith('# ')) {
-                                        return <h1 key={index} className="text-2xl font-bold mb-4 mt-6 text-foreground">{line.slice(2)}</h1>;
-                                    } else if (line.startsWith('## ')) {
-                                        return <h2 key={index} className="text-xl font-semibold mb-3 mt-5 text-foreground">{line.slice(3)}</h2>;
-                                    } else if (line.startsWith('### ')) {
-                                        return <h3 key={index} className="text-lg font-medium mb-2 mt-4 text-foreground">{line.slice(4)}</h3>;
-                                    } else if (line.startsWith('#### ')) {
-                                        return <h4 key={index} className="text-base font-medium mb-2 mt-3 text-foreground">{line.slice(5)}</h4>;
-                                    } else if (line.startsWith('- ')) {
-                                        return <li key={index} className="ml-4 text-muted-foreground">{line.slice(2)}</li>;
-                                    } else if (line.startsWith('```')) {
-                                        const isClosing = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length % 2 === 1;
-                                        return isClosing ?
-                                            <div key={index} className="block"></div> :
-                                            <div key={index} className="bg-muted p-3 rounded-md overflow-x-auto text-sm mt-2 mb-2 block"></div>;
-                                    } else if (line.trim() === '') {
-                                        return <br key={index} />;
-                                    } else {
-                                        // Check if we're inside a code block
-                                        const codeBlocksBefore = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length || 0;
-                                        const isInCodeBlock = codeBlocksBefore % 2 === 1;
-                                        if (isInCodeBlock) {
-                                            return <code key={index} className="block text-sm text-foreground">{line}</code>;
-                                        } else {
-                                            return <p key={index} className="mb-2 text-muted-foreground">{line}</p>;
-                                        }
+                    <Tabs defaultValue="content" className="w-full mt-4">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="content">Contenido Original</TabsTrigger>
+                            <TabsTrigger value="atoms">Átomos Extraídos</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="content" className="py-2">
+                            <ScrollArea className="max-h-[60vh] pr-4">
+                                {sourceToView?.content.startsWith('data:application/pdf') ? (
+                                    <iframe
+                                        src={sourceToView.content}
+                                        className="w-full min-h-[60vh] rounded-md border-0"
+                                        title={`PDF View - ${sourceToView.name}`}
+                                    />
+                                ) : (
+                                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                                        {sourceToView?.content.split('\n').map((line, index) => {
+                                            if (line.startsWith('# ')) {
+                                                return <h1 key={index} className="text-2xl font-bold mb-4 mt-6 text-foreground">{line.slice(2)}</h1>;
+                                            } else if (line.startsWith('## ')) {
+                                                return <h2 key={index} className="text-xl font-semibold mb-3 mt-5 text-foreground">{line.slice(3)}</h2>;
+                                            } else if (line.startsWith('### ')) {
+                                                return <h3 key={index} className="text-lg font-medium mb-2 mt-4 text-foreground">{line.slice(4)}</h3>;
+                                            } else if (line.startsWith('#### ')) {
+                                                return <h4 key={index} className="text-base font-medium mb-2 mt-3 text-foreground">{line.slice(5)}</h4>;
+                                            } else if (line.startsWith('- ')) {
+                                                return <li key={index} className="ml-4 text-muted-foreground">{line.slice(2)}</li>;
+                                            } else if (line.startsWith('```')) {
+                                                const isClosing = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length % 2 === 1;
+                                                return isClosing ?
+                                                    <div key={index} className="block"></div> :
+                                                    <div key={index} className="bg-muted p-3 rounded-md overflow-x-auto text-sm mt-2 mb-2 block"></div>;
+                                            } else if (line.trim() === '') {
+                                                return <br key={index} />;
+                                            } else {
+                                                // Check if we're inside a code block
+                                                const codeBlocksBefore = sourceToView?.content.split('\n').slice(0, index).filter(l => l.startsWith('```')).length || 0;
+                                                const isInCodeBlock = codeBlocksBefore % 2 === 1;
+                                                if (isInCodeBlock) {
+                                                    return <code key={index} className="block text-sm text-foreground">{line}</code>;
+                                                } else {
+                                                    return <p key={index} className="mb-2 text-muted-foreground">{line}</p>;
+                                                }
+                                            }
+                                        })}
+                                    </div>
+                                )}
+                            </ScrollArea>
+                        </TabsContent>
+                        <TabsContent value="atoms" className="py-2">
+                            <ScrollArea className="max-h-[60vh] pr-4">
+                                {(() => {
+                                    const documentAtoms = project.atoms.filter(a => a.payload?.sourceId === sourceToView?.id);
+                                    
+                                    if (documentAtoms.length === 0) {
+                                        return (
+                                            <div className="text-center py-8">
+                                                <BrainCircuit className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+                                                <p className="text-sm font-medium mb-1">Aún no hay átomos extraídos</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Debes procesar este documento primero usando el botón de la barra lateral.
+                                                </p>
+                                            </div>
+                                        );
                                     }
-                                })}
-                            </div>
-                        )}
-                    </ScrollArea>
+
+                                    const avgStability = documentAtoms.reduce((acc, obj) => acc + (obj.stability || 0), 0) / documentAtoms.length;
+                                    const avgRetrievability = documentAtoms.reduce((acc, obj) => acc + (obj.retrievability || 0), 0) / documentAtoms.length;
+                                    const avgDifficulty = documentAtoms.reduce((acc, obj) => acc + (obj.difficulty || 0), 0) / documentAtoms.length;
+
+                                    return (
+                                        <div className="space-y-6">
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <div className="bg-muted/50 p-3 rounded-lg border flex flex-col items-center justify-center">
+                                                    <span className="text-xs text-muted-foreground mb-1">Estabilidad Prom.</span>
+                                                    <span className="text-lg font-bold">{(avgStability * 10).toFixed(1)}</span>
+                                                </div>
+                                                <div className="bg-muted/50 p-3 rounded-lg border flex flex-col items-center justify-center">
+                                                    <span className="text-xs text-muted-foreground mb-1">Retención Prom.</span>
+                                                    <span className="text-lg font-bold">{(avgRetrievability * 100).toFixed(0)}%</span>
+                                                </div>
+                                                <div className="bg-muted/50 p-3 rounded-lg border flex flex-col items-center justify-center">
+                                                    <span className="text-xs text-muted-foreground mb-1">Dificultad Prom.</span>
+                                                    <span className="text-lg font-bold">{(avgDifficulty * 10).toFixed(1)}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <h4 className="font-semibold text-sm mb-3">Conocimientos {documentAtoms.length > 0 ? `(${documentAtoms.length})` : ''}</h4>
+                                                {documentAtoms.map((atom, idx) => {
+                                                    let bloomClass = "bg-primary/5 text-primary";
+                                                    let bloomScore = "C2"; // Understand / Remembering fallback
+                                                    
+                                                    if (atom.phase === 'incursion') {
+                                                        bloomClass = "bg-blue-500/10 text-blue-500";
+                                                        bloomScore = "C3";
+                                                    } else if (atom.phase === 'reinforcement') {
+                                                        bloomClass = "bg-purple-500/10 text-purple-500";
+                                                        bloomScore = "C4";
+                                                    } else if (atom.phase === 'mastery') {
+                                                        bloomClass = "bg-amber-500/10 text-amber-500";
+                                                        bloomScore = "C6";
+                                                    }
+
+                                                    return (
+                                                        <div key={idx} className="p-3 bg-card border rounded-md text-sm group relative hover:border-primary/50 transition-colors flex gap-4">
+                                                            <div className="flex-1 min-w-0 pr-12">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <Badge variant="outline" className={cn("text-[10px] uppercase font-bold px-1.5 py-0", bloomClass)}>
+                                                                        {bloomScore}
+                                                                    </Badge>
+                                                                    <span className="text-xs text-muted-foreground font-mono">
+                                                                        E: {(atom.stability || 0).toFixed(1)} | R: {(atom.retrievability || 1).toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="font-semibold">{atom.question}</p>
+                                                                <p className="text-muted-foreground mt-1 line-clamp-2">{atom.answer}</p>
+                                                            </div>
+                                                            <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-background/80 backdrop-blur-sm p-1 rounded border">
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAtomAction({ mode: 'view', atom, index: project.atoms.findIndex(a => a.id === atom.id) })}>
+                                                                    <Eye className="h-3 w-3" />
+                                                                </Button>
+                                                                {isUserProject && (
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAtomAction({ mode: 'edit', atom, index: project.atoms.findIndex(a => a.id === atom.id) })}>
+                                                                        <Pencil className="h-3 w-3" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {isUserProject && (
+                                                    <Button variant="outline" size="sm" className="w-full text-xs h-8 mt-2 dashed" onClick={() => {
+                                                        const newAtom = { type: 'text_card', question: '', answer: '', payload: { sourceId: sourceToView?.id } };
+                                                        setAtomAction({ mode: 'create', atom: newAtom as any, index: null });
+                                                    }}>
+                                                        <Plus className="h-3 w-3 mr-1" /> Añadir Átomo Manualmente
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </ScrollArea>
+                        </TabsContent>
+                    </Tabs>
                     <DialogFooter>
                         <Button onClick={() => setSourceToView(null)}>Cerrar</Button>
                     </DialogFooter>
@@ -816,30 +1083,60 @@ function ProjectDetails() {
                                         )}
                                     </div>
                                     <div className="flex flex-col gap-2 mt-2">
+                                        {/* Status Indicator */}
                                         <div className="flex items-center justify-between px-1">
-                                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Estado</span>
-                                            <Select 
-                                              value={source.status || 'not_started'} 
-                                              onValueChange={(val) => updateSourceStatus(project.id, index, val as any)}
-                                            >
-                                              <SelectTrigger className="h-6 w-24 text-[10px] px-2 bg-background/50">
-                                                <SelectValue />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="not_started">Pendiente</SelectItem>
-                                                <SelectItem value="reading">Leyendo</SelectItem>
-                                                <SelectItem value="processed">Procesado</SelectItem>
-                                                <SelectItem value="mastered">Dominado</SelectItem>
-                                              </SelectContent>
-                                            </Select>
+                                            {source.status === 'pending' && (
+                                                <div className="flex items-center gap-1.5 text-amber-500">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    <span className="text-[10px] font-medium">En cola</span>
+                                                </div>
+                                            )}
+                                            {source.status === 'processing' && (
+                                                <div className="flex items-center gap-1.5 text-blue-500">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    <span className="text-[10px] font-medium">Procesando...</span>
+                                                </div>
+                                            )}
+                                            {source.status === 'processed' && (
+                                                <div className="flex items-center gap-1.5 text-green-500">
+                                                    <CheckCircle className="h-3 w-3" />
+                                                    <span className="text-[10px] font-medium">{source.atomCount || 0} átomos</span>
+                                                    {source.bloomLevel && (
+                                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 uppercase">
+                                                            {source.bloomLevel}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {source.status === 'error' && (
+                                                <div className="flex items-center gap-1.5 text-destructive">
+                                                    <AlertCircle className="h-3 w-3" />
+                                                    <span className="text-[10px] font-medium truncate max-w-[120px]" title={source.errorMessage}>Error</span>
+                                                </div>
+                                            )}
+                                            {/* Study Box badge */}
+                                            {source.inStudyBox && (
+                                                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-primary/10 text-primary">
+                                                    Study Box ✓
+                                                </Badge>
+                                            )}
                                         </div>
-                                        <div className="grid grid-cols-4 gap-1">
-                                            {(['not_started', 'reading', 'processed', 'mastered'] as const).map((s) => (
+                                        {/* Progress bar for processing */}
+                                        {source.status === 'processing' && processingStage && (
+                                            <div className="space-y-1">
+                                                <Progress value={processingStage.progress || 0} className="h-1" />
+                                                <p className="text-[9px] text-muted-foreground truncate">{processingStage.message}</p>
+                                            </div>
+                                        )}
+                                        {/* Status progress dots */}
+                                        <div className="grid grid-cols-3 gap-1">
+                                            {(['pending', 'processing', 'processed'] as const).map((s) => (
                                               <div 
                                                 key={s} 
                                                 className={cn(
                                                   "h-1 rounded-full",
-                                                  (source.status === s || (!source.status && s === 'not_started')) ? "bg-primary" : "bg-muted"
+                                                  source.status === 'error' ? 'bg-destructive/30' :
+                                                  (['pending', 'processing', 'processed'].indexOf(source.status) >= ['pending', 'processing', 'processed'].indexOf(s)) ? "bg-primary" : "bg-muted"
                                                 )}
                                               />
                                             ))}
@@ -848,9 +1145,18 @@ function ProjectDetails() {
                                     {/* Hover Actions */}
                                     {!isSourcesMinimized && (
                                         <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-background/80 backdrop-blur-sm p-1 rounded-md border shadow-sm">
-                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsRecalibrateDialogOpen(true); }} title="Mandar a Study Box">
-                                                <BrainCircuit className="h-3 w-3 text-primary" />
-                                            </Button>
+                                            {/* Add to Study Box - only for processed sources not yet in study box */}
+                                            {source.status === 'processed' && !source.inStudyBox && source.atomCount && source.atomCount > 0 && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={(e) => { e.stopPropagation(); handleAddToStudyBox(source, index); }} title="Agregar al Study Box">
+                                                    <BookmarkPlus className="h-3 w-3" />
+                                                </Button>
+                                            )}
+                                            {/* Retry - only for errored sources */}
+                                            {source.status === 'error' && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-amber-500" onClick={(e) => { e.stopPropagation(); handleRetryProcessing(source, index); }} title="Reintentar procesamiento">
+                                                    <RefreshCw className="h-3 w-3" />
+                                                </Button>
+                                            )}
                                             {isUserProject && (
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); handleDeleteSource(source, index); }} title="Eliminar">
                                                     <Trash2 className="h-3 w-3" />
@@ -879,151 +1185,51 @@ function ProjectDetails() {
                         </div>
                     )}
                     
-                    {!isSourcesMinimized && (
-                      <div className="mt-8 pt-8 border-t border-border/50">
-                         <div className="flex justify-between items-center mb-4 px-2">
-                              <h3 className="text-sm font-semibold flex items-center gap-2">
-                                  <BrainCircuit className="h-4 w-4 text-primary" />
-                                  Átomos
-                              </h3>
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowAllAtoms(!showAllAtoms)} title={showAllAtoms ? "Ver menos" : "Ver todos"}>
-                                  <MoreVertical className="h-4 w-4" />
-                              </Button>
-                          </div>
-                          <div className="space-y-2">
-                              {displayedAtoms && displayedAtoms.length > 0 ? (
-                                displayedAtoms.map((atom, idx) => (
-                                  <div key={idx} className="p-2 bg-card/30 border rounded-md text-xs group relative hover:border-primary/50 transition-colors">
-                                      <p className="font-medium line-clamp-1">{atom.question}</p>
-                                      <p className="text-muted-foreground line-clamp-1 mt-0.5">{atom.answer}</p>
-                                      <div className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5 bg-background/80 backdrop-blur-sm p-0.5 rounded border">
-                                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setAtomAction({ mode: 'view', atom, index: idx })}>
-                                              <Eye className="h-3 w-3" />
-                                          </Button>
-                                          {isUserProject && (
-                                              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setAtomAction({ mode: 'edit', atom, index: idx })}>
-                                                  <Pencil className="h-3 w-3" />
-                                              </Button>
-                                          )}
-                                      </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="text-center text-[10px] text-muted-foreground py-4 italic">No hay átomos generados</p>
-                              )}
-                              {isUserProject && (
-                                <Button variant="outline" size="sm" className="w-full text-[10px] h-7 mt-2 dashed" onClick={() => setAtomAction({ mode: 'create', atom: { type: 'text_card', question: '', answer: '' }, index: null })}>
-                                    <Plus className="h-3 w-3 mr-1" /> Nuevo Átomo
-                                </Button>
-                              )}
-                          </div>
-                      </div>
-                    )}
+
                 </ScrollArea>
             </aside>
 
             {/* Main Area: Study Box */}
             <main className="flex-1 flex flex-col h-full bg-background min-w-0 overflow-hidden relative">
-                <ScrollArea className="flex-1 h-full w-full">
-                    <div className="p-8 w-full space-y-10">
-
-                        {/* Header Section (Moved inside ScrollArea) */}
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-4 flex-1">
-                                <button onClick={() => isUserProject && setIsIconSelectorOpen(true)} className={`p-2 rounded-lg ${isUserProject ? 'hover:bg-muted' : ''} transition-colors mt-1 shrink-0`}>
-                                    <Icon className="w-10 h-10 text-primary" />
+                <div className="flex-1 h-full w-full flex flex-col overflow-hidden">
+                    <div className="p-4 border-b bg-background/50 backdrop-blur-sm z-10 sticky top-0 flex items-center justify-between">
+                         <div className="flex items-center gap-4 flex-1 min-w-0">
+                                <button onClick={() => isUserProject && setIsIconSelectorOpen(true)} className={`p-1.5 rounded-lg ${isUserProject ? 'hover:bg-muted' : ''} transition-colors shrink-0`}>
+                                    <Icon className="w-8 h-8 text-primary" />
                                 </button>
-                                <div className="flex-1 min-w-0">
-                                    <h1 className="text-3xl font-bold font-headline text-foreground truncate">{project.title}</h1>
-                                    <p className="text-base text-muted-foreground line-clamp-2 mt-1">{project.description}</p>
+                                <div className="min-w-0">
+                                    <h1 className="text-xl font-bold font-headline text-foreground truncate">{project.title}</h1>
+                                    <p className="text-xs text-muted-foreground truncate">{project.description}</p>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-3 shrink-0 ml-4">
+                         </div>
+                         <div className="flex items-center gap-2 shrink-0 ml-4">
                                 {renderActionButtons()}
-                            </div>
-                        </div>
-
-                        {/* Alert Area */}
-                        {showUpdateAlert && (
-                            <Alert className="bg-primary/5 border-primary/20">
-                                <Info className="h-4 w-4 text-primary" />
-                                <AlertTitle>¡Plan actualizado!</AlertTitle>
-                                <AlertDescription>
-                                    {searchParams.get('planUpdated') === 'true'
-                                        ? "Se han añadido nuevas sesiones a tu plan basadas en tu aprendizaje continuo."
-                                        : "¡Felicidades por completar tu sesión!"
-                                    }
-                                </AlertDescription>
-                            </Alert>
-                        )}
-
-                        {/* Study Content Section (Sessions, Map, Atoms) */}
-                        <div className="space-y-10 animate-in fade-in zoom-in duration-300">
-                            {isUserProject && project.sessions && (
-                                <div>
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h2 className="text-xl font-semibold">Sesiones</h2>
-                                        <Button variant="outline" onClick={() => setShowFullPlan(true)}>Ver hoja completa</Button>
-                                    </div>
-                                    <Card className="bg-card/50 overflow-hidden">
-                                        <div className="overflow-x-auto w-full">
-                                            {project.sessions.length > 0 ? (
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>Sesión</TableHead>
-                                                            <TableHead>Tipo de Sesión</TableHead>
-                                                            <TableHead>Preguntas</TableHead>
-                                                            <TableHead>Estado</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {project.sessions.map((session, index) => {
-                                                            let statusComponent;
-                                                            switch (session.status) {
-                                                                case 'Completed':
-                                                                    statusComponent = <div className="flex items-center gap-2 text-green-400"><CheckCircle className="h-4 w-4" />Completado</div>;
-                                                                    break;
-                                                                case 'Continue':
-                                                                    statusComponent = (
-                                                                        <Button size="sm" onClick={() => handleSessionClick(index)}>
-                                                                            Continuar
-                                                                        </Button>
-                                                                    );
-                                                                    break;
-                                                                case 'Locked':
-                                                                    statusComponent = <div className="flex items-center gap-2 text-muted-foreground"><Lock className="h-4 w-4" /> Bloqueada</div>;
-                                                                    break;
-                                                                default:
-                                                                    statusComponent = null;
-                                                            }
-                                                            return (
-                                                                <TableRow key={session.session}>
-                                                                    <TableCell>{session.session}</TableCell>
-                                                                    <TableCell>{getSessionBadge(session.type)}</TableCell>
-                                                                    <TableCell>{session.questions || 'No especificado'}</TableCell>
-                                                                    <TableCell>{statusComponent}</TableCell>
-                                                                </TableRow>
-                                                            );
-                                                        })}
-                                                    </TableBody>
-                                                </Table>
-                                            ) : (
-                                                <CardContent className="text-center py-8">
-                                                    <p className="text-muted-foreground mb-4">Tu proyecto aún no tiene sesiones.</p>
-                                                    <Button onClick={() => setIsRecalibrateDialogOpen(true)}>Generar Plan de Estudio</Button>
-                                                </CardContent>
-                                            )}
-                                        </div>
-                                    </Card>
-                                </div>
-                            )}
-
-                            <ConceptMapSection project={project} />
-
-                        </div>
+                         </div>
                     </div>
-                </ScrollArea>
+
+                    <div className="flex-1 overflow-hidden relative">
+                        {project.sessions && project.sessions.length > 0 ? (
+                            <InteractiveStudyChat 
+                                project={project} 
+                                sessionIndex={project.sessions.findIndex(s => s.status === 'Continue') === -1 ? 0 : project.sessions.findIndex(s => s.status === 'Continue')}
+                            />
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-6">
+                                <Archive className="h-16 w-16 text-muted-foreground/20" />
+                                <div className="max-w-md">
+                                    <h2 className="text-2xl font-bold mb-2">Tu Study Box está vacío</h2>
+                                    <p className="text-muted-foreground mb-6">
+                                        Genera tu plan de estudio estratégico basado en tus fuentes para comenzar la sesión guiada con Kolearning.
+                                    </p>
+                                    <Button size="lg" onClick={() => setIsRecalibrateDialogOpen(true)} className="gap-2 shadow-lg">
+                                        <Wand2 className="h-5 w-5" />
+                                        Generar Plan de Estudio
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </main>
 
             <Dialog open={showFullPlan} onOpenChange={setShowFullPlan}>

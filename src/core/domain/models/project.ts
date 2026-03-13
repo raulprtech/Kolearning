@@ -20,7 +20,7 @@ export type LearningPathItem = {
     questionFormats?: string;
 };
 
-export type SourceStatus = 'not_started' | 'reading' | 'processed' | 'mastered';
+export type SourceStatus = 'pending' | 'processing' | 'processed' | 'error';
 
 export type Source = {
     id?: string;
@@ -28,6 +28,10 @@ export type Source = {
     type: string;
     content: string;
     status: SourceStatus;
+    inStudyBox?: boolean;
+    bloomLevel?: 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
+    atomCount?: number;
+    errorMessage?: string;
 };
 
 export type Project = {

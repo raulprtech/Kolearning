@@ -1,6 +1,6 @@
-import { Worker } from 'worker_threads';
 import { HookRegistry } from '../domain/services/HookRegistry';
 import path from 'path';
+import { Worker } from 'worker_threads';
 export class SandboxConectorProxy {
     constructor(metadata, workerScriptPath) {
         this.metadata = metadata;

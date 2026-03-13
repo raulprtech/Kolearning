@@ -1,28 +1,24 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
     Card,
     CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
 } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { KolearningAvatar } from "@/components/icons/kolearning-avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Flame, Lightbulb, Repeat, BrainCircuit, Loader2, Zap, Brain, Award, ListChecks, Send, RefreshCw, X, Eye } from "lucide-react";
+import { Lightbulb, Repeat, BrainCircuit, Loader2, ListChecks, Send, RefreshCw, X, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useProjects, Atom as ProjectAtom } from "@/contexts/ProjectContext";
+import { useRouter } from "next/navigation";
+import { useProjects, Atom as ProjectAtom, Project } from "@/contexts/ProjectContext";
 import { explainCorrectAnswer, ExplainCorrectAnswerOutput } from "@/ai/flows/kolearning-explain-answer";
 import { getStudyAid } from "@/ai/flows/kolearning-study-aids";
 import { kolearningTutorChat } from "@/ai/flows/kolearning-tutor-chat";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,7 +36,6 @@ import ZettelkastenNote from "@/components/ui/study/ZettelkastenNote";
 import { VideoReviewQuestion } from "@/components/ui/study/VideoReviewQuestion";
 import { MatchingGameQuestion } from "@/components/ui/study/MatchingGameQuestion";
 
-
 const ratings = [
     { label: "Muy Difícil", variant: "destructive", description: "Repetir Pronto", fsrs: 1 },
     { label: "Difícil", variant: "outline", description: "Revisar en un día", fsrs: 2 },
@@ -48,7 +43,6 @@ const ratings = [
     { label: "Fácil", variant: "default", description: "Revisar en una semana", fsrs: 4 },
 ] as const;
 
-// Correctly typed SortableItem
 type SortableItemProps = {
     id: string;
     children: React.ReactNode;
@@ -82,7 +76,6 @@ function SortableItem({ id, children, isAnswered, isCorrect }: SortableItemProps
     );
 }
 
-// Correctly typed OrderingQuestion
 type OrderingQuestionProps = {
     atom: ProjectAtom;
     onRate: (fsrs: 1 | 2 | 3 | 4) => void;
@@ -169,7 +162,6 @@ const OrderingQuestion = ({ atom, onRate, onAnswerSelect }: OrderingQuestionProp
     );
 };
 
-// Correctly typed MultipleChoiceQuestion
 type MultipleChoiceQuestionProps = {
     atom: ProjectAtom;
     onRate: (fsrs: 1 | 2 | 3 | 4) => void;
@@ -189,11 +181,8 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: Mu
             let options: string[] = [];
 
             if (atom.incorrectAnswers && atom.incorrectAnswers.length > 0) {
-                // Usa los distractores pre-generados
                 options = [atom.answer, ...atom.incorrectAnswers];
             } else {
-                // Fallback: si no hay distractores, genéralos ahora
-                console.warn(`No pre-generated distractors for: "${atom.question}". Generating them now.`);
                 try {
                     const { generateDistractors } = await import('@/ai/flows/generate-distractors');
                     const response = await generateDistractors({
@@ -203,8 +192,6 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: Mu
                     });
                     options = [atom.answer, ...response.distractors];
                 } catch (error) {
-                    console.error("Error generating fallback distractors:", error);
-                    // Opciones de respaldo en caso de error
                     options = [atom.answer, "Opción A", "Opción B", "Opción C"];
                 }
             }
@@ -214,10 +201,8 @@ const MultipleChoiceQuestion = ({ atom, onRate, isRevealed, onAnswerSelect }: Mu
         };
 
         getOptions();
-
         setIsAnswered(false);
         setSelectedOption(null);
-
     }, [atom.answer, atom.question, atom.incorrectAnswers]);
 
     useEffect(() => {
@@ -295,7 +280,6 @@ type ChatMessageDetail = {
     content: React.ReactNode;
 };
 
-// Correctly typed KolearningTutorPanel
 type KolearningTutorPanelProps = {
     isOpen: boolean;
     onClose: () => void;
@@ -304,7 +288,7 @@ type KolearningTutorPanelProps = {
     onUseEnergy: (cost: number) => boolean;
 };
 
-const KolearningTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }: KolearningTutorPanelProps) => {
+const KolearningTutorPanel = ({ isOpen, onClose, question, answer }: KolearningTutorPanelProps) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -327,12 +311,10 @@ const KolearningTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }
 
     const handleSendMessage = async () => {
         if (!input.trim()) return;
-
         const userMessage: ChatMessage = { role: 'user', content: input };
         setMessages(prev => [...prev, userMessage]);
         setInput("");
         setIsLoading(true);
-
         try {
             const response = await kolearningTutorChat({
                 questionContext: question,
@@ -341,8 +323,7 @@ const KolearningTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }
             });
             setMessages(prev => [...prev, { role: 'model', content: response.response }]);
         } catch (error) {
-            console.error("Error chatting with Kolearning:", error);
-            setMessages(prev => [...prev, { role: 'model', content: "Lo siento, tuve un problema para procesar tu pregunta. Inténtalo de nuevo." }]);
+            setMessages(prev => [...prev, { role: 'model', content: "Lo siento, tuve un problema para procesar tu pregunta." }]);
         } finally {
             setIsLoading(false);
         }
@@ -353,9 +334,6 @@ const KolearningTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }
             <SheetContent className="w-full sm:w-[540px] flex flex-col">
                 <SheetHeader>
                     <SheetTitle>Consulta a Kolearning</SheetTitle>
-                    <SheetDescription>
-                        Chatea con tu tutor de IA para resolver tus dudas sobre este tema.
-                    </SheetDescription>
                 </SheetHeader>
                 <div className="flex-1 overflow-hidden flex flex-col">
                     <ScrollArea className="flex-1 pr-4 -mr-4">
@@ -404,25 +382,21 @@ const KolearningTutorPanel = ({ isOpen, onClose, question, answer, onUseEnergy }
     )
 };
 
+export interface InteractiveStudyChatProps {
+    project: Project;
+    sessionIndex: number;
+    onComplete?: () => void;
+}
 
-function StudySessionContent() {
-    const params = useParams();
-    const searchParams = useSearchParams();
+export function InteractiveStudyChat({ project, sessionIndex, onComplete }: InteractiveStudyChatProps) {
     const router = useRouter();
     const {
-        projects,
-        completeSession,
         recordAnswer,
         resetSessionStats,
         updateAtom,
-        isAuthenticated
     } = useProjects();
 
-    const projectId = params.id as string;
-    const sessionIndex = parseInt(searchParams.get('sessionIndex') || '0', 10);
-
-    const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
-    const session = useMemo(() => project?.sessions[sessionIndex], [project, sessionIndex]);
+    const session = useMemo(() => project.sessions[sessionIndex], [project, sessionIndex]);
 
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [sessionAtoms, setSessionAtoms] = useState(session?.atoms || []);
@@ -450,28 +424,23 @@ function StudySessionContent() {
 
     useEffect(() => {
         if (isSessionFinished) {
-            // Use a timeout to allow state updates to propagate before navigating.
-            setTimeout(() => {
-                router.push(`/study/${projectId}/session/summary?sessionIndex=${sessionIndex}`);
-            }, 100);
+            if (onComplete) {
+                onComplete();
+            } else {
+                router.push(`/study/${project.id}/session/summary?sessionIndex=${sessionIndex}`);
+            }
         }
-    }, [isSessionFinished, router, projectId, sessionIndex]);
-
-    useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login');
-        }
-    }, [isAuthenticated, router]);
+    }, [isSessionFinished, router, project.id, sessionIndex, onComplete]);
 
     useEffect(() => {
         if (session) {
             setSessionAtoms(session.atoms);
             resetSessionStats();
             setQuestionStartTime(Date.now());
+            setChatHistory([]);
+            setCurrentCardIndex(0);
         }
-        // ONLY reset when the actual session context changes (project ID or session index)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [projectId, sessionIndex]);
+    }, [project.id, sessionIndex]);
 
     useEffect(() => {
         if (mainScrollRef.current) {
@@ -491,14 +460,12 @@ function StudySessionContent() {
     const currentAtomProjectIndex = useMemo(() => {
         if (!project || !currentAtom?.question) return -1;
         const normalizedQuestion = normalizeText(currentAtom.question);
-        const index = project.atoms.findIndex(atom => normalizeText(atom.question) === normalizedQuestion);
-        return index;
+        return project.atoms.findIndex(atom => normalizeText(atom.question) === normalizedQuestion);
     }, [project, currentAtom]);
 
     const isMultipleChoice = useMemo(() => session?.questions === "Opción Múltiple", [session]);
     const isOrdering = useMemo(() => session?.questions === "Ordenamiento", [session]);
     const sessionPhase = useMemo(() => session?.phase || 'calibration', [session]);
-
 
     const handleRate = useCallback((fsrs: 1 | 2 | 3 | 4) => {
         let isCorrect = false;
@@ -511,28 +478,17 @@ function StudySessionContent() {
         }
 
         const responseTime = Date.now() - questionStartTime;
-
         let displayUserAnswer = userAnswer;
         if (isOrdering) displayUserAnswer = userOrderingAnswer.join(", ");
-        if (!displayUserAnswer) displayUserAnswer = "Completado mediante interacción in-app.";
+        if (!displayUserAnswer) displayUserAnswer = "Interacción directa.";
 
         setChatHistory(prev => [
             ...prev,
-            {
-               id: `tq-${currentCardIndex}-${Date.now()}`,
-               role: 'tutor',
-               content: (
-                   <p className="font-medium">{rephrasedQuestion || currentAtom.question}</p>
-               )
-            },
-            {
-               id: `ua-${currentCardIndex}-${Date.now()}`,
-               role: 'user',
-               content: <p className="text-base">{displayUserAnswer}</p>
-            },
-            {
-               id: `tf-${currentCardIndex}-${Date.now()}`,
-               role: 'tutor',
+            { id: `tq-${currentCardIndex}-${Date.now()}`, role: 'tutor', content: <p className="font-medium">{rephrasedQuestion || currentAtom.question}</p> },
+            { id: `ua-${currentCardIndex}-${Date.now()}`, role: 'user', content: <p className="text-base">{displayUserAnswer}</p> },
+            { 
+               id: `tf-${currentCardIndex}-${Date.now()}`, 
+               role: 'tutor', 
                content: (
                    <div className="space-y-3">
                        <p className={cn("font-medium", isCorrect ? "text-green-600 dark:text-green-400" : "text-destructive")}>
@@ -552,12 +508,8 @@ function StudySessionContent() {
             }
         ]);
 
-
-        if (projectId && currentAtomProjectIndex !== -1) {
-            console.log(`[Study] Recording answer for atom ${currentAtomProjectIndex}. Correct: ${isCorrect}, responseTime: ${responseTime}ms`);
-            recordAnswer(projectId, currentAtomProjectIndex, fsrs, isCorrect, responseTime, aidsUsed);
-        } else {
-            console.warn(`[Study] ⚠️ SKIPPING recordAnswer! projectId: ${projectId}, atomIdx: ${currentAtomProjectIndex}`);
+        if (project.id && currentAtomProjectIndex !== -1) {
+            recordAnswer(project.id, currentAtomProjectIndex, fsrs, isCorrect, responseTime, aidsUsed);
         }
 
         if (currentCardIndex < sessionAtoms.length - 1) {
@@ -575,32 +527,11 @@ function StudySessionContent() {
         } else {
             setIsSessionFinished(true);
         }
-    }, [isOrdering, userOrderingAnswer, currentAtom, isMultipleChoice, isConvertedToMc, userAnswer, verificationResult, recordAnswer, projectId, currentAtomProjectIndex, aidsUsed, currentCardIndex, sessionAtoms.length, router, sessionIndex, questionStartTime, rephrasedQuestion]);
-
-
-    if (!isAuthenticated) {
-        return (
-            <div className="flex flex-col flex-1 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="mt-4 text-muted-foreground">Redirigiendo a inicio de sesión...</p>
-            </div>
-        );
-    }
-
-    if (!project || !session) {
-        return (
-            <div className="flex flex-col flex-1 items-center justify-center">
-                <h1 className="text-2xl">Sesión no encontrada</h1>
-                <Button onClick={() => router.push('/study')} className="mt-4">Volver a Estudio</Button>
-            </div>
-        )
-    }
+    }, [isOrdering, userOrderingAnswer, currentAtom, isMultipleChoice, isConvertedToMc, userAnswer, verificationResult, recordAnswer, project.id, currentAtomProjectIndex, aidsUsed, currentCardIndex, sessionAtoms.length, questionStartTime, rephrasedQuestion]);
 
     const handleCheckAnswer = async () => {
         if (!userAnswer.trim()) return;
-
         setIsVerifying(true);
-        setVerificationResult(null);
         try {
             const result = await verifyAnswer({
                 question: currentAtom.question,
@@ -609,24 +540,15 @@ function StudySessionContent() {
             });
             setVerificationResult(result);
         } catch (error) {
-            console.error("Error verifying answer:", error);
-            setVerificationResult({ isCorrect: false, feedback: "Hubo un problema al verificar tu respuesta. Inténtalo de nuevo." });
+            setVerificationResult({ isCorrect: false, feedback: "Error al verificar." });
         } finally {
             setIsVerifying(false);
             setViewState('answer');
         }
     }
 
-    const handleUseEnergy = (cost: number, aidType?: string) => {
-        // Gamification disabled - all aids are free
-        if (aidType) {
-            setAidsUsed(prev => [...prev, aidType]);
-        }
-        return true;
-    }
-
     const handleExplainAnswer = async () => {
-        handleUseEnergy(0, 'explain');
+        setAidsUsed(prev => [...prev, 'explain']);
         setIsExplanationDialogOpen(true);
         setIsExplanationLoading(true);
         try {
@@ -634,20 +556,18 @@ function StudySessionContent() {
                 question: currentAtom.question,
                 correctAnswer: currentAtom.answer,
                 learnerAnswer: userAnswer,
-                context: `El usuario está en una sesión de tipo "${session.type}" para el proyecto "${project.title}".`
+                context: `Sesión "${session.type}" proyecto "${project.title}".`
             });
             setExplanation(result);
         } catch (error) {
-            console.error("Error explaining answer:", error);
-            setExplanation({ explanation: "Lo siento, no pude generar una explicación en este momento.", examples: [] });
+            setExplanation({ explanation: "Error.", examples: [] });
         } finally {
             setIsExplanationLoading(false);
         }
     }
 
     const handleGetStudyAid = async (aidType: 'hint' | 'rephrase') => {
-        handleUseEnergy(0, aidType);
-
+        setAidsUsed(prev => [...prev, aidType]);
         setIsAidLoading(aidType);
         try {
             const result = await getStudyAid({
@@ -655,236 +575,107 @@ function StudySessionContent() {
                 question: currentAtom.question,
                 answer: currentAtom.answer,
             });
-
-            if (aidType === 'hint') {
-                setHint(result.result);
-            } else {
-                setRephrasedQuestion(result.result);
-            }
-        } catch (error) {
-            console.error(`Error getting ${aidType}:`, error);
-        } finally {
+            if (aidType === 'hint') setHint(result.result);
+            else setRephrasedQuestion(result.result);
+        } catch (error) {} finally {
             setIsAidLoading(null);
         }
     }
 
     const handleSeeAnswer = () => {
-        handleUseEnergy(0, 'seeAnswer');
+        setAidsUsed(prev => [...prev, 'seeAnswer']);
         setViewState('answer');
         setIsAnswerRevealed(true);
     };
 
-
     const handleConvertToMc = () => {
-        handleUseEnergy(0, 'convertToMc');
+        setAidsUsed(prev => [...prev, 'convertToMc']);
         setIsConvertedToMc(true);
     }
 
     const handleOpenTutorChat = () => {
-        handleUseEnergy(0, 'tutorChat');
+        setAidsUsed(prev => [...prev, 'tutorChat']);
         setIsTutorPanelOpen(true);
     }
 
-    const progress = (currentCardIndex / sessionAtoms.length) * 100;
-
-    type TacticalButtonProps = {
-        icon: React.ReactNode;
-        label: string;
-        action: () => void;
-        disabled?: boolean;
-        isLoading?: boolean;
-    };
-
-    const TacticalButton = ({ icon, label, action, disabled = false, isLoading = false }: TacticalButtonProps) => (
+    const TacticalButton = ({ icon, label, action, disabled = false, isLoading = false }: any) => (
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" aria-label={label} onClick={action} disabled={disabled || isLoading}>
+                    <Button variant="outline" size="icon" onClick={action} disabled={disabled || isLoading}>
                         {isLoading ? <Loader2 className="animate-spin" /> : icon}
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                    <p>{label}</p>
-                </TooltipContent>
+                <TooltipContent><p>{label}</p></TooltipContent>
             </Tooltip>
         </TooltipProvider>
     )
 
     const renderQuestionInterface = () => {
-        // Handle polymorphic atom types
         if (currentAtom.type === 'video_review') {
-            return (
-                <VideoReviewQuestion
-                    atom={currentAtom}
-                    onAnswerSubmit={(isCorrect, time) => handleRate(isCorrect ? 3 : 1)}
-                />
-            );
+            return <VideoReviewQuestion atom={currentAtom} onAnswerSubmit={(isCorrect) => handleRate(isCorrect ? 3 : 1)} />;
         }
-
         if (currentAtom.type === 'mini_game') {
-            return (
-                <MatchingGameQuestion
-                    atom={currentAtom}
-                    onAnswerSubmit={(isCorrect, time) => handleRate(isCorrect ? 4 : 1)}
-                />
-            );
+            return <MatchingGameQuestion atom={currentAtom} onAnswerSubmit={(isCorrect) => handleRate(isCorrect ? 4 : 1)} />;
         }
-
-        // Default 'text_card' handling
-        // Phase-aware rendering: dispatch to the correct component based on session phase
         if (sessionPhase === 'calibration' || isMultipleChoice || isConvertedToMc) {
             return <MultipleChoiceQuestion atom={currentAtom} onRate={handleRate} isRevealed={isAnswerRevealed} onAnswerSelect={setUserAnswer} />;
         }
-
-        // Incursión phase: association or fill-blank
         if (sessionPhase === 'incursion') {
-            const questionFormats = session?.questionFormats || '';
-            // If the session includes association format, use AssociationQuestion
-            if (questionFormats.includes('Asociación')) {
-                // Generate association pairs from atoms in the current session
-                const pairs = sessionAtoms.slice(0, Math.min(6, sessionAtoms.length)).map((atom, i) => ({
-                    id: `pair-${i}`,
-                    concept: atom.question,
-                    definition: atom.answer,
-                }));
-                return (
-                    <AssociationQuestion
-                        pairs={pairs}
-                        onComplete={(isCorrect) => {
-                            handleRate(isCorrect ? 3 : 1);
-                        }}
-                        onAnswerSelect={setUserAnswer}
-                    />
-                );
+            const formats = session?.questionFormats || '';
+            if (formats.includes('Asociación')) {
+                const pairs = sessionAtoms.slice(0, 6).map((a, i) => ({ id: `p-${i}`, concept: a.question, definition: a.answer }));
+                return <AssociationQuestion pairs={pairs} onComplete={(isCorrect) => handleRate(isCorrect ? 3 : 1)} onAnswerSelect={setUserAnswer} />;
             }
-            // If fill-blank format
-            if (questionFormats.includes('Completar')) {
-                // Generate fill-blank segments from the current atom's answer
+            if (formats.includes('Completar')) {
                 const words = currentAtom.answer.split(' ');
-                const segments = words.map((word, i) => {
-                    // Make every 3rd substantial word a blank
-                    const isBlank = i > 0 && i % 3 === 0 && word.length > 3;
-                    return {
-                        text: isBlank ? '___' : word + ' ',
-                        isBlank,
-                        answer: isBlank ? word : undefined,
-                    };
+                const segments = words.map((w, i) => {
+                    const isBlank = i > 0 && i % 3 === 0 && w.length > 3;
+                    return { text: isBlank ? '___' : w + ' ', isBlank, answer: isBlank ? w : undefined };
                 });
-                return (
-                    <FillBlankQuestion
-                        segments={segments}
-                        questionText={currentAtom.question}
-                        onComplete={(isCorrect) => {
-                            handleRate(isCorrect ? 3 : 1);
-                        }}
-                        onAnswerSelect={setUserAnswer}
-                    />
-                );
+                return <FillBlankQuestion segments={segments} questionText={currentAtom.question} onComplete={(isCorrect) => handleRate(isCorrect ? 3 : 1)} onAnswerSelect={setUserAnswer} />;
             }
-            // Default incursion: open-ended textarea
             return (
-                <>
-                    <Textarea
-                        rows={8}
-                        placeholder="Escribe tu respuesta con tus propias palabras..."
-                        className="bg-background text-lg"
-                        value={userAnswer}
-                        onChange={(e) => setUserAnswer(e.target.value)}
-                        readOnly={viewState === 'answer'}
-                    />
-                    <div className="mt-6 flex justify-center">
-                        <Button size="lg" className="w-full max-w-xs" onClick={handleCheckAnswer} disabled={isVerifying || !userAnswer.trim()}>
-                            {isVerifying ? <Loader2 className="animate-spin" /> : "Comprobar"}
-                        </Button>
-                    </div>
-                </>
+                <div className="space-y-4">
+                    <Textarea rows={6} placeholder="Respuesta..." className="bg-background" value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} readOnly={viewState === 'answer'} />
+                    <Button size="lg" className="w-full" onClick={handleCheckAnswer} disabled={isVerifying || !userAnswer.trim()}>{isVerifying ? <Loader2 className="animate-spin" /> : "Comprobar"}</Button>
+                </div>
             );
         }
-
-        // Refuerzo phase: scenario-based reasoning
         if (sessionPhase === 'reinforcement') {
-            return (
-                <ScenarioQuestion
-                    scenario={`Imagina que necesitas explicar o aplicar el siguiente concepto en un contexto real: ${currentAtom.question}`}
-                    question={`¿Cómo aplicarías o explicarías "${currentAtom.answer}" en este contexto? Justifica tu razonamiento.`}
-                    expectedAnswer={currentAtom.answer}
-                    relatedConcepts={sessionAtoms.slice(0, 3).map(a => a.question)}
-                    onComplete={(isCorrect) => {
-                        handleRate(isCorrect ? 3 : 2);
-                    }}
-                    onAnswerSelect={setUserAnswer}
-                />
-            );
+            return <ScenarioQuestion scenario={`Contexto: ${currentAtom.question}`} question={`¿Cómo aplicarías "${currentAtom.answer}"?`} expectedAnswer={currentAtom.answer} onComplete={(isCorrect) => handleRate(isCorrect ? 3 : 2)} onAnswerSelect={setUserAnswer} />;
         }
-
-        // Dominio phase: Kolearning Ignorante chat
         if (sessionPhase === 'mastery') {
-            return (
-                <KolearningIgnoranteChat
-                    concept={currentAtom.question}
-                    expectedExplanation={currentAtom.answer}
-                    onComplete={(mastered: boolean) => {
-                        handleRate(mastered ? 4 : 2);
-                    }}
-                    onAnswerSelect={setUserAnswer}
-                />
-            );
+            return <KolearningIgnoranteChat concept={currentAtom.question} expectedExplanation={currentAtom.answer} onComplete={(m) => handleRate(m ? 4 : 2)} onAnswerSelect={setUserAnswer} />;
         }
-
-        // Legacy ordering fallback
         if (isOrdering) {
             return <OrderingQuestion atom={currentAtom} onRate={handleRate} onAnswerSelect={setUserOrderingAnswer} />;
         }
-
-        // Default fallback: open-ended textarea
         return (
-            <>
-                <Textarea
-                    rows={8}
-                    placeholder="Tu respuesta..."
-                    className="bg-background text-lg"
-                    value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
-                    readOnly={viewState === 'answer'}
-                />
-                <div className="mt-6 flex justify-center">
-                    <Button size="lg" className="w-full max-w-xs" onClick={handleCheckAnswer} disabled={isVerifying || !userAnswer.trim()}>
-                        {isVerifying ? <Loader2 className="animate-spin" /> : "Comprobar"}
-                    </Button>
-                </div>
-            </>
+            <div className="space-y-4">
+                <Textarea rows={6} placeholder="Respuesta..." className="bg-background" value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} readOnly={viewState === 'answer'} />
+                <Button size="lg" className="w-full" onClick={handleCheckAnswer} disabled={isVerifying || !userAnswer.trim()}>{isVerifying ? <Loader2 className="animate-spin" /> : "Comprobar"}</Button>
+            </div>
         );
     }
 
     const questionToDisplay = rephrasedQuestion || currentAtom.question;
 
     return (
-        <div className="flex flex-col flex-1 h-[calc(100vh)] bg-muted/10">
-            <header className="flex items-center justify-between p-4 border-b border-border gap-4 shrink-0 bg-background/50 backdrop-blur-sm z-10 sticky top-0">
-                <div className="w-1/4">
-                    <Button variant="outline" onClick={() => router.back()}>Salir de la Sesión</Button>
-                </div>
-                <div className="flex-1 flex flex-col items-center justify-center">
-                    <Badge variant="secondary" className="mb-2">{session.type}</Badge>
-                    <div className="w-full max-w-md">
-                        <Progress value={progress} />
-                        <p className="text-xs text-muted-foreground mt-1 text-center">{currentCardIndex + 1} de {sessionAtoms.length}</p>
-                    </div>
-                </div>
-                <div className="w-1/4 flex justify-end">
-                </div>
-            </header>
-
+        <div className="flex flex-col h-full w-full bg-muted/5 rounded-xl overflow-hidden border shadow-inner">
             <main className="flex-1 overflow-y-auto w-full relative" ref={mainScrollRef}>
-                <div className="max-w-3xl mx-auto p-4 md:p-8 space-y-8 pb-32 pt-6">
-
+                <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-6 pb-24">
+                    {chatHistory.length === 0 && (
+                        <div className="flex justify-center py-8">
+                            <Badge variant="outline" className="text-muted-foreground">Sesión Iniciada: {session.type}</Badge>
+                        </div>
+                    )}
                     {chatHistory.map(msg => (
-                        <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            {msg.role === 'tutor' && <KolearningAvatar className="h-10 w-10 shrink-0 mt-1 shadow-sm" />}
-                            <div className={`p-4 max-w-[85%] shadow-sm ${
-                                msg.role === 'user' ? 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm' : 
-                                msg.role === 'system' ? 'bg-transparent border-0 shadow-none text-center w-full max-w-full text-muted-foreground rounded-2xl' :
-                                'bg-background border rounded-2xl rounded-tl-sm'
+                        <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            {msg.role === 'tutor' && <KolearningAvatar className="h-8 w-8 shrink-0 mt-1" />}
+                            <div className={`p-3 max-w-[90%] shadow-sm ${
+                                msg.role === 'user' ? 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm text-sm' : 
+                                'bg-background border rounded-2xl rounded-tl-sm text-sm'
                             }`}>
                                 {msg.content}
                             </div>
@@ -892,82 +683,57 @@ function StudySessionContent() {
                     ))}
 
                     {!isSessionFinished && (
-                        <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <KolearningAvatar className="h-10 w-10 shrink-0 mt-1 shadow-sm" />
-                            <div className="p-0 bg-transparent w-full space-y-4">
-                                <div className="p-4 rounded-2xl bg-background border rounded-tl-sm shadow-sm relative group text-foreground">
-                                    <p className="font-semibold text-lg">{questionToDisplay}</p>
-                                    {rephrasedQuestion && (
-                                        <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setRephrasedQuestion(null)} title="Ver original">
-                                            <RefreshCw className="h-3 w-3 text-muted-foreground" />
-                                        </Button>
-                                    )}
+                        <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <KolearningAvatar className="h-8 w-8 shrink-0 mt-1" />
+                            <div className="p-0 bg-transparent w-full space-y-3">
+                                <div className="p-3 rounded-2xl bg-background border rounded-tl-sm shadow-sm relative group">
+                                    <p className="font-semibold text-base">{questionToDisplay}</p>
                                     {hint && (
-                                        <Alert className="mt-4 bg-primary/10 border-primary/20 text-primary">
-                                            <Lightbulb className="h-4 w-4 text-primary" />
-                                            <AlertTitle className="flex justify-between items-center text-sm">
-                                                Pista de Kolearning
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={() => setHint(null)}><X className="h-4 w-4" /></Button>
-                                            </AlertTitle>
-                                            <AlertDescription className="text-sm">{hint}</AlertDescription>
+                                        <Alert className="mt-3 bg-primary/5 py-2">
+                                            <Lightbulb className="h-3 w-3" />
+                                            <AlertDescription className="text-xs">{hint}</AlertDescription>
                                         </Alert>
                                     )}
                                 </div>
                                 <div className="w-full">
-                                    {viewState === 'question' && renderQuestionInterface()}
-                                    {viewState === 'answer' && (isMultipleChoice || isConvertedToMc || isOrdering) && renderQuestionInterface()}
-                                    {viewState === 'answer' && !isMultipleChoice && !isConvertedToMc && !isOrdering && (
-                                        <div className="bg-background rounded-2xl p-6 border shadow-sm mt-4">
-                                            {verificationResult && (
-                                                <Alert className={cn('mb-6', verificationResult.isCorrect ? 'border-green-500/50 text-green-300' : 'border-destructive/50 text-destructive')}>
-                                                    <AlertTitle>{verificationResult.isCorrect ? "¡Correcto!" : "Respuesta incorrecta"}</AlertTitle>
-                                                    <AlertDescription>{verificationResult.feedback}</AlertDescription>
-                                                </Alert>
-                                            )}
-                                            <div className="bg-primary/5 border border-primary/10 p-4 rounded-lg mb-8">
-                                                <h4 className="font-bold font-headline mb-2 text-primary">
-                                                    Respuesta Correcta Esperada
-                                                </h4>
-                                                <p>{currentAtom.answer}</p>
-                                            </div>
-
-                                            <h3 className="font-headline text-muted-foreground mb-4 text-center">
-                                                Califica tu rendimiento al recordar:
-                                            </h3>
-                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                                {ratings.map(rating => (
-                                                    <Button key={rating.label} variant={rating.variant} className="h-auto py-3 flex-col w-full shadow-sm" onClick={() => handleRate(rating.fsrs)}>
-                                                        <span className="text-sm font-bold">{rating.label}</span>
-                                                        <span className="text-[10px] opacity-80 mt-1">{rating.description}</span>
-                                                    </Button>
-                                                ))}
-                                            </div>
-
-                                            <div className="mt-6 pt-6 border-t">
+                                    {viewState === 'question' ? renderQuestionInterface() : (
+                                        (isMultipleChoice || isConvertedToMc || isOrdering) ? renderQuestionInterface() : (
+                                            <div className="bg-background rounded-xl p-4 border shadow-sm space-y-4">
+                                                {verificationResult && (
+                                                    <Alert variant={verificationResult.isCorrect ? "default" : "destructive"} className="py-2">
+                                                        <AlertDescription className="text-xs">{verificationResult.feedback}</AlertDescription>
+                                                    </Alert>
+                                                )}
+                                                <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
+                                                    <p className="text-xs font-bold text-primary mb-1 uppercase">Respuesta Correcta</p>
+                                                    <p className="text-sm">{currentAtom.answer}</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {ratings.map(rating => (
+                                                        <Button key={rating.label} variant={rating.variant} className="h-auto py-2 flex-col" onClick={() => handleRate(rating.fsrs)}>
+                                                            <span className="text-xs font-bold">{rating.label}</span>
+                                                            <span className="text-[10px] opacity-70">{rating.description}</span>
+                                                        </Button>
+                                                    ))}
+                                                </div>
                                                 <ZettelkastenNote
                                                     atomQuestion={currentAtom.question}
                                                     atomAnswer={currentAtom.answer}
                                                     existingNote={currentAtom.zettelkastenNote}
-                                                    onSaveNote={(note) => {
-                                                        if (projectId && currentAtomProjectIndex !== -1) {
-                                                            updateAtom(projectId, currentAtomProjectIndex, { ...currentAtom, zettelkastenNote: note });
-                                                        }
-                                                    }}
+                                                    onSaveNote={(note) => updateAtom(project.id, currentAtomProjectIndex, { ...currentAtom, zettelkastenNote: note })}
                                                 />
                                             </div>
-                                        </div>
+                                        )
                                     )}
                                 </div>
                                 
                                 <div className="flex flex-wrap items-center gap-2 mt-4">
                                     <TacticalButton icon={<Eye className="h-4 w-4" />} label="Ver respuesta" action={handleSeeAnswer} disabled={viewState === 'answer'} />
-                                    <TacticalButton icon={<Lightbulb className="h-4 w-4" />} label="Pista" action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} isLoading={isAidLoading === 'hint'} />
-                                    {!isMultipleChoice && !isConvertedToMc && !isOrdering && <TacticalButton icon={<ListChecks className="h-4 w-4" />} label="Convertir a Opción Múltiple" action={handleConvertToMc} disabled={viewState === 'answer'} />}
-                                    <TacticalButton icon={<BrainCircuit className="h-4 w-4" />} label="Explicar" action={handleExplainAnswer} disabled={viewState === 'question'} />
-                                    <TacticalButton icon={<Repeat className="h-4 w-4" />} label="Reformular" action={() => handleGetStudyAid('rephrase')} disabled={viewState === 'answer' || !!rephrasedQuestion} isLoading={isAidLoading === 'rephrase'} />
-                                    <Button variant="outline" size="sm" className="ml-auto" onClick={handleOpenTutorChat}>
-                                        <KolearningAvatar className="h-4 w-4 mr-2" />
-                                        Consultar
+                                    <TacticalButton icon={<Lightbulb className="h-4 w-4" />} label="Pista" action={() => handleGetStudyAid('hint')} disabled={viewState === 'answer' || !!hint} />
+                                    {!isMultipleChoice && !isConvertedToMc && !isOrdering && <TacticalButton icon={<ListChecks className="h-4 w-4" />} label="Opción Múltiple" action={handleConvertToMc} /> }
+                                    <TacticalButton icon={<BrainCircuit className="h-4 w-4" />} label="Explicar" action={handleExplainAnswer} />
+                                    <Button variant="ghost" size="sm" className="ml-auto h-8 text-xs" onClick={handleOpenTutorChat}>
+                                        <KolearningAvatar className="h-4 w-4 mr-1" /> Chatear
                                     </Button>
                                 </div>
                             </div>
@@ -976,53 +742,18 @@ function StudySessionContent() {
                 </div>
 
                 <Dialog open={isExplanationDialogOpen} onOpenChange={setIsExplanationDialogOpen}>
-                    <DialogContent className="sm:max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>Explicación de la Respuesta</DialogTitle>
-                            <DialogDescription>
-                                Kolearning ha generado una explicación para ayudarte a entender mejor.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4 max-h-[60vh] overflow-y-auto">
-                            {isExplanationLoading ? (
-                                <div className="flex items-center justify-center">
-                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                </div>
-                            ) : (
-                                <div className="prose dark:prose-invert max-w-none">
-                                    <p>{explanation?.explanation}</p>
-                                    {explanation?.examples && explanation.examples.length > 0 && (
-                                        <>
-                                            <h4 className="font-bold mt-4">Ejemplos:</h4>
-                                            <ul className="list-disc pl-5">
-                                                {explanation.examples.map((ex, i) => <li key={i}>{ex}</li>)}
-                                            </ul>
-                                        </>
-                                    )}
-                                </div>
-                            )}
+                    <DialogContent>
+                        <DialogHeader><DialogTitle>Explicación</DialogTitle></DialogHeader>
+                        <div className="prose prose-sm dark:prose-invert">
+                            <p>{explanation?.explanation}</p>
+                            {explanation?.examples?.map((ex, i) => <li key={i}>{ex}</li>)}
                         </div>
-                        <DialogFooter>
-                            <Button onClick={() => setIsExplanationDialogOpen(false)}>Cerrar</Button>
-                        </DialogFooter>
+                        <DialogFooter><Button onClick={() => setIsExplanationDialogOpen(false)}>Cerrar</Button></DialogFooter>
                     </DialogContent>
                 </Dialog>
 
-                <KolearningTutorPanel
-                    isOpen={isTutorPanelOpen}
-                    onClose={() => setIsTutorPanelOpen(false)}
-                    question={currentAtom.question}
-                    answer={currentAtom.answer}
-                    onUseEnergy={handleUseEnergy}
-                />
+                <KolearningTutorPanel isOpen={isTutorPanelOpen} onClose={() => setIsTutorPanelOpen(false)} question={currentAtom.question} answer={currentAtom.answer} onUseEnergy={() => true} />
             </main>
         </div>
-    );
-}
-export default function StudySessionPage() {
-    return (
-        <Suspense fallback={<div className="flex-1 flex items-center justify-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-            <StudySessionContent />
-        </Suspense>
     );
 }
