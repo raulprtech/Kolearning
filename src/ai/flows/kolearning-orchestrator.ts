@@ -6,7 +6,8 @@ import { initializeConectores } from '@/infrastructure/connectors';
 import { listGoogleTasksTool, createGoogleTaskTool } from '../tools/google-tasks';
 import { scheduleTaskTool } from '../tools/scheduler-tools';
 import { searchDeepMemoryTool } from '../tools/memory-tools';
-import { updateStudentProfileTool } from '../tools/metacognitive-tools';
+import { updateStudentProfileTool, browseLearningBrainTool } from '../tools/metacognitive-tools';
+import { storeInteractionRewardTool } from '../tools/feedback-loop-tools';
 import { createClient } from '@/lib/supabase/client';
 
 const searchArticlesTool = ai.defineTool(
@@ -228,6 +229,9 @@ export const kolearningOrchestrator = ai.defineFlow(
             - startStudySession: Use this when the user specifies a project they want to study.
             - searchDeepMemory: Cross-reference across all knowledge atoms. Essential for "Transversal connections".
             - updateStudentProfile: CALL THIS if you detect a new pattern (e.g. "Student struggles with algebra", "Student loves visual examples").
+            - storeInteractionReward: CALL THIS when the user CORRECTS you or gives explicit feedback. 
+              Examples: "Don't use sports icons" -> reward: -1, context: "User dislike icons".
+              Use this to update your "GOLDEN RULES" in the cognitive context.
             
             GOOGLE TASKS:
             - If Google Integration is ENABLED, you can call 'listGoogleTasks' and 'createGoogleTask'.
@@ -269,7 +273,9 @@ export const kolearningOrchestrator = ai.defineFlow(
                 createGoogleTaskTool,
                 scheduleTaskTool,
                 searchDeepMemoryTool,
-                updateStudentProfileTool
+                updateStudentProfileTool,
+                browseLearningBrainTool,
+                storeInteractionRewardTool
             ],
             onChunk: (chunk) => {
                 if (chunk.toolRequests && chunk.toolRequests.length > 0) {
@@ -278,6 +284,7 @@ export const kolearningOrchestrator = ai.defineFlow(
                         if (toolName === 'searchArticles') sendStatus('Agente Investigador: Buscando artículos...');
                         if (toolName === 'createProject') sendStatus('Agente Estratega: Preparando proyecto...');
                         if (toolName === 'searchDataBox') sendStatus('Consultando tu Data Box...');
+                        if (toolName === 'browseLearningBrain') sendStatus('Navegando tu Cerebro de Aprendizaje (viking://)...');
                         if (toolName === 'startStudySession') sendStatus('Iniciando sesión de estudio...');
                         if (toolName === 'listGoogleTasks') sendStatus('Consultando tus tareas de Google...');
                         if (toolName === 'createGoogleTask') sendStatus('Añadiendo tarea a Google...');

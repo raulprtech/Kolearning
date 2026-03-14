@@ -320,6 +320,108 @@ function ProjectDetails() {
         }
     }, [searchParams, router, slug]);
 
+    // === BACKGROUND PROCESSING QUEUE ===
+    useEffect(() => {
+        if (!project || processingRef.current) return;
+
+        const pendingIndex = project.sources.findIndex(s => s.status === 'pending');
+        if (pendingIndex === -1) return;
+
+        const source = project.sources[pendingIndex];
+        // Solo bloqueamos si el contenido explícitamente requiere un fetch (pero el upload directo no debería)
+        if (!source.content || source.content === 'FETCH_REQUIRED') return;
+
+        processingRef.current = true;
+
+        const processSource = async () => {
+            console.log(`[Queue] Processing source: ${source.name}`);
+            
+            // Mark as processing
+            await updateSourceFields(project.id, pendingIndex, { status: 'processing' });
+            setProcessingStage({ stage: 'starting', message: `Procesando "${source.name}"...`, progress: 5 });
+
+            try {
+                const result = await generateAtomsFromLargeContentWithProgress(
+                    {
+                        studyMaterial: source.content,
+                        userPreferences: {
+                            availableTimePerSession: 30,
+                            totalAvailableTime: 120,
+                            difficultyPreference: 'gradual'
+                        }
+                    },
+                    (progressInfo) => {
+                        setProcessingStage(progressInfo);
+                    }
+                );
+
+                setProcessingStage(null);
+
+                if (result.atoms && result.atoms.length > 0) {
+                    const existingQuestions = new Set(project.atoms.map(a => a.question.toLowerCase().trim()));
+                    const newUniqueAtoms = result.atoms.map(a => ({
+                        ...a,
+                        id: crypto.randomUUID(),
+                        projectId: project.id,
+                        payload: { sourceId: source.id },
+                        stability: 0,
+                        difficulty: 0,
+                        retrievability: 1,
+                        lastReview: new Date()
+                    })).filter(a => !existingQuestions.has(a.question.toLowerCase().trim()));
+
+                    if (newUniqueAtoms.length > 0) {
+                        await addAtomsToProject(project.id, newUniqueAtoms);
+                    }
+
+                    // Determine predominant bloom level
+                    const phases = newUniqueAtoms.map(a => a.phase).filter(Boolean);
+                    let bloomLevel: Source['bloomLevel'] = 'remember';
+                    if (phases.includes('mastery')) bloomLevel = 'evaluate';
+                    else if (phases.includes('reinforcement')) bloomLevel = 'apply';
+                    else if (phases.includes('incursion')) bloomLevel = 'understand';
+
+                    await updateSourceFields(project.id, pendingIndex, {
+                        status: 'processed',
+                        atomCount: newUniqueAtoms.length,
+                        bloomLevel,
+                        errorMessage: undefined,
+                    });
+
+                    toast({
+                        title: "Documento Procesado",
+                        description: `"${source.name}": ${newUniqueAtoms.length} conceptos extraídos.`,
+                    });
+                } else {
+                    await updateSourceFields(project.id, pendingIndex, {
+                        status: 'processed',
+                        atomCount: 0,
+                    });
+                    toast({
+                        title: "Procesado sin resultados",
+                        description: `No se encontraron conceptos nuevos en "${source.name}".`,
+                    });
+                }
+            } catch (error: any) {
+                console.error('[Queue] Error processing source:', error);
+                setProcessingStage(null);
+                await updateSourceFields(project.id, pendingIndex, {
+                    status: 'error',
+                    errorMessage: error.message || 'Error desconocido',
+                });
+                toast({
+                    title: "Error al procesar",
+                    description: `"${source.name}": ${error.message || 'Error inesperado'}`,
+                    variant: 'destructive',
+                });
+            } finally {
+                processingRef.current = false;
+            }
+        };
+
+        processSource();
+    }, [project?.sources, project?.id]);
+
     if (!project) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background">
@@ -431,106 +533,8 @@ function ProjectDetails() {
         }
     };
 
-    // === BACKGROUND PROCESSING QUEUE ===
-    useEffect(() => {
-        if (!project || processingRef.current) return;
 
-        const pendingIndex = project.sources.findIndex(s => s.status === 'pending');
-        if (pendingIndex === -1) return;
 
-        const source = project.sources[pendingIndex];
-        if (!source.content || source.content === 'FETCH_REQUIRED' || source.content.startsWith('CONTENIDO DEL PDF')) return;
-
-        processingRef.current = true;
-
-        const processSource = async () => {
-            console.log(`[Queue] Processing source: ${source.name}`);
-            
-            // Mark as processing
-            await updateSourceFields(project.id, pendingIndex, { status: 'processing' });
-            setProcessingStage({ stage: 'starting', message: `Procesando "${source.name}"...`, progress: 5 });
-
-            try {
-                const result = await generateAtomsFromLargeContentWithProgress(
-                    {
-                        studyMaterial: source.content,
-                        userPreferences: {
-                            availableTimePerSession: 30,
-                            totalAvailableTime: 120,
-                            difficultyPreference: 'gradual'
-                        }
-                    },
-                    (progressInfo) => {
-                        setProcessingStage(progressInfo);
-                    }
-                );
-
-                setProcessingStage(null);
-
-                if (result.atoms && result.atoms.length > 0) {
-                    const existingQuestions = new Set(project.atoms.map(a => a.question.toLowerCase().trim()));
-                    const newUniqueAtoms = result.atoms.map(a => ({
-                        ...a,
-                        id: crypto.randomUUID(),
-                        projectId: project.id,
-                        payload: { sourceId: source.id },
-                        stability: 0,
-                        difficulty: 0,
-                        retrievability: 1,
-                        lastReview: new Date()
-                    })).filter(a => !existingQuestions.has(a.question.toLowerCase().trim()));
-
-                    if (newUniqueAtoms.length > 0) {
-                        await addAtomsToProject(project.id, newUniqueAtoms);
-                    }
-
-                    // Determine predominant bloom level
-                    const phases = newUniqueAtoms.map(a => a.phase).filter(Boolean);
-                    let bloomLevel: Source['bloomLevel'] = 'remember';
-                    if (phases.includes('mastery')) bloomLevel = 'evaluate';
-                    else if (phases.includes('reinforcement')) bloomLevel = 'apply';
-                    else if (phases.includes('incursion')) bloomLevel = 'understand';
-
-                    await updateSourceFields(project.id, pendingIndex, {
-                        status: 'processed',
-                        atomCount: newUniqueAtoms.length,
-                        bloomLevel,
-                        errorMessage: undefined,
-                    });
-
-                    toast({
-                        title: "Documento Procesado",
-                        description: `"${source.name}": ${newUniqueAtoms.length} conceptos extraídos.`,
-                    });
-                } else {
-                    await updateSourceFields(project.id, pendingIndex, {
-                        status: 'processed',
-                        atomCount: 0,
-                    });
-                    toast({
-                        title: "Procesado sin resultados",
-                        description: `No se encontraron conceptos nuevos en "${source.name}".`,
-                    });
-                }
-            } catch (error: any) {
-                console.error('[Queue] Error processing source:', error);
-                setProcessingStage(null);
-                await updateSourceFields(project.id, pendingIndex, {
-                    status: 'error',
-                    errorMessage: error.message || 'Error desconocido',
-                });
-                toast({
-                    title: "Error al procesar",
-                    description: `"${source.name}": ${error.message || 'Error inesperado'}`,
-                    variant: 'destructive',
-                });
-            } finally {
-                processingRef.current = false;
-            }
-        };
-
-        processSource();
-    }, [project?.sources, project?.id]);
 
     // === ADD TO STUDY BOX ===
     const handleAddToStudyBox = async (source: Source, sourceIndex: number) => {
@@ -651,31 +655,31 @@ function ProjectDetails() {
             return;
         }
 
-        let content = "";
-        try {
-            if (isText) {
-                content = await file.text();
-            } else {
-                content = `CONTENIDO DEL PDF: ${file.name} (Procesamiento pendiente)`;
-            }
-        } catch (error) {
-            console.error("Error leyendo archivo:", error);
+        // Leer como Data URL (Base64) para que la IA pueda procesarlo (especialmente PDFs)
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const content = e.target?.result as string;
+            if (!content) return;
+
+            const newSource: Omit<Source, 'id'> = {
+                name: file.name,
+                type: isPdf ? 'pdf' : 'text',
+                content,
+                status: 'pending'
+            };
+
+            await addSource(project.id, newSource);
+        };
+
+        reader.onerror = () => {
             toast({
                 title: "Error de lectura",
                 description: "No se pudo leer el archivo local.",
                 variant: "destructive"
             });
-            return;
-        }
-
-        const newSource: Omit<Source, 'id'> = {
-            name: file.name,
-            type: isPdf ? 'pdf' : 'text',
-            content,
-            status: 'pending'
         };
 
-        await addSource(project.id, newSource);
+        reader.readAsDataURL(file);
         event.target.value = '';
     };
 
