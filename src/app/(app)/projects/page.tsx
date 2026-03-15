@@ -77,39 +77,27 @@ const DashboardView = ({ projects, profile, onStartNewProject }: { projects: Pro
                                             {project.icon === 'Book' ? '📚' : project.icon === 'Science' ? '🔬' : '💡'}
                                         </div>
                                     </div>
-                                    <CardTitle className="mt-4 line-clamp-1">{project.title}</CardTitle>
+                                    <CardTitle className="mt-4 line-clamp-1">
+                                        <Link href={`/study/${project.id}`} className="hover:text-primary transition-colors block">
+                                            {project.title}
+                                        </Link>
+                                    </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4 flex-1 flex flex-col">
+                                <CardContent className="space-y-4 flex-1 flex flex-col pt-0">
                                     <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
                                         {project.description || t('dashboard.no_description')}
                                     </p>
 
-                                    <div className="pt-4 border-t mt-auto">
-                                        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-4">
+                                    <div className="pt-4 mt-auto">
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
                                             <div className="flex items-center gap-1">
                                                 <Clock className="h-3 w-3" />
                                                 <span>{project.atoms.length} {t('dashboard.atoms')}</span>
                                             </div>
+                                            <div className="h-6 w-6 rounded-full bg-primary/5 flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:bg-primary/10 transition-all">
+                                                <ArrowRight className="h-3 w-3 text-primary" />
+                                            </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <Button asChild variant="outline" size="sm" className="rounded-xl flex items-center gap-2 justify-center">
-                                                <Link href={`/study/${project.id}?tab=study`}>
-                                                    <BrainCircuit className="h-4 w-4" />
-                                                    Study Box
-                                                </Link>
-                                            </Button>
-                                            <Button asChild variant="outline" size="sm" className="rounded-xl flex items-center gap-2 justify-center">
-                                                <Link href={`/study/${project.id}?tab=data`}>
-                                                    <Library className="h-4 w-4" />
-                                                    Data Box
-                                                </Link>
-                                            </Button>
-                                        </div>
-                                        <Button asChild className="w-full mt-2 rounded-xl">
-                                            <Link href={`/study/${project.id}`}>
-                                                {t('dashboard.study')} <ArrowRight className="ml-2 h-4 w-4" />
-                                            </Link>
-                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>
