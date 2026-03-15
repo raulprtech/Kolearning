@@ -8,6 +8,7 @@ import { scheduleTaskTool } from '../tools/scheduler-tools';
 import { searchDeepMemoryTool } from '../tools/memory-tools';
 import { updateStudentProfileTool, browseLearningBrainTool } from '../tools/metacognitive-tools';
 import { storeInteractionRewardTool } from '../tools/feedback-loop-tools';
+import { detectMisconceptionTool } from '../tools/misconception-tools';
 import { createClient } from '@/lib/supabase/client';
 
 const searchArticlesTool = ai.defineTool(
@@ -232,6 +233,8 @@ export const kolearningOrchestrator = ai.defineFlow(
             - storeInteractionReward: CALL THIS when the user CORRECTS you or gives explicit feedback. 
               Examples: "Don't use sports icons" -> reward: -1, context: "User dislike icons".
               Use this to update your "GOLDEN RULES" in the cognitive context.
+            - detectMisconception: CALL THIS before answering advanced questions if you suspect the student is basing their query on a false premise or lacks a fundamental concept.
+              If a misconception is detected, PRIORITIZE clarifying the base concept before moving to the advanced topic.
             
             GOOGLE TASKS:
             - If Google Integration is ENABLED, you can call 'listGoogleTasks' and 'createGoogleTask'.
@@ -275,7 +278,8 @@ export const kolearningOrchestrator = ai.defineFlow(
                 searchDeepMemoryTool,
                 updateStudentProfileTool,
                 browseLearningBrainTool,
-                storeInteractionRewardTool
+                storeInteractionRewardTool,
+                detectMisconceptionTool
             ],
             onChunk: (chunk) => {
                 if (chunk.toolRequests && chunk.toolRequests.length > 0) {

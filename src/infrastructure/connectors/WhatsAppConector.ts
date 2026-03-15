@@ -237,9 +237,14 @@ export class WhatsAppConector extends BaseConector {
             if (msg.key.fromMe) return;
 
             const sender = msg.key.remoteJid;
-            const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+            const rawText = msg.message.conversation || msg.message.extendedTextMessage?.text;
 
-            if (text) {
+            if (rawText) {
+                const text = this.sanitizeMessage(rawText);
+                if (!text) {
+                    console.warn(`[WhatsAppConector] Mensaje filtrado o vacío de ${sender}`);
+                    return;
+                }
                 console.log(`[WhatsAppConector] 💬 Mensaje de ${sender}: "${text}"`);
                 await this.socket.sendPresenceUpdate('composing', sender);
                 await delay(500);
@@ -282,5 +287,38 @@ export class WhatsAppConector extends BaseConector {
             this.socket = null;
         }
         this.isConnected = false;
+    }
+
+    private sanitizeMessage(text: string): string {
+        if (!text) return '';
+
+        // 1. Limit length (DoS protection)
+        const maxLength = 2000;
+        let sanitized = text.substring(0, maxLength);
+
+        // 2. Detection of common prompt injection patterns
+        const injectionPatterns = [
+            /ignore\s+(all\s+)?(previous\s+)?instructions/gi,
+            /system\s+prompt/gi,
+            /new\s+role/gi,
+            /forget\s+everything/gi,
+            /assistant\s+mode/gi,
+            /dan\s+mode/gi,
+            /jailbreak/gi
+        ];
+
+        for (const pattern of injectionPatterns) {
+            if (pattern.test(sanitized)) {
+                console.warn(`[WhatsAppConector] Posible intento de inyección detectado: "${sanitized.substring(0, 50)}..."`);
+                // If injection is detected, we can either block the message or neuter it
+                // For now, let's return an empty string to block it.
+                return '';
+            }
+        }
+
+        // 3. Basic character cleaning (remove strange non-printable chars)
+        sanitized = sanitized.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+
+        return sanitized.trim();
     }
 }

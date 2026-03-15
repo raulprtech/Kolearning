@@ -94,11 +94,11 @@ export async function generateAtomsFromLargeContentWithProgress(
     const base64 = matches[2];
     const buffer = Buffer.from(base64, 'base64');
     const parsed = await pdfParse(buffer);
-    content = parsed.text || '';
+    content = filterSensitiveInfo(parsed.text || '');
     isPDF = true;
   } else {
     console.log('Text file detected - decoding content');
-    content = decodeDataURI(input.studyMaterial);
+    content = filterSensitiveInfo(decodeDataURI(input.studyMaterial));
 
     console.log('=== DEBUGGING CONTENT DECODING ===');
     console.log('Decoded content length:', content.length);
@@ -798,21 +798,36 @@ async function generateAtomsInChunks(content: string, documentContext: any, onPr
 // Function to decode data URI for text files only
 function decodeDataURI(dataURI: string): string {
   try {
-    const dataURIPattern = /^data:([^;]+);base64,(.+)$/;
-    const matches = dataURI.match(dataURIPattern);
-
-    if (!matches) {
-      throw new Error('Invalid data URI format');
-    }
-
-    const [, , base64Data] = matches;
-
-    // Decode as UTF-8 text
-    const decodedContent = Buffer.from(base64Data, 'base64').toString('utf-8');
-    console.log('Text file decoded, length:', decodedContent.length);
-    return decodedContent;
+    const base64 = dataURI.split(',')[1];
+    return Buffer.from(base64, 'base64').toString('utf-8');
   } catch (error) {
     console.error('Error decoding data URI:', error);
-    throw new Error('Failed to decode study material');
+    return '';
   }
+}
+
+/**
+ * Filter sensitive information (PII) from text before processing or storage.
+ * Redacts emails, phone numbers, credit cards, and IP addresses.
+ */
+function filterSensitiveInfo(text: string): string {
+  if (!text) return '';
+
+  // 1. Emails
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+
+  // 2. Phone numbers (various formats)
+  const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+
+  // 3. Credit Cards (simple pattern, not exhaustive but covers most)
+  const ccRegex = /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g;
+
+  // 4. IPv4 Addresses
+  const ipRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g;
+
+  return text
+    .replace(emailRegex, '[EMAIL_REDACTED]')
+    .replace(phoneRegex, '[PHONE_REDACTED]')
+    .replace(ccRegex, '[CREDIT_CARD_REDACTED]')
+    .replace(ipRegex, '[IP_REDACTED]');
 }
