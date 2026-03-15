@@ -78,3 +78,66 @@ export const updateStudentProfileTool = ai.defineTool({
         };
     }
 });
+export const browseLearningBrainTool = ai.defineTool({
+    name: 'browseLearningBrain',
+    description: 'Navigates the students knowledge hierarchy using a file-system paradigm (viking:// protocol). Efficiently loads context in tiers (L0: Overview, L1: Concept Map, L2: Details).',
+    inputSchema: z.object({
+        path: z.string().describe("The virtual path to browse. Examples: 'viking://projects' (L0), 'viking://projects/:id' (L1), 'viking://projects/:id/atoms/:atomId' (L2)"),
+        userId: z.string().describe("The UUID of the student")
+    }),
+    outputSchema: z.object({
+        currentLevel: z.enum(['L0', 'L1', 'L2']),
+        data: z.any(),
+        message: z.string().optional()
+    }),
+}, async ({ path, userId }) => {
+    console.log(`[OpenViking] Browsing: ${path} for user: ${userId}`);
+    const supabase = createClient();
+    // 1. L0: Root - List all projects
+    if (path === 'viking://projects' || path === 'viking://') {
+        const { data, error } = await supabase
+            .from('projects')
+            .select('id, title, description, mastery')
+            .eq('user_id', userId);
+        if (error)
+            throw error;
+        return { currentLevel: 'L0', data: data || [] };
+    }
+    // 2. L1: Project Level - Concept Map (List atoms without full answers)
+    const projectMatch = path.match(/^viking:\/\/projects\/([^\/]+)$/);
+    if (projectMatch) {
+        const projectId = projectMatch[1];
+        const { data: project } = await supabase.from('projects').select('title, description').eq('id', projectId).single();
+        const { data: atoms, error } = await supabase
+            .from('atoms')
+            .select('id, question')
+            .eq('project_id', projectId);
+        if (error)
+            throw error;
+        return {
+            currentLevel: 'L1',
+            data: {
+                project,
+                conceptMap: (atoms === null || atoms === void 0 ? void 0 : atoms.map(a => ({ id: a.id, topic: a.question }))) || []
+            }
+        };
+    }
+    // 3. L2: Atom Level - Full Detail
+    const atomMatch = path.match(/^viking:\/\/projects\/[^\/]+\/atoms\/([^\/]+)$/);
+    if (atomMatch) {
+        const atomId = atomMatch[1];
+        const { data, error } = await supabase
+            .from('atoms')
+            .select('*')
+            .eq('id', atomId)
+            .single();
+        if (error)
+            throw error;
+        return { currentLevel: 'L2', data };
+    }
+    return {
+        currentLevel: 'L0',
+        data: null,
+        message: "Invalid path. Use 'viking://projects' as root."
+    };
+});

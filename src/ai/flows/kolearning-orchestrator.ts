@@ -9,38 +9,8 @@ import { searchDeepMemoryTool } from '../tools/memory-tools';
 import { updateStudentProfileTool, browseLearningBrainTool } from '../tools/metacognitive-tools';
 import { storeInteractionRewardTool } from '../tools/feedback-loop-tools';
 import { detectMisconceptionTool } from '../tools/misconception-tools';
+import { searchArticlesTool } from '../tools/article-tools';
 import { createClient } from '@/lib/supabase/client';
-
-const searchArticlesTool = ai.defineTool(
-    {
-        name: 'searchArticles',
-        description: 'Searches for academic articles and papers based on a query.',
-        inputSchema: z.object({ query: z.string().describe("Topic or keyword to search for") }),
-        outputSchema: z.array(z.object({
-            title: z.string(),
-            authors: z.array(z.string()).optional(),
-            year: z.number().optional(),
-            url: z.string().optional(),
-            abstract: z.string().optional(),
-        })),
-    },
-    async ({ query }) => {
-        console.log(`[AI Orchestrator] Searching for articles: ${query}`);
-        try {
-            const results = await searchPapers(query);
-            return results.map(r => ({
-                title: r.title,
-                authors: r.authors,
-                year: r.year || undefined,
-                url: r.url || undefined,
-                abstract: r.abstract || undefined
-            }));
-        } catch (error) {
-            console.error("[searchArticlesTool] Error:", error);
-            return [];
-        }
-    }
-);
 
 const createProjectTool = ai.defineTool(
     {

@@ -1,41 +1,15 @@
 import { ai } from '../genkit';
 import { z } from 'genkit';
-import { searchPapers } from '@/lib/paper-utils';
 import { HookRegistry } from '@/core/domain/services/HookRegistry';
 import { initializeConectores } from '@/infrastructure/connectors';
 import { listGoogleTasksTool, createGoogleTaskTool } from '../tools/google-tasks';
 import { scheduleTaskTool } from '../tools/scheduler-tools';
 import { searchDeepMemoryTool } from '../tools/memory-tools';
-import { updateStudentProfileTool } from '../tools/metacognitive-tools';
+import { updateStudentProfileTool, browseLearningBrainTool } from '../tools/metacognitive-tools';
+import { storeInteractionRewardTool } from '../tools/feedback-loop-tools';
+import { detectMisconceptionTool } from '../tools/misconception-tools';
+import { searchArticlesTool } from '../tools/article-tools';
 import { createClient } from '@/lib/supabase/client';
-const searchArticlesTool = ai.defineTool({
-    name: 'searchArticles',
-    description: 'Searches for academic articles and papers based on a query.',
-    inputSchema: z.object({ query: z.string().describe("Topic or keyword to search for") }),
-    outputSchema: z.array(z.object({
-        title: z.string(),
-        authors: z.array(z.string()).optional(),
-        year: z.number().optional(),
-        url: z.string().optional(),
-        abstract: z.string().optional(),
-    })),
-}, async ({ query }) => {
-    console.log(`[AI Orchestrator] Searching for articles: ${query}`);
-    try {
-        const results = await searchPapers(query);
-        return results.map(r => ({
-            title: r.title,
-            authors: r.authors,
-            year: r.year || undefined,
-            url: r.url || undefined,
-            abstract: r.abstract || undefined
-        }));
-    }
-    catch (error) {
-        console.error("[searchArticlesTool] Error:", error);
-        return [];
-    }
-});
 const createProjectTool = ai.defineTool({
     name: 'createProject',
     description: 'Initiates the creation of a new learning project from a URL or text.',
@@ -200,6 +174,11 @@ export const kolearningOrchestrator = ai.defineFlow({
             - startStudySession: Use this when the user specifies a project they want to study.
             - searchDeepMemory: Cross-reference across all knowledge atoms. Essential for "Transversal connections".
             - updateStudentProfile: CALL THIS if you detect a new pattern (e.g. "Student struggles with algebra", "Student loves visual examples").
+            - storeInteractionReward: CALL THIS when the user CORRECTS you or gives explicit feedback. 
+              Examples: "Don't use sports icons" -> reward: -1, context: "User dislike icons".
+              Use this to update your "GOLDEN RULES" in the cognitive context.
+            - detectMisconception: CALL THIS before answering advanced questions if you suspect the student is basing their query on a false premise or lacks a fundamental concept.
+              If a misconception is detected, PRIORITIZE clarifying the base concept before moving to the advanced topic.
             
             GOOGLE TASKS:
             - If Google Integration is ENABLED, you can call 'listGoogleTasks' and 'createGoogleTask'.
@@ -237,7 +216,10 @@ export const kolearningOrchestrator = ai.defineFlow({
             createGoogleTaskTool,
             scheduleTaskTool,
             searchDeepMemoryTool,
-            updateStudentProfileTool
+            updateStudentProfileTool,
+            browseLearningBrainTool,
+            storeInteractionRewardTool,
+            detectMisconceptionTool
         ],
         onChunk: (chunk) => {
             if (chunk.toolRequests && chunk.toolRequests.length > 0) {
@@ -249,6 +231,8 @@ export const kolearningOrchestrator = ai.defineFlow({
                         sendStatus('Agente Estratega: Preparando proyecto...');
                     if (toolName === 'searchDataBox')
                         sendStatus('Consultando tu Data Box...');
+                    if (toolName === 'browseLearningBrain')
+                        sendStatus('Navegando tu Cerebro de Aprendizaje (viking://)...');
                     if (toolName === 'startStudySession')
                         sendStatus('Iniciando sesión de estudio...');
                     if (toolName === 'listGoogleTasks')
