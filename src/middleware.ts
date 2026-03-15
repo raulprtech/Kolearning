@@ -85,5 +85,11 @@ export const config = {
      * - images, etc.
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/profile/:path*',
+    '/projects/:path*',
+    '/study/:path*',
+    '/new-project/:path*',
+    '/archive/:path*',
+    '/migrate/:path*',
   ],
 }

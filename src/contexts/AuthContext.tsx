@@ -98,9 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
+      console.log(`[Auth] State change: ${event}`, session ? `User: ${session.user.id}` : 'No session');
+      
       // Handle SIGNED_OUT event
       if (event === 'SIGNED_OUT') {
-        console.log('[Auth] User signed out')
         setSession(null)
         setUser(null)
         setProfile(null)
@@ -134,10 +135,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (session) {
+            console.log('[Auth] Initial session found:', session.user.id);
             setSession(session)
             setUser(session.user)
             await fetchProfile(session.user)
           } else {
+            console.log('[Auth] No initial session found.');
             setLoading(false)
           }
         } catch (error) {

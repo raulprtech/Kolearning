@@ -58,33 +58,26 @@ export async function updateSession(request: NextRequest) {
     // Check if the session is valid
     const { data: { session }, error } = await supabase.auth.getSession()
 
-    // If there's a refresh token error, clean up cookies
+    // If there's a refresh token error, log it clearly
     if (error) {
       const errorMessage = error.message || String(error)
+      console.error('[Middleware] Auth error:', errorMessage)
 
-      // Check for refresh token errors
+      // Only clear cookies for specific, fatal refresh errors to prevent loss of session on hot-reloads
       if (
         errorMessage.includes('Invalid Refresh Token') ||
-        errorMessage.includes('Refresh Token Not Found') ||
-        errorMessage.includes('refresh_token')
+        errorMessage.includes('Refresh Token Not Found')
       ) {
-        console.warn('[Middleware] Invalid refresh token detected, cleaning up cookies')
+        console.warn('[Middleware] Fatal refresh token error, cleaning up session cookies')
 
         // Clear all Supabase auth cookies
-        const cookiesToClear = [
-          'sb-access-token',
-          'sb-refresh-token',
-          ...Array.from(request.cookies.getAll())
-            .filter((cookie) => cookie.name.startsWith('sb-'))
-            .map((cookie) => cookie.name),
-        ]
+        const cookiesToClear = Array.from(request.cookies.getAll())
+          .filter((cookie) => cookie.name.startsWith('sb-'))
+          .map((cookie) => cookie.name);
 
         cookiesToClear.forEach((name) => {
           response.cookies.delete(name)
         })
-
-        // Don't redirect here, let the client handle it
-        // This prevents redirect loops
       }
     }
 

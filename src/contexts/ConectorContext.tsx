@@ -24,18 +24,20 @@ const ConectorContext = createContext<ConectorContextType | undefined>(undefined
 /**
  * Calls the server API to initialize/disable server-only connectors.
  */
-async function toggleServerConnector(conectorId: string, enabled: boolean) {
+async function toggleServerConnector(conectorIds: string[], enabled: boolean) {
+    if (conectorIds.length === 0) return;
+    
     try {
         await fetch('/api/connectors/initialize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                conectorIds: [conectorId],
+                conectorIds,
                 action: enabled ? 'enable' : 'disable'
             })
         });
     } catch (error) {
-        console.error(`[ConectorContext] Failed to ${enabled ? 'enable' : 'disable'} server connector ${conectorId}:`, error);
+        console.error(`[ConectorContext] Failed to ${enabled ? 'enable' : 'disable'} server connectors [${conectorIds.join(', ')}]:`, error);
     }
 }
 
@@ -70,7 +72,7 @@ export const ConectorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
                     // Initialize server-only connectors via API
                     if (serverIds.length > 0) {
-                        toggleServerConnector(serverIds[0], true);
+                        toggleServerConnector(serverIds, true);
                     }
                 }
             } catch (error) {
@@ -90,7 +92,7 @@ export const ConectorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         if (SERVER_ONLY_CONNECTORS.includes(conectorId)) {
             // Delegate to the server API
-            await toggleServerConnector(conectorId, enabled);
+            await toggleServerConnector([conectorId], enabled);
         } else {
             // Handle client-safe connectors directly
             if (enabled) {

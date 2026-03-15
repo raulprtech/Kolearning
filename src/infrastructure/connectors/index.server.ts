@@ -23,16 +23,6 @@ export const initializeServerConectores = async (enabledConectorIds: string[]) =
         }
 
         try {
-            // Verificar dependencias críticas
-            console.log('[Conectores:Server] Verificando dependencias para WhatsApp...');
-            try {
-                require.resolve('jimp');
-                require.resolve('sharp');
-                console.log('[Conectores:Server] ✅ jimp y sharp están presentes.');
-            } catch (depErr) {
-                console.warn('[Conectores:Server] ⚠️ Advertencia: jimp o sharp no encontrados. Baileys podría fallar al procesar el QR.');
-            }
-
             const whatsapp = new WhatsAppConector();
             ConectorManager.registerConector(whatsapp);
         } catch (error) {

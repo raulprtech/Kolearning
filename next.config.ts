@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  serverExternalPackages: [
+    '@whiskeysockets/baileys',
+    'sharp',
+    'pino',
+    'qrcode',
+    'pdf-parse'
+  ],
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
